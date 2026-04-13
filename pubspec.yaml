@@ -1,0 +1,50 @@
+name: agente_viajes
+description: "Travel Tours Florencia - Admin Web App"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_bloc: ^9.1.0
+  bloc: ^9.0.0
+  equatable: ^2.0.7
+  get_it: ^8.0.3
+  intl: ^0.20.2
+  google_fonts: ^6.2.1
+  http: ^1.6.0
+  url_launcher: ^6.3.1
+  flutter_secure_storage: ^10.0.0
+  web: ^1.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/travel_icon.png"
+  min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#0D1B2A"
+  android: true
+  ios: true
+  web: false
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+
+
+
+
