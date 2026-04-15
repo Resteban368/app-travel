@@ -103,10 +103,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    final user = await _authRepository.restoreSession();
-    if (user != null) {
-      emit(AuthAuthenticated(user));
-    } else {
+    try {
+      final user = await _authRepository.restoreSession();
+      if (user != null) {
+        emit(AuthAuthenticated(user));
+      } else {
+        emit(AuthInitial());
+      }
+    } catch (_) {
       emit(AuthInitial());
     }
   }

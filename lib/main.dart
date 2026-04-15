@@ -15,6 +15,7 @@ import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_bloc.d
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/di/injection_container.dart';
 import 'core/theme/app_theme.dart';
@@ -23,6 +24,7 @@ import 'features/tour/presentation/bloc/tour_bloc.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
   initDependencies();
   initializeDateFormatting('es_CO', null);
   runApp(const TravelToursApp());

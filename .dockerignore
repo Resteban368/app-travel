@@ -1,0 +1,30 @@
+# Build output
+build/
+
+# Flutter/Dart tool caches
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+# Platform folders not needed for web build
+android/
+ios/
+linux/
+macos/
+windows/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Docs / extras
+README.md
+*.md
+refactor.dart
+replace_ip.dart
