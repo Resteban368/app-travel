@@ -13,8 +13,6 @@ import '../../../../core/widgets/shimmer_loading.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/theme/premium_palette.dart';
 
-
-
 // ─── Root screen ─────────────────────────────────────────────────────────────
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -384,18 +382,6 @@ class _DashboardBackground extends StatelessWidget {
 
   const _DashboardBackground({required this.shimmer, required this.floatY});
 
-  Widget _orb(double size, Color color) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: RadialGradient(
-        colors: [color, Colors.transparent],
-        stops: const [0.0, 1.0],
-      ),
-    ),
-  );
-
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -409,41 +395,6 @@ class _DashboardBackground extends StatelessWidget {
               colors: [D.bg, Color(0xFF080F1D), Color(0xFF060C17)],
             ),
           ),
-        ),
-
-        // Orbe azul eléctrico – arriba izquierda
-        Positioned(
-          top: -60 + floatY * 0.5,
-          left: -60,
-          child: _orb(
-            280,
-            Color.lerp(
-              D.royalBlue.withOpacity(0.18),
-              D.indigo.withOpacity(0.28),
-              shimmer,
-            )!,
-          ),
-        ),
-
-        // Orbe cyan – abajo derecha
-        Positioned(
-          bottom: -80 - floatY * 0.3,
-          right: -80,
-          child: _orb(
-            320,
-            Color.lerp(
-              D.cyan.withOpacity(0.10),
-              D.gold.withOpacity(0.08),
-              shimmer,
-            )!,
-          ),
-        ),
-
-        // Orbe indigo – centro
-        Positioned(
-          top: 200 + floatY * 0.8,
-          right: 60,
-          child: _orb(160, D.indigo.withOpacity(0.06 + shimmer * 0.04)),
         ),
 
         // Patrón de puntos
@@ -534,11 +485,7 @@ class _DashboardHeader extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           'Aquí tienes un resumen de Travel Tours Florencia',
-          style: TextStyle(
-            fontSize: 13,
-            color: D.slate400,
-            letterSpacing: 0.1,
-          ),
+          style: TextStyle(fontSize: 13, color: D.slate400, letterSpacing: 0.1),
         ),
       ],
     );
@@ -708,9 +655,7 @@ class _StatCardState extends State<_StatCard> {
                 color: _hovered ? D.surfaceHigh : D.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: _hovered
-                      ? d.accentColor.withOpacity(0.4)
-                      : D.border,
+                  color: _hovered ? d.accentColor.withOpacity(0.4) : D.border,
                   width: 1,
                 ),
                 boxShadow: _hovered
@@ -996,9 +941,7 @@ class _FilterToggleBtn extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: active
-              ? D.skyBlue.withOpacity(0.12)
-              : Colors.transparent,
+          color: active ? D.skyBlue.withOpacity(0.12) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: active ? D.skyBlue.withOpacity(0.35) : D.border,
@@ -1018,9 +961,7 @@ class _FilterToggleBtn extends StatelessWidget {
                 width: 18,
                 height: 18,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [D.royalBlue, D.cyan],
-                  ),
+                  gradient: const LinearGradient(colors: [D.royalBlue, D.cyan]),
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: Center(
@@ -1140,9 +1081,7 @@ class _FilterPanel extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: D.rose.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: D.rose.withOpacity(0.3),
-                        ),
+                        border: Border.all(color: D.rose.withOpacity(0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1278,9 +1217,7 @@ class _DateRangeChipState extends State<_DateRangeChip> {
                     Text(
                       'Rango de fechas',
                       style: TextStyle(
-                        color: hasDate
-                            ? D.cyan.withOpacity(0.8)
-                            : D.slate600,
+                        color: hasDate ? D.cyan.withOpacity(0.8) : D.slate600,
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.3,
@@ -1371,12 +1308,7 @@ class _PriceRangeInputsState extends State<_PriceRangeInputs> {
           width: isFocused ? 1.5 : 1,
         ),
         boxShadow: isFocused
-            ? [
-                BoxShadow(
-                  color: iconColor.withOpacity(0.08),
-                  blurRadius: 10,
-                ),
-              ]
+            ? [BoxShadow(color: iconColor.withOpacity(0.08), blurRadius: 10)]
             : [],
       ),
       child: TextField(
@@ -1538,9 +1470,7 @@ class _DarkSliderSectionState extends State<_DarkSliderSection> {
               decoration: BoxDecoration(
                 color: widget.accentColor.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: widget.accentColor.withOpacity(0.25),
-                ),
+                border: Border.all(color: widget.accentColor.withOpacity(0.25)),
               ),
               child: Icon(widget.icon, color: widget.accentColor, size: 18),
             ),
@@ -1736,9 +1666,7 @@ class _DarkTourCardState extends State<_DarkTourCard> {
             color: D.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _hovered
-                  ? widget.accentColor.withOpacity(0.4)
-                  : D.border,
+              color: _hovered ? widget.accentColor.withOpacity(0.4) : D.border,
             ),
             boxShadow: _hovered
                 ? [

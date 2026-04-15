@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,6 +8,7 @@ import '../bloc/service_bloc.dart';
 import '../bloc/service_event.dart';
 import '../bloc/service_state.dart';
 import '../../../settings/presentation/bloc/sede_bloc.dart';
+import '../../../../core/widgets/premium_form_widgets.dart';
 
 class ServiceFormScreen extends StatefulWidget {
   final Service? service;
@@ -72,7 +74,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
     super.dispose();
   }
 
-  void _save() {
+  void _save(BuildContext context) {
     if (!_formKey.currentState!.validate()) return;
 
     final service = Service(
@@ -92,13 +94,12 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
     }
   }
 
-  void _showToast(String msg, {bool isError = false}) {
+  void _showToast(BuildContext context, String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
         backgroundColor: isError ? D.rose : D.emerald,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -108,137 +109,169 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
     final authState = context.watch<AuthBloc>().state;
     final isAdmin =
         authState is AuthAuthenticated && authState.user.role == 'admin';
+    final canWrite = authState is AuthAuthenticated
+        ? authState.user.canWrite('services')
+        : isAdmin;
 
     return BlocListener<ServiceBloc, ServiceState>(
       listener: (context, state) {
         if (state is ServiceSaved) {
-          _showToast(_isEditing ? 'Servicio actualizado' : 'Servicio creado');
+          _showToast(
+            context,
+            _isEditing ? 'Servicio actualizado' : 'Servicio creado',
+          );
           Navigator.pop(context);
         } else if (state is ServiceError) {
-          _showToast(state.message, isError: true);
+          _showToast(context, state.message, isError: true);
         }
       },
       child: Scaffold(
         backgroundColor: D.bg,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          foregroundColor: Colors.white,
-          title: Text(
-            _isEditing ? 'Editar Servicio' : 'Nuevo Servicio',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
         body: Stack(
           children: [
-            Positioned.fill(child: CustomPaint(painter: _DotGridPainter())),
-            FadeTransition(
-              opacity: _fade,
-              child: SlideTransition(
-                position: _slide,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 600),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _isEditing
-                                  ? 'MODIFICAR SERVICIO'
-                                  : 'DEFINICIÓN DE SERVICIO',
-                              style: TextStyle(
-                                color: D.skyBlue,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Container(
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                color: D.surface,
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(color: D.border),
-                              ),
+            const PremiumBackground(),
+            CustomScrollView(
+              slivers: [
+                PremiumSliverAppBar(
+                  title: _isEditing && !canWrite
+                      ? 'Ver Servicio'
+                      : (_isEditing ? 'Editar Servicio' : 'Nuevo Servicio'),
+                  actions: IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: Colors.white,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: FadeTransition(
+                    opacity: _fade,
+                    child: SlideTransition(
+                      position: _slide,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 800),
+                            child: Form(
+                              key: _formKey,
                               child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildField(
-                                    controller: _nameCtrl,
-                                    label: 'Nombre del Servicio',
-                                    hint:
-                                        'Ej: Guía bilingüe, Almuerzo típico...',
-                                    icon: Icons.label_important_outline_rounded,
-                                  ),
-                                  const SizedBox(height: 20),
-                                  _buildSedeDropdown(),
-                                  const SizedBox(height: 20),
-                                  _buildField(
-                                    controller: _costCtrl,
-                                    label: 'Costo (Opcional)',
-                                    hint: 'Ej: 50000',
-                                    icon: Icons.attach_money_rounded,
-                                    isNumeric: true,
-                                  ),
-                                  const SizedBox(height: 20),
-                                  _buildField(
-                                    controller: _descriptionCtrl,
-                                    label: 'Descripción Detallada',
-                                    hint:
-                                        'Describe qué incluye este servicio...',
-                                    icon: Icons.description_outlined,
-                                    maxLines: 3,
+                                  // Etiqueta de información
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: D.skyBlue.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: D.skyBlue.withOpacity(0.3),
+                                      ),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.label_important_rounded,
+                                          color: D.skyBlue,
+                                          size: 16,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'DEFINICIÓN DE SERVICIO',
+                                          style: TextStyle(
+                                            color: D.skyBlue,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                   const SizedBox(height: 24),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: D.bg.withOpacity(0.5),
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: D.border),
-                                    ),
-                                    child: SwitchListTile(
-                                      title: const Text(
-                                        'Servicio Activo',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                        ),
+
+                                  PremiumSectionCard(
+                                    title: 'INFORMACIÓN BÁSICA',
+                                    icon: Icons.room_service_rounded,
+                                    children: [
+                                      PremiumTextField(
+                                        controller: _nameCtrl,
+                                        label: 'Nombre del Servicio *',
+                                        icon: Icons
+                                            .label_important_outline_rounded,
+                                        readOnly: !canWrite,
                                       ),
-                                      subtitle: Text(
-                                        _isActive
-                                            ? 'Visible en el sistema'
-                                            : 'Oculto actualmente',
-                                        style: TextStyle(
-                                          color: D.slate400,
-                                          fontSize: 12,
-                                        ),
+                                      const SizedBox(height: 20),
+                                      _buildSedeDropdown(canWrite: canWrite),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _costCtrl,
+                                        label: 'Costo Monetario',
+                                        icon: Icons.attach_money_rounded,
+                                        isNumeric: true,
+                                        readOnly: !canWrite,
                                       ),
-                                      value: _isActive,
-                                      activeColor: D.emerald,
-                                      onChanged: (v) =>
-                                          setState(() => _isActive = v),
-                                    ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _descriptionCtrl,
+                                        label: 'Descripción Detallada *',
+                                        icon: Icons.description_outlined,
+                                        maxLines: 3,
+                                        readOnly: !canWrite,
+                                      ),
+                                    ],
                                   ),
+                                  const SizedBox(height: 24),
+
+                                  PremiumSectionCard(
+                                    title: 'ESTADO Y VISIBILIDAD',
+                                    icon: Icons.visibility_rounded,
+                                    children: [
+                                      _buildVisibilitySwitch(
+                                        canWrite: canWrite,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 48),
+
+                                  if (canWrite)
+                                    Builder(
+                                      builder: (ctx) =>
+                                          BlocBuilder<
+                                            ServiceBloc,
+                                            ServiceState
+                                          >(
+                                            builder: (context, state) {
+                                              return PremiumActionButton(
+                                                label: _isEditing
+                                                    ? 'ACTUALIZAR SERVICIO'
+                                                    : 'GUARDAR SERVICIO',
+                                                icon: Icons.save_rounded,
+                                                isLoading:
+                                                    state is ServiceSaving,
+                                                onTap: () => _save(ctx),
+                                              );
+                                            },
+                                          ),
+                                    ),
+                                  const SizedBox(height: 100),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 40),
-                            _GlowSaveButton(
-                              onPressed: _save,
-                              isDisabled: !isAdmin,
-                            ),
-                            const SizedBox(height: 40),
-                          ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -246,215 +279,157 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
     );
   }
 
-  Widget _buildSedeDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.store_rounded, color: D.slate600, size: 16),
-            const SizedBox(width: 8),
-            Text(
-              'Sede Asociada',
-              style: TextStyle(
-                color: D.slate400,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        BlocBuilder<SedeBloc, SedeState>(
-          builder: (context, state) {
-            final isLoading = state is SedeLoading;
-            final sedes = state is SedesLoaded ? state.sedes : [];
-            return DropdownButtonFormField<int>(
-              value: _selectedSedeId,
-              dropdownColor: D.surfaceHigh,
-              style: const TextStyle(color: Colors.white, fontSize: 15),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: D.bg.withOpacity(0.5),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: D.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: D.skyBlue),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 15,
-                ),
-                hintText: isLoading
-                    ? 'Cargando sedes...'
-                    : 'Selecciona una sede',
-                hintStyle: TextStyle(color: D.slate600),
-              ),
-              items: sedes
-                  .map(
-                    (s) => DropdownMenuItem<int>(
-                      value: int.tryParse(s.id) ?? 0,
-                      child: Text(s.nombreSede),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => _selectedSedeId = v),
-              validator: (v) =>
-                  v == null ? 'Por favor selecciona una sede' : null,
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    int maxLines = 1,
-    bool isNumeric = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: D.slate600, size: 16),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: D.slate400,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        TextFormField(
-          controller: controller,
-          maxLines: maxLines,
-          keyboardType: isNumeric
-              ? const TextInputType.numberWithOptions(decimal: true)
-              : null,
-          style: const TextStyle(color: Colors.white, fontSize: 15),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: D.slate600, fontSize: 14),
-            filled: true,
-            fillColor: D.bg.withOpacity(0.5),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: D.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: D.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: D.skyBlue, width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.all(16),
-          ),
-          validator: (v) => (!isNumeric && (v == null || v.isEmpty))
-              ? 'Campo requerido'
-              : null,
-        ),
-      ],
-    );
-  }
-}
-
-class _GlowSaveButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  final bool isDisabled;
-  const _GlowSaveButton({required this.onPressed, this.isDisabled = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<ServiceBloc, ServiceState>(
+  Widget _buildSedeDropdown({required bool canWrite}) {
+    return BlocBuilder<SedeBloc, SedeState>(
       builder: (context, state) {
-        final isSaving = state is ServiceSaving;
-        final actualDisabled = isDisabled || isSaving;
-        return GestureDetector(
-          onTap: actualDisabled ? null : onPressed,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 56,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: actualDisabled
-                    ? [D.slate600, D.slate600]
-                    : [D.indigo, D.royalBlue],
+        if (state is SedeLoading || state is SedeInitial) {
+          return const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'SEDE ASOCIADA *',
+                style: TextStyle(
+                  color: D.slate400,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
               ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: actualDisabled
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: D.indigo.withOpacity(0.4),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+              SizedBox(height: 16),
+              CircularProgressIndicator(color: D.skyBlue),
+            ],
+          );
+        }
+
+        final sedes = (state is SedesLoaded)
+            ? state.sedes
+            : (state is SedeSaved && state.sedes != null)
+            ? state.sedes!
+            : (state is SedeSaving && state.sedes != null)
+            ? state.sedes!
+            : [];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'SEDE ASOCIADA *',
+              style: TextStyle(
+                color: D.slate400,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
             ),
-            child: Center(
-              child: isSaving
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.save_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'GUARDAR SERVICIO',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                      ],
+            const SizedBox(height: 8),
+            if (!canWrite)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: D.surfaceHigh.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.store_rounded, color: D.skyBlue, size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      sedes.any((s) => int.tryParse(s.id) == _selectedSedeId)
+                          ? sedes
+                                .firstWhere(
+                                  (s) => int.tryParse(s.id) == _selectedSedeId,
+                                )
+                                .nombreSede
+                          : 'Selecciona una sede',
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
                     ),
-            ),
-          ),
+                  ],
+                ),
+              )
+            else
+              DropdownButtonFormField<int>(
+                value: sedes.any((s) => int.tryParse(s.id) == _selectedSedeId)
+                    ? _selectedSedeId
+                    : null,
+                dropdownColor: D.surfaceHigh,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(
+                    Icons.store_rounded,
+                    color: D.skyBlue,
+                    size: 20,
+                  ),
+                  filled: true,
+                  fillColor: D.surfaceHigh.withOpacity(0.5),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: Colors.white.withOpacity(0.05),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: D.skyBlue, width: 1.5),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                ),
+                items: sedes.map((s) {
+                  return DropdownMenuItem(
+                    value: int.tryParse(s.id) ?? 0,
+                    child: Text(s.nombreSede),
+                  );
+                }).toList(),
+                onChanged: canWrite
+                    ? (val) => setState(() => _selectedSedeId = val)
+                    : null,
+                validator: (v) => v == null ? 'Selecciona una sede' : null,
+              ),
+          ],
         );
       },
     );
   }
-}
 
-class _DotGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = D.border.withOpacity(0.2);
-    const spacing = 32.0;
-    for (double i = 0; i < size.width; i += spacing) {
-      for (double j = 0; j < size.height; j += spacing) {
-        canvas.drawCircle(Offset(i, j), 0.8, paint);
-      }
-    }
+  Widget _buildVisibilitySwitch({required bool canWrite}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          decoration: BoxDecoration(
+            color: D.surfaceHigh.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
+          ),
+          child: SwitchListTile(
+            title: const Text(
+              'Servicio Activo',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            subtitle: Text(
+              _isActive ? 'Visible en el sistema' : 'Oculto actualmente',
+              style: const TextStyle(color: D.slate400, fontSize: 12),
+            ),
+            value: _isActive,
+            activeColor: D.emerald,
+            activeTrackColor: D.emerald.withOpacity(0.3),
+            inactiveThumbColor: D.slate400,
+            inactiveTrackColor: D.bg.withOpacity(0.5),
+            onChanged: canWrite ? (v) => setState(() => _isActive = v) : null,
+          ),
+        ),
+      ),
+    );
   }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

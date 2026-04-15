@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:agente_viajes/core/widgets/SmallBtn_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/premium_palette.dart';
@@ -26,7 +27,8 @@ class _FaqListBody extends StatefulWidget {
   State<_FaqListBody> createState() => _FaqListBodyState();
 }
 
-class _FaqListBodyState extends State<_FaqListBody> with TickerProviderStateMixin {
+class _FaqListBodyState extends State<_FaqListBody>
+    with TickerProviderStateMixin {
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
   late final AnimationController _bgCtrl;
@@ -55,15 +57,13 @@ class _FaqListBodyState extends State<_FaqListBody> with TickerProviderStateMixi
         curve: const Interval(0, 0.4, curve: Curves.easeOut),
       ),
     );
-    _headerSlide = Tween<Offset>(
-      begin: const Offset(0, -0.05),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
-      ),
-    );
+    _headerSlide =
+        Tween<Offset>(begin: const Offset(0, -0.05), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _entryCtrl,
+            curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
+          ),
+        );
     _contentOpacity = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _entryCtrl,
@@ -85,7 +85,8 @@ class _FaqListBodyState extends State<_FaqListBody> with TickerProviderStateMixi
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
-    final canWrite = authState is AuthAuthenticated && authState.user.canWrite('faqs');
+    final canWrite =
+        authState is AuthAuthenticated && authState.user.canWrite('faqs');
     return Scaffold(
       backgroundColor: D.bg,
       body: Stack(
@@ -142,13 +143,15 @@ class _FaqListBodyState extends State<_FaqListBody> with TickerProviderStateMixi
               );
             },
           ),
-          
+
           // Progress overlay for saving
           BlocBuilder<FaqBloc, FaqState>(
             builder: (context, state) {
               if (state is FaqSaving) {
                 return Positioned(
-                  top: 0, left: 0, right: 0,
+                  top: 0,
+                  left: 0,
+                  right: 0,
                   child: LinearProgressIndicator(
                     backgroundColor: Colors.transparent,
                     valueColor: AlwaysStoppedAnimation<Color>(D.skyBlue),
@@ -217,8 +220,7 @@ class _FaqListBodyState extends State<_FaqListBody> with TickerProviderStateMixi
         ),
         if (canWrite)
           _AddBtn(
-            onPressed: () =>
-                Navigator.pushNamed(context, AppRouter.faqCreate),
+            onPressed: () => Navigator.pushNamed(context, AppRouter.faqCreate),
           ),
       ],
     );
@@ -241,15 +243,29 @@ class _FaqListBodyState extends State<_FaqListBody> with TickerProviderStateMixi
             decoration: InputDecoration(
               hintText: 'Buscar dudas o palabras clave...',
               hintStyle: TextStyle(color: D.slate600),
-              prefixIcon: Icon(Icons.search_rounded, color: D.slate400, size: 22),
+              prefixIcon: Icon(
+                Icons.search_rounded,
+                color: D.slate400,
+                size: 22,
+              ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-              suffixIcon: _searchQuery.isNotEmpty 
-                ? IconButton(
-                    icon: Icon(Icons.close_rounded, color: D.slate400, size: 20),
-                    onPressed: () { _searchCtrl.clear(); setState(() => _searchQuery = ''); },
-                  )
-                : null,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 15,
+              ),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: D.slate400,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
             ),
           ),
         ),
@@ -259,9 +275,12 @@ class _FaqListBodyState extends State<_FaqListBody> with TickerProviderStateMixi
 
   Widget _buildSliverContent(FaqState state) {
     List<Faq>? currentFaqs;
-    if (state is FaqsLoaded) currentFaqs = state.faqs;
-    else if (state is FaqSaving && state.faqs != null) currentFaqs = state.faqs;
-    else if (state is FaqSaved && state.faqs != null) currentFaqs = state.faqs;
+    if (state is FaqsLoaded)
+      currentFaqs = state.faqs;
+    else if (state is FaqSaving && state.faqs != null)
+      currentFaqs = state.faqs;
+    else if (state is FaqSaved && state.faqs != null)
+      currentFaqs = state.faqs;
 
     if (state is FaqLoading && currentFaqs == null) {
       return SliverList(
@@ -274,17 +293,18 @@ class _FaqListBodyState extends State<_FaqListBody> with TickerProviderStateMixi
 
     if (state is FaqError && currentFaqs == null) {
       return SliverFillRemaining(
-        child: Center(
-          child: _ErrorDisplay(message: state.message),
-        ),
+        child: Center(child: _ErrorDisplay(message: state.message)),
       );
     }
 
     if (currentFaqs != null) {
-      final filtered = currentFaqs.where((f) => 
-        f.question.toLowerCase().contains(_searchQuery.toLowerCase()) || 
-        f.answer.toLowerCase().contains(_searchQuery.toLowerCase())
-      ).toList();
+      final filtered = currentFaqs
+          .where(
+            (f) =>
+                f.question.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                f.answer.toLowerCase().contains(_searchQuery.toLowerCase()),
+          )
+          .toList();
 
       if (filtered.isEmpty) {
         return SliverFillRemaining(
@@ -313,7 +333,8 @@ class _FaqListBodyState extends State<_FaqListBody> with TickerProviderStateMixi
       context: context,
       builder: (ctx) => _PremiumConfirmDialog(
         title: '¿Eliminar FAQ?',
-        content: 'Esta acción no se puede deshacer. La pregunta se eliminará permanentemente.',
+        content:
+            'Esta acción no se puede deshacer. La pregunta se eliminará permanentemente.',
         onConfirm: () {
           context.read<FaqBloc>().add(DeleteFaq(faq.id));
           Navigator.pop(ctx);
@@ -328,7 +349,11 @@ class _FaqCard extends StatefulWidget {
   final int index;
   final VoidCallback onDelete;
 
-  const _FaqCard({required this.faq, required this.index, required this.onDelete});
+  const _FaqCard({
+    required this.faq,
+    required this.index,
+    required this.onDelete,
+  });
 
   @override
   State<_FaqCard> createState() => _FaqCardState();
@@ -352,15 +377,25 @@ class _FaqCardState extends State<_FaqCard> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             decoration: BoxDecoration(
-              color: widget.faq.isActive ? D.surface : D.surface.withOpacity(0.4),
+              color: widget.faq.isActive
+                  ? D.surface
+                  : D.surface.withOpacity(0.4),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: _isExpanded ? D.royalBlue.withOpacity(0.12) : D.royalBlue.withOpacity(0.05),
+                color: _isExpanded
+                    ? D.royalBlue.withOpacity(0.12)
+                    : D.royalBlue.withOpacity(0.05),
                 width: 1.5,
               ),
-              boxShadow: _isHovered ? [
-                BoxShadow(color: D.royalBlue.withOpacity(0.1), blurRadius: 20, spreadRadius: -5)
-              ] : null,
+              boxShadow: _isHovered
+                  ? [
+                      BoxShadow(
+                        color: D.royalBlue.withOpacity(0.1),
+                        blurRadius: 20,
+                        spreadRadius: -5,
+                      ),
+                    ]
+                  : null,
             ),
             child: Column(
               children: [
@@ -374,7 +409,11 @@ class _FaqCardState extends State<_FaqCard> {
                           color: D.royalBlue.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.help_outline_rounded, color: D.skyBlue, size: 20),
+                        child: Icon(
+                          Icons.help_outline_rounded,
+                          color: D.skyBlue,
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -387,18 +426,30 @@ class _FaqCardState extends State<_FaqCard> {
                                 color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                decoration: widget.faq.isActive ? null : TextDecoration.lineThrough,
+                                decoration: widget.faq.isActive
+                                    ? null
+                                    : TextDecoration.lineThrough,
                               ),
                             ),
                             if (!widget.faq.isActive)
-                              Text('Inactiva', style: TextStyle(color: D.rose, fontSize: 11, fontWeight: FontWeight.bold)),
+                              Text(
+                                'Inactiva',
+                                style: TextStyle(
+                                  color: D.rose,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                           ],
                         ),
                       ),
                       AnimatedRotation(
                         turns: _isExpanded ? 0.5 : 0.0,
                         duration: const Duration(milliseconds: 300),
-                        child: Icon(Icons.expand_more_rounded, color: D.slate400),
+                        child: Icon(
+                          Icons.expand_more_rounded,
+                          color: D.slate400,
+                        ),
                       ),
                     ],
                   ),
@@ -414,75 +465,57 @@ class _FaqCardState extends State<_FaqCard> {
                         const SizedBox(height: 12),
                         Text(
                           widget.faq.answer,
-                          style: TextStyle(color: D.slate400, fontSize: 14, height: 1.6),
+                          style: TextStyle(
+                            color: D.slate400,
+                            fontSize: 14,
+                            height: 1.6,
+                          ),
                         ),
                         const SizedBox(height: 24),
-                        Builder(builder: (context) {
-                          final canWrite = context.read<AuthBloc>().state is AuthAuthenticated &&
-                              (context.read<AuthBloc>().state as AuthAuthenticated).user.canWrite('faqs');
-                          return Row(
-                            children: [
-                              Text('Estado:', style: TextStyle(color: D.slate600, fontSize: 12, fontWeight: FontWeight.bold)),
-                              const SizedBox(width: 8),
-                              if (canWrite)
-                                Transform.scale(
-                                  scale: 0.8,
-                                  child: Switch(
-                                    value: widget.faq.isActive,
-                                    activeColor: D.emerald,
-                                    onChanged: (v) => context.read<FaqBloc>().add(ToggleFaqActive(widget.faq.id)),
+                        Builder(
+                          builder: (context) {
+                            final canWrite =
+                                context.read<AuthBloc>().state
+                                    is AuthAuthenticated &&
+                                (context.read<AuthBloc>().state
+                                        as AuthAuthenticated)
+                                    .user
+                                    .canWrite('faqs');
+                            return Row(
+                              children: [
+                                const Spacer(),
+                                if (canWrite) ...[
+                                  SmallBtn(
+                                    icon: Icons.edit_rounded,
+                                    color: D.skyBlue,
+                                    onTap: () => Navigator.pushNamed(
+                                      context,
+                                      AppRouter.faqEdit,
+                                      arguments: widget.faq,
+                                    ),
                                   ),
-                                ),
-                              const Spacer(),
-                              if (canWrite) ...[
-                                _ActionBtn(
-                                  icon: Icons.edit_rounded,
-                                  color: D.skyBlue,
-                                  onTap: () => Navigator.pushNamed(context, AppRouter.faqEdit, arguments: widget.faq),
-                                ),
-                                const SizedBox(width: 12),
-                                _ActionBtn(
-                                  icon: Icons.delete_outline_rounded,
-                                  color: D.rose,
-                                  onTap: widget.onDelete,
-                                ),
+                                  const SizedBox(width: 12),
+                                  SmallBtn(
+                                    icon: Icons.delete_outline_rounded,
+                                    color: D.rose,
+                                    onTap: widget.onDelete,
+                                  ),
+                                ],
                               ],
-                            ],
-                          );
-                        }),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
-                  crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                  crossFadeState: _isExpanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
                   duration: const Duration(milliseconds: 300),
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionBtn extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ActionBtn({required this.icon, required this.color, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: color.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Icon(icon, color: color, size: 18),
         ),
       ),
     );
@@ -546,6 +579,7 @@ class _DotGridPainter extends CustomPainter {
       }
     }
   }
+
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
@@ -556,7 +590,10 @@ class _SkelCard extends StatelessWidget {
     return Container(
       height: 80,
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(color: D.surface.withOpacity(0.5), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        color: D.surface.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(20),
+      ),
     );
   }
 }
@@ -574,14 +611,20 @@ class _EmptyDisplay extends StatelessWidget {
           Icon(Icons.help_center_outlined, size: 80, color: D.slate600),
           const SizedBox(height: 24),
           Text(
-            query.isEmpty ? 'No hay preguntas frecuentes' : 'No se encontraron resultados',
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            query.isEmpty
+                ? 'No hay preguntas frecuentes'
+                : 'No se encontraron resultados',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
-            query.isEmpty 
-              ? 'Comienza agregando una nueva pregunta' 
-              : 'Prueba con términos más generales',
+            query.isEmpty
+                ? 'Comienza agregando una nueva pregunta'
+                : 'Prueba con términos más generales',
             style: TextStyle(color: D.slate400, fontSize: 14),
           ),
         ],
@@ -616,7 +659,11 @@ class _PremiumConfirmDialog extends StatelessWidget {
   final String content;
   final VoidCallback onConfirm;
 
-  const _PremiumConfirmDialog({required this.title, required this.content, required this.onConfirm});
+  const _PremiumConfirmDialog({
+    required this.title,
+    required this.content,
+    required this.onConfirm,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -634,16 +681,33 @@ class _PremiumConfirmDialog extends StatelessWidget {
           children: [
             const Icon(Icons.warning_amber_rounded, color: D.rose, size: 54),
             const SizedBox(height: 20),
-            Text(title, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 12),
-            Text(content, textAlign: TextAlign.center, style: TextStyle(color: D.slate400, fontSize: 14)),
+            Text(
+              content,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: D.slate400, fontSize: 14),
+            ),
             const SizedBox(height: 32),
             Row(
               children: [
                 Expanded(
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar', style: TextStyle(color: D.slate400, fontWeight: FontWeight.w600)),
+                    child: const Text(
+                      'Cancelar',
+                      style: TextStyle(
+                        color: D.slate400,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -654,9 +718,14 @@ class _PremiumConfirmDialog extends StatelessWidget {
                       backgroundColor: D.rose,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
-                    child: const Text('Eliminar', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Eliminar',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],

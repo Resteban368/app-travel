@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/premium_palette.dart';
@@ -5,6 +6,7 @@ import '../../domain/entities/agente.dart';
 import '../bloc/agente_bloc.dart';
 import '../bloc/agente_event.dart';
 import '../bloc/agente_state.dart';
+import '../../../../core/widgets/premium_form_widgets.dart';
 
 // ─── Definición de módulos disponibles ───────────────────────────────────────
 
@@ -16,7 +18,6 @@ class _Module {
 }
 
 const _modules = [
-  // _Module(key: 'dashboard', label: 'Dashboard', icon: Icons.dashboard_rounded),
   _Module(key: 'tours', label: 'Tours y Promociones', icon: Icons.tour_rounded),
   _Module(key: 'sedes', label: 'Sedes', icon: Icons.store_rounded),
   _Module(
@@ -93,12 +94,12 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
   late final TextEditingController _correoCtrl;
   late final TextEditingController _passwordCtrl;
 
-  // Permisos: key = module key, value = 'lectura' | 'completo'
   late Map<String, String> _permisos;
   late bool _isActive;
 
   late final AnimationController _entryCtrl;
   late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
 
   bool get _isEditing => widget.agente != null;
 
@@ -113,12 +114,16 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
 
     _entryCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1000),
     );
     _fade = Tween<double>(
       begin: 0,
       end: 1,
     ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut));
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.05),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
     _entryCtrl.forward();
   }
 
@@ -131,17 +136,17 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
     super.dispose();
   }
 
-  void _showMsg(String msg, Color color) {
+  void _showMsg(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: color,
+        backgroundColor: isError ? D.rose : D.emerald,
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
-  void _save() {
+  void _save(BuildContext ctx) {
     if (!_formKey.currentState!.validate()) return;
 
     final agente = Agente(
@@ -154,13 +159,12 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
     );
 
     if (_isEditing) {
-      context.read<AgenteBloc>().add(UpdateAgente(agente));
+      ctx.read<AgenteBloc>().add(UpdateAgente(agente));
     } else {
-      context.read<AgenteBloc>().add(CreateAgente(agente));
+      ctx.read<AgenteBloc>().add(CreateAgente(agente));
     }
   }
 
-  // Dependencias: al activar una clave, estas claves también se activan automáticamente
   static const Map<String, List<String>> _dependencias = {
     'reservas': ['tours', 'pagosRealizados'],
   };
@@ -169,7 +173,6 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
     setState(() {
       if (enabled) {
         _permisos[key] = 'lectura';
-        // Activar módulos dependientes si aún no están activos
         final deps = _dependencias[key] ?? [];
         for (final dep in deps) {
           _permisos.putIfAbsent(dep, () => 'lectura');
@@ -193,88 +196,157 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
             _isEditing
                 ? 'Agente actualizado con éxito'
                 : 'Nuevo agente registrado',
-            D.emerald,
           );
           Navigator.pop(context);
         } else if (state is AgenteError) {
-          _showMsg(state.message, D.rose);
+          _showMsg(state.message, isError: true);
         }
       },
       child: Scaffold(
         backgroundColor: D.bg,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          foregroundColor: Colors.white,
-          title: Text(
-            _isEditing ? 'Editar Agente' : 'Nuevo Agente',
-            style: const TextStyle(fontWeight: FontWeight.w900, color: D.white),
-          ),
-        ),
         body: Stack(
           children: [
-            Positioned.fill(child: CustomPaint(painter: _DotGridPainter())),
-            FadeTransition(
-              opacity: _fade,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 32,
+            const PremiumBackground(),
+            CustomScrollView(
+              slivers: [
+                PremiumSliverAppBar(
+                  title: _isEditing ? 'Editar Agente' : 'Nuevo Agente',
+                  actions: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 680),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          // ── Datos del agente ──────────────────────────
-                          _buildSectionCard('DATOS DEL AGENTE', [
-                            _buildField(
-                              controller: _nombreCtrl,
-                              label: 'Nombre Completo *',
-                              icon: Icons.person_outline_rounded,
-                            ),
-                            const SizedBox(height: 24),
-                            _buildField(
-                              controller: _correoCtrl,
-                              label: 'Correo Electrónico *',
-                              icon: Icons.email_outlined,
-                              keyboardType: TextInputType.emailAddress,
-                            ),
-                            const SizedBox(height: 24),
-                            _buildActiveToggle(),
-                            const SizedBox(height: 24),
-                            if (!_isEditing)
-                              _buildField(
-                                controller: _passwordCtrl,
-                                label: _isEditing
-                                    ? 'Nueva Contraseña (Opcional)'
-                                    : 'Contraseña *',
-                                icon: Icons.lock_outline_rounded,
-                                isPassword: true,
-                                validator: (v) {
-                                  if (!_isEditing && (v == null || v.isEmpty)) {
-                                    return 'La contraseña es obligatoria para nuevos agentes';
-                                  }
-                                  return null;
-                                },
+                SliverToBoxAdapter(
+                  child: FadeTransition(
+                    opacity: _fade,
+                    child: SlideTransition(
+                      position: _slide,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 800),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Etiqueta de información
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: D.skyBlue.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: D.skyBlue.withOpacity(0.3)),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.person_add_alt_1_rounded, color: D.skyBlue, size: 16),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'GESTIÓN DE AGENTE',
+                                          style: TextStyle(
+                                            color: D.skyBlue,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  PremiumSectionCard(
+                                    title: 'DATOS PERSONALES',
+                                    icon: Icons.person_outline_rounded,
+                                    children: [
+                                      PremiumTextField(
+                                        controller: _nombreCtrl,
+                                        label: 'Nombre Completo *',
+                                        icon: Icons.person_rounded,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _correoCtrl,
+                                        label: 'Correo Electrónico *',
+                                        icon: Icons.email_rounded,
+                                        keyboardType: TextInputType.emailAddress,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      if (!_isEditing) ...[
+                                        PremiumTextField(
+                                          controller: _passwordCtrl,
+                                          label: 'Contraseña *',
+                                          icon: Icons.lock_rounded,
+                                          isPassword: true,
+                                          validator: (v) {
+                                            if (!_isEditing && (v == null || v.isEmpty)) {
+                                              return 'La contraseña es obligatoria';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        const SizedBox(height: 20),
+                                      ],
+                                      _buildActiveToggle(),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  PremiumSectionCard(
+                                    title: 'PERMISOS DE ACCESO',
+                                    icon: Icons.security_rounded,
+                                    children: [
+                                      Text(
+                                        'Define a qué módulos podrá acceder y qué acciones podrá realizar.',
+                                        style: TextStyle(color: D.slate400, fontSize: 13),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      Row(
+                                        children: [
+                                          _LegendBadge(
+                                            icon: Icons.visibility_rounded,
+                                            label: 'Ver solo',
+                                            color: D.skyBlue,
+                                          ),
+                                          const SizedBox(width: 16),
+                                          _LegendBadge(
+                                            icon: Icons.edit_rounded,
+                                            label: 'Ver y Editar',
+                                            color: D.emerald,
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 24),
+                                      ..._modules.map((m) => _buildModuleRow(m)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 48),
+
+                                  Builder(
+                                    builder: (ctx) => BlocBuilder<AgenteBloc, AgenteState>(
+                                      builder: (context, state) {
+                                        return PremiumActionButton(
+                                          label: _isEditing ? 'ACTUALIZAR AGENTE' : 'GUARDAR AGENTE',
+                                          icon: Icons.save_rounded,
+                                          isLoading: state is AgenteSaving,
+                                          onTap: () => _save(ctx),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 100),
+                                ],
                               ),
-                          ]),
-                          const SizedBox(height: 32),
-
-                          // ── Permisos por módulo ───────────────────────
-                          _buildPermissionsCard(),
-                          const SizedBox(height: 48),
-
-                          _buildSubmitButton(),
-                          const SizedBox(height: 100),
-                        ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -283,153 +355,37 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
   }
 
   Widget _buildActiveToggle() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: _isActive
-            ? D.emerald.withValues(alpha: 0.06)
-            : D.rose.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _isActive
-              ? D.emerald.withValues(alpha: 0.3)
-              : D.rose.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            _isActive ? Icons.check_circle_rounded : Icons.cancel_rounded,
-            color: _isActive ? D.emerald : D.rose,
-            size: 20,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          decoration: BoxDecoration(
+            color: D.surfaceHigh.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'ESTADO DEL AGENTE',
-                  style: TextStyle(
-                    color: D.slate600,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _isActive
-                      ? 'Activo — puede iniciar sesión'
-                      : 'Inactivo — acceso bloqueado',
-                  style: TextStyle(
-                    color: _isActive ? D.emerald : D.rose,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+          child: SwitchListTile(
+            title: const Text(
+              'Estado del Agente',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          Switch(
+            subtitle: Text(
+              _isActive ? 'Agente activo y con acceso' : 'Acceso bloqueado temporalmente',
+              style: TextStyle(color: _isActive ? D.emerald : D.rose, fontSize: 12),
+            ),
             value: _isActive,
-            activeThumbColor: D.emerald,
+            activeColor: D.emerald,
+            activeTrackColor: D.emerald.withOpacity(0.3),
             inactiveThumbColor: D.rose,
-            inactiveTrackColor: D.rose.withValues(alpha: 0.3),
+            inactiveTrackColor: D.rose.withOpacity(0.3),
             onChanged: (v) => setState(() => _isActive = v),
           ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Sección de permisos ──────────────────────────────────────────────────
-
-  Widget _buildPermissionsCard() {
-    final assignedCount = _permisos.length;
-    return Container(
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: D.surface,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: D.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: D.skyBlue,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'PERMISOS DE ACCESO',
-                style: TextStyle(
-                  color: D.slate400,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: D.skyBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: D.skyBlue.withValues(alpha: 0.3)),
-                ),
-                child: Text(
-                  '$assignedCount módulo${assignedCount != 1 ? 's' : ''}',
-                  style: const TextStyle(
-                    color: D.skyBlue,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Activa los módulos a los que tendrá acceso y define su nivel.',
-            style: TextStyle(color: D.slate600, fontSize: 12),
-          ),
-          const SizedBox(height: 20),
-
-          // Leyenda
-          Row(
-            children: [
-              _LegendBadge(
-                icon: Icons.visibility_rounded,
-                label: 'Lectura: solo ver',
-                color: D.skyBlue,
-              ),
-              const SizedBox(width: 16),
-              _LegendBadge(
-                icon: Icons.edit_rounded,
-                label: 'Completo: ver y editar',
-                color: D.emerald,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-          const SizedBox(height: 16),
-
-          // Filas de módulos
-          ...(_modules.map((m) => _buildModuleRow(m))),
-        ],
+        ),
       ),
     );
   }
@@ -440,71 +396,45 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
     final activeColor = level == 'completo' ? D.emerald : D.skyBlue;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 12),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: enabled
-              ? activeColor.withValues(alpha: 0.06)
-              : D.bg.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(14),
+          color: enabled ? activeColor.withOpacity(0.08) : D.surfaceHigh.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: enabled ? activeColor.withValues(alpha: 0.3) : D.border,
+            color: enabled ? activeColor.withOpacity(0.4) : Colors.white.withOpacity(0.05),
+            width: 1.5,
           ),
         ),
         child: Column(
           children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                module.label,
-                style: TextStyle(
-                  color: enabled ? Colors.white : D.slate400,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
             Row(
               children: [
-                // Ícono del módulo
                 Container(
-                  width: 34,
-                  height: 34,
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: (enabled ? activeColor : D.slate600).withValues(
-                      alpha: 0.1,
-                    ),
-                    borderRadius: BorderRadius.circular(9),
+                    color: (enabled ? activeColor : D.slate600).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     module.icon,
-                    color: enabled ? activeColor : D.slate600,
-                    size: 17,
+                    color: enabled ? activeColor : D.slate400,
+                    size: 20,
                   ),
                 ),
-                const SizedBox(width: 12),
-                // Nombre del módulo
-                // Expanded(
-                //   child: Text(
-                //     module.label,
-                //     style: TextStyle(
-                //       color: enabled ? Colors.white : D.slate400,
-                //       fontSize: 13,
-                //       fontWeight: FontWeight.w500,
-                //     ),
-                //   ),
-                // ),
-                // Selector lectura / completo (solo si está activo)
-                if (enabled) ...[
-                  _LevelSelector(
-                    level: level,
-                    onChanged: (v) => _setLevel(module.key, v),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    module.label,
+                    style: TextStyle(
+                      color: enabled ? Colors.white : D.slate400,
+                      fontSize: 14,
+                      fontWeight: enabled ? FontWeight.bold : FontWeight.normal,
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                ],
-                // Switch activar/desactivar módulo
+                ),
                 Switch(
                   value: enabled,
                   activeColor: activeColor,
@@ -512,205 +442,34 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                 ),
               ],
             ),
+            if (enabled) ...[
+              const SizedBox(height: 12),
+              const Divider(color: Colors.white10),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  _LevelChip(
+                    label: 'Lectura',
+                    icon: Icons.visibility_rounded,
+                    active: level == 'lectura',
+                    color: D.skyBlue,
+                    onTap: () => _setLevel(module.key, 'lectura'),
+                  ),
+                  const SizedBox(width: 8),
+                  _LevelChip(
+                    label: 'Completo',
+                    icon: Icons.edit_rounded,
+                    active: level == 'completo',
+                    color: D.emerald,
+                    onTap: () => _setLevel(module.key, 'completo'),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
-    );
-  }
-
-  // ─── Helpers ─────────────────────────────────────────────────────────────
-
-  Widget _buildSectionCard(String title, List<Widget> children) {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: D.surface,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: D.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: D.skyBlue,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  color: D.slate400,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          ...children,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    bool isPassword = false,
-    String? hint,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: D.slate600,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 8),
-        StatefulBuilder(
-          builder: (context, setLocal) {
-            return TextFormField(
-              controller: controller,
-              obscureText: isPassword,
-              keyboardType: keyboardType,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: InputDecoration(
-                prefixIcon: Icon(icon, color: D.slate800, size: 18),
-                hintText: hint,
-                hintStyle: TextStyle(color: D.slate800, fontSize: 13),
-                filled: true,
-                fillColor: D.bg.withValues(alpha: 0.3),
-                suffixIcon: isPassword || controller == _passwordCtrl
-                    ? IconButton(
-                        icon: Icon(
-                          isPassword
-                              ? Icons.visibility_off_rounded
-                              : Icons.visibility_rounded,
-                          color: D.slate800,
-                        ),
-                        onPressed: () => setLocal(() => isPassword = !isPassword),
-                      )
-                    : null,
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: D.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: D.skyBlue),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-              ),
-              validator:
-                  validator ??
-                  (v) =>
-                      (v == null || v.isEmpty) ? 'Este campo es obligatorio' : null,
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSubmitButton() {
-    return BlocBuilder<AgenteBloc, AgenteState>(
-      builder: (context, state) {
-        final isSaving = state is AgenteSaving;
-        return GestureDetector(
-          onTap: isSaving ? null : _save,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            height: 58,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [D.royalBlue, D.cyan]),
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: D.royalBlue.withValues(alpha: 0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Center(
-              child: isSaving
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.save_rounded, color: Colors.white),
-                        SizedBox(width: 12),
-                        Text(
-                          'GUARDAR AGENTE',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 13,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-// ─── Widget selector de nivel ─────────────────────────────────────────────────
-
-class _LevelSelector extends StatelessWidget {
-  final String level;
-  final ValueChanged<String> onChanged;
-  const _LevelSelector({required this.level, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _LevelChip(
-          label: 'Lectura',
-          icon: Icons.visibility_rounded,
-          active: level == 'lectura',
-          color: D.skyBlue,
-          onTap: () => onChanged('lectura'),
-        ),
-        const SizedBox(width: 4),
-        _LevelChip(
-          label: 'Completo',
-          icon: Icons.edit_rounded,
-          active: level == 'completo',
-          color: D.emerald,
-          onTap: () => onChanged('completo'),
-        ),
-      ],
     );
   }
 }
@@ -734,26 +493,26 @@ class _LevelChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? color.withValues(alpha: 0.15) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          color: active ? color.withOpacity(0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: active ? color.withValues(alpha: 0.5) : D.border,
+            color: active ? color.withOpacity(0.5) : Colors.white.withOpacity(0.1),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: active ? color : D.slate600, size: 11),
-            const SizedBox(width: 4),
+            Icon(icon, color: active ? color : D.slate400, size: 14),
+            const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: active ? color : D.slate600,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
+                color: active ? color : D.slate400,
+                fontSize: 12,
+                fontWeight: active ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           ],
@@ -778,35 +537,17 @@ class _LegendBadge extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: color, size: 12),
-        const SizedBox(width: 4),
+        Icon(icon, color: color, size: 14),
+        const SizedBox(width: 6),
         Text(
           label,
           style: TextStyle(
-            color: D.slate600,
-            fontSize: 11,
+            color: D.slate400,
+            fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
         ),
       ],
     );
   }
-}
-
-// ─── Painter de fondo ─────────────────────────────────────────────────────────
-
-class _DotGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = D.border.withValues(alpha: 0.2);
-    const spacing = 32.0;
-    for (double i = 0; i < size.width; i += spacing) {
-      for (double j = 0; j < size.height; j += spacing) {
-        canvas.drawCircle(Offset(i, j), 0.8, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

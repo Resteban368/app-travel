@@ -1,3 +1,4 @@
+import 'package:agente_viajes/core/widgets/SmallBtn_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:math' as math;
@@ -46,15 +47,13 @@ class _SedeListScreenState extends State<SedeListScreen>
         curve: const Interval(0, 0.4, curve: Curves.easeOut),
       ),
     );
-    _headerSlide = Tween<Offset>(
-      begin: const Offset(0, -0.05),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
-      ),
-    );
+    _headerSlide =
+        Tween<Offset>(begin: const Offset(0, -0.05), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _entryCtrl,
+            curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
+          ),
+        );
     _contentOpacity = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _entryCtrl,
@@ -152,7 +151,12 @@ class _SedeListScreenState extends State<SedeListScreen>
                     _buildFilters(context),
                     SliverFadeTransition(
                       opacity: _contentOpacity,
-                      sliver: _buildSliverContent(context, state, filtered, canWrite),
+                      sliver: _buildSliverContent(
+                        context,
+                        state,
+                        filtered,
+                        canWrite,
+                      ),
                     ),
                     const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
                   ],
@@ -219,7 +223,10 @@ class _SedeListScreenState extends State<SedeListScreen>
         if (canWrite)
           _AddBtn(
             onPressed: () async {
-              final result = await Navigator.pushNamed(context, AppRouter.sedeForm);
+              final result = await Navigator.pushNamed(
+                context,
+                AppRouter.sedeForm,
+              );
               if (result == true && context.mounted) {
                 context.read<SedeBloc>().add(LoadSedes());
               }
@@ -463,31 +470,10 @@ class _SedeCardState extends State<_SedeCard> {
   }
 
   Widget _buildDesktopActions(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          onPressed: () =>
-              context.read<SedeBloc>().add(ToggleSedeActive(widget.sede.id)),
-          icon: Icon(
-            widget.sede.isActive
-                ? Icons.visibility_rounded
-                : Icons.visibility_off_rounded,
-            color: D.slate400,
-            size: 20,
-          ),
-          tooltip: 'Cambiar Estado',
-        ),
-        IconButton(
-          onPressed: () => _confirmDelete(context),
-          icon: const Icon(
-            Icons.delete_outline_rounded,
-            color: D.rose,
-            size: 20,
-          ),
-          tooltip: 'Eliminar Sede',
-        ),
-      ],
+    return SmallBtn(
+      icon: Icons.delete_outline_rounded,
+      color: D.rose,
+      onTap: () => _confirmDelete(context),
     );
   }
 }

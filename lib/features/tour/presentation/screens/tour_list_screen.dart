@@ -1,3 +1,4 @@
+import 'package:agente_viajes/core/widgets/SmallBtn_widget.dart';
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -34,7 +35,11 @@ class _TourListScreenState extends State<TourListScreen>
   final _maxPriceCtrl = TextEditingController();
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
-  final _currencyFormat = NumberFormat.currency(locale: 'es_CO', symbol: '\$', decimalDigits: 0);
+  final _currencyFormat = NumberFormat.currency(
+    locale: 'es_CO',
+    symbol: '\$',
+    decimalDigits: 0,
+  );
 
   @override
   void initState() {
@@ -55,15 +60,13 @@ class _TourListScreenState extends State<TourListScreen>
         curve: const Interval(0, 0.4, curve: Curves.easeOut),
       ),
     );
-    _headerSlide = Tween<Offset>(
-      begin: const Offset(0, -0.05),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
-      ),
-    );
+    _headerSlide =
+        Tween<Offset>(begin: const Offset(0, -0.05), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _entryCtrl,
+            curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
+          ),
+        );
     _contentOpacity = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _entryCtrl,
@@ -85,16 +88,31 @@ class _TourListScreenState extends State<TourListScreen>
   }
 
   void _applyFilters() {
-    final minPrice = double.tryParse(_minPriceCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''));
-    final maxPrice = double.tryParse(_maxPriceCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''));
-    context.read<TourBloc>().add(FilterTours(startDate: _dateRange?.start, endDate: _dateRange?.end, minPrice: minPrice, maxPrice: maxPrice));
+    final minPrice = double.tryParse(
+      _minPriceCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+    );
+    final maxPrice = double.tryParse(
+      _maxPriceCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+    );
+    context.read<TourBloc>().add(
+      FilterTours(
+        startDate: _dateRange?.start,
+        endDate: _dateRange?.end,
+        minPrice: minPrice,
+        maxPrice: maxPrice,
+      ),
+    );
     setState(() => _filtersVisible = false);
   }
 
   void _clearFilters() {
     _minPriceCtrl.clear();
     _maxPriceCtrl.clear();
-    setState(() { _dateRange = null; _searchQuery = ''; _searchCtrl.clear(); });
+    setState(() {
+      _dateRange = null;
+      _searchQuery = '';
+      _searchCtrl.clear();
+    });
     context.read<TourBloc>().add(LoadTours());
   }
 
@@ -114,7 +132,10 @@ class _TourListScreenState extends State<TourListScreen>
                   Positioned(
                     top: -150 + math.sin(_bgCtrl.value * math.pi * 2) * 40,
                     right: -100 + math.cos(_bgCtrl.value * math.pi * 2) * 30,
-                    child: _Orb(color: D.royalBlue.withOpacity(0.12), size: 500),
+                    child: _Orb(
+                      color: D.royalBlue.withOpacity(0.12),
+                      size: 500,
+                    ),
                   ),
                   Positioned(
                     bottom: -100 + math.cos(_bgCtrl.value * math.pi * 2) * 50,
@@ -130,11 +151,15 @@ class _TourListScreenState extends State<TourListScreen>
               create: (_) => sl<SedeBloc>()..add(LoadSedes()),
               child: BlocBuilder<SedeBloc, SedeState>(
                 builder: (context, sedeState) {
-                  final sedes = sedeState is SedesLoaded ? sedeState.sedes : <Sede>[];
+                  final sedes = sedeState is SedesLoaded
+                      ? sedeState.sedes
+                      : <Sede>[];
                   return BlocBuilder<TourBloc, TourState>(
                     builder: (context, state) {
                       final authState = context.watch<AuthBloc>().state;
-                      final canWrite = authState is AuthAuthenticated && authState.user.canWrite('tours');
+                      final canWrite =
+                          authState is AuthAuthenticated &&
+                          authState.user.canWrite('tours');
 
                       List<Tour>? tours;
                       if (state is ToursLoaded) {
@@ -147,7 +172,9 @@ class _TourListScreenState extends State<TourListScreen>
 
                       if (tours != null && _searchQuery.isNotEmpty) {
                         final query = _searchQuery.toLowerCase();
-                        tours = tours.where((t) => t.name.toLowerCase().contains(query)).toList();
+                        tours = tours
+                            .where((t) => t.name.toLowerCase().contains(query))
+                            .toList();
                       }
 
                       return CustomScrollView(
@@ -210,11 +237,7 @@ class _TourListScreenState extends State<TourListScreen>
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.explore_rounded,
-                    color: Colors.white,
-                    size: 10,
-                  ),
+                  Icon(Icons.explore_rounded, color: Colors.white, size: 10),
                   SizedBox(width: 6),
                   Text(
                     'GESTIÓN DE TOURS',
@@ -247,8 +270,7 @@ class _TourListScreenState extends State<TourListScreen>
         ),
         if (canWrite)
           _AddBtn(
-            onPressed: () =>
-                Navigator.pushNamed(context, AppRouter.tourCreate),
+            onPressed: () => Navigator.pushNamed(context, AppRouter.tourCreate),
           ),
       ],
     );
@@ -262,7 +284,11 @@ class _TourListScreenState extends State<TourListScreen>
           children: [
             Expanded(
               child: Container(
-                decoration: BoxDecoration(color: D.surface.withOpacity(0.6), borderRadius: BorderRadius.circular(20), border: Border.all(color: D.border.withOpacity(0.5))),
+                decoration: BoxDecoration(
+                  color: D.surface.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: D.border.withOpacity(0.5)),
+                ),
                 child: TextField(
                   controller: _searchCtrl,
                   onChanged: (v) => setState(() => _searchQuery = v),
@@ -270,9 +296,16 @@ class _TourListScreenState extends State<TourListScreen>
                   decoration: InputDecoration(
                     hintText: 'Buscar experiencia...',
                     hintStyle: TextStyle(color: D.slate600, fontSize: 14),
-                    prefixIcon: Icon(Icons.search_rounded, color: D.slate600, size: 20),
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: D.slate600,
+                      size: 20,
+                    ),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 15,
+                    ),
                   ),
                 ),
               ),
@@ -293,34 +326,71 @@ class _TourListScreenState extends State<TourListScreen>
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(color: D.surface, borderRadius: BorderRadius.circular(28), border: Border.all(color: D.border)),
+        decoration: BoxDecoration(
+          color: D.surface,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: D.border),
+        ),
         child: Column(
           children: [
             Row(
               children: [
-                Expanded(child: _buildFilterInput('Precio Mín', _minPriceCtrl, Icons.attach_money_rounded)),
+                Expanded(
+                  child: _buildFilterInput(
+                    'Precio Mín',
+                    _minPriceCtrl,
+                    Icons.attach_money_rounded,
+                  ),
+                ),
                 const SizedBox(width: 16),
-                Expanded(child: _buildFilterInput('Precio Máx', _maxPriceCtrl, Icons.attach_money_rounded)),
+                Expanded(
+                  child: _buildFilterInput(
+                    'Precio Máx',
+                    _maxPriceCtrl,
+                    Icons.attach_money_rounded,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
             _DateRangePicker(
               range: _dateRange,
               onTap: () async {
-                final range = await showDateRangePicker(context: context, firstDate: DateTime(2023), lastDate: DateTime(2030));
+                final range = await showDateRangePicker(
+                  context: context,
+                  firstDate: DateTime(2023),
+                  lastDate: DateTime(2030),
+                );
                 if (range != null) setState(() => _dateRange = range);
               },
             ),
             const SizedBox(height: 24),
             Row(
               children: [
-                Expanded(child: TextButton(onPressed: _clearFilters, child: const Text('Limpiar Todo', style: TextStyle(color: D.slate400)))),
+                Expanded(
+                  child: TextButton(
+                    onPressed: _clearFilters,
+                    child: const Text(
+                      'Limpiar Todo',
+                      style: TextStyle(color: D.slate400),
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: _applyFilters,
-                    style: ElevatedButton.styleFrom(backgroundColor: D.royalBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 14)),
-                    child: const Text('Aplicar Filtros', style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: D.royalBlue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text(
+                      'Aplicar Filtros',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
@@ -331,32 +401,66 @@ class _TourListScreenState extends State<TourListScreen>
     );
   }
 
-  Widget _buildFilterInput(String label, TextEditingController ctrl, IconData icon) {
+  Widget _buildFilterInput(
+    String label,
+    TextEditingController ctrl,
+    IconData icon,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(color: D.slate600, fontSize: 11, fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: TextStyle(
+            color: D.slate600,
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(color: D.bg.withOpacity(0.5), borderRadius: BorderRadius.circular(12), border: Border.all(color: D.border)),
+          decoration: BoxDecoration(
+            color: D.bg.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: D.border),
+          ),
           child: TextField(
             controller: ctrl,
             keyboardType: TextInputType.number,
             style: const TextStyle(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(border: InputBorder.none, hintText: '\$', hintStyle: TextStyle(color: D.slate800)),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: '\$',
+              hintStyle: TextStyle(color: D.slate800),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildListContent(BuildContext context, TourState state, List<Tour>? tours, bool canWrite, List<Sede> sedes) {
+  Widget _buildListContent(
+    BuildContext context,
+    TourState state,
+    List<Tour>? tours,
+    bool canWrite,
+    List<Sede> sedes,
+  ) {
     if (state is TourLoading && tours == null) {
-      return SliverList(delegate: SliverChildBuilderDelegate((_, i) => _SkelCard(), childCount: 3));
+      return SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (_, i) => _SkelCard(),
+          childCount: 3,
+        ),
+      );
     }
     if (tours == null || tours.isEmpty) {
-      return SliverFillRemaining(child: _EmptyState(isSearch: _searchQuery.isNotEmpty || _dateRange != null));
+      return SliverFillRemaining(
+        child: _EmptyState(
+          isSearch: _searchQuery.isNotEmpty || _dateRange != null,
+        ),
+      );
     }
 
     return SliverPadding(
@@ -364,7 +468,13 @@ class _TourListScreenState extends State<TourListScreen>
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
           final tour = tours[index];
-          return _TourCard(tour: tour, canWrite: canWrite, index: index, currencyFormat: _currencyFormat, sedes: sedes);
+          return _TourCard(
+            tour: tour,
+            canWrite: canWrite,
+            index: index,
+            currencyFormat: _currencyFormat,
+            sedes: sedes,
+          );
         }, childCount: tours.length),
       ),
     );
@@ -377,7 +487,13 @@ class _TourCard extends StatefulWidget {
   final int index;
   final NumberFormat currencyFormat;
   final List<Sede> sedes;
-  const _TourCard({required this.tour, required this.canWrite, required this.index, required this.currencyFormat, required this.sedes});
+  const _TourCard({
+    required this.tour,
+    required this.canWrite,
+    required this.index,
+    required this.currencyFormat,
+    required this.sedes,
+  });
 
   @override
   State<_TourCard> createState() => _TourCardState();
@@ -391,7 +507,8 @@ class _TourCardState extends State<_TourCard> {
       context: context,
       builder: (ctx) => _PremiumConfirmDialog(
         title: '¿Eliminar Experiencia?',
-        content: 'Confirma si deseas eliminar "${widget.tour.name}". Esta acción no se puede deshacer.',
+        content:
+            'Confirma si deseas eliminar "${widget.tour.name}". Esta acción no se puede deshacer.',
         onConfirm: () {
           context.read<TourBloc>().add(DeleteTour(widget.tour.id));
           Navigator.pop(ctx);
@@ -414,11 +531,23 @@ class _TourCardState extends State<_TourCard> {
         decoration: BoxDecoration(
           color: isActive ? D.surface : D.surface.withOpacity(0.4),
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: _hovered ? D.royalBlue.withOpacity(0.5) : D.border, width: 1.5),
-          boxShadow: _hovered ? [BoxShadow(color: D.royalBlue.withOpacity(0.15), blurRadius: 40, offset: const Offset(0, 10))] : null,
+          border: Border.all(
+            color: _hovered ? D.royalBlue.withOpacity(0.5) : D.border,
+            width: 1.5,
+          ),
+          boxShadow: _hovered
+              ? [
+                  BoxShadow(
+                    color: D.royalBlue.withOpacity(0.15),
+                    blurRadius: 40,
+                    offset: const Offset(0, 10),
+                  ),
+                ]
+              : null,
         ),
         child: InkWell(
-          onTap: () => Navigator.pushNamed(context, AppRouter.tourEdit, arguments: tour),
+          onTap: () =>
+              Navigator.pushNamed(context, AppRouter.tourEdit, arguments: tour),
           borderRadius: BorderRadius.circular(28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -427,64 +556,127 @@ class _TourCardState extends State<_TourCard> {
               Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(26),
+                    ),
                     child: Container(
-                      height: 180, width: double.infinity,
+                      height: 180,
+                      width: double.infinity,
                       decoration: BoxDecoration(color: D.bg),
                       child: Image.network(
                         tour.imageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Center(child: Icon(Icons.image_not_supported_rounded, color: D.slate800, size: 40)),
+                        errorBuilder: (_, __, ___) => Center(
+                          child: Icon(
+                            Icons.image_not_supported_rounded,
+                            color: D.slate800,
+                            size: 40,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                   Positioned(
-                    top: 16, left: 16,
-                    child: _Tag(label: tour.isPromotion ? 'PROMO' : 'TOUR', color: tour.isPromotion ? D.gold : D.royalBlue),
+                    top: 16,
+                    left: 16,
+                    child: _Tag(
+                      label: tour.isPromotion ? 'PROMO' : 'TOUR',
+                      color: tour.isPromotion ? D.gold : D.royalBlue,
+                    ),
                   ),
                   if (tour.isDraft)
-                    Positioned(top: 16, right: 16, child: _Tag(label: 'BORRADOR', color: D.rose)),
+                    Positioned(
+                      top: 16,
+                      right: 16,
+                      child: _Tag(label: 'BORRADOR', color: D.rose),
+                    ),
                   Positioned(
-                    bottom: 0, left: 0, right: 0,
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
                     child: Container(
                       height: 80,
-                      decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [D.surface, Colors.transparent])),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [D.surface, Colors.transparent],
+                        ),
+                      ),
                     ),
                   ),
                   Positioned(
-                    bottom: 12, right: 16,
+                    bottom: 12,
+                    right: 16,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(color: D.royalBlue, borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)]),
-                      child: Text(widget.currencyFormat.format(tour.price), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: D.royalBlue,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black26, blurRadius: 10),
+                        ],
+                      ),
+                      child: Text(
+                        widget.currencyFormat.format(tour.price),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
-              
+
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(tour.name, style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
+                    Text(
+                      tour.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
                     const SizedBox(height: 12),
-                    _InfoRow(icon: Icons.calendar_today_rounded, text: '${DateFormat('MMM dd').format(tour.startDate)} - ${DateFormat('MMM dd, yyyy').format(tour.endDate)}'),
+                    _InfoRow(
+                      icon: Icons.calendar_today_rounded,
+                      text:
+                          '${DateFormat('MMM dd').format(tour.startDate)} - ${DateFormat('MMM dd, yyyy').format(tour.endDate)}',
+                    ),
                     const SizedBox(height: 8),
-                    _InfoRow(icon: Icons.place_rounded, text: 'Salida: ${tour.departurePoint}'),
+                    _InfoRow(
+                      icon: Icons.place_rounded,
+                      text: 'Salida: ${tour.departurePoint}',
+                    ),
                     const SizedBox(height: 8),
                     _InfoRow(
                       icon: Icons.business_rounded,
                       text: () {
                         if (tour.sedeId == null) return 'Sin sede asignada';
-                        final sede = widget.sedes.where((s) => s.id == tour.sedeId).firstOrNull;
-                        return sede != null ? 'Sede: ${sede.nombreSede}' : 'Sede #${tour.sedeId}';
+                        final sede = widget.sedes
+                            .where((s) => s.id == tour.sedeId)
+                            .firstOrNull;
+                        return sede != null
+                            ? 'Sede: ${sede.nombreSede}'
+                            : 'Sede #${tour.sedeId}';
                       }(),
                     ),
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        Expanded(child: _InclusionsStrip(items: tour.inclusions)),
+                        Expanded(
+                          child: _InclusionsStrip(items: tour.inclusions),
+                        ),
                         if (widget.canWrite) _buildAdminActions(context),
                       ],
                     ),
@@ -499,33 +691,52 @@ class _TourCardState extends State<_TourCard> {
   }
 
   Widget _buildAdminActions(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _ActionButton(icon: widget.tour.isActive ? Icons.visibility_rounded : Icons.visibility_off_rounded, color: D.slate400, onTap: () => context.read<TourBloc>().add(ToggleTourActive(widget.tour.id))),
-        const SizedBox(width: 8),
-        _ActionButton(icon: Icons.delete_outline_rounded, color: D.rose, onTap: () => _confirmDelete(context)),
-      ],
+    return SmallBtn(
+      icon: Icons.delete_outline_rounded,
+      color: D.rose,
+      onTap: () => _confirmDelete(context),
     );
   }
 }
 
 class _Tag extends StatelessWidget {
-  final String label; final Color color;
+  final String label;
+  final Color color;
   const _Tag({required this.label, required this.color});
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)]),
-    child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(8),
+      boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+    ),
+    child: Text(
+      label,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 10,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 1,
+      ),
+    ),
   );
 }
 
 class _InfoRow extends StatelessWidget {
-  final IconData icon; final String text;
+  final IconData icon;
+  final String text;
   const _InfoRow({required this.icon, required this.text});
   @override
-  Widget build(BuildContext context) => Row(children: [Icon(icon, color: D.slate600, size: 14), const SizedBox(width: 8), Expanded(child: Text(text, style: TextStyle(color: D.slate400, fontSize: 13)))]);
+  Widget build(BuildContext context) => Row(
+    children: [
+      Icon(icon, color: D.slate600, size: 14),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(text, style: TextStyle(color: D.slate400, fontSize: 13)),
+      ),
+    ],
+  );
 }
 
 class _InclusionsStrip extends StatelessWidget {
@@ -540,23 +751,24 @@ class _InclusionsStrip extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(width: 8),
       itemBuilder: (context, i) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(color: D.bg, borderRadius: BorderRadius.circular(8), border: Border.all(color: D.border)),
+        decoration: BoxDecoration(
+          color: D.bg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: D.border),
+        ),
         alignment: Alignment.center,
-        child: Text(items[i], style: TextStyle(color: D.slate400, fontSize: 11)),
+        child: Text(
+          items[i],
+          style: TextStyle(color: D.slate400, fontSize: 11),
+        ),
       ),
     ),
   );
 }
 
-class _ActionButton extends StatelessWidget {
-  final IconData icon; final Color color; final VoidCallback onTap;
-  const _ActionButton({required this.icon, required this.color, required this.onTap});
-  @override
-  Widget build(BuildContext context) => IconButton(onPressed: onTap, icon: Icon(icon, color: color, size: 20), padding: EdgeInsets.zero, constraints: const BoxConstraints());
-}
-
 class _FilterToggle extends StatelessWidget {
-  final bool isActive; final VoidCallback onTap;
+  final bool isActive;
+  final VoidCallback onTap;
   const _FilterToggle({required this.isActive, required this.onTap});
   @override
   Widget build(BuildContext context) => InkWell(
@@ -565,28 +777,48 @@ class _FilterToggle extends StatelessWidget {
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: isActive ? D.royalBlue : D.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: isActive ? D.royalBlue : D.border)),
-      child: Icon(isActive ? Icons.filter_list_off_rounded : Icons.filter_list_rounded, color: isActive ? Colors.white : D.slate600, size: 24),
+      decoration: BoxDecoration(
+        color: isActive ? D.royalBlue : D.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isActive ? D.royalBlue : D.border),
+      ),
+      child: Icon(
+        isActive ? Icons.filter_list_off_rounded : Icons.filter_list_rounded,
+        color: isActive ? Colors.white : D.slate600,
+        size: 24,
+      ),
     ),
   );
 }
 
 class _DateRangePicker extends StatelessWidget {
-  final DateTimeRange? range; final VoidCallback onTap;
+  final DateTimeRange? range;
+  final VoidCallback onTap;
   const _DateRangePicker({required this.range, required this.onTap});
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: onTap,
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(color: D.bg.withOpacity(0.5), borderRadius: BorderRadius.circular(16), border: Border.all(color: D.border)),
-      child: Row(children: [
-        Icon(Icons.date_range_rounded, color: D.slate600, size: 20),
-        const SizedBox(width: 12),
-        Text(range == null ? 'Cualquier Fecha' : '${DateFormat('dd/MM/yyyy').format(range!.start)} - ${DateFormat('dd/MM/yyyy').format(range!.end)}', style: TextStyle(color: range == null ? D.slate600 : Colors.white)),
-        const Spacer(),
-        Icon(Icons.expand_more_rounded, color: D.slate600),
-      ]),
+      decoration: BoxDecoration(
+        color: D.bg.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: D.border),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.date_range_rounded, color: D.slate600, size: 20),
+          const SizedBox(width: 12),
+          Text(
+            range == null
+                ? 'Cualquier Fecha'
+                : '${DateFormat('dd/MM/yyyy').format(range!.start)} - ${DateFormat('dd/MM/yyyy').format(range!.end)}',
+            style: TextStyle(color: range == null ? D.slate600 : Colors.white),
+          ),
+          const Spacer(),
+          Icon(Icons.expand_more_rounded, color: D.slate600),
+        ],
+      ),
     ),
   );
 }
@@ -620,10 +852,18 @@ class _AddBtn extends StatelessWidget {
 }
 
 class _Orb extends StatelessWidget {
-  final Color color; final double size;
+  final Color color;
+  final double size;
   const _Orb({required this.color, required this.size});
   @override
-  Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [color, Colors.transparent])));
+  Widget build(BuildContext context) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: RadialGradient(colors: [color, Colors.transparent]),
+    ),
+  );
 }
 
 class _DotGridPainter extends CustomPainter {
@@ -637,44 +877,121 @@ class _DotGridPainter extends CustomPainter {
       }
     }
   }
+
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 
 class _SkelCard extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => Container(height: 300, margin: const EdgeInsets.only(bottom: 20, left: 24, right: 24), decoration: BoxDecoration(color: D.surface.withOpacity(0.5), borderRadius: BorderRadius.circular(28)));
+  Widget build(BuildContext context) => Container(
+    height: 300,
+    margin: const EdgeInsets.only(bottom: 20, left: 24, right: 24),
+    decoration: BoxDecoration(
+      color: D.surface.withOpacity(0.5),
+      borderRadius: BorderRadius.circular(28),
+    ),
+  );
 }
 
 class _EmptyState extends StatelessWidget {
   final bool isSearch;
   const _EmptyState({required this.isSearch});
   @override
-  Widget build(BuildContext context) => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(isSearch ? Icons.search_off_rounded : Icons.tour_rounded, size: 80, color: D.slate800), const SizedBox(height: 16), Text(isSearch ? 'No hay tours bajo esos filtros' : 'Aún no hay tours registrados', style: TextStyle(color: D.slate600, fontSize: 16, fontWeight: FontWeight.bold))]));
+  Widget build(BuildContext context) => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          isSearch ? Icons.search_off_rounded : Icons.tour_rounded,
+          size: 80,
+          color: D.slate800,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          isSearch
+              ? 'No hay tours bajo esos filtros'
+              : 'Aún no hay tours registrados',
+          style: TextStyle(
+            color: D.slate600,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _PremiumConfirmDialog extends StatelessWidget {
-  final String title, content; final VoidCallback onConfirm;
-  const _PremiumConfirmDialog({required this.title, required this.content, required this.onConfirm});
+  final String title, content;
+  final VoidCallback onConfirm;
+  const _PremiumConfirmDialog({
+    required this.title,
+    required this.content,
+    required this.onConfirm,
+  });
   @override
   Widget build(BuildContext context) => Dialog(
     backgroundColor: Colors.transparent,
     child: Container(
       padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(color: D.surface, borderRadius: BorderRadius.circular(28), border: Border.all(color: D.border)),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.warning_amber_rounded, color: D.rose, size: 54),
-        const SizedBox(height: 20),
-        Text(title, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
-        Text(content, textAlign: TextAlign.center, style: TextStyle(color: D.slate400, fontSize: 14)),
-        const SizedBox(height: 32),
-        Row(children: [
-          Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar', style: TextStyle(color: D.slate400)))),
-          const SizedBox(width: 12),
-          Expanded(child: ElevatedButton(onPressed: onConfirm, style: ElevatedButton.styleFrom(backgroundColor: D.rose, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))), child: const Text('Confirmar', style: TextStyle(fontWeight: FontWeight.bold)))),
-        ]),
-      ]),
+      decoration: BoxDecoration(
+        color: D.surface,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: D.border),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: D.rose, size: 54),
+          const SizedBox(height: 20),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            content,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: D.slate400, fontSize: 14),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(color: D.slate400),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: onConfirm,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: D.rose,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    'Confirmar',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     ),
   );
 }

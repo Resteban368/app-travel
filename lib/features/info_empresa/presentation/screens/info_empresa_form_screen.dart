@@ -1,12 +1,13 @@
+import 'dart:ui';
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'dart:math' as math;
 import '../../../../core/theme/premium_palette.dart';
 import '../../domain/entities/info_empresa.dart';
 import '../bloc/info_empresa_bloc.dart';
 import '../bloc/info_empresa_event.dart';
 import '../bloc/info_empresa_state.dart';
+import '../../../../core/widgets/premium_form_widgets.dart';
 
 class InfoEmpresaFormScreen extends StatefulWidget {
   final InfoEmpresa? info;
@@ -16,9 +17,9 @@ class InfoEmpresaFormScreen extends StatefulWidget {
   State<InfoEmpresaFormScreen> createState() => _InfoEmpresaFormScreenState();
 }
 
-class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen> with SingleTickerProviderStateMixin {
+class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  late final AnimationController _bgCtrl;
 
   late TextEditingController _nombreCtrl;
   late TextEditingController _direccionCtrl;
@@ -34,10 +35,15 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen> with Sing
 
   List<RedSocial> _redesSociales = [];
 
+  late final AnimationController _entryCtrl;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  bool get _isEditing => widget.info != null;
+
   @override
   void initState() {
     super.initState();
-    _bgCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 15))..repeat();
     _nombreCtrl = TextEditingController(text: widget.info?.nombre);
     _direccionCtrl = TextEditingController(text: widget.info?.direccion);
     _misionCtrl = TextEditingController(text: widget.info?.mision);
@@ -50,12 +56,28 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen> with Sing
     _correoCtrl = TextEditingController(text: widget.info?.correo);
     _webCtrl = TextEditingController(text: widget.info?.sitioWeb);
 
-    _redesSociales = widget.info?.redesSociales != null ? List.from(widget.info!.redesSociales) : [];
+    _redesSociales = widget.info?.redesSociales != null
+        ? List.from(widget.info!.redesSociales)
+        : [];
+
+    _entryCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _fade = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut));
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.05),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
+    _entryCtrl.forward();
   }
 
   @override
   void dispose() {
-    _bgCtrl.dispose();
+    _entryCtrl.dispose();
     _nombreCtrl.dispose();
     _direccionCtrl.dispose();
     _misionCtrl.dispose();
@@ -70,22 +92,17 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen> with Sing
     super.dispose();
   }
 
-  InputDecoration _inputDecoration(IconData icon, String label) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: TextStyle(color: D.slate400, fontSize: 13),
-      prefixIcon: Icon(icon, color: D.skyBlue, size: 20),
-      filled: true,
-      fillColor: D.surfaceHigh.withOpacity(0.5),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: D.border)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: D.royalBlue)),
-      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: D.rose.withOpacity(0.5))),
-      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: D.rose)),
-      floatingLabelStyle: const TextStyle(color: D.skyBlue),
+  void _showMsg(BuildContext context, String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? D.rose : D.emerald,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
-  void _onSave() {
+  void _onSave(BuildContext context) {
     if (!_formKey.currentState!.validate()) return;
 
     final info = InfoEmpresa(
@@ -119,33 +136,62 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen> with Sing
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: D.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: D.border)),
-        title: const Text('Añadir Red Social', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: D.border),
+        ),
+        title: const Text(
+          'Añadir Red Social',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-                controller: nCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: _inputDecoration(Icons.label_rounded, 'Nombre (ej: Instagram)')),
+            PremiumTextField(
+              controller: nCtrl,
+              label: 'Nombre (ej: Instagram) *',
+              icon: Icons.label_rounded,
+            ),
             const SizedBox(height: 16),
-            TextField(
-                controller: lCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: _inputDecoration(Icons.link_rounded, 'Link / URL')),
+            PremiumTextField(
+              controller: lCtrl,
+              label: 'Enlace / URL *',
+              icon: Icons.link_rounded,
+            ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancelar', style: TextStyle(color: D.slate400))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancelar', style: TextStyle(color: D.slate400)),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: D.royalBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: D.royalBlue,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
             onPressed: () {
               if (nCtrl.text.isNotEmpty && lCtrl.text.isNotEmpty) {
-                setState(() => _redesSociales.add(RedSocial(nombre: nCtrl.text.trim(), link: lCtrl.text.trim())));
+                setState(
+                  () => _redesSociales.add(
+                    RedSocial(
+                      nombre: nCtrl.text.trim(),
+                      link: lCtrl.text.trim(),
+                    ),
+                  ),
+                );
                 Navigator.pop(ctx);
               }
             },
-            child: const Text('Añadir', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Añadir',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -155,224 +201,376 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen> with Sing
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
-    final isAdmin = authState is AuthAuthenticated && authState.user.role == 'admin';
+    final isAdmin =
+        authState is AuthAuthenticated && authState.user.role == 'admin';
+
+    // Para la info de la empresa, asumimos que solo los admins pueden modificarla
+    final canWrite = isAdmin;
 
     return BlocListener<InfoEmpresaBloc, InfoEmpresaState>(
       listener: (context, state) {
-        if (state is InfoSaved) Navigator.pop(context);
-        if (state is InfoError) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message), backgroundColor: D.rose));
+        if (state is InfoSaved) {
+          _showMsg(
+            context,
+            _isEditing
+                ? 'Información actualizada con éxito'
+                : 'Perfil de empresa creado',
+          );
+          Navigator.pop(context);
+        } else if (state is InfoError) {
+          _showMsg(context, state.message, isError: true);
         }
       },
-      child: BlocBuilder<InfoEmpresaBloc, InfoEmpresaState>(
-        builder: (context, state) {
-          final isSaving = state is InfoSaving;
-
-          return Scaffold(
-            backgroundColor: D.bg,
-            body: Stack(
-              children: [
-                AnimatedBuilder(
-                  animation: _bgCtrl,
-                  builder: (context, _) => Stack(
-                    children: [
-                      Positioned(
-                        top: -100 + math.cos(_bgCtrl.value * math.pi * 2) * 40,
-                        left: -50 + math.sin(_bgCtrl.value * math.pi * 2) * 50,
-                        child: Container(
-                          width: 400,
-                          height: 400,
-                          decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [D.royalBlue.withOpacity(0.08), Colors.transparent])),
-                        ),
-                      ),
-                    ],
+      child: Scaffold(
+        backgroundColor: D.bg,
+        body: Stack(
+          children: [
+            const PremiumBackground(),
+            CustomScrollView(
+              slivers: [
+                PremiumSliverAppBar(
+                  title: _isEditing && !canWrite
+                      ? 'Ver Información'
+                      : (_isEditing
+                            ? 'Editar Información'
+                            : 'Nueva Configuración'),
+                  actions: IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: Colors.white,
+                    ),
+                    onPressed: () => Navigator.pop(context),
                   ),
                 ),
-                CustomScrollView(
-                  slivers: [
-                    SliverAppBar(
-                      backgroundColor: Colors.transparent,
-                      elevation: 0,
-                      leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20), onPressed: () => Navigator.pop(context)),
-                      title: Text(widget.info == null ? 'Nueva Configuración' : 'Editar Información',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
-                    ),
-                    SliverToBoxAdapter(
+                SliverToBoxAdapter(
+                  child: FadeTransition(
+                    opacity: _fade,
+                    child: SlideTransition(
+                      position: _slide,
                       child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: AbsorbPointer(
-                          absorbing: isSaving,
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              children: [
-                                _PremiumCard(
-                                  title: 'Datos Generales',
-                                  icon: Icons.business_rounded,
-                                  children: [
-                                    _buildField(_nombreCtrl, 'Nombre Empresa', Icons.business_rounded, required: true),
-                                    _buildField(_gerenteCtrl, 'Gerente General', Icons.person_rounded),
-                                    _buildField(_detallesCtrl, 'Sobre nosotros', Icons.info_outline_rounded, maxLines: 4),
-                                  ],
-                                ),
-                                _PremiumCard(
-                                  title: 'Filosofía Corporativa',
-                                  icon: Icons.auto_awesome_rounded,
-                                  children: [
-                                    _buildField(_misionCtrl, 'Misión', Icons.flag_rounded, maxLines: 3),
-                                    _buildField(_visionCtrl, 'Visión', Icons.visibility_rounded, maxLines: 3),
-                                  ],
-                                ),
-                                _PremiumCard(
-                                  title: 'Contacto y Canales',
-                                  icon: Icons.contact_emergency_rounded,
-                                  children: [
-                                    _buildField(_direccionCtrl, 'Dirección Principal', Icons.location_on_rounded),
-                                    _buildField(_telefonoCtrl, 'Teléfono WhatsApp', Icons.phone_android_rounded),
-                                    _buildField(_correoCtrl, 'Correo Institucional', Icons.email_rounded),
-                                    _buildField(_webCtrl, 'Sitio Web', Icons.language_rounded),
-                                  ],
-                                ),
-                                _PremiumCard(
-                                  title: 'Horarios de Operación',
-                                  icon: Icons.more_time_rounded,
-                                  children: [
-                                    _buildField(_horarioPCtrl, 'Atención Presencial', Icons.access_time_rounded),
-                                    _buildField(_horarioVCtrl, 'Soporte Virtual / AI Agent', Icons.smart_toy_rounded),
-                                  ],
-                                ),
-                                _buildRedesSocialesSection(),
-                                const SizedBox(height: 32),
-                                if (isAdmin) _buildSubmitButton(isSaving),
-                                const SizedBox(height: 80),
-                              ],
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 800),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Etiqueta
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: D.skyBlue.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: D.skyBlue.withOpacity(0.3),
+                                      ),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.business_rounded,
+                                          color: D.skyBlue,
+                                          size: 16,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'PERFIL EMPRESARIAL',
+                                          style: TextStyle(
+                                            color: D.skyBlue,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  PremiumSectionCard(
+                                    title: 'DATOS GENERALES',
+                                    icon: Icons.domain_rounded,
+                                    children: [
+                                      PremiumTextField(
+                                        controller: _nombreCtrl,
+                                        label: 'Nombre Empresa *',
+                                        icon: Icons.business_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _gerenteCtrl,
+                                        label: 'Gerente General',
+                                        icon: Icons.person_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _detallesCtrl,
+                                        label: 'Sobre nosotros *',
+                                        icon: Icons.info_outline_rounded,
+                                        maxLines: 4,
+                                        readOnly: !canWrite,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  PremiumSectionCard(
+                                    title: 'FILOSOFÍA CORPORATIVA',
+                                    icon: Icons.auto_awesome_rounded,
+                                    children: [
+                                      PremiumTextField(
+                                        controller: _misionCtrl,
+                                        label: 'Misión *',
+                                        icon: Icons.flag_rounded,
+                                        maxLines: 3,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _visionCtrl,
+                                        label: 'Visión *',
+                                        icon: Icons.visibility_rounded,
+                                        maxLines: 3,
+                                        readOnly: !canWrite,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  PremiumSectionCard(
+                                    title: 'CONTACTO Y CANALES',
+                                    icon: Icons.contact_emergency_rounded,
+                                    children: [
+                                      PremiumTextField(
+                                        controller: _direccionCtrl,
+                                        label: 'Dirección Principal *',
+                                        icon: Icons.location_on_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _telefonoCtrl,
+                                        label: 'Teléfono WhatsApp *',
+                                        icon: Icons.phone_android_rounded,
+                                        isNumeric: true,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _correoCtrl,
+                                        label: 'Correo Institucional *',
+                                        icon: Icons.email_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _webCtrl,
+                                        label: 'Sitio Web',
+                                        icon: Icons.language_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  PremiumSectionCard(
+                                    title: 'HORARIOS DE OPERACIÓN',
+                                    icon: Icons.more_time_rounded,
+                                    children: [
+                                      PremiumTextField(
+                                        controller: _horarioPCtrl,
+                                        label: 'Atención Presencial *',
+                                        icon: Icons.access_time_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _horarioVCtrl,
+                                        label: 'Soporte Virtual / AI Agent *',
+                                        icon: Icons.smart_toy_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  _buildRedesSocialesSection(
+                                    canWrite: canWrite,
+                                  ),
+                                  const SizedBox(height: 48),
+
+                                  if (canWrite)
+                                    Builder(
+                                      builder: (ctx) =>
+                                          BlocBuilder<
+                                            InfoEmpresaBloc,
+                                            InfoEmpresaState
+                                          >(
+                                            builder: (context, state) {
+                                              return PremiumActionButton(
+                                                label: _isEditing
+                                                    ? 'GUARDAR CAMBIOS'
+                                                    : 'CREAR PERFIL EMPRESA',
+                                                icon: Icons.save_rounded,
+                                                isLoading: state is InfoSaving,
+                                                onTap: () => _onSave(ctx),
+                                              );
+                                            },
+                                          ),
+                                    ),
+                                  const SizedBox(height: 100),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildField(TextEditingController ctrl, String label, IconData icon, {bool required = false, int maxLines = 1}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: TextFormField(
-        controller: ctrl,
-        maxLines: maxLines,
-        style: const TextStyle(color: Colors.white, fontSize: 14),
-        decoration: _inputDecoration(icon, label),
-        validator: (v) => required && (v == null || v.trim().isEmpty) ? 'Este campo es obligatorio' : null,
-      ),
-    );
-  }
-
-  Widget _buildRedesSocialesSection() {
-    return _PremiumCard(
-      title: 'Presencia Digital',
-      icon: Icons.share_rounded,
-      action: IconButton(onPressed: _addRedSocial, icon: const Icon(Icons.add_circle_outline_rounded, color: D.skyBlue)),
-      children: [
-        if (_redesSociales.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Text('No hay redes sociales configuradas', style: TextStyle(color: D.slate600, fontStyle: FontStyle.italic)),
-          )
-        else
-          ..._redesSociales.asMap().entries.map((e) => Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: D.surfaceHigh, borderRadius: BorderRadius.circular(14), border: Border.all(color: D.border)),
-                child: Row(
-                  children: [
-                    const Icon(Icons.link_rounded, color: D.skyBlue, size: 18),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(e.value.nombre, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                        Text(e.value.link, style: TextStyle(color: D.slate400, fontSize: 11)),
-                      ],
-                    )),
-                    IconButton(
-                        onPressed: () => setState(() => _redesSociales.removeAt(e.key)),
-                        icon: const Icon(Icons.delete_outline_rounded, color: D.rose, size: 18))
-                  ],
-                ),
-              )),
-      ],
-    );
-  }
-
-  Widget _buildSubmitButton(bool isSaving) {
+  Widget _buildRedesSocialesSection({required bool canWrite}) {
     return Container(
       width: double.infinity,
-      height: 58,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: const LinearGradient(colors: [D.royalBlue, D.skyBlue]),
-        boxShadow: [BoxShadow(color: D.royalBlue.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8))],
-      ),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
-        onPressed: isSaving ? null : _onSave,
-        child: isSaving
-            ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.save_rounded, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(widget.info == null ? 'CREAR PERFIL EMPRESA' : 'GUARDAR CAMBIOS', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1.1)),
-                ],
-              ),
-      ),
-    );
-  }
-}
-
-class _PremiumCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final List<Widget> children;
-  final Widget? action;
-
-  const _PremiumCard({required this.title, required this.icon, required this.children, this.action});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: D.surface.withOpacity(0.4), borderRadius: BorderRadius.circular(24), border: Border.all(color: D.border)),
+      decoration: BoxDecoration(
+        color: D.surfaceHigh.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: D.border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
+              const Row(
                 children: [
-                  Icon(icon, color: D.skyBlue, size: 18),
-                  const SizedBox(width: 12),
-                  Text(title.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+                  Icon(Icons.share_rounded, color: D.skyBlue, size: 20),
+                  SizedBox(width: 12),
+                  Text(
+                    'PRESENCIA DIGITAL',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
                 ],
               ),
-              if (action != null) action!,
+              if (canWrite)
+                Material(
+                  color: D.skyBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  child: InkWell(
+                    onTap: _addRedSocial,
+                    borderRadius: BorderRadius.circular(10),
+                    child: const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Icon(
+                        Icons.add_rounded,
+                        color: D.skyBlue,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Divider(color: D.border.withOpacity(0.5)),
           const SizedBox(height: 16),
-          ...children,
+          if (_redesSociales.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Text(
+                'No hay redes sociales configuradas',
+                style: TextStyle(
+                  color: D.slate600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            )
+          else
+            ..._redesSociales.asMap().entries.map(
+              (e) => Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: D.surfaceHigh.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: D.royalBlue.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.link_rounded,
+                        color: D.skyBlue,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            e.value.nombre,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            e.value.link,
+                            style: TextStyle(color: D.slate400, fontSize: 12),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (canWrite)
+                      IconButton(
+                        onPressed: () =>
+                            setState(() => _redesSociales.removeAt(e.key)),
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          color: D.rose,
+                          size: 20,
+                        ),
+                        tooltip: 'Eliminar Red Social',
+                      ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

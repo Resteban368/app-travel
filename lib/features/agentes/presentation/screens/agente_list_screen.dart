@@ -1,3 +1,4 @@
+import 'package:agente_viajes/core/widgets/SmallBtn_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:math' as math;
@@ -48,15 +49,13 @@ class _AgenteListScreenState extends State<AgenteListScreen>
         curve: const Interval(0, 0.4, curve: Curves.easeOut),
       ),
     );
-    _headerSlide = Tween<Offset>(
-      begin: const Offset(0, -0.05),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
-      ),
-    );
+    _headerSlide =
+        Tween<Offset>(begin: const Offset(0, -0.05), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _entryCtrl,
+            curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
+          ),
+        );
     _contentOpacity = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _entryCtrl,
@@ -108,13 +107,18 @@ class _AgenteListScreenState extends State<AgenteListScreen>
               listener: (context, state) {
                 if (state is AgenteError) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(state.message), backgroundColor: D.rose),
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: D.rose,
+                    ),
                   );
                 }
               },
               builder: (context, state) {
                 final authState = context.watch<AuthBloc>().state;
-                final canWrite = authState is AuthAuthenticated && authState.user.canWrite('agentes');
+                final canWrite =
+                    authState is AuthAuthenticated &&
+                    authState.user.canWrite('agentes');
                 List<Agente>? agentes;
                 if (state is AgenteLoaded) {
                   agentes = state.agentes;
@@ -172,11 +176,7 @@ class _AgenteListScreenState extends State<AgenteListScreen>
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.person_rounded,
-                    color: Colors.white,
-                    size: 10,
-                  ),
+                  Icon(Icons.person_rounded, color: Colors.white, size: 10),
                   SizedBox(width: 6),
                   Text(
                     'CONTROL DE ACCESO',
@@ -222,9 +222,10 @@ class _AgenteListScreenState extends State<AgenteListScreen>
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Container(
           decoration: BoxDecoration(
-              color: D.surface.withOpacity(0.6),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: D.border.withOpacity(0.5))),
+            color: D.surface.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: D.border.withOpacity(0.5)),
+          ),
           child: TextField(
             controller: _searchCtrl,
             onChanged: (v) => setState(() => _searchQuery = v),
@@ -232,9 +233,16 @@ class _AgenteListScreenState extends State<AgenteListScreen>
             decoration: InputDecoration(
               hintText: 'Buscar agentes...',
               hintStyle: TextStyle(color: D.slate600, fontSize: 14),
-              prefixIcon: Icon(Icons.search_rounded, color: D.slate600, size: 20),
+              prefixIcon: Icon(
+                Icons.search_rounded,
+                color: D.slate600,
+                size: 20,
+              ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 15,
+              ),
             ),
           ),
         ),
@@ -242,9 +250,19 @@ class _AgenteListScreenState extends State<AgenteListScreen>
     );
   }
 
-  Widget _buildContent(BuildContext context, AgenteState state, List<Agente>? agentes, bool canWrite) {
+  Widget _buildContent(
+    BuildContext context,
+    AgenteState state,
+    List<Agente>? agentes,
+    bool canWrite,
+  ) {
     if (state is AgenteLoading && agentes == null) {
-      return SliverList(delegate: SliverChildBuilderDelegate((_, i) => _SkelCard(), childCount: 4));
+      return SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (_, i) => _SkelCard(),
+          childCount: 4,
+        ),
+      );
     }
 
     if (agentes == null || agentes.isEmpty) {
@@ -252,9 +270,11 @@ class _AgenteListScreenState extends State<AgenteListScreen>
     }
 
     final filtered = agentes
-        .where((a) =>
-            a.nombre.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            a.correo.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .where(
+          (a) =>
+              a.nombre.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              a.correo.toLowerCase().contains(_searchQuery.toLowerCase()),
+        )
         .toList();
 
     if (filtered.isEmpty) {
@@ -277,7 +297,11 @@ class _AgenteCard extends StatefulWidget {
   final Agente agente;
   final AgenteState state;
   final bool canWrite;
-  const _AgenteCard({required this.agente, required this.state, required this.canWrite});
+  const _AgenteCard({
+    required this.agente,
+    required this.state,
+    required this.canWrite,
+  });
 
   @override
   State<_AgenteCard> createState() => _AgenteCardState();
@@ -291,7 +315,8 @@ class _AgenteCardState extends State<_AgenteCard> {
       context: context,
       builder: (ctx) => _PremiumConfirmDialog(
         title: '¿Eliminar Agente?',
-        content: 'Esta acción borrará a "${widget.agente.nombre}" permanentemente.',
+        content:
+            'Esta acción borrará a "${widget.agente.nombre}" permanentemente.',
         onConfirm: () {
           context.read<AgenteBloc>().add(DeleteAgente(widget.agente.id!));
           Navigator.pop(ctx);
@@ -312,10 +337,19 @@ class _AgenteCardState extends State<_AgenteCard> {
         decoration: BoxDecoration(
           color: D.surface,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: _hovered ? D.royalBlue.withOpacity(0.5) : D.border, width: 1.5),
+          border: Border.all(
+            color: _hovered ? D.royalBlue.withOpacity(0.5) : D.border,
+            width: 1.5,
+          ),
         ),
         child: InkWell(
-          onTap: widget.canWrite ? () => Navigator.pushNamed(context, AppRouter.agenteEdit, arguments: widget.agente) : null,
+          onTap: widget.canWrite
+              ? () => Navigator.pushNamed(
+                  context,
+                  AppRouter.agenteEdit,
+                  arguments: widget.agente,
+                )
+              : null,
           borderRadius: BorderRadius.circular(22),
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -324,18 +358,34 @@ class _AgenteCardState extends State<_AgenteCard> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: D.royalBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
-                  child: const Icon(Icons.person_rounded, color: D.royalBlue, size: 24),
+                  decoration: BoxDecoration(
+                    color: D.royalBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.person_rounded,
+                    color: D.royalBlue,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 20),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(a.nombre,
-                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        a.nombre,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text(a.correo, style: TextStyle(color: D.slate400, fontSize: 13)),
+                      Text(
+                        a.correo,
+                        style: TextStyle(color: D.slate400, fontSize: 13),
+                      ),
                     ],
                   ),
                 ),
@@ -353,12 +403,22 @@ class _AgenteCardState extends State<_AgenteCard> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(
-            icon: const Icon(Icons.edit_outlined, color: D.skyBlue, size: 20),
-            onPressed: () => Navigator.pushNamed(context, AppRouter.agenteEdit, arguments: widget.agente)),
-        IconButton(
-            icon: const Icon(Icons.delete_outline_rounded, color: D.rose, size: 20),
-            onPressed: isSaving ? null : _confirmDelete),
+        SmallBtn(
+          icon: Icons.edit_outlined,
+          color: D.skyBlue,
+          onTap: () => Navigator.pushNamed(
+            context,
+            AppRouter.agenteEdit,
+            arguments: widget.agente,
+          ),
+        ),
+        const SizedBox(width: 8),
+
+        SmallBtn(
+          icon: Icons.delete_outline_rounded,
+          color: D.rose,
+          onTap: isSaving ? () {} : _confirmDelete,
+        ),
       ],
     );
   }
@@ -370,9 +430,13 @@ class _Orb extends StatelessWidget {
   const _Orb({required this.color, required this.size});
   @override
   Widget build(BuildContext context) => Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [color, Colors.transparent])));
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: RadialGradient(colors: [color, Colors.transparent]),
+    ),
+  );
 }
 
 class _DotGridPainter extends CustomPainter {
@@ -422,9 +486,13 @@ class _AddBtn extends StatelessWidget {
 class _SkelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
-      height: 100,
-      margin: const EdgeInsets.only(bottom: 16, left: 24, right: 24),
-      decoration: BoxDecoration(color: D.surface.withOpacity(0.5), borderRadius: BorderRadius.circular(22)));
+    height: 100,
+    margin: const EdgeInsets.only(bottom: 16, left: 24, right: 24),
+    decoration: BoxDecoration(
+      color: D.surface.withOpacity(0.5),
+      borderRadius: BorderRadius.circular(22),
+    ),
+  );
 }
 
 class _EmptyState extends StatelessWidget {
@@ -432,46 +500,97 @@ class _EmptyState extends StatelessWidget {
   const _EmptyState({this.isSearch = false});
   @override
   Widget build(BuildContext context) => Center(
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(isSearch ? Icons.search_off_rounded : Icons.people_outline_rounded, size: 64, color: D.slate800),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          isSearch ? Icons.search_off_rounded : Icons.people_outline_rounded,
+          size: 64,
+          color: D.slate800,
+        ),
         const SizedBox(height: 16),
-        Text(isSearch ? 'No se encontraron agentes' : 'Sin agentes registrados',
-            style: TextStyle(color: D.slate600, fontSize: 16, fontWeight: FontWeight.bold))
-      ]));
+        Text(
+          isSearch ? 'No se encontraron agentes' : 'Sin agentes registrados',
+          style: TextStyle(
+            color: D.slate600,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _PremiumConfirmDialog extends StatelessWidget {
   final String title, content;
   final VoidCallback onConfirm;
-  const _PremiumConfirmDialog({required this.title, required this.content, required this.onConfirm});
+  const _PremiumConfirmDialog({
+    required this.title,
+    required this.content,
+    required this.onConfirm,
+  });
   @override
   Widget build(BuildContext context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(28),
-          decoration:
-              BoxDecoration(color: D.surface, borderRadius: BorderRadius.circular(28), border: Border.all(color: D.border)),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.warning_amber_rounded, color: D.rose, size: 48),
-            const SizedBox(height: 20),
-            Text(title, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Text(content, textAlign: TextAlign.center, style: TextStyle(color: D.slate400, fontSize: 14)),
-            const SizedBox(height: 32),
-            Row(children: [
+    backgroundColor: Colors.transparent,
+    child: Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: D.surface,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: D.border),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: D.rose, size: 48),
+          const SizedBox(height: 20),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            content,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: D.slate400, fontSize: 14),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            children: [
               Expanded(
-                  child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancelar', style: TextStyle(color: D.slate400)))),
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(color: D.slate400),
+                  ),
+                ),
+              ),
               const SizedBox(width: 12),
               Expanded(
-                  child: ElevatedButton(
-                      onPressed: onConfirm,
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: D.rose, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                      child: const Text('Confirmar', style: TextStyle(fontWeight: FontWeight.bold)))),
-            ]),
-          ]),
-        ),
-      );
+                child: ElevatedButton(
+                  onPressed: onConfirm,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: D.rose,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    'Confirmar',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
 }

@@ -1,4 +1,6 @@
+import 'dart:ui';
 import 'package:agente_viajes/core/widgets/dialog_loading_widget.dart';
+import 'package:agente_viajes/core/widgets/premium_form_widgets.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -108,7 +110,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     super.dispose();
   }
 
-  void _save() {
+  void _save(BuildContext context) {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedReservaId == null) {
@@ -200,10 +202,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               );
             } else if (state is WhatsAppSent) {
               setState(() => _wasWhatsappSent = true);
-              Navigator.pop(context);
+              Navigator.pop(context); // close loading
               _executeSave();
             } else if (state is WhatsAppError) {
-              Navigator.pop(context);
+              Navigator.pop(context); // close loading
               _showToast(state.message, isError: true);
             }
           },
@@ -224,53 +226,149 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       ],
       child: Scaffold(
         backgroundColor: D.bg,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          foregroundColor: Colors.white,
-          centerTitle: true,
-          title: Text(
-            _isEditing ? 'Detalle de Pago' : 'Nuevo Pago Manual',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          actions: [
-            if (_isEditing && canWrite)
-              IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, color: D.rose),
-                onPressed: () => _confirmDelete(context),
-              ),
-          ],
-        ),
         body: Stack(
           children: [
-            Positioned.fill(child: CustomPaint(painter: _DotGridPainter())),
-            FadeTransition(
-              opacity: _fade,
-              child: SlideTransition(
-                position: _slide,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 900),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            if (_urlImagenCtrl.text.isNotEmpty)
-                              _buildImagePreview(),
-                            const SizedBox(height: 24),
-                            _buildFormCard(canWrite: canWrite),
-                            const SizedBox(height: 40),
-                            if (canWrite) _GlowSaveButton(onPressed: _save),
-                            const SizedBox(height: 40),
-                          ],
+            const PremiumBackground(),
+            CustomScrollView(
+              slivers: [
+                PremiumSliverAppBar(
+                  title: _isEditing ? 'Detalle de Pago' : 'Nuevo Pago Manual',
+                  actions: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded, color: D.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: FadeTransition(
+                    opacity: _fade,
+                    child: SlideTransition(
+                      position: _slide,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 800),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (_urlImagenCtrl.text.isNotEmpty)
+                                    _buildImagePreview(),
+                                  if (_urlImagenCtrl.text.isNotEmpty)
+                                    const SizedBox(height: 24),
+
+                                  PremiumSectionCard(
+                                    title: 'INFORMACIÓN DEL PAGO',
+                                    icon: Icons.receipt_long_rounded,
+                                    children: [
+                                      _buildReservaSelector(canWrite: canWrite),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _chatIdCtrl,
+                                        label: 'Chat - WhatsApp *',
+                                        icon: Icons.person_outline_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      _buildTypeDropdown(canWrite: canWrite),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _proveedorCtrl,
+                                        label: 'Comercio / Proveedor *',
+                                        icon: Icons.store_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _nitCtrl,
+                                        label: 'NIT / ID Fiscal',
+                                        icon: Icons.badge_outlined,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _montoCtrl,
+                                        label: 'Monto Recibido *',
+                                        icon: Icons.attach_money_rounded,
+                                        isNumeric: true,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _metodoPagoCtrl,
+                                        label: 'Método de Pago *',
+                                        icon: Icons
+                                            .account_balance_wallet_outlined,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _referenciaCtrl,
+                                        label: 'No. Referencia *',
+                                        icon: Icons.tag_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _fechaDocumentoCtrl,
+                                        label: 'Fecha Documento (DD-MM-YYYY) *',
+                                        icon: Icons.event_note_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _urlImagenCtrl,
+                                        label: 'URL del Comprobante *',
+                                        icon: Icons.link_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  PremiumSectionCard(
+                                    title: 'VALIDACIÓN Y NOTIFICACIÓN',
+                                    icon: Icons.verified_user_rounded,
+                                    children: [
+                                      _buildSwitch(canWrite: canWrite),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 48),
+
+                                  if (canWrite)
+                                    Builder(
+                                      builder: (ctx) =>
+                                          BlocBuilder<
+                                            PagoRealizadoBloc,
+                                            PagoRealizadoState
+                                          >(
+                                            builder: (context, state) {
+                                              return PremiumActionButton(
+                                                label: 'PROCESAR PAGO',
+                                                icon: Icons.verified_rounded,
+                                                isLoading:
+                                                    state
+                                                        is PagoRealizadoSaving,
+                                                onTap: () => _save(ctx),
+                                              );
+                                            },
+                                          ),
+                                    ),
+                                  const SizedBox(height: 100),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -282,34 +380,35 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     final directUrl = _getDirectImageUrl(_urlImagenCtrl.text);
     return Container(
       decoration: BoxDecoration(
-        color: D.surface,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: D.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 40,
-            spreadRadius: -10,
-          ),
-        ],
+        color: D.surfaceHigh.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            color: D.royalBlue.withValues(alpha: 0.1),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [D.skyBlue.withOpacity(0.15), Colors.transparent],
+                stops: const [0, 0.8],
+              ),
+              border: Border(
+                bottom: BorderSide(color: Colors.white.withOpacity(0.05)),
+              ),
+            ),
             child: Row(
               children: [
-                Icon(Icons.receipt_long_rounded, color: D.skyBlue, size: 16),
-                const SizedBox(width: 8),
+                Icon(Icons.receipt_long_rounded, color: D.skyBlue, size: 20),
+                const SizedBox(width: 12),
                 const Text(
                   'COMPROBANTE ADJUNTO',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
                     letterSpacing: 1.2,
                   ),
                 ),
@@ -317,7 +416,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                 if (!kIsWeb)
                   Text(
                     'Toque para ampliar',
-                    style: TextStyle(color: D.slate600, fontSize: 10),
+                    style: TextStyle(color: D.slate400, fontSize: 11),
                   ),
               ],
             ),
@@ -386,90 +485,6 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     );
   }
 
-  Widget _buildFormCard({required bool canWrite}) {
-    return Container(
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: D.surface,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: D.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionHeader('INFORMACIÓN DEL PAGO'),
-          const SizedBox(height: 20),
-          _buildReservaSelector(canWrite: canWrite),
-          const SizedBox(height: 10),
-          _buildField(
-            controller: _chatIdCtrl,
-            label: 'Chat - WhatsApp',
-            icon: Icons.person_outline_rounded,
-            readOnly: !canWrite,
-          ),
-          const SizedBox(height: 10),
-          _buildTypeDropdown(canWrite: canWrite),
-          const SizedBox(height: 10),
-          _buildField(
-            controller: _proveedorCtrl,
-            label: 'Comercio / Proveedor',
-            icon: Icons.store_rounded,
-            readOnly: !canWrite,
-          ),
-          const SizedBox(height: 20),
-          _buildField(
-            controller: _nitCtrl,
-            label: 'NIT / ID Fiscal',
-            icon: Icons.badge_outlined,
-            readOnly: !canWrite,
-          ),
-          const SizedBox(height: 10),
-          _buildField(
-            controller: _montoCtrl,
-            label: 'Monto Recibido',
-            icon: Icons.attach_money_rounded,
-            isNumeric: true,
-            readOnly: !canWrite,
-          ),
-
-          const SizedBox(height: 20),
-          _buildField(
-            controller: _metodoPagoCtrl,
-            label: 'Método de Pago',
-            icon: Icons.account_balance_wallet_outlined,
-            readOnly: !canWrite,
-          ),
-          const SizedBox(height: 10),
-          _buildField(
-            controller: _referenciaCtrl,
-            label: 'No. Referencia',
-            icon: Icons.tag_rounded,
-            readOnly: !canWrite,
-          ),
-
-          const SizedBox(height: 20),
-          _buildField(
-            controller: _fechaDocumentoCtrl,
-            label: 'Fecha Documento (DD-MM-YYYY)',
-            icon: Icons.event_note_rounded,
-            readOnly: !canWrite,
-          ),
-          const SizedBox(height: 20),
-          _buildField(
-            controller: _urlImagenCtrl,
-            label: 'URL del Comprobante',
-            icon: Icons.link_rounded,
-            readOnly: !canWrite,
-          ),
-          const SizedBox(height: 32),
-          _sectionHeader('VALIDACIÓN Y NOTIFICACIÓN'),
-          const SizedBox(height: 16),
-          _buildSwitch(canWrite: canWrite),
-        ],
-      ),
-    );
-  }
-
   Widget _buildReservaSelector({required bool canWrite}) {
     return BlocBuilder<ReservaBloc, ReservaState>(
       builder: (context, state) {
@@ -477,28 +492,36 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         List<Reserva> reservas = [];
         if (state is ReservaLoaded) reservas = state.reservas;
 
-        // Actualizar label cuando cargan las reservas
-        if (state is ReservaLoaded && _selectedReservaId != null &&
+        if (state is ReservaLoaded &&
+            _selectedReservaId != null &&
             _reservaSearchCtrl.text.startsWith('Reserva #')) {
           final match = reservas.firstWhere(
             (r) => int.tryParse(r.id ?? '') == _selectedReservaId,
             orElse: () => Reserva(
-              id: '', correo: '', estado: '',
-              fechaCreacion: DateTime.now(), fechaActualizacion: DateTime.now(),
-              notas: '', integrantes: const [], idTour: '', serviciosIds: [],
+              id: '',
+              correo: '',
+              estado: '',
+              fechaCreacion: DateTime.now(),
+              fechaActualizacion: DateTime.now(),
+              notas: '',
+              integrantes: const [],
+              idTour: '',
+              serviciosIds: [],
             ),
           );
           if (match.id?.isNotEmpty == true) {
             final responsable = match.integrantes.isNotEmpty
                 ? match.integrantes.firstWhere(
                     (i) => i.esResponsable,
-                    orElse: () => match.integrantes.first)
+                    orElse: () => match.integrantes.first,
+                  )
                 : null;
             final lbl =
                 '${match.idReserva ?? 'Reserva #$_selectedReservaId'} - ${responsable?.nombre ?? match.correo}';
             if (_reservaSearchCtrl.text != lbl) {
               WidgetsBinding.instance.addPostFrameCallback(
-                  (_) => setState(() => _reservaSearchCtrl.text = lbl));
+                (_) => setState(() => _reservaSearchCtrl.text = lbl),
+              );
             }
           }
         }
@@ -508,15 +531,13 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Reserva Vinculada',
-              style: TextStyle(
-                color: D.slate400,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text(
+                'Reserva Vinculada *',
+                style: TextStyle(color: D.slate400, fontSize: 13),
               ),
             ),
-            const SizedBox(height: 8),
             InkWell(
               onTap: (isLoading || !canWrite)
                   ? null
@@ -531,14 +552,14 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                         final responsable = result.integrantes.isNotEmpty
                             ? result.integrantes.firstWhere(
                                 (i) => i.esResponsable,
-                                orElse: () => result.integrantes.first)
+                                orElse: () => result.integrantes.first,
+                              )
                             : null;
                         setState(() {
                           _selectedReservaId = parsed;
                           _reservaSearchCtrl.text =
                               '${result.idReserva ?? 'Reserva #${result.id}'} - ${responsable?.nombre ?? result.correo}';
-                          if (_chatIdCtrl.text.isEmpty &&
-                              responsable != null) {
+                          if (_chatIdCtrl.text.isEmpty && responsable != null) {
                             _chatIdCtrl.text = responsable.telefono;
                           }
                         });
@@ -546,10 +567,12 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     },
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 18,
+                ),
                 decoration: BoxDecoration(
-                  color: D.bg.withValues(alpha: 0.3),
+                  color: D.surfaceHigh.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: hasSelection ? D.skyBlue : D.border,
@@ -559,8 +582,8 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                   children: [
                     Icon(
                       Icons.airplane_ticket_rounded,
-                      color: hasSelection ? D.skyBlue : D.slate600,
-                      size: 18,
+                      color: hasSelection ? D.skyBlue : D.slate400,
+                      size: 20,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -580,7 +603,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: D.skyBlue),
+                          strokeWidth: 2,
+                          color: D.skyBlue,
+                        ),
                       )
                     else if (hasSelection && canWrite)
                       GestureDetector(
@@ -588,12 +613,18 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                           _selectedReservaId = null;
                           _reservaSearchCtrl.clear();
                         }),
-                        child: const Icon(Icons.close_rounded,
-                            color: D.slate400, size: 18),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: D.slate400,
+                          size: 20,
+                        ),
                       )
                     else
-                      const Icon(Icons.search_rounded,
-                          color: D.slate600, size: 18),
+                      const Icon(
+                        Icons.search_rounded,
+                        color: D.slate400,
+                        size: 20,
+                      ),
                   ],
                 ),
               ),
@@ -610,21 +641,34 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Tipo Documento',
-          style: TextStyle(
-            color: D.slate400,
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'Tipo Documento *',
+            style: TextStyle(color: D.slate400, fontSize: 13),
           ),
         ),
-        const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _tipoDocumento,
           dropdownColor: D.surfaceHigh,
           isExpanded: true,
           style: const TextStyle(color: Colors.white, fontSize: 14),
-          decoration: _inputDecoration(null),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: D.surfaceHigh.withOpacity(0.5),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: D.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: D.skyBlue),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+          ),
           items: docTypes
               .map(
                 (t) => DropdownMenuItem(
@@ -633,111 +677,49 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                 ),
               )
               .toList(),
-          onChanged: canWrite ? (v) => setState(() => _tipoDocumento = v!) : null,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSwitch({required bool canWrite}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: D.bg.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: D.border),
-      ),
-      child: SwitchListTile(
-        title: const Text(
-          'Validar Pago',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        subtitle: Text(
-          'Confirma el recibo y envía comprobante por WhatsApp',
-          style: TextStyle(color: D.slate400, fontSize: 12),
-        ),
-        value: _isValidated,
-        activeThumbColor: D.emerald,
-        onChanged: canWrite ? (v) => setState(() => _isValidated = v) : null,
-      ),
-    );
-  }
-
-  Widget _buildField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    bool isNumeric = false,
-    bool readOnly = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: D.slate400,
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          readOnly: readOnly,
-          keyboardType: isNumeric ? TextInputType.number : null,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
-          decoration: _inputDecoration(icon),
-          validator: (v) => (v == null || v.isEmpty) && label.contains('*')
-              ? 'Requerido'
+          onChanged: canWrite
+              ? (v) => setState(() => _tipoDocumento = v!)
               : null,
         ),
       ],
     );
   }
 
-  InputDecoration _inputDecoration(IconData? icon) {
-    return InputDecoration(
-      prefixIcon: icon != null ? Icon(icon, color: D.slate600, size: 18) : null,
-      filled: true,
-      fillColor: D.bg.withValues(alpha: 0.3),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: D.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: D.skyBlue),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    );
-  }
-
-  Widget _sectionHeader(String title) {
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 14,
+  Widget _buildSwitch({required bool canWrite}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
           decoration: BoxDecoration(
-            color: D.skyBlue,
-            borderRadius: BorderRadius.circular(2),
+            color: D.surfaceHigh.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
+          ),
+          child: SwitchListTile(
+            title: const Text(
+              'Validar Pago',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            subtitle: Text(
+              'Confirma el recibo y envía comprobante por WhatsApp',
+              style: TextStyle(color: D.slate400, fontSize: 12),
+            ),
+            value: _isValidated,
+            activeColor: D.emerald,
+            activeTrackColor: D.emerald.withOpacity(0.3),
+            inactiveThumbColor: D.slate400,
+            inactiveTrackColor: D.bg.withOpacity(0.5),
+            onChanged: canWrite
+                ? (v) => setState(() => _isValidated = v)
+                : null,
           ),
         ),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: TextStyle(
-            color: D.slate600,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.5,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -851,12 +833,12 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
               final correo = r.correo.toLowerCase();
               final responsable = r.integrantes.isNotEmpty
                   ? r.integrantes
-                      .firstWhere(
-                        (i) => i.esResponsable,
-                        orElse: () => r.integrantes.first,
-                      )
-                      .nombre
-                      .toLowerCase()
+                        .firstWhere(
+                          (i) => i.esResponsable,
+                          orElse: () => r.integrantes.first,
+                        )
+                        .nombre
+                        .toLowerCase()
                   : '';
               return id.contains(q) ||
                   correo.contains(q) ||
@@ -879,7 +861,7 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
       child: Container(
         constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
         decoration: BoxDecoration(
-          color: D.surface,
+          color: D.surfaceHigh,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(color: D.border),
         ),
@@ -890,8 +872,11 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
               padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
               child: Row(
                 children: [
-                  const Icon(Icons.airplane_ticket_rounded,
-                      color: D.skyBlue, size: 20),
+                  const Icon(
+                    Icons.airplane_ticket_rounded,
+                    color: D.skyBlue,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
@@ -904,8 +889,11 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded,
-                        color: D.slate400, size: 20),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: D.slate400,
+                      size: 20,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -920,21 +908,26 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                 style: const TextStyle(color: Colors.white, fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'Buscar por ID, correo o responsable...',
-                  hintStyle: TextStyle(color: D.slate600, fontSize: 13),
-                  prefixIcon:
-                      const Icon(Icons.search_rounded, color: D.slate600, size: 18),
+                  hintStyle: TextStyle(color: D.slate400, fontSize: 13),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: D.slate400,
+                    size: 18,
+                  ),
                   filled: true,
-                  fillColor: D.bg.withValues(alpha: 0.5),
+                  fillColor: D.surface.withOpacity(0.5),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide(color: D.border),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                     borderSide: const BorderSide(color: D.skyBlue),
                   ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                 ),
               ),
             ),
@@ -950,41 +943,49 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                     )
                   : ListView.separated(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 4),
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
                       itemCount: _filtered.length,
-                      separatorBuilder: (context, i) => const SizedBox(height: 4),
+                      separatorBuilder: (context, i) =>
+                          const SizedBox(height: 4),
                       itemBuilder: (_, index) {
                         final r = _filtered[index];
                         final responsable = r.integrantes.isNotEmpty
                             ? r.integrantes
-                                .firstWhere(
-                                  (i) => i.esResponsable,
-                                  orElse: () => r.integrantes.first,
-                                )
-                                .nombre
+                                  .firstWhere(
+                                    (i) => i.esResponsable,
+                                    orElse: () => r.integrantes.first,
+                                  )
+                                  .nombre
                             : r.correo;
-                        final label =
-                            r.idReserva ?? 'Reserva #${r.id}';
+                        final label = r.idReserva ?? 'Reserva #${r.id}';
                         return Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(16),
                             onTap: () => Navigator.pop(context, r),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
+                                horizontal: 16,
+                                vertical: 16,
+                              ),
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
+                                color: D.surface.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                    color: D.border.withValues(alpha: 0.5)),
+                                  color: Colors.white.withOpacity(0.05),
+                                ),
                               ),
                               child: Row(
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: D.skyBlue.withValues(alpha: 0.15),
+                                      color: D.skyBlue.withOpacity(0.15),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -996,19 +997,23 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
+                                  const SizedBox(width: 16),
                                   Expanded(
                                     child: Text(
                                       responsable,
                                       style: const TextStyle(
-                                          color: Colors.white, fontSize: 13),
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                      ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   Text(
                                     r.estado,
                                     style: TextStyle(
-                                        color: D.slate400, fontSize: 11),
+                                      color: D.slate400,
+                                      fontSize: 11,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1045,10 +1050,10 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: D.surface,
-          borderRadius: BorderRadius.circular(28),
+          color: D.surfaceHigh,
+          borderRadius: BorderRadius.circular(32),
           border: Border.all(color: D.border),
         ),
         child: Column(
@@ -1057,17 +1062,16 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: D.emerald.withValues(alpha: 0.1),
+                color: D.emerald.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: //agrega la imagen de whatsapp
-              Image.asset(
+              child: Image.asset(
                 'assets/images/whatsapp.png',
-                width: 40,
-                height: 40,
+                width: 48,
+                height: 48,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             const Text(
               'Confirmación de Pago',
               style: TextStyle(
@@ -1078,23 +1082,26 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Notificaremos al cliente sobre su validación.',
+              'Notificaremos al cliente sobre su validación por WhatsApp.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: D.slate400, fontSize: 13),
+              style: TextStyle(color: D.slate400, fontSize: 14),
             ),
             const SizedBox(height: 24),
             TextFormField(
               controller: widget.messageCtrl,
-              maxLines: null,
+              maxLines: 4,
+              minLines: 2,
               onChanged: (_) => setState(() {}),
               style: const TextStyle(color: Colors.white, fontSize: 14),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: D.bg,
+                fillColor: D.surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
                 ),
                 hintText: 'Escribe el mensaje...',
+                hintStyle: TextStyle(color: D.slate600),
               ),
             ),
             const SizedBox(height: 24),
@@ -1107,23 +1114,30 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
                     onPressed: () => Navigator.pop(context),
                     child: const Text(
                       'Cancelar',
-                      style: TextStyle(color: D.slate400),
+                      style: TextStyle(
+                        color: D.slate400,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () => widget.onConfirm(widget.messageCtrl.text),
                     style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: D.emerald,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
                     child: const Text(
-                      'Enviar Notificación',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      'Enviar',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -1137,10 +1151,11 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
 
   Widget _buildWPPreview(String text) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xff152d24),
-        borderRadius: BorderRadius.circular(12).copyWith(topRight: Radius.zero),
+        borderRadius: BorderRadius.circular(16).copyWith(topRight: Radius.zero),
+        border: Border.all(color: D.emerald.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1149,7 +1164,7 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
             text.isEmpty ? '...' : text,
             style: const TextStyle(color: Colors.white, fontSize: 13),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
@@ -1157,85 +1172,16 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
               Text(
                 'Ahora',
                 style: TextStyle(
-                  color: D.emerald.withValues(alpha: 0.6),
-                  fontSize: 9,
+                  color: D.emerald.withOpacity(0.8),
+                  fontSize: 10,
                 ),
               ),
               const SizedBox(width: 4),
-              Icon(Icons.done_all_rounded, color: D.skyBlue, size: 12),
+              Icon(Icons.done_all_rounded, color: D.skyBlue, size: 14),
             ],
           ),
         ],
       ),
-    );
-  }
-}
-
-class _GlowSaveButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  const _GlowSaveButton({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<PagoRealizadoBloc, PagoRealizadoState>(
-      builder: (context, state) {
-        final isSaving = state is PagoRealizadoSaving;
-        return GestureDetector(
-          onTap: isSaving ? null : onPressed,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 56,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: isSaving
-                    ? [D.slate600, D.slate600]
-                    : [D.indigo, D.royalBlue],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: isSaving
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: D.indigo.withValues(alpha: 0.4),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-            ),
-            child: Center(
-              child: isSaving
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.verified_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'PROCESAR PAGO',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-          ),
-        );
-      },
     );
   }
 }
@@ -1269,7 +1215,7 @@ class _ImageError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 200,
-      color: D.surfaceHigh,
+      color: D.surfaceHigh.withOpacity(0.5),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -1285,22 +1231,6 @@ class _ImageError extends StatelessWidget {
   }
 }
 
-class _DotGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = D.border.withValues(alpha: 0.2);
-    const spacing = 32.0;
-    for (double i = 0; i < size.width; i += spacing) {
-      for (double j = 0; j < size.height; j += spacing) {
-        canvas.drawCircle(Offset(i, j), 0.8, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
-}
-
 class _PremiumConfirmDialog extends StatelessWidget {
   final String title, content;
   final VoidCallback onConfirm;
@@ -1314,17 +1244,17 @@ class _PremiumConfirmDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: D.surface,
-          borderRadius: BorderRadius.circular(28),
+          color: D.surfaceHigh,
+          borderRadius: BorderRadius.circular(32),
           border: Border.all(color: D.border),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.warning_amber_rounded, color: D.rose, size: 54),
-            const SizedBox(height: 20),
+            const Icon(Icons.warning_amber_rounded, color: D.rose, size: 64),
+            const SizedBox(height: 24),
             Text(
               title,
               style: const TextStyle(
@@ -1347,23 +1277,30 @@ class _PremiumConfirmDialog extends StatelessWidget {
                     onPressed: () => Navigator.pop(context),
                     child: const Text(
                       'Cancelar',
-                      style: TextStyle(color: D.slate400),
+                      style: TextStyle(
+                        color: D.slate400,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: onConfirm,
                     style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: D.rose,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
                     child: const Text(
                       'Confirmar',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -1375,5 +1312,3 @@ class _PremiumConfirmDialog extends StatelessWidget {
     );
   }
 }
-
-
