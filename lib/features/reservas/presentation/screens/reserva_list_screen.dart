@@ -53,15 +53,13 @@ class _ReservaListScreenState extends State<ReservaListScreen>
         curve: const Interval(0, 0.4, curve: Curves.easeOut),
       ),
     );
-    _headerSlide = Tween<Offset>(
-      begin: const Offset(0, -0.05),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
-      ),
-    );
+    _headerSlide =
+        Tween<Offset>(begin: const Offset(0, -0.05), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _entryCtrl,
+            curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
+          ),
+        );
     _contentOpacity = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _entryCtrl,
@@ -82,12 +80,14 @@ class _ReservaListScreenState extends State<ReservaListScreen>
   }
 
   void _goToPage(int page) {
-    context.read<ReservaBloc>().add(LoadReservas(
-      page: page,
-      startDate: _startDate,
-      endDate: _endDate,
-      status: _selectedStatus,
-    ));
+    context.read<ReservaBloc>().add(
+      LoadReservas(
+        page: page,
+        startDate: _startDate,
+        endDate: _endDate,
+        status: _selectedStatus,
+      ),
+    );
   }
 
   Future<void> _pickDateRange(BuildContext context) async {
@@ -119,12 +119,14 @@ class _ReservaListScreenState extends State<ReservaListScreen>
         _startDate = picked.start;
         _endDate = picked.end;
       });
-      context.read<ReservaBloc>().add(LoadReservas(
-        page: 1,
-        startDate: _startDate,
-        endDate: _endDate,
-        status: _selectedStatus,
-      ));
+      context.read<ReservaBloc>().add(
+        LoadReservas(
+          page: 1,
+          startDate: _startDate,
+          endDate: _endDate,
+          status: _selectedStatus,
+        ),
+      );
     }
   }
 
@@ -133,17 +135,21 @@ class _ReservaListScreenState extends State<ReservaListScreen>
       _startDate = null;
       _endDate = null;
     });
-    context.read<ReservaBloc>().add(LoadReservas(page: 1, status: _selectedStatus));
+    context.read<ReservaBloc>().add(
+      LoadReservas(page: 1, status: _selectedStatus),
+    );
   }
 
   void _onStatusChanged(String? status) {
     setState(() => _selectedStatus = status);
-    context.read<ReservaBloc>().add(LoadReservas(
-      page: 1,
-      startDate: _startDate,
-      endDate: _endDate,
-      status: _selectedStatus,
-    ));
+    context.read<ReservaBloc>().add(
+      LoadReservas(
+        page: 1,
+        startDate: _startDate,
+        endDate: _endDate,
+        status: _selectedStatus,
+      ),
+    );
   }
 
   @override
@@ -187,7 +193,9 @@ class _ReservaListScreenState extends State<ReservaListScreen>
               },
               builder: (context, state) {
                 final authState = context.watch<AuthBloc>().state;
-                final canWrite = authState is AuthAuthenticated && authState.user.canWrite('reservas');
+                final canWrite =
+                    authState is AuthAuthenticated &&
+                    authState.user.canWrite('reservas');
                 List<Reserva>? reservas;
                 if (state is ReservaLoaded) {
                   reservas = state.reservas;
@@ -432,7 +440,12 @@ class _ReservaListScreenState extends State<ReservaListScreen>
     );
   }
 
-  Widget _buildContent(BuildContext context, ReservaState state, List<Reserva>? reservas, bool canWrite) {
+  Widget _buildContent(
+    BuildContext context,
+    ReservaState state,
+    List<Reserva>? reservas,
+    bool canWrite,
+  ) {
     if (state is ReservaLoading && reservas == null) {
       return SliverList(
         delegate: SliverChildBuilderDelegate(
@@ -453,12 +466,15 @@ class _ReservaListScreenState extends State<ReservaListScreen>
       final idMatches = (r.id ?? '').toLowerCase().contains(queryLower);
 
       // Buscar nombre del responsable de r.responsable o de integrantes
-      final responsableNombre = r.responsable?.nombre ??
+      final responsableNombre =
+          r.responsable?.nombre ??
           (r.integrantes.isNotEmpty
               ? r.integrantes
-                  .firstWhere((i) => i.esResponsable,
-                      orElse: () => r.integrantes.first)
-                  .nombre
+                    .firstWhere(
+                      (i) => i.esResponsable,
+                      orElse: () => r.integrantes.first,
+                    )
+                    .nombre
               : '');
       final nameMatches = responsableNombre.toLowerCase().contains(queryLower);
 
@@ -481,7 +497,11 @@ class _ReservaListScreenState extends State<ReservaListScreen>
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
           final reserva = filtered[index];
-          return _ReservaCard(reserva: reserva, state: state, canWrite: canWrite);
+          return _ReservaCard(
+            reserva: reserva,
+            state: state,
+            canWrite: canWrite,
+          );
         }, childCount: filtered.length),
       ),
     );
@@ -492,7 +512,11 @@ class _ReservaCard extends StatefulWidget {
   final Reserva reserva;
   final ReservaState state;
   final bool canWrite;
-  const _ReservaCard({required this.reserva, required this.state, required this.canWrite});
+  const _ReservaCard({
+    required this.reserva,
+    required this.state,
+    required this.canWrite,
+  });
 
   @override
   State<_ReservaCard> createState() => _ReservaCardState();
@@ -520,19 +544,25 @@ class _ReservaCardState extends State<_ReservaCard> {
 
     // Priorizar responsable como objeto Cliente (viene del backend),
     // con fallback al primer integrante marcado como responsable.
-    final nombreResponsable = r.responsable?.nombre ??
+    final nombreResponsable =
+        r.responsable?.nombre ??
         (r.integrantes.isNotEmpty
             ? r.integrantes
-                .firstWhere((i) => i.esResponsable,
-                    orElse: () => r.integrantes.first)
-                .nombre
+                  .firstWhere(
+                    (i) => i.esResponsable,
+                    orElse: () => r.integrantes.first,
+                  )
+                  .nombre
             : null);
-    final telefonoResponsable = r.responsable?.telefono ??
+    final telefonoResponsable =
+        r.responsable?.telefono ??
         (r.integrantes.isNotEmpty
             ? r.integrantes
-                .firstWhere((i) => i.esResponsable,
-                    orElse: () => r.integrantes.first)
-                .telefono
+                  .firstWhere(
+                    (i) => i.esResponsable,
+                    orElse: () => r.integrantes.first,
+                  )
+                  .telefono
             : null);
 
     final statusColor = _getStatusColor(r.estado);
@@ -552,7 +582,8 @@ class _ReservaCardState extends State<_ReservaCard> {
           ),
         ),
         child: InkWell(
-          onTap: () => Navigator.pushNamed(context, AppRouter.reservaEdit, arguments: r),
+          onTap: () =>
+              Navigator.pushNamed(context, AppRouter.reservaEdit, arguments: r),
           borderRadius: BorderRadius.circular(22),
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -566,7 +597,9 @@ class _ReservaCardState extends State<_ReservaCard> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
-                    Icons.airplane_ticket_rounded,
+                    r.tipoReserva == 'vuelos'
+                        ? Icons.flight_rounded
+                        : Icons.terrain_rounded,
                     color: statusColor,
                     size: 24,
                   ),
@@ -594,13 +627,22 @@ class _ReservaCardState extends State<_ReservaCard> {
                           ),
                         ],
                       ),
+                      Text(
+                        'ID: ${r.idReserva.toString()}',
+                        style: TextStyle(color: D.slate200, fontSize: 13),
+                      ),
                       const SizedBox(height: 8),
-                      // Tour Info with Price
+                      // Tour / Vuelos Info
                       Row(
                         children: [
                           Expanded(
                             child: Text(
-                              r.tour?.name ?? 'Tour ID: ${r.idTour}',
+                              r.tipoReserva == 'vuelos'
+                                  ? '${r.vuelos.length} vuelo(s)'
+                                  : (r.tour?.name ??
+                                        (r.idTour != null
+                                            ? 'Tour ID: ${r.idTour}'
+                                            : 'Sin tour')),
                               style: TextStyle(
                                 color: D.slate200,
                                 fontSize: 13,
@@ -612,16 +654,64 @@ class _ReservaCardState extends State<_ReservaCard> {
                         ],
                       ),
                       if (r.tour != null)
-                        Text(
-                          NumberFormat.currency(
-                            symbol: '\$',
-                            decimalDigits: 0,
-                          ).format(r.tour!.price),
-                          style: const TextStyle(
-                            color: D.emerald,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Text('Valor Total: '),
+                            Text(
+                              NumberFormat.currency(
+                                symbol: '\$',
+                                decimalDigits: 0,
+                              ).format(r.valorTotal),
+                              style: const TextStyle(
+                                color: D.emerald,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text('Saldo Pendiente: '),
+                            Text(
+                              NumberFormat.currency(
+                                symbol: '\$',
+                                decimalDigits: 0,
+                              ).format(r.saldoPendiente),
+                              style: const TextStyle(
+                                color: D.gold,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      if (r.tipoReserva == 'vuelos')
+                        Row(
+                          children: [
+                            Text('Valor Total: '),
+                            Text(
+                              NumberFormat.currency(
+                                symbol: '\$',
+                                decimalDigits: 0,
+                              ).format(r.valorTotal),
+                              style: const TextStyle(
+                                color: D.emerald,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text('Saldo Pendiente: '),
+                            Text(
+                              NumberFormat.currency(
+                                symbol: '\$',
+                                decimalDigits: 0,
+                              ).format(r.saldoPendiente),
+                              style: const TextStyle(
+                                color: D.gold,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       if (r.tour != null) ...[
                         const SizedBox(height: 4),
@@ -643,7 +733,11 @@ class _ReservaCardState extends State<_ReservaCard> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(Icons.email_outlined, color: D.slate600, size: 14),
+                          Icon(
+                            Icons.email_outlined,
+                            color: D.slate600,
+                            size: 14,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             r.correo,
@@ -651,11 +745,16 @@ class _ReservaCardState extends State<_ReservaCard> {
                           ),
                         ],
                       ),
-                      if (telefonoResponsable != null && telefonoResponsable.isNotEmpty) ...[
+                      if (telefonoResponsable != null &&
+                          telefonoResponsable.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            Icon(Icons.phone_outlined, color: D.slate600, size: 14),
+                            Icon(
+                              Icons.phone_outlined,
+                              color: D.slate600,
+                              size: 14,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               telefonoResponsable,
@@ -801,7 +900,11 @@ class _PageBtn extends StatelessWidget {
   final bool enabled;
   final VoidCallback onTap;
 
-  const _PageBtn({required this.icon, required this.enabled, required this.onTap});
+  const _PageBtn({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -817,11 +920,7 @@ class _PageBtn extends StatelessWidget {
             color: enabled ? D.royalBlue.withValues(alpha: 0.4) : D.border,
           ),
         ),
-        child: Icon(
-          icon,
-          color: enabled ? D.skyBlue : D.slate600,
-          size: 22,
-        ),
+        child: Icon(icon, color: enabled ? D.skyBlue : D.slate600, size: 22),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import '../entities/reserva.dart';
+import '../entities/aerolinea.dart';
 import '../../../../core/models/paged_result.dart';
 
 abstract class ReservaRepository {
@@ -12,4 +13,5 @@ abstract class ReservaRepository {
   Future<Reserva> getReservaById(String id);
   Future<void> createReserva(Reserva reserva);
   Future<void> updateReserva(Reserva reserva);
+  Future<List<Aerolinea>> getAerolineas();
 }

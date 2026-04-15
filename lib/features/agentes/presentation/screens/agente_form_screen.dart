@@ -231,29 +231,43 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Etiqueta de información
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: D.skyBlue.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: D.skyBlue.withOpacity(0.3)),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.person_add_alt_1_rounded, color: D.skyBlue, size: 16),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          'GESTIÓN DE AGENTE',
-                                          style: TextStyle(
-                                            color: D.skyBlue,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
+                                  // ── Badge de Ruta ───────────────────────────
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: D.skyBlue.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(
+                                            color: D.skyBlue.withOpacity(0.2),
                                           ),
                                         ),
-                                      ],
-                                    ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: const [
+                                            Icon(
+                                              Icons.admin_panel_settings_rounded,
+                                              color: D.skyBlue,
+                                              size: 14,
+                                            ),
+                                            SizedBox(width: 8),
+                                            Text(
+                                              'ADMINISTRACIÓN / AGENTES',
+                                              style: TextStyle(
+                                                color: D.skyBlue,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: 1,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 24),
 
@@ -281,13 +295,14 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                                           icon: Icons.lock_rounded,
                                           isPassword: true,
                                           validator: (v) {
-                                            if (!_isEditing && (v == null || v.isEmpty)) {
+                                            if (!_isEditing &&
+                                                (v == null || v.isEmpty)) {
                                               return 'La contraseña es obligatoria';
                                             }
                                             return null;
                                           },
                                         ),
-                                        const SizedBox(height: 20),
+                                        const SizedBox(height: 24),
                                       ],
                                       _buildActiveToggle(),
                                     ],
@@ -355,35 +370,53 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
   }
 
   Widget _buildActiveToggle() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          decoration: BoxDecoration(
-            color: D.surfaceHigh.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
-          ),
-          child: SwitchListTile(
-            title: const Text(
-              'Estado del Agente',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+    return Container(
+      decoration: BoxDecoration(
+        color: D.surfaceHigh.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.03)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Estado de Acceso',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _isActive ? 'Habilitado' : 'Bloqueado',
+                        style: TextStyle(
+                          color: _isActive ? D.emerald : D.rose,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _isActive,
+                  activeColor: D.emerald,
+                  activeTrackColor: D.emerald.withOpacity(0.3),
+                  inactiveThumbColor: D.rose,
+                  inactiveTrackColor: D.rose.withOpacity(0.3),
+                  onChanged: (v) => setState(() => _isActive = v),
+                ),
+              ],
             ),
-            subtitle: Text(
-              _isActive ? 'Agente activo y con acceso' : 'Acceso bloqueado temporalmente',
-              style: TextStyle(color: _isActive ? D.emerald : D.rose, fontSize: 12),
-            ),
-            value: _isActive,
-            activeColor: D.emerald,
-            activeTrackColor: D.emerald.withOpacity(0.3),
-            inactiveThumbColor: D.rose,
-            inactiveTrackColor: D.rose.withOpacity(0.3),
-            onChanged: (v) => setState(() => _isActive = v),
           ),
         ),
       ),
@@ -401,11 +434,15 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: enabled ? activeColor.withOpacity(0.08) : D.surfaceHigh.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(18),
+          color: enabled
+              ? activeColor.withOpacity(0.05)
+              : D.surfaceHigh.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: enabled ? activeColor.withOpacity(0.4) : Colors.white.withOpacity(0.05),
-            width: 1.5,
+            color: enabled
+                ? activeColor.withOpacity(0.3)
+                : Colors.white.withOpacity(0.03),
+            width: 1,
           ),
         ),
         child: Column(

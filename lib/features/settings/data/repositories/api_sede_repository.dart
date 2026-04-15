@@ -56,6 +56,7 @@ class ApiSedeRepository implements SedeRepository {
 
   @override
   Future<void> updateSede(Sede sede) async {
+    debugPrint('🌎 [ApiSedeRepository] PATCH $_baseUrl/${sede.id}');
     final response = await client.patch(
       Uri.parse('$_baseUrl/${sede.id}'),
       headers: {
@@ -65,6 +66,8 @@ class ApiSedeRepository implements SedeRepository {
       body: json.encode(_toJson(sede)),
     );
     if (response.statusCode != 200 && response.statusCode != 204) {
+      debugPrint('❌ [ApiSedeRepository] Error code: ${response.statusCode}');
+      debugPrint('📄 [ApiSedeRepository] Response body: ${response.body}');
       throw Exception('Error al actualizar sede: ${response.statusCode}');
     }
   }
@@ -76,14 +79,16 @@ class ApiSedeRepository implements SedeRepository {
       headers: {'Accept': 'application/json'},
     );
     if (response.statusCode != 200 && response.statusCode != 204) {
+      debugPrint('❌ [ApiSedeRepository] Error code: ${response.statusCode}');
+
       throw Exception('Error al eliminar sede: ${response.statusCode}');
     }
   }
 
   /// Maps API JSON to Sede entity.
   Sede _fromJson(Map<String, dynamic> json) {
-    // some endpoints use idSede and others id_sede
-    final idValue = json['id_sede'] ?? json['idSede'] ?? '0';
+    final idValue =
+        json['id_sede'] ?? json['idSede'] ?? json['id'] ?? '0';
     return Sede(
       id: idValue.toString(),
       nombreSede: json['nombre_sede'] ?? '',
