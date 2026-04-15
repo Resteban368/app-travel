@@ -14,10 +14,21 @@ class ReservaLoading extends ReservaState {}
 
 class ReservaLoaded extends ReservaState {
   final List<Reserva> reservas;
-  const ReservaLoaded(this.reservas);
+  final int page;
+  final int totalPages;
+  final int total;
+  final int limit;
+
+  const ReservaLoaded(
+    this.reservas, {
+    this.page = 1,
+    this.totalPages = 1,
+    this.total = 0,
+    this.limit = 20,
+  });
 
   @override
-  List<Object?> get props => [reservas];
+  List<Object?> get props => [reservas, page, totalPages, total, limit];
 }
 
 class ReservaSaving extends ReservaState {

@@ -44,6 +44,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   late final Animation<double> _fade;
   late final Animation<Offset> _slide;
 
+  // Reserva search
+  final _reservaSearchCtrl = TextEditingController();
+  final _reservaSearchFocus = FocusNode();
+
   bool get _isEditing => widget.pago != null;
 
   @override
@@ -61,9 +65,12 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     _tipoDocumento = p?.tipoDocumento ?? 'Factura';
     _isValidated = p?.isValidated ?? false;
     _selectedReservaId = p?.reservaId;
+    if (p?.reservaId != null) {
+      _reservaSearchCtrl.text = 'Reserva #${p!.reservaId}';
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ReservaBloc>().add(const LoadReservas());
+      context.read<ReservaBloc>().add(const LoadReservas(limit: 200));
     });
 
     _entryCtrl = AnimationController(
@@ -96,6 +103,8 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     _referenciaCtrl.dispose();
     _fechaDocumentoCtrl.dispose();
     _urlImagenCtrl.dispose();
+    _reservaSearchCtrl.dispose();
+    _reservaSearchFocus.dispose();
     super.dispose();
   }
 
@@ -464,38 +473,37 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   Widget _buildReservaSelector({required bool canWrite}) {
     return BlocBuilder<ReservaBloc, ReservaState>(
       builder: (context, state) {
-        String label = 'Seleccionar Reserva *';
-        bool isLoading = state is ReservaLoading;
+        final isLoading = state is ReservaLoading;
+        List<Reserva> reservas = [];
+        if (state is ReservaLoaded) reservas = state.reservas;
 
-        if (_selectedReservaId != null) {
-          if (state is ReservaLoaded) {
-            final r = state.reservas.firstWhere(
-              (r) => (int.tryParse(r.id ?? '') == _selectedReservaId),
-              orElse: () => Reserva(
-                id: _selectedReservaId?.toString(), // Fix: convert int? to String?
-                correo: '',
-                estado: '',
-                fechaCreacion: DateTime.now(),
-                fechaActualizacion: DateTime.now(),
-                notas: '',
-                integrantes: const [],
-                idTour: '',
-                serviciosIds: [],
-              ),
-            );
-            if (r.idReserva != null || r.id != null) {
-              final responsable = r.integrantes.isNotEmpty
-                  ? r.integrantes.firstWhere(
-                      (i) => i.esResponsable,
-                      orElse: () => r.integrantes.first,
-                    )
-                  : null;
-              label = '${r.idReserva ?? 'Reserva #${_selectedReservaId}'} - ${responsable?.nombre ?? r.correo}';
+        // Actualizar label cuando cargan las reservas
+        if (state is ReservaLoaded && _selectedReservaId != null &&
+            _reservaSearchCtrl.text.startsWith('Reserva #')) {
+          final match = reservas.firstWhere(
+            (r) => int.tryParse(r.id ?? '') == _selectedReservaId,
+            orElse: () => Reserva(
+              id: '', correo: '', estado: '',
+              fechaCreacion: DateTime.now(), fechaActualizacion: DateTime.now(),
+              notas: '', integrantes: const [], idTour: '', serviciosIds: [],
+            ),
+          );
+          if (match.id?.isNotEmpty == true) {
+            final responsable = match.integrantes.isNotEmpty
+                ? match.integrantes.firstWhere(
+                    (i) => i.esResponsable,
+                    orElse: () => match.integrantes.first)
+                : null;
+            final lbl =
+                '${match.idReserva ?? 'Reserva #$_selectedReservaId'} - ${responsable?.nombre ?? match.correo}';
+            if (_reservaSearchCtrl.text != lbl) {
+              WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => setState(() => _reservaSearchCtrl.text = lbl));
             }
-          } else if (_isEditing && widget.pago?.reservaId != null) {
-            label = 'Reserva: ${widget.pago!.reservaId}';
           }
         }
+
+        final hasSelection = _selectedReservaId != null;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -510,39 +518,61 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
             ),
             const SizedBox(height: 8),
             InkWell(
-              onTap: (isLoading || !canWrite) ? null : () => _showReservaPicker(state),
+              onTap: (isLoading || !canWrite)
+                  ? null
+                  : () async {
+                      final result = await showDialog<Reserva>(
+                        context: context,
+                        builder: (_) =>
+                            _ReservaPickerDialog(reservas: reservas),
+                      );
+                      if (result != null) {
+                        final parsed = int.tryParse(result.id ?? '');
+                        final responsable = result.integrantes.isNotEmpty
+                            ? result.integrantes.firstWhere(
+                                (i) => i.esResponsable,
+                                orElse: () => result.integrantes.first)
+                            : null;
+                        setState(() {
+                          _selectedReservaId = parsed;
+                          _reservaSearchCtrl.text =
+                              '${result.idReserva ?? 'Reserva #${result.id}'} - ${responsable?.nombre ?? result.correo}';
+                          if (_chatIdCtrl.text.isEmpty &&
+                              responsable != null) {
+                            _chatIdCtrl.text = responsable.telefono;
+                          }
+                        });
+                      }
+                    },
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: D.bg.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: _selectedReservaId == null ? D.border : D.skyBlue,
+                    color: hasSelection ? D.skyBlue : D.border,
                   ),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.airplane_ticket_rounded,
-                      color: _selectedReservaId == null
-                          ? D.slate600
-                          : D.skyBlue,
+                      color: hasSelection ? D.skyBlue : D.slate600,
                       size: 18,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        label,
+                        hasSelection
+                            ? _reservaSearchCtrl.text
+                            : 'Seleccionar reserva...',
                         style: TextStyle(
-                          color: _selectedReservaId == null
-                              ? D.slate400
-                              : Colors.white,
+                          color: hasSelection ? Colors.white : D.slate400,
                           fontSize: 14,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (isLoading)
@@ -550,12 +580,20 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: D.skyBlue,
-                        ),
+                            strokeWidth: 2, color: D.skyBlue),
+                      )
+                    else if (hasSelection && canWrite)
+                      GestureDetector(
+                        onTap: () => setState(() {
+                          _selectedReservaId = null;
+                          _reservaSearchCtrl.clear();
+                        }),
+                        child: const Icon(Icons.close_rounded,
+                            color: D.slate400, size: 18),
                       )
                     else
-                      Icon(Icons.arrow_drop_down_rounded, color: D.slate600),
+                      const Icon(Icons.search_rounded,
+                          color: D.slate600, size: 18),
                   ],
                 ),
               ),
@@ -563,33 +601,6 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           ],
         );
       },
-    );
-  }
-
-  void _showReservaPicker(ReservaState state) {
-    if (state is! ReservaLoaded) return;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: D.bg,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) => _ReservaSearchPicker(
-        reservas: state.reservas,
-        onSelected: (r) {
-          final parsed = int.tryParse(r.id ?? '');
-          debugPrint('[PagoForm] Reserva seleccionada → id: "${r.id}", idReserva: "${r.idReserva}", parsed int: $parsed');
-          setState(() {
-            _selectedReservaId = parsed;
-            if (_chatIdCtrl.text.isEmpty && r.responsableTelefono != null) {
-              _chatIdCtrl.text = r.responsableTelefono!;
-            }
-          });
-          Navigator.pop(ctx);
-        },
-      ),
     );
   }
 
@@ -808,6 +819,214 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     );
   }
 }
+
+// ─── Reserva Picker Dialog ───────────────────────────────────────────────────
+
+class _ReservaPickerDialog extends StatefulWidget {
+  final List<Reserva> reservas;
+  const _ReservaPickerDialog({required this.reservas});
+
+  @override
+  State<_ReservaPickerDialog> createState() => _ReservaPickerDialogState();
+}
+
+class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
+  final _searchCtrl = TextEditingController();
+  List<Reserva> _filtered = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.reservas;
+    _searchCtrl.addListener(_onSearch);
+  }
+
+  void _onSearch() {
+    final q = _searchCtrl.text.toLowerCase().trim();
+    setState(() {
+      _filtered = q.isEmpty
+          ? widget.reservas
+          : widget.reservas.where((r) {
+              final id = (r.idReserva ?? r.id ?? '').toLowerCase();
+              final correo = r.correo.toLowerCase();
+              final responsable = r.integrantes.isNotEmpty
+                  ? r.integrantes
+                      .firstWhere(
+                        (i) => i.esResponsable,
+                        orElse: () => r.integrantes.first,
+                      )
+                      .nombre
+                      .toLowerCase()
+                  : '';
+              return id.contains(q) ||
+                  correo.contains(q) ||
+                  responsable.contains(q);
+            }).toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
+        decoration: BoxDecoration(
+          color: D.surface,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: D.border),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
+              child: Row(
+                children: [
+                  const Icon(Icons.airplane_ticket_rounded,
+                      color: D.skyBlue, size: 20),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Seleccionar Reserva',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded,
+                        color: D.slate400, size: 20),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            // Search field
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: TextField(
+                controller: _searchCtrl,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por ID, correo o responsable...',
+                  hintStyle: TextStyle(color: D.slate600, fontSize: 13),
+                  prefixIcon:
+                      const Icon(Icons.search_rounded, color: D.slate600, size: 18),
+                  filled: true,
+                  fillColor: D.bg.withValues(alpha: 0.5),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: D.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: D.skyBlue),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // List
+            Expanded(
+              child: _filtered.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Sin resultados',
+                        style: TextStyle(color: D.slate600, fontSize: 13),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
+                      itemCount: _filtered.length,
+                      separatorBuilder: (context, i) => const SizedBox(height: 4),
+                      itemBuilder: (_, index) {
+                        final r = _filtered[index];
+                        final responsable = r.integrantes.isNotEmpty
+                            ? r.integrantes
+                                .firstWhere(
+                                  (i) => i.esResponsable,
+                                  orElse: () => r.integrantes.first,
+                                )
+                                .nombre
+                            : r.correo;
+                        final label =
+                            r.idReserva ?? 'Reserva #${r.id}';
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () => Navigator.pop(context, r),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: D.border.withValues(alpha: 0.5)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: D.skyBlue.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      label,
+                                      style: const TextStyle(
+                                        color: D.skyBlue,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      responsable,
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 13),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    r.estado,
+                                    style: TextStyle(
+                                        color: D.slate400, fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── WhatsApp Dialog ──────────────────────────────────────────────────────────
 
 class _PremiumWhatsAppDialog extends StatefulWidget {
   final TextEditingController messageCtrl;
@@ -1157,146 +1376,4 @@ class _PremiumConfirmDialog extends StatelessWidget {
   }
 }
 
-class _ReservaSearchPicker extends StatefulWidget {
-  final List<Reserva> reservas;
-  final Function(Reserva) onSelected;
 
-  const _ReservaSearchPicker({
-    required this.reservas,
-    required this.onSelected,
-  });
-
-  @override
-  State<_ReservaSearchPicker> createState() => _ReservaSearchPickerState();
-}
-
-class _ReservaSearchPickerState extends State<_ReservaSearchPicker> {
-  final _searchCtrl = TextEditingController();
-  String _query = '';
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final filtered = widget.reservas.where((r) {
-      final q = _query.toLowerCase();
-      final idMatch = (r.idReserva ?? '').toLowerCase().contains(q);
-      final correoMatch = r.correo.toLowerCase().contains(q);
-      final responsable = r.integrantes.isNotEmpty
-          ? r.integrantes.firstWhere(
-              (i) => i.esResponsable,
-              orElse: () => r.integrantes.first,
-            )
-          : null;
-      final nameMatch = responsable?.nombre.toLowerCase().contains(q) ?? false;
-      return idMatch || correoMatch || nameMatch;
-    }).toList();
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.8,
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-      decoration: const BoxDecoration(
-        color: D.bg,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: D.slate800,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Seleccionar Reserva',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _searchCtrl,
-            onChanged: (v) => setState(() => _query = v),
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Buscar id, correo o nombre...',
-              hintStyle: TextStyle(color: D.slate600),
-              prefixIcon: Icon(Icons.search_rounded, color: D.slate600),
-              filled: true,
-              fillColor: D.surfaceHigh.withValues(alpha: 0.5),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: D.skyBlue),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: filtered.isEmpty
-                ? Center(
-                    child: Text(
-                      'No se encontraron reservas',
-                      style: TextStyle(color: D.slate600),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: filtered.length,
-                    itemBuilder: (ctx, i) {
-                      final r = filtered[i];
-                      final responsable = r.integrantes.isNotEmpty
-                          ? r.integrantes.firstWhere(
-                              (i) => i.esResponsable,
-                              orElse: () => r.integrantes.first,
-                            )
-                          : null;
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                        leading: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: D.royalBlue.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.airplane_ticket_rounded,
-                            color: D.skyBlue,
-                          ),
-                        ),
-                        title: Text(
-                          r.idReserva ?? 'Sin ID',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Text(
-                          responsable?.nombre ?? r.correo,
-                          style: TextStyle(color: D.slate400, fontSize: 13),
-                        ),
-                        onTap: () => widget.onSelected(r),
-                        trailing: Icon(
-                          Icons.chevron_right_rounded,
-                          color: D.slate800,
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}

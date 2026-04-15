@@ -31,6 +31,17 @@ class RefreshProfile extends AuthEvent {
   const RefreshProfile();
 }
 
+class ChangePasswordRequested extends AuthEvent {
+  final String currentPassword;
+  final String newPassword;
+  const ChangePasswordRequested({
+    required this.currentPassword,
+    required this.newPassword,
+  });
+  @override
+  List<Object?> get props => [currentPassword, newPassword];
+}
+
 // ─── States ──────────────────────────────────────────────
 
 abstract class AuthState extends Equatable {
@@ -57,6 +68,21 @@ class AuthError extends AuthState {
   List<Object?> get props => [message];
 }
 
+class ChangePasswordLoading extends AuthState {
+  final User user;
+  const ChangePasswordLoading(this.user);
+  @override
+  List<Object?> get props => [user];
+}
+
+class ChangePasswordFailed extends AuthState {
+  final User user;
+  final String message;
+  const ChangePasswordFailed(this.user, this.message);
+  @override
+  List<Object?> get props => [user, message];
+}
+
 // ─── BLoC ────────────────────────────────────────────────
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
@@ -69,6 +95,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LoginRequested>(_onLoginRequested);
     on<LogoutRequested>(_onLogoutRequested);
     on<RefreshProfile>(_onRefreshProfile);
+    on<ChangePasswordRequested>(_onChangePasswordRequested);
   }
 
   Future<void> _onAppStarted(
@@ -113,5 +140,36 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     await _authRepository.logout();
     emit(AuthInitial());
+  }
+
+  Future<void> _onChangePasswordRequested(
+    ChangePasswordRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    final currentState = state;
+    User? user;
+    if (currentState is AuthAuthenticated) {
+      user = currentState.user;
+    } else if (currentState is ChangePasswordFailed) {
+      user = currentState.user;
+    }
+    if (user == null) return;
+
+    emit(ChangePasswordLoading(user));
+    try {
+      await _authRepository.changePassword(event.currentPassword, event.newPassword);
+      await _authRepository.logout();
+      emit(AuthInitial());
+    } catch (e) {
+      final msg = e.toString();
+      if (msg.contains('wrong_password')) {
+        emit(ChangePasswordFailed(user, 'La contraseña actual es incorrecta'));
+      } else if (msg.contains('token_expired')) {
+        await _authRepository.logout();
+        emit(AuthInitial());
+      } else {
+        emit(ChangePasswordFailed(user, 'Error al cambiar la contraseña. Inténtalo de nuevo.'));
+      }
+    }
   }
 }

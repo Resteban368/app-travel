@@ -42,6 +42,8 @@ class _CatalogueFormScreenState extends State<CatalogueFormScreen>
     _selectedSedeId = c?.idSede;
     _isActive = c?.activo ?? true;
 
+    context.read<SedeBloc>().add(LoadSedes());
+
     _entryCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 1000));
     _fade = Tween<double>(begin: 0, end: 1).animate(
@@ -290,8 +292,25 @@ class _CatalogueFormScreenState extends State<CatalogueFormScreen>
   Widget _buildSedeDropdown({required bool canWrite}) {
     return BlocBuilder<SedeBloc, SedeState>(
       builder: (context, state) {
+        if (state is SedeLoading || state is SedeInitial) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text('Sede / Sucursal', style: TextStyle(color: D.slate400, fontSize: 12, fontWeight: FontWeight.w600)),
+              SizedBox(height: 16),
+              Center(child: CircularProgressIndicator(color: D.skyBlue)),
+            ],
+          );
+        }
+
         List<Sede> sedes = [];
-        if (state is SedesLoaded) sedes = state.sedes;
+        if (state is SedesLoaded) {
+          sedes = state.sedes;
+        } else if (state is SedeSaved && state.sedes != null) {
+          sedes = state.sedes!;
+        } else if (state is SedeSaving && state.sedes != null) {
+          sedes = state.sedes!;
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,7 +318,7 @@ class _CatalogueFormScreenState extends State<CatalogueFormScreen>
             const Text('Sede / Sucursal', style: TextStyle(color: D.slate400, fontSize: 12, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             DropdownButtonFormField<int>(
-              value: _selectedSedeId,
+              value: sedes.any((s) => int.tryParse(s.id) == _selectedSedeId) ? _selectedSedeId : null,
               dropdownColor: D.surfaceHigh,
               style: const TextStyle(color: Colors.white, fontSize: 15),
               decoration: InputDecoration(

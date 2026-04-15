@@ -121,6 +121,29 @@ class ApiAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    final token = await _storage.read(key: 'access_token');
+    if (token == null) throw Exception('token_expired');
+
+    final response = await http.patch(
+      Uri.parse('$_baseUrl/change-password'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      }),
+    );
+
+    if (response.statusCode == 200) return;
+    if (response.statusCode == 400) throw Exception('wrong_password');
+    if (response.statusCode == 401) throw Exception('token_expired');
+    throw Exception('Error al cambiar la contraseña: ${response.statusCode}');
+  }
+
+  @override
   Future<void> logout() async {
     final accessToken = await _storage.read(key: 'access_token');
     

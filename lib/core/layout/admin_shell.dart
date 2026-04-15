@@ -19,6 +19,8 @@ import 'package:agente_viajes/features/reservas/presentation/bloc/reserva_bloc.d
 import 'package:agente_viajes/features/reservas/presentation/bloc/reserva_event.dart';
 import 'package:agente_viajes/features/cotizaciones/presentation/bloc/cotizacion_bloc.dart';
 import 'package:agente_viajes/features/cotizaciones/presentation/bloc/cotizacion_event.dart';
+import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_bloc.dart';
+import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_event.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../theme/app_colors.dart';
@@ -124,6 +126,12 @@ class _AdminShellState extends State<AdminShell> {
       permission: 'cotizacion',
     ),
     _NavItem(
+      icon: Icons.people_rounded,
+      label: 'Clientes',
+      route: AppRouter.clientes,
+      permission: 'clientes',
+    ),
+    _NavItem(
       icon: Icons.account_circle_rounded,
       label: 'Mi Perfil',
       route: AppRouter.profile,
@@ -168,6 +176,8 @@ class _AdminShellState extends State<AdminShell> {
         context.read<ReservaBloc>().add(const LoadReservas());
       case AppRouter.cotizaciones:
         context.read<CotizacionBloc>().add(LoadCotizaciones());
+      case AppRouter.clientes:
+        context.read<ClienteBloc>().add(LoadClientes());
     }
 
     Navigator.pushReplacementNamed(context, item.route);

@@ -49,6 +49,9 @@ import '../../features/agentes/presentation/bloc/agente_bloc.dart';
 import '../../features/reservas/data/repositories/api_reserva_repository.dart';
 import '../../features/reservas/domain/repositories/reserva_repository.dart';
 import '../../features/reservas/presentation/bloc/reserva_bloc.dart';
+import '../../features/clientes/data/repositories/api_cliente_repository.dart';
+import '../../features/clientes/domain/repositories/cliente_repository.dart';
+import '../../features/clientes/presentation/bloc/cliente_bloc.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -81,6 +84,7 @@ void initDependencies() {
   sl.registerLazySingleton<CotizacionRepository>(() => ApiCotizacionRepository(client: sl()));
   sl.registerLazySingleton<AgenteRepository>(() => ApiAgenteRepository(client: sl()));
   sl.registerLazySingleton<ReservaRepository>(() => ApiReservaRepository(client: sl()));
+  sl.registerLazySingleton<ClienteRepository>(() => ApiClienteRepository(client: sl()));
 
   // ─── Use Cases ────────────────────────────────────────
   sl.registerLazySingleton(() => SendWhatsAppMessage(sl()));
@@ -102,4 +106,5 @@ void initDependencies() {
   sl.registerLazySingleton(() => CotizacionBloc(repository: sl()));
   sl.registerFactory(() => AgenteBloc(repository: sl()));
   sl.registerFactory(() => ReservaBloc(repository: sl()));
+  sl.registerFactory(() => ClienteBloc(repository: sl()));
 }

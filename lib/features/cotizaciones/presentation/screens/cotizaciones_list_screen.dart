@@ -169,7 +169,33 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const _ScreenSectionHeader(),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Expanded(child: _ScreenSectionHeader()),
+                                      const SizedBox(width: 12),
+                                      GestureDetector(
+                                        onTap: () => Navigator.pushNamed(context, AppRouter.cotizacionCreate),
+                                        child: Container(
+                                          width: 52,
+                                          height: 52,
+                                          decoration: BoxDecoration(
+                                            gradient: const LinearGradient(colors: [D.indigo, D.royalBlue]),
+                                            borderRadius: BorderRadius.circular(16),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: D.indigo.withOpacity(0.3),
+                                                blurRadius: 15,
+                                                offset: const Offset(0, 6),
+                                              ),
+                                            ],
+                                          ),
+                                          child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                   const SizedBox(height: 24),
                                   _SearchBar(
                                     controller: _searchCtrl,
@@ -511,6 +537,18 @@ class _CotizacionCard extends StatefulWidget {
 class _CotizacionCardState extends State<_CotizacionCard> {
   bool _hover = false;
 
+  List<Color> _estadoColors(String estado) {
+    switch (estado.toLowerCase()) {
+      case 'atendida':
+        return [D.emerald, const Color(0xFF059669)];
+      case 'cancelada':
+        return [D.rose, const Color(0xFFBE123C)];
+      case 'pendiente':
+      default:
+        return [Colors.amber.shade700, Colors.orange.shade800];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = widget.cotizacion;
@@ -555,9 +593,7 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: isUnread
-                        ? [D.indigo, D.royalBlue]
-                        : [D.slate600, D.border],
+                    colors: _estadoColors(c.estado),
                   ),
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -589,12 +625,29 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (isUnread)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
+                        const SizedBox(width: 6),
+                        // Badge estado
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _estadoColors(c.estado).first.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(color: _estadoColors(c.estado).first.withOpacity(0.5)),
+                          ),
+                          child: Text(
+                            c.estado.toUpperCase(),
+                            style: TextStyle(
+                              color: _estadoColors(c.estado).first,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.4,
                             ),
+                          ),
+                        ),
+                        if (isUnread) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: D.indigo.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(4),
@@ -608,6 +661,7 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                               ),
                             ),
                           ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 4),

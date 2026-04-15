@@ -248,8 +248,7 @@ class TourBloc extends Bloc<TourEvent, TourState> {
         emit(TourSaving(tours: currentTours));
         try {
           final tour = currentTours.firstWhere((t) => t.id == event.id);
-          final updated = tour.copyWith(isActive: !tour.isActive);
-          await _tourRepository.updateTour(updated);
+          await _tourRepository.toggleActive(event.id, !tour.isActive);
           final updatedList = await _tourRepository.getTours();
           emit(TourSaved(tours: updatedList));
           emit(ToursLoaded(tours: updatedList, filteredTours: updatedList));

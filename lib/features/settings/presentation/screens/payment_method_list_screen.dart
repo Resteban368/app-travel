@@ -141,7 +141,12 @@ class _PaymentMethodListBodyState extends State<_PaymentMethodListBody>
                                     method: method,
                                     canWrite: canWrite,
                                     icon: _bankIcon(method.name),
-                                    onEdit: () => Navigator.pushNamed(context, AppRouter.paymentMethodForm, arguments: method),
+                                    onEdit: () async {
+                                      final result = await Navigator.pushNamed(context, AppRouter.paymentMethodForm, arguments: method);
+                                      if (result == true && context.mounted) {
+                                        context.read<PaymentMethodBloc>().add(LoadPaymentMethods());
+                                      }
+                                    },
                                     onDelete: () => _confirmDelete(context, method),
                                     onToggle: () => context.read<PaymentMethodBloc>().add(TogglePaymentMethodActive(method.id)),
                                   ),
@@ -275,7 +280,12 @@ class _HeaderSection extends StatelessWidget {
           ],
         ),
         if (canWrite)
-          _AddBtn(onTap: () => Navigator.pushNamed(context, AppRouter.paymentMethodForm)),
+          _AddBtn(onTap: () async {
+            final result = await Navigator.pushNamed(context, AppRouter.paymentMethodForm);
+            if (result == true && context.mounted) {
+              context.read<PaymentMethodBloc>().add(LoadPaymentMethods());
+            }
+          }),
       ],
     );
   }

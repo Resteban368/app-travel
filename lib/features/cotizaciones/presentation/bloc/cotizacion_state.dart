@@ -21,6 +21,10 @@ class CotizacionLoaded extends CotizacionState {
   List<Object?> get props => [cotizaciones];
 }
 
+class CotizacionSaving extends CotizacionState {}
+
+class CotizacionSaved extends CotizacionState {}
+
 class CotizacionError extends CotizacionState {
   final String message;
 

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:agente_viajes/features/tour/domain/entities/tour.dart';
+import 'package:agente_viajes/features/clientes/domain/entities/cliente.dart';
 import 'integrante.dart';
 
 class Reserva extends Equatable {
@@ -14,14 +15,10 @@ class Reserva extends Equatable {
   final List<int> serviciosIds;
   final List<Integrante> integrantes;
 
-  // Responsable de la reserva
-  final String? responsableNombre;
-  final String? responsableTelefono;
-  final String? responsableCedula;
-  final DateTime? responsableFechaNacimiento;
-
+  final int? idResponsable;
   final String idTour;
   final Tour? tour;
+  final Cliente? responsable;
 
   const Reserva({
     this.id,
@@ -34,12 +31,10 @@ class Reserva extends Equatable {
     required this.notas,
     required this.serviciosIds,
     required this.integrantes,
-    this.responsableNombre,
-    this.responsableTelefono,
-    this.responsableCedula,
-    this.responsableFechaNacimiento,
+    this.idResponsable,
     required this.idTour,
     this.tour,
+    this.responsable,
   });
 
   Reserva copyWith({
@@ -53,12 +48,10 @@ class Reserva extends Equatable {
     String? notas,
     List<int>? serviciosIds,
     List<Integrante>? integrantes,
-    String? responsableNombre,
-    String? responsableTelefono,
-    String? responsableCedula,
-    DateTime? responsableFechaNacimiento,
+    int? idResponsable,
     String? idTour,
     Tour? tour,
+    Cliente? responsable,
   }) {
     return Reserva(
       id: id ?? this.id,
@@ -71,12 +64,10 @@ class Reserva extends Equatable {
       notas: notas ?? this.notas,
       serviciosIds: serviciosIds ?? this.serviciosIds,
       integrantes: integrantes ?? this.integrantes,
-      responsableNombre: responsableNombre ?? this.responsableNombre,
-      responsableTelefono: responsableTelefono ?? this.responsableTelefono,
-      responsableCedula: responsableCedula ?? this.responsableCedula,
-      responsableFechaNacimiento: responsableFechaNacimiento ?? this.responsableFechaNacimiento,
+      idResponsable: idResponsable ?? this.idResponsable,
       idTour: idTour ?? this.idTour,
       tour: tour ?? this.tour,
+      responsable: responsable ?? this.responsable,
     );
   }
 
@@ -92,11 +83,9 @@ class Reserva extends Equatable {
         notas,
         serviciosIds,
         integrantes,
-        responsableNombre,
-        responsableTelefono,
-        responsableCedula,
-        responsableFechaNacimiento,
+        idResponsable,
         idTour,
         tour,
+        responsable,
       ];
 }

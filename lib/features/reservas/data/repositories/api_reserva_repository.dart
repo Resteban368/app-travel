@@ -5,7 +5,9 @@ import '../../domain/entities/reserva.dart';
 import '../../domain/entities/integrante.dart';
 import '../../domain/repositories/reserva_repository.dart';
 import 'package:agente_viajes/features/tour/domain/entities/tour.dart';
+import 'package:agente_viajes/features/clientes/domain/entities/cliente.dart';
 import 'package:agente_viajes/core/constants/api_constants.dart';
+import 'package:agente_viajes/core/models/paged_result.dart';
 
 class ApiReservaRepository implements ReservaRepository {
   final http.Client client;
@@ -20,34 +22,44 @@ class ApiReservaRepository implements ReservaRepository {
       };
 
   @override
-  Future<List<Reserva>> getReservas({DateTime? startDate, DateTime? endDate, String? status}) async {
+  Future<PagedResult<Reserva>> getReservas({
+    int page = 1,
+    int limit = 20,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? status,
+  }) async {
     debugPrint('🌎 [ApiReservaRepository] GET request to $_baseUrl');
-    
-    // Contruyendo los query parameters
-    final Map<String, String> params = {};
+
+    final params = <String, String>{
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
     if (startDate != null) params['start_date'] = startDate.toIso8601String();
     if (endDate != null) params['end_date'] = endDate.toIso8601String();
     if (status != null && status.isNotEmpty) params['estado'] = status;
 
-    Uri uri = Uri.parse(_baseUrl);
-    if (params.isNotEmpty) {
-      uri = uri.replace(queryParameters: params);
-    }
+    final uri = Uri.parse(_baseUrl).replace(queryParameters: params);
 
     try {
       final response = await client.get(uri, headers: _headers);
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((item) => _fromJson(item)).toList();
+        final body = json.decode(response.body) as Map<String, dynamic>;
+        final data = (body['data'] as List<dynamic>).map((item) => _fromJson(item as Map<String, dynamic>)).toList();
+        return PagedResult(
+          data: data,
+          total: (body['total'] as num?)?.toInt() ?? data.length,
+          totalPages: (body['totalPages'] as num?)?.toInt() ?? 1,
+          page: (body['page'] as num?)?.toInt() ?? page,
+          limit: (body['limit'] as num?)?.toInt() ?? limit,
+        );
       } else {
         debugPrint('❌ [ApiReservaRepository] Error: ${response.statusCode}');
-        // As a fallback for UI testing if the backend is not yet ready, we could return empty list
-        // returning an empty list instead of throwing an exact error to let UI render properly.
-        return [];
+        return PagedResult(data: const [], total: 0, totalPages: 1, page: 1, limit: limit);
       }
     } catch (e) {
-       debugPrint('❌ [ApiReservaRepository] Exception: $e');
-       throw Exception('Error al conectar con la API de reservas');
+      debugPrint('❌ [ApiReservaRepository] Exception: $e');
+      throw Exception('Error al conectar con la API de reservas');
     }
   }
 
@@ -62,7 +74,21 @@ class ApiReservaRepository implements ReservaRepository {
 
   @override
   Future<void> createReserva(Reserva reserva) async {
-    final body = json.encode(_toJson(reserva));
+    final body = json.encode({
+      'id_tour': int.tryParse(reserva.idTour) ?? 0,
+      'correo': reserva.correo,
+      'id_responsable': reserva.idResponsable,
+      'estado': reserva.estado,
+      'servicios_ids': reserva.serviciosIds,
+      'integrantes': reserva.integrantes.map((i) => {
+        'nombre': i.nombre,
+        'telefono': i.telefono,
+        if (i.fechaNacimiento != null)
+          'fecha_nacimiento': i.fechaNacimiento!.toIso8601String().split('T').first,
+        'tipo_documento': i.tipoDocumento,
+        'documento': i.documento,
+      }).toList(),
+    });
     debugPrint('📤 [ApiReservaRepository] Creating: $body');
     final response = await client.post(
       Uri.parse(_baseUrl),
@@ -76,13 +102,31 @@ class ApiReservaRepository implements ReservaRepository {
 
   @override
   Future<void> updateReserva(Reserva reserva) async {
-    final body = json.encode(_toJson(reserva));
+    final body = json.encode({
+      'id_tour': int.tryParse(reserva.idTour) ?? 0,
+      'correo': reserva.correo,
+      'id_responsable': reserva.idResponsable,
+      'estado': reserva.estado,
+      'notas': reserva.notas,
+      'servicios_ids': reserva.serviciosIds,
+      'integrantes': reserva.integrantes.map((i) => {
+        'nombre': i.nombre,
+        'telefono': i.telefono,
+        if (i.fechaNacimiento != null)
+          'fecha_nacimiento': i.fechaNacimiento!.toIso8601String().split('T').first,
+        'tipo_documento': i.tipoDocumento,
+        'documento': i.documento,
+      }).toList(),
+    });
+
+    debugPrint('📤 [ApiReservaRepository] Updating: $body');
     final response = await client.patch(
       Uri.parse('$_baseUrl/${reserva.id}'),
       headers: _headers,
       body: body,
     );
-    if (response.statusCode != 200) {
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Error al actualizar reserva: ${response.statusCode} - ${response.body}');
     }
   }
@@ -100,6 +144,8 @@ class ApiReservaRepository implements ReservaRepository {
           telefono: i['telefono']?.toString() ?? '',
           fechaNacimiento: i['fecha_nacimiento'] != null ? DateTime.tryParse(i['fecha_nacimiento']) : null,
           esResponsable: isRes,
+          tipoDocumento: i['tipo_documento'] ?? 'cedula',
+          documento: i['documento']?.toString() ?? '',
         );
       }).toList();
     }
@@ -120,6 +166,20 @@ class ApiReservaRepository implements ReservaRepository {
       tempIdTour = json['tour']['id'].toString();
     }
 
+    // Parse responsable (puede venir como objeto anidado o solo id)
+    Cliente? parsedResponsable;
+    int? idResponsable = int.tryParse(json['id_responsable']?.toString() ?? '');
+
+    // Intentar parsear objeto anidado 'responsable' o 'cliente'
+    final responsableJson = json['responsable'] ?? json['cliente'];
+    if (responsableJson is Map<String, dynamic>) {
+      idResponsable ??= int.tryParse(
+        (responsableJson['id_cliente'] ?? responsableJson['id'] ?? '').toString(),
+      );
+      parsedResponsable = _parseCliente(responsableJson);
+    }
+
+    debugPrint('📦 [ApiReservaRepository] _fromJson id=${json['id']} id_responsable=$idResponsable responsable=${parsedResponsable?.nombre}');
     return Reserva(
       id: json['id']?.toString(),
       idReserva: json['id_reserva']?.toString(),
@@ -131,37 +191,13 @@ class ApiReservaRepository implements ReservaRepository {
       notas: json['notas'] ?? '',
       serviciosIds: serviciosIds,
       integrantes: integrantes,
-      responsableNombre: json['responsable_nombre'],
-      responsableTelefono: json['responsable_telefono']?.toString(),
-      responsableCedula: json['responsable_cedula']?.toString(),
-      responsableFechaNacimiento: json['responsable_fecha_nacimiento'] != null
-          ? DateTime.tryParse(json['responsable_fecha_nacimiento'])
-          : null,
+      idResponsable: idResponsable,
       idTour: json['id_tour']?.toString() ?? tempIdTour,
       tour: json['tour'] != null ? _parseTour(json['tour']) : null,
+      responsable: parsedResponsable,
     );
   }
 
-  Map<String, dynamic> _toJson(Reserva reserva) {
-    return {
-      'id_tour': int.tryParse(reserva.idTour) ?? 0,
-      'correo': reserva.correo,
-      'estado': reserva.estado,
-      'notas': reserva.notas,
-      'servicios_ids': reserva.serviciosIds,
-      'integrantes': reserva.integrantes.map((i) => {
-        'nombre': i.nombre,
-        'telefono': i.telefono,
-        'fecha_nacimiento': i.fechaNacimiento?.toIso8601String(),
-        'es_responsable': i.esResponsable,
-      }).toList(),
-      if (reserva.responsableNombre != null) 'responsable_nombre': reserva.responsableNombre,
-      if (reserva.responsableTelefono != null) 'responsable_telefono': reserva.responsableTelefono,
-      if (reserva.responsableCedula != null) 'responsable_cedula': reserva.responsableCedula,
-      if (reserva.responsableFechaNacimiento != null)
-        'responsable_fecha_nacimiento': reserva.responsableFechaNacimiento!.toIso8601String(),
-    };
-  }
 
   Tour? _parseTour(Map<String, dynamic> jsonTour) {
     try {
@@ -181,6 +217,25 @@ class ApiReservaRepository implements ReservaRepository {
         exclusions: [],
         itinerary: [],
         imageUrl: jsonTour['imageUrl'] ?? '',
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Cliente? _parseCliente(Map<String, dynamic> json) {
+    try {
+      return Cliente(
+        id: int.tryParse((json['id_cliente'] ?? json['id'] ?? '').toString()),
+        nombre: json['nombre'] ?? '',
+        correo: json['correo'] ?? json['email'] ?? '',
+        telefono: json['telefono']?.toString() ?? '',
+        tipoDocumento: json['tipo_documento'] ?? 'CC',
+        documento: json['documento']?.toString() ?? '',
+        fechaNacimiento: json['fecha_nacimiento'] != null
+            ? DateTime.tryParse(json['fecha_nacimiento'].toString())
+            : null,
+        notas: json['notas'] ?? '',
       );
     } catch (e) {
       return null;

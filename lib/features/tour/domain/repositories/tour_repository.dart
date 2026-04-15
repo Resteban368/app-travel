@@ -7,4 +7,5 @@ abstract class TourRepository {
   Future<void> createTour(Tour tour);
   Future<void> updateTour(Tour tour);
   Future<void> deleteTour(String id);
+  Future<void> toggleActive(String id, bool isActive);
 }

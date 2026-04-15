@@ -648,28 +648,12 @@ class _TourFormScreenState extends State<TourFormScreen>
     return BlocBuilder<TourBloc, TourState>(
       builder: (context, state) {
         final isSaving = state is TourSaving;
-        return Row(
-          children: [
-            Expanded(
-              child: _FormButton(
-                label: 'GUARDAR BORRADOR',
-                color: D.slate800,
-                icon: Icons.drafts_rounded,
-                isLoading: isSaving,
-                onTap: () => _saveTour(context, publish: false),
-              ),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: _FormButton(
-                label: 'PUBLICAR AHORA',
-                color: D.royalBlue,
-                icon: Icons.rocket_launch_rounded,
-                isLoading: isSaving,
-                onTap: () => _saveTour(context, publish: true),
-              ),
-            ),
-          ],
+        return _FormButton(
+          label: 'GUARDAR',
+          color: D.royalBlue,
+          icon: Icons.save_rounded,
+          isLoading: isSaving,
+          onTap: () => _saveTour(context, publish: true),
         );
       },
     );

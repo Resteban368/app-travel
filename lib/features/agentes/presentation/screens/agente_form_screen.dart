@@ -69,6 +69,11 @@ const _modules = [
     label: 'Cotizaciones',
     icon: Icons.request_quote_rounded,
   ),
+  _Module(
+    key: 'clientes',
+    label: 'Clientes',
+    icon: Icons.people_rounded,
+  ),
 ];
 
 // ─── Screen ──────────────────────────────────────────────────────────────────

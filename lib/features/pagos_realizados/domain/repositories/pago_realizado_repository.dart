@@ -1,8 +1,14 @@
 import '../entities/pago_realizado.dart';
+import '../../../../core/models/paged_result.dart';
 
 abstract class PagoRealizadoRepository {
-  /// Fetches all payments, optionally filtered by the given date range.
-  Future<List<PagoRealizado>> getPagos({DateTime? startDate, DateTime? endDate});
+  /// Fetches a paginated page of payments, optionally filtered by date range.
+  Future<PagedResult<PagoRealizado>> getPagos({
+    int page = 1,
+    int limit = 20,
+    DateTime? startDate,
+    DateTime? endDate,
+  });
 
   /// Fetches all payments linked to a specific reservation.
   Future<List<PagoRealizado>> getPagosByReserva(int reservaId);

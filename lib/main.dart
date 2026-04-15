@@ -11,8 +11,10 @@ import 'package:agente_viajes/features/whatsapp/presentation/bloc/whatsapp_bloc.
 import 'package:agente_viajes/features/cotizaciones/presentation/bloc/cotizacion_bloc.dart';
 import 'package:agente_viajes/features/agentes/presentation/bloc/agente_bloc.dart';
 import 'package:agente_viajes/features/reservas/presentation/bloc/reserva_bloc.dart';
+import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/di/injection_container.dart';
 import 'core/theme/app_theme.dart';
@@ -48,12 +50,23 @@ class TravelToursApp extends StatelessWidget {
         BlocProvider<CotizacionBloc>(create: (_) => sl<CotizacionBloc>()),
         BlocProvider<AgenteBloc>(create: (_) => sl<AgenteBloc>()),
         BlocProvider<ReservaBloc>(create: (_) => sl<ReservaBloc>()),
+        BlocProvider<ClienteBloc>(create: (_) => sl<ClienteBloc>()),
         BlocProvider<AuthBloc>(create: (_) => sl<AuthBloc>()),
       ],
       child: MaterialApp(
         title: 'Travel Tours Florencia - Admin',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
+        locale: const Locale('es', 'CO'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('es', 'CO'),
+          Locale('en', 'US'),
+        ],
         initialRoute: AppRouter.splash,
         onGenerateRoute: AppRouter.onGenerateRoute,
       ),

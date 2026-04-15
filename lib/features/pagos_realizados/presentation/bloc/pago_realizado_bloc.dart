@@ -12,13 +12,15 @@ abstract class PagoRealizadoEvent extends Equatable {
 }
 
 class LoadPagos extends PagoRealizadoEvent {
+  final int page;
+  final int limit;
   final DateTime? startDate;
   final DateTime? endDate;
 
-  const LoadPagos({this.startDate, this.endDate});
+  const LoadPagos({this.page = 1, this.limit = 20, this.startDate, this.endDate});
 
   @override
-  List<Object?> get props => [startDate, endDate];
+  List<Object?> get props => [page, limit, startDate, endDate];
 }
 
 class CreatePago extends PagoRealizadoEvent {
@@ -63,17 +65,25 @@ class PagoRealizadoLoading extends PagoRealizadoState {}
 
 class PagosRealizadosLoaded extends PagoRealizadoState {
   final List<PagoRealizado> pagos;
+  final int page;
+  final int totalPages;
+  final int total;
+  final int limit;
   final DateTime? filterStartDate;
   final DateTime? filterEndDate;
 
   const PagosRealizadosLoaded({
     required this.pagos,
+    this.page = 1,
+    this.totalPages = 1,
+    this.total = 0,
+    this.limit = 20,
     this.filterStartDate,
     this.filterEndDate,
   });
 
   @override
-  List<Object?> get props => [pagos, filterStartDate, filterEndDate];
+  List<Object?> get props => [pagos, page, totalPages, total, limit, filterStartDate, filterEndDate];
 }
 
 class PagoRealizadoSaving extends PagoRealizadoState {
@@ -118,17 +128,21 @@ class PagoRealizadoBloc extends Bloc<PagoRealizadoEvent, PagoRealizadoState> {
   ) async {
     emit(PagoRealizadoLoading());
     try {
-      final pagos = await _repository.getPagos(
+      final result = await _repository.getPagos(
+        page: event.page,
+        limit: event.limit,
         startDate: event.startDate,
         endDate: event.endDate,
       );
-      emit(
-        PagosRealizadosLoaded(
-          pagos: pagos,
-          filterStartDate: event.startDate,
-          filterEndDate: event.endDate,
-        ),
-      );
+      emit(PagosRealizadosLoaded(
+        pagos: result.data,
+        page: result.page,
+        totalPages: result.totalPages,
+        total: result.total,
+        limit: result.limit,
+        filterStartDate: event.startDate,
+        filterEndDate: event.endDate,
+      ));
     } catch (e) {
       emit(PagoRealizadoError(e.toString()));
     }
@@ -144,9 +158,9 @@ class PagoRealizadoBloc extends Bloc<PagoRealizadoEvent, PagoRealizadoState> {
     emit(PagoRealizadoSaving(pagos: currentPagos));
     try {
       await _repository.createPago(event.pago);
-      final pagos = await _repository.getPagos();
-      emit(PagoRealizadoSaved(pagos: pagos));
-      emit(PagosRealizadosLoaded(pagos: pagos));
+      final result = await _repository.getPagos(page: 1, limit: 20);
+      emit(PagoRealizadoSaved(pagos: result.data));
+      emit(PagosRealizadosLoaded(pagos: result.data, page: 1, totalPages: result.totalPages, total: result.total, limit: result.limit));
     } catch (e) {
       emit(PagoRealizadoError(e.toString()));
     }
@@ -162,9 +176,9 @@ class PagoRealizadoBloc extends Bloc<PagoRealizadoEvent, PagoRealizadoState> {
     emit(PagoRealizadoSaving(pagos: currentPagos));
     try {
       await _repository.updatePago(event.pago);
-      final pagos = await _repository.getPagos();
-      emit(PagoRealizadoSaved(pagos: pagos));
-      emit(PagosRealizadosLoaded(pagos: pagos));
+      final result = await _repository.getPagos(page: 1, limit: 20);
+      emit(PagoRealizadoSaved(pagos: result.data));
+      emit(PagosRealizadosLoaded(pagos: result.data, page: 1, totalPages: result.totalPages, total: result.total, limit: result.limit));
     } catch (e) {
       emit(PagoRealizadoError(e.toString()));
     }
@@ -180,9 +194,9 @@ class PagoRealizadoBloc extends Bloc<PagoRealizadoEvent, PagoRealizadoState> {
     emit(PagoRealizadoSaving(pagos: currentPagos));
     try {
       await _repository.deletePago(event.id);
-      final pagos = await _repository.getPagos();
-      emit(PagoRealizadoSaved(pagos: pagos));
-      emit(PagosRealizadosLoaded(pagos: pagos));
+      final result = await _repository.getPagos(page: 1, limit: 20);
+      emit(PagoRealizadoSaved(pagos: result.data));
+      emit(PagosRealizadosLoaded(pagos: result.data, page: 1, totalPages: result.totalPages, total: result.total, limit: result.limit));
     } catch (e) {
       emit(PagoRealizadoError(e.toString()));
     }
@@ -200,9 +214,9 @@ class PagoRealizadoBloc extends Bloc<PagoRealizadoEvent, PagoRealizadoState> {
       try {
         final updated = event.pago.copyWith(isValidated: !event.pago.isValidated);
         await _repository.updatePago(updated);
-        final pagos = await _repository.getPagos();
-        emit(PagoRealizadoSaved(pagos: pagos));
-        emit(PagosRealizadosLoaded(pagos: pagos));
+        final result = await _repository.getPagos(page: 1, limit: 20);
+        emit(PagoRealizadoSaved(pagos: result.data));
+        emit(PagosRealizadosLoaded(pagos: result.data, page: 1, totalPages: result.totalPages, total: result.total, limit: result.limit));
       } catch (e) {
         emit(PagoRealizadoError(e.toString()));
       }

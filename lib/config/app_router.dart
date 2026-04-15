@@ -32,6 +32,7 @@ import '../features/pagos_realizados/presentation/screens/pago_realizado_form_sc
 import '../../features/pagos_realizados/domain/entities/pago_realizado.dart';
 import '../features/cotizaciones/presentation/screens/cotizaciones_list_screen.dart';
 import '../features/cotizaciones/presentation/screens/cotizacion_detail_screen.dart';
+import '../features/cotizaciones/presentation/screens/cotizacion_form_screen.dart';
 import '../features/cotizaciones/domain/entities/cotizacion.dart';
 import '../features/agentes/presentation/screens/agente_list_screen.dart';
 import '../features/agentes/presentation/screens/agente_form_screen.dart';
@@ -40,6 +41,9 @@ import '../features/agentes/domain/entities/agente.dart';
 import '../features/reservas/presentation/screens/reserva_list_screen.dart';
 import '../features/reservas/presentation/screens/reserva_form_screen.dart';
 import '../features/reservas/domain/entities/reserva.dart';
+import '../features/clientes/presentation/screens/cliente_list_screen.dart';
+import '../features/clientes/presentation/screens/cliente_form_screen.dart';
+import '../features/clientes/domain/entities/cliente.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
 
 /// Centralised route configuration.
@@ -73,6 +77,7 @@ class AppRouter {
   static const String pagoRealizadoCreate = '/pagos-realizados/create';
   static const String pagoRealizadoEdit = '/pagos-realizados/edit';
   static const String cotizaciones = '/cotizaciones';
+  static const String cotizacionCreate = '/cotizaciones/create';
   static const String cotizacionDetail = '/cotizaciones/detail';
   static const String agentes = '/agentes';
   static const String agenteCreate = '/agentes/create';
@@ -81,6 +86,9 @@ class AppRouter {
   static const String reservas = '/reservas';
   static const String reservaCreate = '/reservas/create';
   static const String reservaEdit = '/reservas/edit';
+  static const String clientes = '/clientes';
+  static const String clienteCreate = '/clientes/create';
+  static const String clienteEdit = '/clientes/edit';
   static const String profile = '/profile';
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -164,6 +172,8 @@ class AppRouter {
         );
       case cotizaciones:
         return _fadeRoute(const CotizacionesListScreen(), settings);
+      case cotizacionCreate:
+        return _fadeRoute(const CotizacionFormScreen(), settings);
       case cotizacionDetail:
         final cotizacion = settings.arguments as Cotizacion;
         return _fadeRoute(CotizacionDetailScreen(cotizacion: cotizacion), settings);
@@ -181,6 +191,13 @@ class AppRouter {
       case reservaEdit:
         final reserva = settings.arguments as Reserva;
         return _fadeRoute(ReservaFormScreen(reserva: reserva), settings);
+      case clientes:
+        return _fadeRoute(const ClienteListScreen(), settings);
+      case clienteCreate:
+        return _fadeRoute(const ClienteFormScreen(), settings);
+      case clienteEdit:
+        final cliente = settings.arguments as Cliente;
+        return _fadeRoute(ClienteFormScreen(cliente: cliente), settings);
       case profile:
         return _fadeRoute(const ProfileScreen(), settings);
       default:

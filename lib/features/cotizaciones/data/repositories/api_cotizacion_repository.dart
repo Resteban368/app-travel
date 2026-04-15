@@ -42,6 +42,45 @@ class ApiCotizacionRepository implements CotizacionRepository {
     }
   }
 
+  @override
+  Future<void> updateEstado(int id, String estado) async {
+    final response = await client.patch(
+      Uri.parse('$_baseUrl/$id'),
+      headers: _headers,
+      body: json.encode({'estado': estado}),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201 && response.statusCode != 204) {
+      throw Exception('Error al actualizar estado: ${response.statusCode}');
+    }
+  }
+
+  @override
+  Future<void> createCotizacion(Cotizacion cotizacion) async {
+    final body = json.encode({
+      'chat_id': cotizacion.chatId,
+      'nombre_completo': cotizacion.nombreCompleto,
+      'correo_electronico': cotizacion.correoElectronico,
+      'detalles_plan': cotizacion.detallesPlan,
+      'numero_pasajeros': cotizacion.numeroPasajeros,
+      'fecha_salida': cotizacion.fechaSalida,
+      'fecha_regreso': cotizacion.fechaRegreso,
+      'origen_destino': cotizacion.origenDestino,
+      'edades_menores': cotizacion.edadesMenuores,
+      'especificaciones': cotizacion.especificaciones,
+      'estado': cotizacion.estado,
+    });
+    debugPrint('📤 [ApiCotizacionRepository] Creating: $body');
+    final response = await client.post(
+      Uri.parse(_baseUrl),
+      headers: _headers,
+      body: body,
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Error al crear cotización: ${response.statusCode} - ${response.body}');
+    }
+  }
+
   Cotizacion _fromJson(Map<String, dynamic> json) {
     return Cotizacion(
       id: json['id'] ?? 0,

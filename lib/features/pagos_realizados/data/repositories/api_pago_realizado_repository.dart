@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../../domain/entities/pago_realizado.dart';
 import '../../domain/repositories/pago_realizado_repository.dart';
 import 'package:agente_viajes/core/constants/api_constants.dart';
+import 'package:agente_viajes/core/models/paged_result.dart';
 
 class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
   final http.Client client;
@@ -18,25 +19,34 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
   };
 
   @override
-  Future<List<PagoRealizado>> getPagos({
+  Future<PagedResult<PagoRealizado>> getPagos({
+    int page = 1,
+    int limit = 20,
     DateTime? startDate,
     DateTime? endDate,
   }) async {
-    var url = _baseUrl;
-    if (startDate != null && endDate != null) {
-      final startStr = startDate.toUtc().toIso8601String();
-      final endStr = endDate.toUtc().toIso8601String();
-      url = '$_baseUrl?startDate=$startStr&endDate=$endStr';
-    }
+    final params = <String, String>{
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
+    if (startDate != null) params['startDate'] = startDate.toUtc().toIso8601String();
+    if (endDate != null) params['endDate'] = endDate.toUtc().toIso8601String();
 
-    debugPrint('API CALL: GET $url');
-    final response = await client.get(Uri.parse(url), headers: _headers);
+    final uri = Uri.parse(_baseUrl).replace(queryParameters: params);
+    debugPrint('API CALL: GET $uri');
+    final response = await client.get(uri, headers: _headers);
     debugPrint('API RESPONSE: ${response.statusCode}');
-    debugPrint('API BODY: ${response.body}');
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      return data.map((json) => _fromJson(json)).toList();
+      final body = json.decode(response.body) as Map<String, dynamic>;
+      final data = (body['data'] as List<dynamic>).map((j) => _fromJson(j as Map<String, dynamic>)).toList();
+      return PagedResult(
+        data: data,
+        total: (body['total'] as num?)?.toInt() ?? data.length,
+        totalPages: (body['totalPages'] as num?)?.toInt() ?? 1,
+        page: (body['page'] as num?)?.toInt() ?? page,
+        limit: (body['limit'] as num?)?.toInt() ?? limit,
+      );
     }
     throw Exception('Error loading payments: ${response.statusCode}');
   }
@@ -46,8 +56,14 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
     final uri = Uri.parse(_baseUrl).replace(queryParameters: {'reserva_id': reservaId.toString()});
     final response = await client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      return data.map((j) => _fromJson(j)).toList();
+      final decoded = json.decode(response.body);
+      List<dynamic> data = [];
+      if (decoded is Map<String, dynamic> && decoded.containsKey('data')) {
+        data = decoded['data'] as List<dynamic>;
+      } else if (decoded is List) {
+        data = decoded;
+      }
+      return data.map((j) => _fromJson(j as Map<String, dynamic>)).toList();
     }
     throw Exception('Error al cargar pagos de la reserva: ${response.statusCode}');
   }

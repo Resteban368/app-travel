@@ -9,14 +9,16 @@ abstract class ReservaEvent extends Equatable {
 }
 
 class LoadReservas extends ReservaEvent {
+  final int page;
+  final int limit;
   final DateTime? startDate;
   final DateTime? endDate;
   final String? status;
 
-  const LoadReservas({this.startDate, this.endDate, this.status});
+  const LoadReservas({this.page = 1, this.limit = 20, this.startDate, this.endDate, this.status});
 
   @override
-  List<Object?> get props => [startDate, endDate, status];
+  List<Object?> get props => [page, limit, startDate, endDate, status];
 }
 
 class CreateReserva extends ReservaEvent {

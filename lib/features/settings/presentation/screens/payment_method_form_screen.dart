@@ -104,7 +104,7 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
       listener: (context, state) {
         if (state is PaymentMethodSaved) {
           _showToast(context, _isEditing ? 'Método actualizado' : 'Método creado');
-          Navigator.pop(context);
+          Navigator.pop(context, true);
         } else if (state is PaymentMethodError) {
           _showToast(context, state.message, isError: true);
         }

@@ -78,6 +78,18 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> with Tic
     super.dispose();
   }
 
+  void _goToPage(int page) {
+    final currentState = context.read<PagoRealizadoBloc>().state;
+    DateTime? startDate, endDate;
+    if (currentState is PagosRealizadosLoaded) {
+      startDate = currentState.filterStartDate;
+      endDate = currentState.filterEndDate;
+    }
+    context.read<PagoRealizadoBloc>().add(
+      LoadPagos(page: page, startDate: startDate, endDate: endDate),
+    );
+  }
+
   void _onFilterDates() async {
     final now = DateTime.now();
     final picked = await showDateRangePicker(
@@ -105,14 +117,14 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> with Tic
       if (!mounted) return;
       setState(() => _selectedDateRange = picked);
       context.read<PagoRealizadoBloc>().add(
-        LoadPagos(startDate: picked.start, endDate: picked.end),
+        LoadPagos(page: 1, startDate: picked.start, endDate: picked.end),
       );
     }
   }
 
   void _clearFilter() {
     setState(() => _selectedDateRange = null);
-    context.read<PagoRealizadoBloc>().add(const LoadPagos());
+    context.read<PagoRealizadoBloc>().add(const LoadPagos(page: 1));
   }
 
   @override
@@ -178,10 +190,20 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> with Tic
                   SliverFadeTransition(
                     opacity: _contentOpacity,
                     sliver: SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
                       sliver: _buildSliverContent(state, pagos),
                     ),
                   ),
+                  if (state is PagosRealizadosLoaded && state.totalPages > 1)
+                    SliverToBoxAdapter(
+                      child: _PaginationBar(
+                        page: state.page,
+                        totalPages: state.totalPages,
+                        total: state.total,
+                        onPageChanged: _goToPage,
+                      ),
+                    ),
+                  const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
                 ],
               );
             },
@@ -586,6 +608,100 @@ class _SkelCard extends StatelessWidget {
     return Container(
       height: 100, margin: const EdgeInsets.only(bottom: 16, left: 24, right: 24),
       decoration: BoxDecoration(color: D.surface.withOpacity(0.5), borderRadius: BorderRadius.circular(24)),
+    );
+  }
+}
+
+class _PaginationBar extends StatelessWidget {
+  final int page;
+  final int totalPages;
+  final int total;
+  final void Function(int) onPageChanged;
+
+  const _PaginationBar({
+    required this.page,
+    required this.totalPages,
+    required this.total,
+    required this.onPageChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: D.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: D.border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _PageBtn(
+              icon: Icons.chevron_left_rounded,
+              enabled: page > 1,
+              onTap: () => onPageChanged(page - 1),
+            ),
+            const SizedBox(width: 20),
+            Column(
+              children: [
+                Text(
+                  'Página $page de $totalPages',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$total resultados',
+                  style: const TextStyle(color: D.slate400, fontSize: 11),
+                ),
+              ],
+            ),
+            const SizedBox(width: 20),
+            _PageBtn(
+              icon: Icons.chevron_right_rounded,
+              enabled: page < totalPages,
+              onTap: () => onPageChanged(page + 1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PageBtn extends StatelessWidget {
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _PageBtn({required this.icon, required this.enabled, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: enabled ? D.royalBlue.withValues(alpha: 0.15) : D.surfaceHigh,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: enabled ? D.royalBlue.withValues(alpha: 0.4) : D.border,
+          ),
+        ),
+        child: Icon(
+          icon,
+          color: enabled ? D.skyBlue : D.slate600,
+          size: 22,
+        ),
+      ),
     );
   }
 }

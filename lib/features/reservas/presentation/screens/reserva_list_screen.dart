@@ -81,6 +81,15 @@ class _ReservaListScreenState extends State<ReservaListScreen>
     super.dispose();
   }
 
+  void _goToPage(int page) {
+    context.read<ReservaBloc>().add(LoadReservas(
+      page: page,
+      startDate: _startDate,
+      endDate: _endDate,
+      status: _selectedStatus,
+    ));
+  }
+
   Future<void> _pickDateRange(BuildContext context) async {
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
@@ -110,13 +119,12 @@ class _ReservaListScreenState extends State<ReservaListScreen>
         _startDate = picked.start;
         _endDate = picked.end;
       });
-      context.read<ReservaBloc>().add(
-        LoadReservas(
-          startDate: _startDate,
-          endDate: _endDate,
-          status: _selectedStatus,
-        ),
-      );
+      context.read<ReservaBloc>().add(LoadReservas(
+        page: 1,
+        startDate: _startDate,
+        endDate: _endDate,
+        status: _selectedStatus,
+      ));
     }
   }
 
@@ -125,18 +133,17 @@ class _ReservaListScreenState extends State<ReservaListScreen>
       _startDate = null;
       _endDate = null;
     });
-    context.read<ReservaBloc>().add(LoadReservas(status: _selectedStatus));
+    context.read<ReservaBloc>().add(LoadReservas(page: 1, status: _selectedStatus));
   }
 
   void _onStatusChanged(String? status) {
     setState(() => _selectedStatus = status);
-    context.read<ReservaBloc>().add(
-      LoadReservas(
-        startDate: _startDate,
-        endDate: _endDate,
-        status: _selectedStatus,
-      ),
-    );
+    context.read<ReservaBloc>().add(LoadReservas(
+      page: 1,
+      startDate: _startDate,
+      endDate: _endDate,
+      status: _selectedStatus,
+    ));
   }
 
   @override
@@ -211,6 +218,15 @@ class _ReservaListScreenState extends State<ReservaListScreen>
                       opacity: _contentOpacity,
                       sliver: _buildContent(context, state, reservas, canWrite),
                     ),
+                    if (state is ReservaLoaded && state.totalPages > 1)
+                      SliverToBoxAdapter(
+                        child: _PaginationBar(
+                          page: state.page,
+                          totalPages: state.totalPages,
+                          total: state.total,
+                          onPageChanged: _goToPage,
+                        ),
+                      ),
                     const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
                   ],
                 );
@@ -436,14 +452,15 @@ class _ReservaListScreenState extends State<ReservaListScreen>
       final correoMatches = r.correo.toLowerCase().contains(queryLower);
       final idMatches = (r.id ?? '').toLowerCase().contains(queryLower);
 
-      final responsable = r.integrantes.isNotEmpty
-          ? r.integrantes.firstWhere(
-              (i) => i.esResponsable,
-              orElse: () => r.integrantes.first,
-            )
-          : null;
-      final nameMatches =
-          responsable?.nombre.toLowerCase().contains(queryLower) ?? false;
+      // Buscar nombre del responsable de r.responsable o de integrantes
+      final responsableNombre = r.responsable?.nombre ??
+          (r.integrantes.isNotEmpty
+              ? r.integrantes
+                  .firstWhere((i) => i.esResponsable,
+                      orElse: () => r.integrantes.first)
+                  .nombre
+              : '');
+      final nameMatches = responsableNombre.toLowerCase().contains(queryLower);
 
       final matchesSearch = correoMatches || idMatches || nameMatches;
 
@@ -501,12 +518,22 @@ class _ReservaCardState extends State<_ReservaCard> {
   Widget build(BuildContext context) {
     final r = widget.reserva;
 
-    final responsable = r.integrantes.isNotEmpty
-        ? r.integrantes.firstWhere(
-            (i) => i.esResponsable,
-            orElse: () => r.integrantes.first,
-          )
-        : null;
+    // Priorizar responsable como objeto Cliente (viene del backend),
+    // con fallback al primer integrante marcado como responsable.
+    final nombreResponsable = r.responsable?.nombre ??
+        (r.integrantes.isNotEmpty
+            ? r.integrantes
+                .firstWhere((i) => i.esResponsable,
+                    orElse: () => r.integrantes.first)
+                .nombre
+            : null);
+    final telefonoResponsable = r.responsable?.telefono ??
+        (r.integrantes.isNotEmpty
+            ? r.integrantes
+                .firstWhere((i) => i.esResponsable,
+                    orElse: () => r.integrantes.first)
+                .telefono
+            : null);
 
     final statusColor = _getStatusColor(r.estado);
 
@@ -553,7 +580,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                         children: [
                           Expanded(
                             child: Text(
-                              responsable?.nombre ?? 'Sin responsable',
+                              nombreResponsable ?? 'Sin responsable',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
@@ -616,11 +643,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(
-                            Icons.email_outlined,
-                            color: D.slate600,
-                            size: 14,
-                          ),
+                          Icon(Icons.email_outlined, color: D.slate600, size: 14),
                           const SizedBox(width: 4),
                           Text(
                             r.correo,
@@ -628,23 +651,39 @@ class _ReservaCardState extends State<_ReservaCard> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      if (telefonoResponsable != null && telefonoResponsable.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.phone_outlined, color: D.slate600, size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              telefonoResponsable,
+                              style: TextStyle(color: D.slate600, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 8),
                       Row(
                         children: [
                           Icon(
                             Icons.calendar_today_rounded,
-                            color: D.slate600,
+                            color: D.skyBlue,
                             size: 14,
                           ),
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              'Creado: ${DateFormat('dd MMM yy', 'es_CO').format(r.fechaCreacion)}',
-                              style: TextStyle(color: D.slate600, fontSize: 12),
+                              'Creado el ${DateFormat("dd 'de' MMMM yyyy", 'es_CO').format(r.fechaCreacion)}',
+                              style: TextStyle(
+                                color: D.slate400,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 8),
                         ],
                       ),
                       Row(
@@ -690,6 +729,100 @@ class _ReservaCardState extends State<_ReservaCard> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _PaginationBar extends StatelessWidget {
+  final int page;
+  final int totalPages;
+  final int total;
+  final void Function(int) onPageChanged;
+
+  const _PaginationBar({
+    required this.page,
+    required this.totalPages,
+    required this.total,
+    required this.onPageChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: D.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: D.border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _PageBtn(
+              icon: Icons.chevron_left_rounded,
+              enabled: page > 1,
+              onTap: () => onPageChanged(page - 1),
+            ),
+            const SizedBox(width: 20),
+            Column(
+              children: [
+                Text(
+                  'Página $page de $totalPages',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$total resultados',
+                  style: const TextStyle(color: D.slate400, fontSize: 11),
+                ),
+              ],
+            ),
+            const SizedBox(width: 20),
+            _PageBtn(
+              icon: Icons.chevron_right_rounded,
+              enabled: page < totalPages,
+              onTap: () => onPageChanged(page + 1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PageBtn extends StatelessWidget {
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _PageBtn({required this.icon, required this.enabled, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: enabled ? D.royalBlue.withValues(alpha: 0.15) : D.surfaceHigh,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: enabled ? D.royalBlue.withValues(alpha: 0.4) : D.border,
+          ),
+        ),
+        child: Icon(
+          icon,
+          color: enabled ? D.skyBlue : D.slate600,
+          size: 22,
+        ),
+      ),
     );
   }
 }

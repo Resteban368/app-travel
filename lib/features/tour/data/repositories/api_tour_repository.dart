@@ -77,6 +77,18 @@ class ApiTourRepository implements TourRepository {
     }
   }
 
+  @override
+  Future<void> toggleActive(String id, bool isActive) async {
+    final response = await client.patch(
+      Uri.parse('$_baseUrl/$id'),
+      headers: _headers,
+      body: json.encode({'is_active': isActive}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to toggle tour active: ${response.statusCode}');
+    }
+  }
+
   Tour _fromJson(Map<String, dynamic> json) {
     return Tour(
       id: (json['id'] ?? '').toString(),

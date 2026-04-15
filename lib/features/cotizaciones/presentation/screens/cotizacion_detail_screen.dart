@@ -5,6 +5,7 @@ import '../../../../core/theme/premium_palette.dart';
 import '../../domain/entities/cotizacion.dart';
 import '../bloc/cotizacion_bloc.dart';
 import '../bloc/cotizacion_event.dart';
+import '../bloc/cotizacion_state.dart';
 
 class CotizacionDetailScreen extends StatefulWidget {
   final Cotizacion cotizacion;
@@ -63,10 +64,17 @@ class _CotizacionDetailScreenState extends State<CotizacionDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    final c = widget.cotizacion;
-    final phone = c.chatId.contains('@') ? c.chatId.split('@')[0] : c.chatId;
+    return BlocBuilder<CotizacionBloc, CotizacionState>(
+      builder: (context, state) {
+        Cotizacion c = widget.cotizacion;
+        if (state is CotizacionLoaded) {
+          try {
+            c = state.cotizaciones.firstWhere((element) => element.id == c.id);
+          } catch (_) {}
+        }
+        final phone = c.chatId.contains('@') ? c.chatId.split('@')[0] : c.chatId;
 
-    return Scaffold(
+        return Scaffold(
       backgroundColor: D.bg,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -135,6 +143,8 @@ class _CotizacionDetailScreenState extends State<CotizacionDetailScreen>
           ),
         ],
       ),
+    );
+      },
     );
   }
 }
@@ -290,19 +300,32 @@ class _StatusBadge extends StatelessWidget {
   final String estado;
   const _StatusBadge({required this.estado});
 
+  List<Color> _estadoColors(String estado) {
+    switch (estado.toLowerCase()) {
+      case 'atendida':
+        return [D.emerald, const Color(0xFF059669)];
+      case 'cancelada':
+        return [D.rose, const Color(0xFFBE123C)];
+      case 'pendiente':
+      default:
+        return [Colors.amber.shade700, Colors.orange.shade800];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final color = _estadoColors(estado).first;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
+        color: color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Text(
         estado.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: color,
           fontSize: 10,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.8,
@@ -421,10 +444,10 @@ class _DetailBody extends StatelessWidget {
               label: 'Fecha de solicitud',
               value: DateFormat('dd MMMM yyyy, hh:mm a', 'es_CO').format(c.createdAt.toLocal()),
             ),
-            _DetailRow(
+            _DropdownEstadoRow(
               icon: Icons.info_outline_rounded,
               label: 'Estado',
-              value: c.estado,
+              cotizacion: c,
             ),
             _DetailRow(
               icon: Icons.mark_email_read_rounded,
@@ -570,6 +593,119 @@ class _TextBlock extends StatelessWidget {
           height: 1.6,
           fontStyle: muted ? FontStyle.italic : FontStyle.normal,
         ),
+      ),
+    );
+  }
+}
+
+class _DropdownEstadoRow extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final Cotizacion cotizacion;
+
+  const _DropdownEstadoRow({
+    required this.icon,
+    required this.label,
+    required this.cotizacion,
+  });
+
+  @override
+  State<_DropdownEstadoRow> createState() => _DropdownEstadoRowState();
+}
+
+class _DropdownEstadoRowState extends State<_DropdownEstadoRow> {
+  static const _estados = ['pendiente', 'atendida', 'cancelada'];
+
+  List<Color> _estadoColors(String estado) {
+    switch (estado.toLowerCase()) {
+      case 'atendida':
+        return [D.emerald, const Color(0xFF059669)];
+      case 'cancelada':
+        return [D.rose, const Color(0xFFBE123C)];
+      case 'pendiente':
+      default:
+        return [Colors.amber.shade700, Colors.orange.shade800];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.cotizacion;
+    final color = _estadoColors(c.estado).first;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: D.surfaceHigh,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(widget.icon, color: D.skyBlue, size: 17),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.label,
+                    style: const TextStyle(
+                        color: D.slate600,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Container(
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: color.withOpacity(0.4)),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: c.estado,
+                      dropdownColor: D.surfaceHigh,
+                      icon: Icon(Icons.arrow_drop_down, color: color, size: 18),
+                      isExpanded: true,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                      onChanged: (String? newValue) {
+                        if (newValue != null && newValue != c.estado) {
+                          context
+                              .read<CotizacionBloc>()
+                              .add(UpdateEstadoCotizacion(c.id, newValue));
+                        }
+                      },
+                      items:
+                          _estados.map<DropdownMenuItem<String>>((String value) {
+                        final itemColor = _estadoColors(value).first;
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(
+                            value.toUpperCase(),
+                            style: TextStyle(
+                              color: itemColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

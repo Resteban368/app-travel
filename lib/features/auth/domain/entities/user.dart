@@ -28,7 +28,8 @@ class User extends Equatable {
   }
 
   /// Returns true if the user has write access (completo) for the given key.
-  bool canWrite(String key) => permisos[key] == 'completo';
+  /// Admins always have full write access.
+  bool canWrite(String key) => isAdmin || permisos[key] == 'completo';
 
   @override
   List<Object?> get props => [id, username, name, role, permisos];

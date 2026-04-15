@@ -6,4 +6,5 @@ abstract class AuthRepository {
   Future<void> logout();
   Future<User?> restoreSession();
   Future<User?> fetchMe();
+  Future<void> changePassword(String currentPassword, String newPassword);
 }

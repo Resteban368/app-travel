@@ -18,6 +18,11 @@ import '../../../../features/pagos_realizados/domain/repositories/pago_realizado
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../../../features/clientes/presentation/bloc/cliente_bloc.dart';
+import '../../../../features/clientes/presentation/bloc/cliente_event.dart';
+import '../../../../features/clientes/presentation/bloc/cliente_state.dart';
+import '../../../../features/clientes/domain/entities/cliente.dart';
+import '../../../../features/clientes/domain/repositories/cliente_repository.dart';
 
 class ReservaFormScreen extends StatefulWidget {
   final Reserva? reserva;
@@ -32,15 +37,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   final _formKey = GlobalKey<FormState>();
 
   // Basic info control
-  late final TextEditingController _correoCtrl;
   late final TextEditingController _notasCtrl;
   String _estado = 'pendiente';
-
-  // Responsable
-  late final TextEditingController _respNombreCtrl;
-  late final TextEditingController _respTelefonoCtrl;
-  late final TextEditingController _respCedulaCtrl;
-  DateTime? _respFechaNacimiento;
 
   // Pagos de la reserva (solo en edición)
   List<PagoRealizado> _pagos = [];
@@ -49,8 +47,14 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   // Tour card expandida
   bool _tourCardExpanded = false;
 
+  // Cliente responsable
+  int? _selectedClienteId;
+  Cliente? _selectedCliente;
+  bool _loadingResponsable = false;
+
   // Tour control
   String? _selectedTourId;
+  final _tourSearchCtrl = TextEditingController();
 
   // Dynamic lists
   List<Integrante> _integrantes = [];
@@ -65,26 +69,23 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   void initState() {
     super.initState();
 
-    _correoCtrl = TextEditingController(text: widget.reserva?.correo ?? '');
     _notasCtrl = TextEditingController(text: widget.reserva?.notas ?? '');
-    _respNombreCtrl = TextEditingController(
-      text: widget.reserva?.responsableNombre ?? '',
-    );
-    _respTelefonoCtrl = TextEditingController(
-      text: widget.reserva?.responsableTelefono ?? '',
-    );
-    _respCedulaCtrl = TextEditingController(
-      text: widget.reserva?.responsableCedula ?? '',
-    );
-    _respFechaNacimiento = widget.reserva?.responsableFechaNacimiento;
 
     if (_isEditing) {
       _estado = widget.reserva!.estado;
+      _selectedClienteId = widget.reserva!.idResponsable;
       _selectedTourId = widget.reserva!.idTour.isNotEmpty
           ? widget.reserva!.idTour
           : null;
       _integrantes = List.from(widget.reserva!.integrantes);
       _servicios = List.from(widget.reserva!.serviciosIds);
+      if (widget.reserva!.tour != null) {
+        _tourSearchCtrl.text = widget.reserva!.tour!.name;
+      }
+      // Pre-cargar responsable embebido si el API lo devolvió
+      if (widget.reserva!.responsable != null) {
+        _selectedCliente = widget.reserva!.responsable;
+      }
       _loadPagos();
     }
 
@@ -97,6 +98,20 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     final serviceState = context.read<ServiceBloc>().state;
     if (serviceState is ServiceInitial || serviceState is ServiceError) {
       context.read<ServiceBloc>().add(LoadServices());
+    }
+
+    final clienteState = context.read<ClienteBloc>().state;
+    if (clienteState is ClienteInitial || clienteState is ClienteError) {
+      context.read<ClienteBloc>().add(LoadClientes());
+    }
+
+    // Si editamos y hay responsable asignado, cargarlo directamente por ID
+    debugPrint(
+      '🔍 [ReservaForm] isEditing=$_isEditing, idResponsable=${widget.reserva?.idResponsable}, _selectedClienteId=$_selectedClienteId, responsableEmbedded=${_selectedCliente?.nombre}',
+    );
+    if (_isEditing && _selectedClienteId != null && _selectedCliente == null) {
+      _loadingResponsable = true;
+      _loadClienteResponsable(_selectedClienteId!);
     }
 
     _entryCtrl = AnimationController(
@@ -113,16 +128,16 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   @override
   void dispose() {
     _entryCtrl.dispose();
-    _correoCtrl.dispose();
     _notasCtrl.dispose();
-    _respNombreCtrl.dispose();
-    _respTelefonoCtrl.dispose();
-    _respCedulaCtrl.dispose();
+    _tourSearchCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _loadPagos() async {
     final reservaIdInt = int.tryParse(widget.reserva?.id ?? '');
+    debugPrint(
+      '🔍 [_loadPagos] widget.reserva.id=${widget.reserva?.id}, parsed=$reservaIdInt',
+    );
     if (reservaIdInt == null) return;
     setState(() => _loadingPagos = true);
     try {
@@ -132,10 +147,30 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       setState(
         () => _pagos = pagos.where((p) => p.reservaId == reservaIdInt).toList(),
       );
-    } catch (_) {
-      // Silencioso: si falla, la sección aparece vacía
+      debugPrint('✅ [_loadPagos] Loaded ${_pagos.length} pagos');
+    } catch (e, stack) {
+      debugPrint('❌ [_loadPagos] Error Loading Pagos: $e\n$stack');
+      // Silencioso UI
     } finally {
       setState(() => _loadingPagos = false);
+    }
+  }
+
+  Future<void> _loadClienteResponsable(int id) async {
+    debugPrint('🔍 [ReservaForm] Loading responsable by id=$id');
+    try {
+      final cliente = await sl<ClienteRepository>().getClienteById(id);
+      debugPrint(
+        '✅ [ReservaForm] Got responsable: ${cliente.nombre} (id=${cliente.id})',
+      );
+      if (mounted)
+        setState(() {
+          _selectedCliente = cliente;
+          _loadingResponsable = false;
+        });
+    } catch (e) {
+      debugPrint('❌ [ReservaForm] Error loading responsable: $e');
+      if (mounted) setState(() => _loadingResponsable = false);
     }
   }
 
@@ -157,32 +192,15 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       return;
     }
 
-    if (_respFechaNacimiento == null) {
-      _showMsg(
-        'La fecha de nacimiento del responsable es obligatoria.',
-        D.rose,
-      );
-      return;
-    }
-
     final reserva = Reserva(
       id: _isEditing ? widget.reserva!.id : null,
       idTour: _selectedTourId!,
-      correo: _correoCtrl.text.trim(),
+      correo: _selectedCliente?.correo ?? widget.reserva?.correo ?? '',
       estado: _estado,
       notas: _notasCtrl.text.trim(),
       serviciosIds: _servicios.where((s) => s != 0).toList(),
       integrantes: _integrantes,
-      responsableNombre: _respNombreCtrl.text.trim().isNotEmpty
-          ? _respNombreCtrl.text.trim()
-          : null,
-      responsableTelefono: _respTelefonoCtrl.text.trim().isNotEmpty
-          ? _respTelefonoCtrl.text.trim()
-          : null,
-      responsableCedula: _respCedulaCtrl.text.trim().isNotEmpty
-          ? _respCedulaCtrl.text.trim()
-          : null,
-      responsableFechaNacimiento: _respFechaNacimiento,
+      idResponsable: _selectedClienteId,
       fechaCreacion: _isEditing
           ? widget.reserva!.fechaCreacion
           : DateTime.now(),
@@ -201,15 +219,87 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     return BlocListener<ReservaBloc, ReservaState>(
       listener: (context, state) {
         if (state is ReservaActionSuccess) {
-          _showMsg(
-            _isEditing
-                ? 'Reserva actualizada con éxito'
-                : 'Nueva reserva registrada',
-            D.emerald,
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _isEditing ? 'Reserva actualizada' : 'Reserva creada',
+              ),
+              backgroundColor: D.emerald,
+            ),
           );
+
+          context.read<ReservaBloc>().add(const LoadReservas());
           Navigator.pop(context);
         } else if (state is ReservaError) {
-          _showMsg(state.message, D.rose);
+          showDialog(
+            context: context,
+            builder: (_) => Dialog(
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(28),
+                decoration: BoxDecoration(
+                  color: D.surface,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: D.rose.withValues(alpha: 0.4)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: D.rose.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.error_rounded,
+                        color: D.rose,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Error al guardar',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      state.message,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: D.slate400, fontSize: 13),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          backgroundColor: D.rose,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text(
+                          'Cerrar',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
         }
       },
       child: Scaffold(
@@ -256,13 +346,17 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           ],
                           _buildResumenSection(),
                           const SizedBox(height: 28),
-                          Builder(builder: (context) {
-                            final authState = context.read<AuthBloc>().state;
-                            final canWrite = authState is AuthAuthenticated &&
-                                authState.user.canWrite('reservas');
-                            if (!canWrite && _isEditing) return const SizedBox.shrink();
-                            return _buildSubmitButton();
-                          }),
+                          Builder(
+                            builder: (context) {
+                              final authState = context.read<AuthBloc>().state;
+                              final canWrite =
+                                  authState is AuthAuthenticated &&
+                                  authState.user.canWrite('reservas');
+                              if (!canWrite && _isEditing)
+                                return const SizedBox.shrink();
+                              return _buildSubmitButton();
+                            },
+                          ),
                           const SizedBox(height: 50),
                         ],
                       ),
@@ -313,45 +407,149 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         const SizedBox(height: 8),
         BlocBuilder<TourBloc, TourState>(
           builder: (context, state) {
+            final isLoading = state is TourLoading;
             List<Tour> tours = [];
-            if (state is ToursLoaded)
+            if (state is ToursLoaded) {
               tours = state.tours;
-            else if (state is TourSaved && state.tours != null)
+            } else if (state is TourSaved && state.tours != null) {
               tours = state.tours!;
+            }
 
             final selectedTour = _selectedTourId != null
                 ? tours.firstWhere(
                     (t) => t.id == _selectedTourId,
-                    orElse: () => tours.first,
+                    orElse: () => Tour(
+                      id: '',
+                      idTour: 0,
+                      name: '',
+                      agency: '',
+                      startDate: DateTime.now(),
+                      endDate: DateTime.now(),
+                      price: 0,
+                      departurePoint: '',
+                      departureTime: '',
+                      arrival: '',
+                      pdfLink: '',
+                      inclusions: [],
+                      exclusions: [],
+                      itinerary: [],
+                      imageUrl: '',
+                    ),
                   )
                 : null;
             final isTourFound =
-                selectedTour != null && selectedTour.id == _selectedTourId;
+                selectedTour != null && selectedTour.id.isNotEmpty;
 
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                DropdownButtonFormField<String>(
-                  value: _selectedTourId,
-                  dropdownColor: D.surface,
-                  isExpanded: true,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  hint: const Text(
-                    'Selecciona un tour',
-                    style: TextStyle(color: Colors.white, fontSize: 14),
+                // Botón selector
+                FormField<String>(
+                  validator: (_) =>
+                      _selectedTourId == null ? 'Selecciona un tour' : null,
+                  builder: (field) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      InkWell(
+                        onTap: isLoading
+                            ? null
+                            : () async {
+                                final result = await showDialog<Tour>(
+                                  context: context,
+                                  builder: (_) =>
+                                      _TourPickerDialog(tours: tours),
+                                );
+                                if (result != null) {
+                                  setState(() {
+                                    _selectedTourId = result.id;
+                                    _tourSearchCtrl.text = result.name;
+                                    _tourCardExpanded = false;
+                                  });
+                                  field.didChange(result.id);
+                                }
+                              },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: D.bg.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: field.hasError
+                                  ? D.rose
+                                  : isTourFound
+                                  ? D.skyBlue
+                                  : D.border,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.tour_rounded,
+                                color: isTourFound ? D.skyBlue : D.slate600,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  isTourFound
+                                      ? _tourSearchCtrl.text
+                                      : 'Seleccionar tour...',
+                                  style: TextStyle(
+                                    color: isTourFound
+                                        ? Colors.white
+                                        : D.slate400,
+                                    fontSize: 14,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (isLoading)
+                                const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: D.skyBlue,
+                                  ),
+                                )
+                              else if (isTourFound)
+                                GestureDetector(
+                                  onTap: () => setState(() {
+                                    _selectedTourId = null;
+                                    _tourSearchCtrl.clear();
+                                  }),
+                                  child: const Icon(
+                                    Icons.close_rounded,
+                                    color: D.slate400,
+                                    size: 18,
+                                  ),
+                                )
+                              else
+                                const Icon(
+                                  Icons.search_rounded,
+                                  color: D.slate600,
+                                  size: 18,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (field.hasError) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          field.errorText!,
+                          style: TextStyle(color: D.rose, fontSize: 12),
+                        ),
+                      ],
+                    ],
                   ),
-                  decoration: _inputDecoration(Icons.tour_outlined, ''),
-                  items: tours
-                      .map(
-                        (t) =>
-                            DropdownMenuItem(value: t.id, child: Text(t.name)),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() {
-                    _selectedTourId = v;
-                    _tourCardExpanded = false;
-                  }),
-                  validator: (v) => v == null ? 'Selecciona un tour' : null,
                 ),
+
+                // Tour info card
                 if (isTourFound) ...[
                   const SizedBox(height: 16),
                   _buildTourInfoCard(selectedTour),
@@ -869,112 +1067,13 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           _buildSectionHeader('RESPONSABLE DE LA RESERVA'),
           const SizedBox(height: 8),
           Text(
-            'Persona encargada y punto de contacto principal.',
+            'Selecciona el cliente registrado que será el responsable.',
             style: TextStyle(color: D.slate600, fontSize: 12),
           ),
-          const SizedBox(height: 24),
-          _buildField(
-            controller: _respNombreCtrl,
-            label: 'Nombre Completo *',
-            icon: Icons.person_rounded,
-          ),
           const SizedBox(height: 16),
-          _buildField(
-            controller: _respTelefonoCtrl,
-            label: 'Teléfono *',
-            icon: Icons.phone_rounded,
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 20),
-          _buildDateField(
-            label: 'Fecha de Nacimiento *',
-            date: _respFechaNacimiento,
-            isRequired: true,
-            onTap: () async {
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: _respFechaNacimiento ?? DateTime(1990),
-                firstDate: DateTime(1900),
-                lastDate: DateTime.now(),
-                builder: (context, child) => Theme(
-                  data: ThemeData.dark().copyWith(
-                    colorScheme: const ColorScheme.dark(
-                      primary: D.royalBlue,
-                      onPrimary: Colors.white,
-                      surface: D.surface,
-                      onSurface: Colors.white,
-                    ),
-                    dialogBackgroundColor: D.bg,
-                  ),
-                  child: child!,
-                ),
-              );
-              if (picked != null) setState(() => _respFechaNacimiento = picked);
-            },
-          ),
-          const SizedBox(height: 10),
-          _buildField(
-            controller: _respCedulaCtrl,
-            label: 'Cédula *',
-            icon: Icons.badge_outlined,
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(width: 16),
-          const SizedBox(height: 20),
-          _buildField(
-            controller: _correoCtrl,
-            label: 'Correo Electrónico *',
-            icon: Icons.email_outlined,
-            keyboardType: TextInputType.emailAddress,
-          ),
+          _buildClienteSelector(),
         ],
       ),
-    );
-  }
-
-  Widget _buildDateField({
-    required String label,
-    required DateTime? date,
-    required VoidCallback onTap,
-    bool isRequired = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: D.white,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 8),
-        InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: D.border),
-              color: D.bg.withOpacity(0.3),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.cake_rounded, color: D.white, size: 18),
-                const SizedBox(width: 12),
-                Text(
-                  date != null
-                      ? '${date.day}/${date.month}/${date.year}'
-                      : 'Seleccionar fecha',
-                  style: const TextStyle(color: D.white, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -1109,7 +1208,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       saldoPendiente,
                       currencyFmt,
                       isTotal: true,
-                      valueColor: saldoPendiente <= 0 ? D.emerald : Colors.amber,
+                      valueColor: saldoPendiente <= 0
+                          ? D.emerald
+                          : Colors.amber,
                     ),
                   ],
                 ],
@@ -1642,6 +1743,235 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     );
   }
 
+  Widget _buildClienteSelector() {
+    return BlocBuilder<ClienteBloc, ClienteState>(
+      builder: (context, state) {
+        final isLoading = state is ClienteLoading;
+        List<Cliente> clientes = [];
+        if (state is ClienteLoaded) clientes = state.clientes;
+        if (state is ClienteActionSuccess) clientes = state.clientes;
+        if (state is ClienteSaving) clientes = state.clientes ?? [];
+
+        // Si el _selectedCliente es null pero tenemos la lista, intentar resolverlo
+        if (_selectedCliente == null &&
+            _selectedClienteId != null &&
+            clientes.isNotEmpty) {
+          final found = clientes.cast<Cliente?>().firstWhere(
+            (c) => c!.id == _selectedClienteId,
+            orElse: () => null,
+          );
+          if (found != null) {
+            // Asignar sin setState para evitar rebuild recursivo; ya estamos en builder
+            _selectedCliente = found;
+            _loadingResponsable = false;
+          }
+        }
+
+        final Cliente? displayCliente = _selectedCliente;
+
+        debugPrint(
+          '🧩 [ClienteSelector] state=${state.runtimeType}, '
+          'clientes=${clientes.length}, '
+          '_selectedClienteId=$_selectedClienteId, '
+          '_selectedCliente=${_selectedCliente?.nombre}, '
+          '_loadingResponsable=$_loadingResponsable, '
+          'displayCliente=${displayCliente?.nombre}',
+        );
+
+        Future<void> openPicker() async {
+          final result = await showDialog<Cliente>(
+            context: context,
+            builder: (_) => _ClientePickerDialog(clientes: clientes),
+          );
+          if (result != null) {
+            setState(() {
+              _selectedClienteId = result.id;
+              _selectedCliente = result;
+            });
+          }
+        }
+
+        if (displayCliente != null) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: D.royalBlue.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: D.skyBlue.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: D.royalBlue.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      displayCliente.nombre.isNotEmpty
+                          ? displayCliente.nombre[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        color: D.skyBlue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayCliente.nombre,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        displayCliente.correo,
+                        style: TextStyle(color: D.slate400, fontSize: 12),
+                      ),
+                      Text(
+                        '${displayCliente.tipoDocumento.toUpperCase()} ${displayCliente.documento}',
+                        style: TextStyle(color: D.slate600, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.swap_horiz_rounded,
+                    color: D.skyBlue,
+                    size: 20,
+                  ),
+                  onPressed: isLoading ? null : openPicker,
+                  tooltip: 'Cambiar cliente',
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Responsable en edición pero aún cargando
+        if (_loadingResponsable && _selectedClienteId != null) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: D.royalBlue.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: D.skyBlue.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: D.royalBlue.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: D.skyBlue,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Cargando responsable...',
+                    style: TextStyle(color: D.slate400, fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Sin cliente resuelto: mostrar botón de búsqueda
+        return FormField<int>(
+          validator: (_) =>
+              _selectedClienteId == null ? 'Selecciona un cliente' : null,
+          builder: (field) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              InkWell(
+                onTap: isLoading ? null : openPicker,
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: D.bg.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: field.hasError ? D.rose : D.border,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.person_search_rounded,
+                        color: D.slate600,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          isLoading
+                              ? 'Cargando clientes...'
+                              : 'Seleccionar cliente *',
+                          style: TextStyle(color: D.slate400, fontSize: 14),
+                        ),
+                      ),
+                      if (isLoading)
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: D.skyBlue,
+                          ),
+                        )
+                      else
+                        const Icon(
+                          Icons.search_rounded,
+                          color: D.slate600,
+                          size: 18,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              if (field.hasError) ...[
+                const SizedBox(height: 6),
+                Text(
+                  field.errorText!,
+                  style: TextStyle(color: D.rose, fontSize: 12),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildField({
     required TextEditingController controller,
     required String label,
@@ -1699,20 +2029,39 @@ class _IntegranteFormFields extends StatefulWidget {
 class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
   late TextEditingController _nameCtrl;
   late TextEditingController _phoneCtrl;
+  late TextEditingController _documentoCtrl;
   DateTime? _dob;
+  late String _tipoDocumento;
+
+  static const _tiposDocumento = ['cedula', 'pasaporte', 'tarjeta identidad'];
 
   @override
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.integrante.nombre);
     _phoneCtrl = TextEditingController(text: widget.integrante.telefono);
+    _documentoCtrl = TextEditingController(text: widget.integrante.documento);
     _dob = widget.integrante.fechaNacimiento;
+    _tipoDocumento = widget.integrante.tipoDocumento;
+  }
+
+  @override
+  void didUpdateWidget(_IntegranteFormFields oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.integrante != widget.integrante) {
+      _nameCtrl.text = widget.integrante.nombre;
+      _phoneCtrl.text = widget.integrante.telefono;
+      _documentoCtrl.text = widget.integrante.documento;
+      _dob = widget.integrante.fechaNacimiento;
+      _tipoDocumento = widget.integrante.tipoDocumento;
+    }
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
+    _documentoCtrl.dispose();
     super.dispose();
   }
 
@@ -1723,6 +2072,8 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
         telefono: _phoneCtrl.text,
         fechaNacimiento: _dob,
         esResponsable: widget.isResponsable,
+        tipoDocumento: _tipoDocumento,
+        documento: _documentoCtrl.text,
       ),
     );
   }
@@ -1822,6 +2173,74 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
               validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null,
             ),
             const SizedBox(height: 12),
+            // ── Tipo de documento ──────────────────────────────────
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'TIPO DE DOCUMENTO',
+                  style: TextStyle(
+                    color: D.slate400,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: _tiposDocumento.map((tipo) {
+                    final selected = _tipoDocumento == tipo;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() => _tipoDocumento = tipo);
+                        _notifyChange();
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? D.royalBlue.withValues(alpha: 0.15)
+                              : D.bg.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: selected
+                                ? D.royalBlue.withValues(alpha: 0.6)
+                                : D.border,
+                          ),
+                        ),
+                        child: Text(
+                          tipo[0].toUpperCase() + tipo.substring(1),
+                          style: TextStyle(
+                            color: selected ? D.royalBlue : D.slate400,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _documentoCtrl,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              decoration: _inputDecoration(
+                Icons.badge_outlined,
+                'Número de documento',
+              ),
+              onChanged: (_) => _notifyChange(),
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? 'Ingresa el documento' : null,
+            ),
+            const SizedBox(height: 12),
             InkWell(
               onTap: _pickDob,
               borderRadius: BorderRadius.circular(16),
@@ -1864,6 +2283,420 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
     );
   }
 }
+
+// ─── Cliente Picker Dialog ────────────────────────────────────────────────────
+
+class _ClientePickerDialog extends StatefulWidget {
+  final List<Cliente> clientes;
+  const _ClientePickerDialog({required this.clientes});
+
+  @override
+  State<_ClientePickerDialog> createState() => _ClientePickerDialogState();
+}
+
+class _ClientePickerDialogState extends State<_ClientePickerDialog> {
+  final _searchCtrl = TextEditingController();
+  List<Cliente> _filtered = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.clientes;
+    _searchCtrl.addListener(_onSearch);
+  }
+
+  void _onSearch() {
+    final q = _searchCtrl.text.toLowerCase().trim();
+    setState(() {
+      _filtered = q.isEmpty
+          ? widget.clientes
+          : widget.clientes
+                .where(
+                  (c) =>
+                      c.nombre.toLowerCase().contains(q) ||
+                      c.correo.toLowerCase().contains(q) ||
+                      c.telefono.contains(q) ||
+                      c.documento.toString().contains(q),
+                )
+                .toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
+        decoration: BoxDecoration(
+          color: D.surface,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: D.border),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.person_search_rounded,
+                    color: D.skyBlue,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Seleccionar Cliente',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: D.slate400,
+                      size: 20,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            // Search
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: TextField(
+                controller: _searchCtrl,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por nombre, correo o documento...',
+                  hintStyle: TextStyle(color: D.slate600, fontSize: 13),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: D.slate600,
+                    size: 18,
+                  ),
+                  filled: true,
+                  fillColor: D.bg.withValues(alpha: 0.5),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: D.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: D.skyBlue),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // List
+            Expanded(
+              child: _filtered.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Sin resultados',
+                        style: TextStyle(color: D.slate600, fontSize: 13),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      itemCount: _filtered.length,
+                      separatorBuilder: (context, i) =>
+                          const SizedBox(height: 4),
+                      itemBuilder: (context, index) {
+                        final c = _filtered[index];
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () => Navigator.pop(context, c),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: D.border.withValues(alpha: 0.5),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: D.royalBlue.withValues(alpha: 0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        c.nombre.isNotEmpty
+                                            ? c.nombre[0].toUpperCase()
+                                            : '?',
+                                        style: const TextStyle(
+                                          color: D.skyBlue,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          c.nombre,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          c.correo,
+                                          style: TextStyle(
+                                            color: D.slate400,
+                                            fontSize: 11,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    c.documento.toString(),
+                                    style: TextStyle(
+                                      color: D.slate600,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Tour Picker Dialog ───────────────────────────────────────────────────────
+
+class _TourPickerDialog extends StatefulWidget {
+  final List<Tour> tours;
+  const _TourPickerDialog({required this.tours});
+
+  @override
+  State<_TourPickerDialog> createState() => _TourPickerDialogState();
+}
+
+class _TourPickerDialogState extends State<_TourPickerDialog> {
+  final _searchCtrl = TextEditingController();
+  List<Tour> _filtered = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.tours;
+    _searchCtrl.addListener(_onSearch);
+  }
+
+  void _onSearch() {
+    final q = _searchCtrl.text.toLowerCase().trim();
+    setState(() {
+      _filtered = q.isEmpty
+          ? widget.tours
+          : widget.tours
+                .where((t) => t.name.toLowerCase().contains(q))
+                .toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
+        decoration: BoxDecoration(
+          color: D.surface,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: D.border),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
+              child: Row(
+                children: [
+                  const Icon(Icons.tour_rounded, color: D.skyBlue, size: 20),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Seleccionar Tour',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: D.slate400,
+                      size: 20,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            // Search field
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: TextField(
+                controller: _searchCtrl,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por nombre del tour...',
+                  hintStyle: TextStyle(color: D.slate600, fontSize: 13),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: D.slate600,
+                    size: 18,
+                  ),
+                  filled: true,
+                  fillColor: D.bg.withValues(alpha: 0.5),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: D.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: D.skyBlue),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // List
+            Expanded(
+              child: _filtered.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Sin resultados',
+                        style: TextStyle(color: D.slate600, fontSize: 13),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      itemCount: _filtered.length,
+                      separatorBuilder: (context, i) =>
+                          const SizedBox(height: 4),
+                      itemBuilder: (context, index) {
+                        final t = _filtered[index];
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () => Navigator.pop(context, t),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: D.border.withValues(alpha: 0.5),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.tour_rounded,
+                                    color: D.skyBlue,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      t.name,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _DotGridPainter extends CustomPainter {
   @override

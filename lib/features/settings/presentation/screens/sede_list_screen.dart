@@ -218,7 +218,12 @@ class _SedeListScreenState extends State<SedeListScreen>
         ),
         if (canWrite)
           _AddBtn(
-            onPressed: () => Navigator.pushNamed(context, AppRouter.sedeForm),
+            onPressed: () async {
+              final result = await Navigator.pushNamed(context, AppRouter.sedeForm);
+              if (result == true && context.mounted) {
+                context.read<SedeBloc>().add(LoadSedes());
+              }
+            },
           ),
       ],
     );
@@ -349,11 +354,16 @@ class _SedeCardState extends State<_SedeCard> {
         ),
         child: InkWell(
           onTap: widget.canWrite
-              ? () => Navigator.pushNamed(
-                  context,
-                  AppRouter.sedeForm,
-                  arguments: widget.sede,
-                )
+              ? () async {
+                  final result = await Navigator.pushNamed(
+                    context,
+                    AppRouter.sedeForm,
+                    arguments: widget.sede,
+                  );
+                  if (result == true && context.mounted) {
+                    context.read<SedeBloc>().add(LoadSedes());
+                  }
+                }
               : null,
           borderRadius: BorderRadius.circular(24),
           child: Padding(

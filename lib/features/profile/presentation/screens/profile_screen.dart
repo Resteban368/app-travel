@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/premium_palette.dart';
 import '../../../../core/layout/admin_shell.dart';
+import '../../../../config/app_router.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/domain/entities/user.dart';
 
@@ -83,9 +84,35 @@ class _ProfileBodyState extends State<_ProfileBody>
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
-    final user = authState is AuthAuthenticated ? authState.user : null;
+    User? user;
+    if (authState is AuthAuthenticated) {
+      user = authState.user;
+    } else if (authState is ChangePasswordLoading) {
+      user = authState.user;
+    } else if (authState is ChangePasswordFailed) {
+      user = authState.user;
+    }
 
-    return Scaffold(
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthInitial) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            AppRouter.login,
+            (_) => false,
+          );
+        } else if (state is ChangePasswordFailed) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: D.rose,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.all(16),
+            ),
+          );
+        }
+      },
+      child: Scaffold(
       backgroundColor: D.bg,
       body: Stack(
         children: [
@@ -143,6 +170,8 @@ class _ProfileBodyState extends State<_ProfileBody>
                             _InfoCard(user: user),
                             const SizedBox(height: 16),
                             _PermissionsCard(user: user),
+                            const SizedBox(height: 16),
+                            const _ChangePasswordCard(),
                           ],
                         ),
                       )
@@ -162,7 +191,7 @@ class _ProfileBodyState extends State<_ProfileBody>
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildHeader() {
@@ -628,6 +657,222 @@ class _PermissionRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── Change Password card ─────────────────────────────────────────────────────
+
+class _ChangePasswordCard extends StatefulWidget {
+  const _ChangePasswordCard();
+
+  @override
+  State<_ChangePasswordCard> createState() => _ChangePasswordCardState();
+}
+
+class _ChangePasswordCardState extends State<_ChangePasswordCard> {
+  final _formKey = GlobalKey<FormState>();
+  final _currentCtrl = TextEditingController();
+  final _newCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
+
+  bool _showCurrent = false;
+  bool _showNew = false;
+  bool _showConfirm = false;
+
+  @override
+  void dispose() {
+    _currentCtrl.dispose();
+    _newCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    context.read<AuthBloc>().add(ChangePasswordRequested(
+      currentPassword: _currentCtrl.text,
+      newPassword: _newCtrl.text,
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isLoading = context.watch<AuthBloc>().state is ChangePasswordLoading;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: D.surface,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: D.border),
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionLabel('CAMBIAR CONTRASEÑA'),
+            const SizedBox(height: 20),
+            _PasswordField(
+              controller: _currentCtrl,
+              label: 'Contraseña actual',
+              hint: 'Ingresa tu contraseña actual',
+              visible: _showCurrent,
+              onToggle: () => setState(() => _showCurrent = !_showCurrent),
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? 'Ingresa tu contraseña actual' : null,
+            ),
+            const SizedBox(height: 14),
+            _PasswordField(
+              controller: _newCtrl,
+              label: 'Nueva contraseña',
+              hint: 'Mínimo 8 caracteres',
+              visible: _showNew,
+              onToggle: () => setState(() => _showNew = !_showNew),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Ingresa la nueva contraseña';
+                if (v.length < 8) return 'Mínimo 8 caracteres';
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            _PasswordField(
+              controller: _confirmCtrl,
+              label: 'Confirmar nueva contraseña',
+              hint: 'Repite la nueva contraseña',
+              visible: _showConfirm,
+              onToggle: () => setState(() => _showConfirm = !_showConfirm),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Confirma la nueva contraseña';
+                if (v != _newCtrl.text) return 'Las contraseñas no coinciden';
+                return null;
+              },
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: isLoading
+                      ? null
+                      : const LinearGradient(
+                          colors: [D.royalBlue, D.cyan],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                  color: isLoading ? D.surfaceHigh : null,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: TextButton(
+                  onPressed: isLoading ? null : _submit,
+                  style: TextButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: D.skyBlue,
+                          ),
+                        )
+                      : const Text(
+                          'Cambiar contraseña',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PasswordField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final bool visible;
+  final VoidCallback onToggle;
+  final String? Function(String?) validator;
+
+  const _PasswordField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.visible,
+    required this.onToggle,
+    required this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: D.slate400,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          obscureText: !visible,
+          style: const TextStyle(color: Colors.white, fontSize: 14),
+          validator: validator,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: D.slate600, fontSize: 13),
+            filled: true,
+            fillColor: D.bg,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: D.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: D.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: D.skyBlue),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: D.rose),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: D.rose),
+            ),
+            suffixIcon: IconButton(
+              onPressed: onToggle,
+              icon: Icon(
+                visible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                color: D.slate400,
+                size: 18,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
