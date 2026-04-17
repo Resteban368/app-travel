@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/premium_palette.dart';
@@ -1348,13 +1349,23 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           decoration: BoxDecoration(
                             color: p.isValidated
                                 ? D.emerald.withValues(alpha: 0.15)
+                                : p.isRechazado
+                                ? D.rose.withValues(alpha: 0.15)
                                 : D.slate600.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            p.isValidated ? 'Validado' : 'Sin validar',
+                            p.isValidated
+                                ? 'Validado'
+                                : p.isRechazado
+                                ? 'Rechazado'
+                                : 'Por validar',
                             style: TextStyle(
-                              color: p.isValidated ? D.emerald : D.slate400,
+                              color: p.isValidated
+                                  ? D.emerald
+                                  : p.isRechazado
+                                  ? D.rose
+                                  : D.slate400,
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                             ),
@@ -2076,6 +2087,7 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
               label: 'Teléfono / WhatsApp',
               icon: Icons.phone_android_rounded,
               keyboardType: TextInputType.phone,
+              isNumeric: true,
             ),
             const SizedBox(height: 20),
             // ── Tipo de documento ──────────────────────────────────
@@ -2138,6 +2150,7 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
               label: 'Número de documento *',
               icon: Icons.badge_outlined,
               keyboardType: TextInputType.number,
+              isNumeric: true,
             ),
             const SizedBox(height: 20),
             Column(
@@ -3164,6 +3177,9 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
               ),
               style: const TextStyle(color: Colors.white, fontSize: 14),
               decoration: _dec('Precio del vuelo ', Icons.attach_money_rounded),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              ],
               onChanged: (_) => _notify(),
             ),
           ],

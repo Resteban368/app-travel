@@ -1,4 +1,7 @@
+import 'dart:typed_data';
 import 'dart:ui';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import 'package:agente_viajes/core/widgets/dialog_loading_widget.dart';
 import 'package:agente_viajes/core/widgets/premium_form_widgets.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -6,6 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/premium_palette.dart';
+import '../../../uploads/presentation/bloc/upload_bloc.dart';
+import '../../../uploads/presentation/bloc/upload_event.dart';
+import '../../../uploads/presentation/bloc/upload_state.dart';
 import '../../domain/entities/pago_realizado.dart';
 import '../bloc/pago_realizado_bloc.dart';
 import '../../../whatsapp/presentation/bloc/whatsapp_bloc.dart';
@@ -38,9 +44,18 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   late final TextEditingController _fechaDocumentoCtrl;
   late final TextEditingController _urlImagenCtrl;
   String _tipoDocumento = 'Factura';
-  bool _isValidated = false;
+  late bool _isValidated;
   bool _wasWhatsappSent = false;
+  bool _waitingForUploadToSave = false;
+  bool _showingLoadingDialog = false;
+  // Imagen pendiente (seleccionada pero aún no subida)
+  Uint8List? _pendingImageBytes;
+  String? _pendingImageMimeType;
+  String? _pendingImageOriginalName;
+
   int? _selectedReservaId;
+
+  static const _pagosFolderId = '1eKuJ_dBJkYUJrISlBxDm2d20L_Glxuz_';
 
   late final AnimationController _entryCtrl;
   late final Animation<double> _fade;
@@ -66,6 +81,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     _urlImagenCtrl = TextEditingController(text: p?.urlImagen ?? '');
     _tipoDocumento = p?.tipoDocumento ?? 'Factura';
     _isValidated = p?.isValidated ?? false;
+    // _isValidated solo se usa al crear un pago nuevo o al guardar cambios de detalle.
     _selectedReservaId = p?.reservaId;
     if (p?.reservaId != null) {
       _reservaSearchCtrl.text = 'Reserva #${p!.reservaId}';
@@ -118,11 +134,63 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       return;
     }
 
+    if (_chatIdCtrl.text.trim().isEmpty) {
+      _showToast('El número de WhatsApp es requerido', isError: true);
+      return;
+    }
+
     if (_isValidated && (!_isEditing || !(widget.pago?.isValidated ?? false))) {
       _showWhatsAppConfirmation();
       return;
     }
-    _executeSave();
+    _doSave();
+  }
+
+  /// Muestra diálogo de carga, sube imagen si hay pendiente y luego guarda.
+  void _doSave() {
+    _showLoadingDialog(_pendingImageBytes != null ? 'Subiendo imagen...' : 'Procesando pago...');
+
+    if (_pendingImageBytes != null) {
+      final phone = _chatIdCtrl.text.trim().replaceAll(RegExp(r'[^0-9]'), '');
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final ext = _mimeToExt(_pendingImageMimeType ?? 'image/jpeg');
+      final filename = 'pago_${phone}_$ts.$ext';
+
+      _waitingForUploadToSave = true;
+      context.read<UploadBloc>().add(UploadFile(
+        folderId: _pagosFolderId,
+        filename: filename,
+        bytes: _pendingImageBytes!,
+        mimeType: _pendingImageMimeType ?? 'image/jpeg',
+      ));
+    } else {
+      _executeSave();
+    }
+  }
+
+  void _showLoadingDialog(String message) {
+    _showingLoadingDialog = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => DialogLoadingNetwork(titel: message),
+    );
+  }
+
+  void _closeLoadingDialog() {
+    if (_showingLoadingDialog) {
+      _showingLoadingDialog = false;
+      Navigator.of(context).pop();
+    }
+  }
+
+  String _mimeToExt(String mime) {
+    switch (mime) {
+      case 'image/png':  return 'png';
+      case 'image/webp': return 'webp';
+      case 'image/gif':  return 'gif';
+      default:           return 'jpg';
+    }
   }
 
   void _executeSave() {
@@ -191,6 +259,28 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
 
     return MultiBlocListener(
       listeners: [
+        BlocListener<UploadBloc, UploadState>(
+          listener: (context, state) {
+            if (state is UploadSuccess) {
+              setState(() {
+                _urlImagenCtrl.text = state.result.url;
+                _pendingImageBytes = null;
+                _pendingImageMimeType = null;
+                _pendingImageOriginalName = null;
+              });
+              context.read<UploadBloc>().add(const ResetUpload());
+              if (_waitingForUploadToSave) {
+                _waitingForUploadToSave = false;
+                _executeSave();
+              }
+            } else if (state is UploadError) {
+              _closeLoadingDialog();
+              _showToast('Error al subir imagen: ${state.message}', isError: true);
+              context.read<UploadBloc>().add(const ResetUpload());
+              _waitingForUploadToSave = false;
+            }
+          },
+        ),
         BlocListener<WhatsAppBloc, WhatsAppState>(
           listener: (context, state) {
             if (state is WhatsAppSending) {
@@ -202,8 +292,8 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               );
             } else if (state is WhatsAppSent) {
               setState(() => _wasWhatsappSent = true);
-              Navigator.pop(context); // close loading
-              _executeSave();
+              Navigator.pop(context); // close WA loading
+              _doSave();
             } else if (state is WhatsAppError) {
               Navigator.pop(context); // close loading
               _showToast(state.message, isError: true);
@@ -213,12 +303,16 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         BlocListener<PagoRealizadoBloc, PagoRealizadoState>(
           listener: (context, state) {
             if (state is PagoRealizadoSaved) {
+              _closeLoadingDialog();
               _showToast(
                 _wasWhatsappSent ? 'Validado y Notificado' : 'Pago procesado',
               );
               _wasWhatsappSent = false;
               Navigator.pop(context);
+            } else if (state is PagosRealizadosLoaded && _isEditing) {
+              // Actualización de estado (validar/rechazar) exitosa — solo cerramos
             } else if (state is PagoRealizadoError) {
+              _closeLoadingDialog();
               _showToast(state.message, isError: true);
             }
           },
@@ -322,19 +416,26 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                                       const SizedBox(height: 20),
                                       PremiumTextField(
                                         controller: _urlImagenCtrl,
-                                        label: 'URL del Comprobante *',
+                                        label: 'URL del Comprobante',
                                         icon: Icons.link_rounded,
                                         readOnly: !canWrite,
                                       ),
+                                      if (canWrite && kIsWeb) ...[
+                                        const SizedBox(height: 8),
+                                        _buildUploadBtn(),
+                                      ],
                                     ],
                                   ),
                                   const SizedBox(height: 24),
 
                                   PremiumSectionCard(
-                                    title: 'VALIDACIÓN Y NOTIFICACIÓN',
+                                    title: 'ESTADO DEL PAGO',
                                     icon: Icons.verified_user_rounded,
                                     children: [
-                                      _buildSwitch(canWrite: canWrite),
+                                      if (_isEditing)
+                                        _buildEstadoSection(canWrite: canWrite)
+                                      else
+                                        _buildSwitch(canWrite: canWrite),
                                     ],
                                   ),
                                   const SizedBox(height: 48),
@@ -685,6 +786,255 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     );
   }
 
+  String _getEstadoLabel(PagoRealizado? pago) {
+    if (pago == null) return 'Pendiente';
+    if (pago.isValidated) return 'Validado';
+    if (pago.isRechazado) return 'Rechazado';
+    return 'Pendiente';
+  }
+
+  Color _getEstadoColor(PagoRealizado? pago) {
+    if (pago == null) return D.slate400;
+    if (pago.isValidated) return D.emerald;
+    if (pago.isRechazado) return D.rose;
+    return const Color(0xFFF59E0B);
+  }
+
+  Widget _buildEstadoSection({required bool canWrite}) {
+    final pago = widget.pago;
+    final estadoLabel = _getEstadoLabel(pago);
+    final estadoColor = _getEstadoColor(pago);
+    final isPendiente = pago != null && !pago.isValidated && !pago.isRechazado;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Badge de estado
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: estadoColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: estadoColor.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                pago?.isValidated == true
+                    ? Icons.check_circle_rounded
+                    : pago?.isRechazado == true
+                        ? Icons.cancel_rounded
+                        : Icons.hourglass_empty_rounded,
+                color: estadoColor,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                estadoLabel,
+                style: TextStyle(
+                  color: estadoColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Motivo de rechazo
+        if (pago?.isRechazado == true && pago?.motivoRechazo != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: D.rose.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: D.rose.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline_rounded, color: D.rose, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    pago!.motivoRechazo!,
+                    style: TextStyle(color: D.slate400, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        // Botones de acción (visibles para cualquier usuario autenticado)
+        if (true) ...[
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              if (!pago!.isValidated)
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _confirmarValidar(),
+                    icon: const Icon(Icons.check_circle_rounded, size: 18),
+                    label: const Text('Validar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: D.emerald,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              if (!pago.isValidated && !pago.isRechazado)
+                const SizedBox(width: 12),
+              if (!pago.isRechazado)
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showRejectionDialog(),
+                    icon: const Icon(Icons.cancel_rounded, size: 18),
+                    label: const Text('Rechazar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: D.rose,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _confirmarValidar() {
+    _showWhatsAppConfirmationForValidar();
+  }
+
+  void _showWhatsAppConfirmationForValidar() {
+    final messageCtrl = TextEditingController(
+      text: 'Tu pago ya fue validado con éxito. Muchas gracias por preferirnos ✅🙏✨',
+    );
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _PremiumWhatsAppDialog(
+        messageCtrl: messageCtrl,
+        onConfirm: (msg) {
+          final bloc = context.read<WhatsAppBloc>();
+          Navigator.pop(ctx);
+          bloc.add(SendMessage(to: _chatIdCtrl.text.trim(), body: msg));
+          _wasWhatsappSent = true;
+          context.read<PagoRealizadoBloc>().add(
+            CambiarEstadoPago(idPago: widget.pago!.id, accion: 'validar'),
+          );
+        },
+      ),
+    ).then((_) => messageCtrl.dispose());
+  }
+
+  void _showRejectionDialog() {
+    final motivoCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: D.surfaceHigh,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: D.border),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Motivo de Rechazo',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Indica el motivo por el que se rechaza este pago.',
+                style: TextStyle(color: D.slate400, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: motivoCtrl,
+                maxLines: 3,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Ej: Comprobante ilegible, monto incorrecto...',
+                  hintStyle: TextStyle(color: D.slate600, fontSize: 13),
+                  filled: true,
+                  fillColor: D.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text(
+                        'Cancelar',
+                        style: TextStyle(color: D.slate400, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final motivo = motivoCtrl.text.trim();
+                        Navigator.pop(ctx);
+                        context.read<PagoRealizadoBloc>().add(
+                          CambiarEstadoPago(
+                            idPago: widget.pago!.id,
+                            accion: 'rechazar',
+                            motivoRechazo: motivo.isEmpty ? null : motivo,
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: D.rose,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text(
+                        'Confirmar',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).then((_) => motivoCtrl.dispose());
+  }
+
   Widget _buildSwitch({required bool canWrite}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
@@ -786,6 +1136,91 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickFile() async {
+    if (!kIsWeb) return;
+    final input = html.FileUploadInputElement()
+      ..accept = 'image/jpeg,image/png,image/webp,image/gif';
+    input.click();
+    await input.onChange.first;
+    if (input.files == null || input.files!.isEmpty) return;
+
+    final file = input.files![0];
+    final mimeType = file.type.isNotEmpty ? file.type : 'image/jpeg';
+
+    final reader = html.FileReader();
+    reader.readAsArrayBuffer(file);
+    await reader.onLoad.first;
+
+    final result = reader.result;
+    final Uint8List bytes;
+    if (result is Uint8List) {
+      bytes = result;
+    } else if (result is ByteBuffer) {
+      bytes = result.asUint8List();
+    } else {
+      bytes = Uint8List.fromList((result as List).cast<int>());
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _pendingImageBytes = bytes;
+      _pendingImageMimeType = mimeType;
+      _pendingImageOriginalName = file.name;
+      // Limpia URL manual si se selecciona un archivo
+      _urlImagenCtrl.clear();
+    });
+  }
+
+  Widget _buildUploadBtn() {
+    final hasFile = _pendingImageBytes != null;
+    if (hasFile) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: D.emerald.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: D.emerald.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: D.emerald, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _pendingImageOriginalName ?? 'Imagen seleccionada',
+                style: const TextStyle(color: D.emerald, fontSize: 13, fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => setState(() {
+                _pendingImageBytes = null;
+                _pendingImageMimeType = null;
+                _pendingImageOriginalName = null;
+              }),
+              child: const Icon(Icons.close_rounded, color: D.slate400, size: 18),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _pickFile,
+        icon: const Icon(Icons.upload_file_rounded, size: 18),
+        label: const Text('Seleccionar imagen / comprobante'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: D.skyBlue,
+          side: const BorderSide(color: D.skyBlue),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
     );

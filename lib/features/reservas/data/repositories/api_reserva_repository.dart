@@ -392,7 +392,6 @@ class ApiReservaRepository implements ReservaRepository {
         fechaNacimiento: json['fecha_nacimiento'] != null
             ? DateTime.tryParse(json['fecha_nacimiento'].toString())
             : null,
-        notas: json['notas'] ?? '',
       );
     } catch (e) {
       return null;

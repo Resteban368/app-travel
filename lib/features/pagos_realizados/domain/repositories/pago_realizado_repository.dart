@@ -24,4 +24,11 @@ abstract class PagoRealizadoRepository {
 
   /// Removes a payment record from the system.
   Future<void> deletePago(int id);
+
+  /// Cambia el estado del pago: 'validar' o 'rechazar'.
+  Future<PagoRealizado> cambiarEstadoPago(
+    int idPago,
+    String accion, {
+    String? motivoRechazo,
+  });
 }

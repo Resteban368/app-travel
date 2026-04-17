@@ -3,7 +3,7 @@ import '../../domain/entities/cotizacion.dart';
 
 abstract class CotizacionState extends Equatable {
   const CotizacionState();
-  
+
   @override
   List<Object?> get props => [];
 }
@@ -14,11 +14,21 @@ class CotizacionLoading extends CotizacionState {}
 
 class CotizacionLoaded extends CotizacionState {
   final List<Cotizacion> cotizaciones;
+  final int page;
+  final int totalPages;
+  final int total;
+  final int limit;
 
-  const CotizacionLoaded(this.cotizaciones);
+  const CotizacionLoaded(
+    this.cotizaciones, {
+    this.page = 1,
+    this.totalPages = 1,
+    this.total = 0,
+    this.limit = 20,
+  });
 
   @override
-  List<Object?> get props => [cotizaciones];
+  List<Object?> get props => [cotizaciones, page, totalPages, total, limit];
 }
 
 class CotizacionSaving extends CotizacionState {}

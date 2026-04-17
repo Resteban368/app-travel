@@ -60,7 +60,7 @@ class ApiClienteRepository implements ClienteRepository {
   }
 
   @override
-  Future<void> createCliente(Cliente cliente) async {
+  Future<String?> createCliente(Cliente cliente) async {
     final body = json.encode(_toJson(cliente));
     debugPrint('📤 [ApiClienteRepository] Creating: $body');
     final response = await client.post(
@@ -68,13 +68,26 @@ class ApiClienteRepository implements ClienteRepository {
       headers: _headers,
       body: body,
     );
-    if (response.statusCode != 201 && response.statusCode != 200) {
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      final decoded = json.decode(response.body);
+      if (decoded is Map<String, dynamic> && decoded.containsKey('message')) {
+        return decoded['message'] as String;
+      }
+      return null;
+    } else {
+      String errorMessage = 'Error al crear cliente';
+      try {
+        final decoded = json.decode(response.body);
+        if (decoded is Map && decoded.containsKey('message')) {
+          errorMessage = decoded['message'].toString();
+        }
+      } catch (_) {}
+
       print(
         'Error al crear cliente: ${response.statusCode} - ${response.body}',
       );
-      throw Exception(
-        'Error al crear cliente: ${response.statusCode} - ${response.body}',
-      );
+      throw Exception(errorMessage);
     }
   }
 
@@ -121,7 +134,10 @@ class ApiClienteRepository implements ClienteRepository {
       fechaNacimiento: json['fecha_nacimiento'] != null
           ? DateTime.tryParse(json['fecha_nacimiento'].toString())
           : null,
-      notas: json['notas'] ?? '',
+      estado: json['estado'],
+      deletedAt: json['deleted_at'] != null
+          ? DateTime.tryParse(json['deleted_at'].toString())
+          : null,
     );
   }
 
@@ -138,7 +154,7 @@ class ApiClienteRepository implements ClienteRepository {
             .toIso8601String()
             .split('T')
             .first,
-      'notas': cliente.notas,
+      'estado': cliente.estado,
     };
   }
 }

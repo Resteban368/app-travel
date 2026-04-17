@@ -501,12 +501,6 @@ class _ServiceCardState extends State<_ServiceCard> {
                               arguments: widget.service,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          SmallBtn(
-                            icon: Icons.delete_outline_rounded,
-                            color: D.rose,
-                            onTap: widget.onDelete,
-                          ),
                         ],
                       ),
                   ],

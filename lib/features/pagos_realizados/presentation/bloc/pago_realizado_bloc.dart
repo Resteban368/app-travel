@@ -51,6 +51,19 @@ class TogglePagoValidation extends PagoRealizadoEvent {
   List<Object?> get props => [pago];
 }
 
+class CambiarEstadoPago extends PagoRealizadoEvent {
+  final int idPago;
+  final String accion;
+  final String? motivoRechazo;
+  const CambiarEstadoPago({
+    required this.idPago,
+    required this.accion,
+    this.motivoRechazo,
+  });
+  @override
+  List<Object?> get props => [idPago, accion, motivoRechazo];
+}
+
 // ─── States ──────────────────────────────────────────────
 
 abstract class PagoRealizadoState extends Equatable {
@@ -120,6 +133,7 @@ class PagoRealizadoBloc extends Bloc<PagoRealizadoEvent, PagoRealizadoState> {
     on<UpdatePago>(_onUpdatePago);
     on<DeletePago>(_onDeletePago);
     on<TogglePagoValidation>(_onTogglePagoValidation);
+    on<CambiarEstadoPago>(_onCambiarEstadoPago);
   }
 
   Future<void> _onLoadPagos(
@@ -197,6 +211,34 @@ class PagoRealizadoBloc extends Bloc<PagoRealizadoEvent, PagoRealizadoState> {
       final result = await _repository.getPagos(page: 1, limit: 20);
       emit(PagoRealizadoSaved(pagos: result.data));
       emit(PagosRealizadosLoaded(pagos: result.data, page: 1, totalPages: result.totalPages, total: result.total, limit: result.limit));
+    } catch (e) {
+      emit(PagoRealizadoError(e.toString()));
+    }
+  }
+
+  Future<void> _onCambiarEstadoPago(
+    CambiarEstadoPago event,
+    Emitter<PagoRealizadoState> emit,
+  ) async {
+    final currentPagos = state is PagosRealizadosLoaded
+        ? (state as PagosRealizadosLoaded).pagos
+        : null;
+    emit(PagoRealizadoSaving(pagos: currentPagos));
+    try {
+      await _repository.cambiarEstadoPago(
+        event.idPago,
+        event.accion,
+        motivoRechazo: event.motivoRechazo,
+      );
+      final result = await _repository.getPagos(page: 1, limit: 20);
+      emit(PagoRealizadoSaved(pagos: result.data));
+      emit(PagosRealizadosLoaded(
+        pagos: result.data,
+        page: 1,
+        totalPages: result.totalPages,
+        total: result.total,
+        limit: result.limit,
+      ));
     } catch (e) {
       emit(PagoRealizadoError(e.toString()));
     }

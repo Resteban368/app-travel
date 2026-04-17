@@ -44,7 +44,6 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
     _numeroDocumentoCtrl = TextEditingController(
       text: widget.cliente?.documento ?? '',
     );
-    _notasCtrl = TextEditingController(text: widget.cliente?.notas ?? '');
     final rawTipo = widget.cliente?.tipoDocumento ?? 'CC';
     _tipoDocumento = _tiposDocumento.firstWhere(
       (t) => t.toLowerCase() == rawTipo.toLowerCase(),
@@ -132,10 +131,12 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
     return BlocListener<ClienteBloc, ClienteState>(
       listener: (context, state) {
         if (state is ClienteActionSuccess) {
-          _showMsg(
-            _isEditing ? 'Cliente actualizado con éxito' : 'Cliente registrado',
-            D.emerald,
-          );
+          final successMsg =
+              state.message ??
+              (_isEditing
+                  ? 'Cliente actualizado con éxito'
+                  : 'Cliente registrado');
+          _showMsg(successMsg, D.emerald);
           Navigator.pop(context);
         } else if (state is ClienteError) {
           _showMsg(state.message, D.rose);
@@ -192,7 +193,8 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
                                       controller: _telefonoCtrl,
                                       label: 'Teléfono de Contacto *',
                                       icon: Icons.phone_rounded,
-                                      keyboardType: TextInputType.phone,
+                                      keyboardType: TextInputType.number,
+                                      isNumeric: true,
                                     ),
                                   ],
                                 ),
@@ -210,26 +212,12 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
                                       label: 'Número de Documento *',
                                       icon: Icons.numbers_rounded,
                                       keyboardType: TextInputType.number,
+                                      isNumeric: true,
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 24),
 
-                                // ── Información Adicional ────────────────────
-                                PremiumSectionCard(
-                                  title: 'INFORMACIÓN ADICIONAL',
-                                  icon: Icons.more_horiz_rounded,
-                                  children: [
-                                    _buildDatePicker(),
-                                    const SizedBox(height: 20),
-                                    PremiumTextField(
-                                      controller: _notasCtrl,
-                                      label: 'Notas / Observaciones',
-                                      icon: Icons.notes_rounded,
-                                      maxLines: 3,
-                                    ),
-                                  ],
-                                ),
                                 const SizedBox(height: 48),
 
                                 // ── Submit ──────────────────────────────────

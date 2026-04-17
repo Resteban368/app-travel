@@ -9,6 +9,7 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/premium_palette.dart';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -251,6 +252,8 @@ class PremiumTextField extends StatefulWidget {
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
   final bool isPassword;
+  final TextInputAction? textInputAction;
+  final FocusNode? focusNode;
 
   const PremiumTextField({
     super.key,
@@ -263,6 +266,8 @@ class PremiumTextField extends StatefulWidget {
     this.validator,
     this.keyboardType,
     this.isPassword = false,
+    this.textInputAction,
+    this.focusNode,
   });
 
   @override
@@ -274,6 +279,20 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
 
   @override
   Widget build(BuildContext context) {
+    // If multiline and no keyboard type specified, use multiline
+    final kType =
+        widget.keyboardType ??
+        (widget.isNumeric
+            ? TextInputType.number
+            : (widget.maxLines > 1
+                  ? TextInputType.multiline
+                  : TextInputType.text));
+
+    // If multiline and no action specified, use newline
+    final tAction =
+        widget.textInputAction ??
+        (widget.maxLines > 1 ? TextInputAction.newline : null);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -292,8 +311,12 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
           readOnly: widget.readOnly,
           maxLines: widget.isPassword ? 1 : widget.maxLines,
           obscureText: widget.isPassword ? _obscureText : false,
-          keyboardType: widget.keyboardType ??
-              (widget.isNumeric ? TextInputType.number : TextInputType.text),
+          keyboardType: kType,
+          textInputAction: tAction,
+          focusNode: widget.focusNode,
+          inputFormatters: widget.isNumeric
+              ? [FilteringTextInputFormatter.digitsOnly]
+              : null,
           style: const TextStyle(color: Colors.white, fontSize: 14),
           decoration: InputDecoration(
             prefixIcon: Icon(widget.icon, color: D.skyBlue, size: 20),
@@ -306,7 +329,8 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
                       color: D.slate400,
                       size: 20,
                     ),
-                    onPressed: () => setState(() => _obscureText = !_obscureText),
+                    onPressed: () =>
+                        setState(() => _obscureText = !_obscureText),
                   )
                 : null,
             filled: true,
@@ -332,7 +356,8 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
               vertical: 14,
             ),
           ),
-          validator: widget.validator ??
+          validator:
+              widget.validator ??
               (v) => (v == null || v.isEmpty) && widget.label.contains('*')
                   ? 'Requerido'
                   : null,

@@ -29,7 +29,8 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
       'page': page.toString(),
       'limit': limit.toString(),
     };
-    if (startDate != null) params['startDate'] = startDate.toUtc().toIso8601String();
+    if (startDate != null)
+      params['startDate'] = startDate.toUtc().toIso8601String();
     if (endDate != null) params['endDate'] = endDate.toUtc().toIso8601String();
 
     final uri = Uri.parse(_baseUrl).replace(queryParameters: params);
@@ -39,7 +40,9 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
 
     if (response.statusCode == 200) {
       final body = json.decode(response.body) as Map<String, dynamic>;
-      final data = (body['data'] as List<dynamic>).map((j) => _fromJson(j as Map<String, dynamic>)).toList();
+      final data = (body['data'] as List<dynamic>)
+          .map((j) => _fromJson(j as Map<String, dynamic>))
+          .toList();
       return PagedResult(
         data: data,
         total: (body['total'] as num?)?.toInt() ?? data.length,
@@ -48,12 +51,15 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
         limit: (body['limit'] as num?)?.toInt() ?? limit,
       );
     }
+    debugPrint('API RESPONSE: ${response.body}');
     throw Exception('Error loading payments: ${response.statusCode}');
   }
 
   @override
   Future<List<PagoRealizado>> getPagosByReserva(int reservaId) async {
-    final uri = Uri.parse(_baseUrl).replace(queryParameters: {'reserva_id': reservaId.toString()});
+    final uri = Uri.parse(
+      _baseUrl,
+    ).replace(queryParameters: {'reserva_id': reservaId.toString()});
     final response = await client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = json.decode(response.body);
@@ -63,17 +69,24 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
       } else if (decoded is List) {
         data = decoded;
       }
+      debugPrint('API RESPONSE: ${response.body}');
       return data.map((j) => _fromJson(j as Map<String, dynamic>)).toList();
     }
-    throw Exception('Error al cargar pagos de la reserva: ${response.statusCode}');
+    throw Exception(
+      'Error al cargar pagos de la reserva: ${response.statusCode}',
+    );
   }
 
   @override
   Future<PagoRealizado> getPagoById(int id) async {
-    final response = await client.get(Uri.parse('$_baseUrl/$id'), headers: _headers);
+    final response = await client.get(
+      Uri.parse('$_baseUrl/$id'),
+      headers: _headers,
+    );
     if (response.statusCode == 200) {
       return _fromJson(json.decode(response.body));
     }
+    debugPrint('API RESPONSE: ${response.body}');
     throw Exception('Error loading payment $id: ${response.statusCode}');
   }
 
@@ -86,6 +99,7 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
     );
 
     if (response.statusCode != 201 && response.statusCode != 200) {
+      debugPrint('API RESPONSE: ${response.body}');
       throw Exception('Error creating payment: ${response.statusCode}');
     }
   }
@@ -101,6 +115,7 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
     );
 
     if (response.statusCode != 200) {
+      debugPrint('API RESPONSE: ${response.body}');
       throw Exception('Error updating payment: ${response.statusCode}');
     }
   }
@@ -113,8 +128,30 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
     );
 
     if (response.statusCode != 200 && response.statusCode != 204) {
+      debugPrint('API RESPONSE: ${response.body}');
       throw Exception('Error deleting payment: ${response.statusCode}');
     }
+  }
+
+  @override
+  Future<PagoRealizado> cambiarEstadoPago(
+    int idPago,
+    String accion, {
+    String? motivoRechazo,
+  }) async {
+    final body = <String, dynamic>{'accion': accion};
+    if (motivoRechazo != null) body['motivo_rechazo'] = motivoRechazo;
+
+    final response = await client.patch(
+      Uri.parse('$_baseUrl/$idPago/estado'),
+      headers: _headers,
+      body: json.encode(body),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return _fromJson(json.decode(response.body) as Map<String, dynamic>);
+    }
+    debugPrint('API RESPONSE: ${response.body}');
+    throw Exception('Error al cambiar estado: ${response.statusCode}');
   }
 
   PagoRealizado _fromJson(Map<String, dynamic> json) {
@@ -128,9 +165,13 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
       metodoPago: json['metodo_pago'] ?? '',
       referencia: json['referencia'] ?? '',
       fechaDocumento: json['fecha_documento'] ?? '',
-      isValidated: json['is_validated'] ?? false,
+      isValidated: json['is_validated'] == true || json['is_validated'] == 1,
+      isRechazado: json['is_rechazado'] == true || json['is_rechazado'] == 1,
+      motivoRechazo: json['motivo_rechazo']?.toString(),
       urlImagen: json['url_imagen'] ?? '',
-      reservaId: json['reserva_id'] is int ? json['reserva_id'] : int.tryParse(json['reserva_id']?.toString() ?? ''),
+      reservaId: json['reserva_id'] is int
+          ? json['reserva_id']
+          : int.tryParse(json['reserva_id']?.toString() ?? ''),
       createdAt: json['fecha_creacion'] != null
           ? DateTime.parse(json['fecha_creacion'])
           : null,
@@ -151,6 +192,8 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
       'referencia': pago.referencia,
       'fecha_documento': pago.fechaDocumento,
       'is_validated': pago.isValidated,
+      'is_rechazado': pago.isRechazado,
+      if (pago.motivoRechazo != null) 'motivo_rechazo': pago.motivoRechazo,
       'url_imagen': pago.urlImagen,
     };
     // Only include reserva_id if it's not null — sending null would overwrite

@@ -1,5 +1,6 @@
-# Build output
+# Build output (excluir todo excepto build/web que es el output de Flutter web)
 build/
+!build/web
 
 # Flutter/Dart tool caches
 .dart_tool/

@@ -34,11 +34,11 @@ class ClienteBloc extends Bloc<ClienteEvent, ClienteState> {
     final current = _getCurrentClientes();
     emit(ClienteSaving(clientes: current));
     try {
-      await repository.createCliente(event.cliente);
+      final message = await repository.createCliente(event.cliente);
       final updated = await repository.getClientes();
-      emit(ClienteActionSuccess(updated));
+      emit(ClienteActionSuccess(updated, message: message));
     } catch (e) {
-      emit(ClienteError(e.toString()));
+      emit(ClienteError(e.toString().replaceAll('Exception: ', '')));
     }
   }
 

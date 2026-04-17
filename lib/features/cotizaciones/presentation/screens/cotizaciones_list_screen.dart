@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/layout/admin_shell.dart';
+import '../../../../core/permissions/permission_helper.dart';
 import '../../../../core/theme/premium_palette.dart';
 import '../../domain/entities/cotizacion.dart';
 import '../bloc/cotizacion_bloc.dart';
@@ -99,8 +100,12 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
     super.dispose();
   }
 
-  void _showDetails(BuildContext context, Cotizacion cot) {
-    Navigator.pushNamed(context, AppRouter.cotizacionDetail, arguments: cot);
+  void _onCotizacionTap(Cotizacion cot) {
+    Navigator.pushNamed(context, AppRouter.cotizacionCreate, arguments: cot);
+  }
+
+  void _goToPage(int page) {
+    context.read<CotizacionBloc>().add(LoadCotizaciones(page: page));
   }
 
   @override
@@ -137,8 +142,15 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
             child: BlocBuilder<CotizacionBloc, CotizacionState>(
               builder: (context, state) {
                 List<Cotizacion> list = [];
+                int currentPage = 1;
+                int totalPages = 1;
+                int totalResults = 0;
+
                 if (state is CotizacionLoaded) {
                   list = state.cotizaciones;
+                  currentPage = state.page;
+                  totalPages = state.totalPages;
+                  totalResults = state.total;
                   if (_searchQuery.isNotEmpty) {
                     final q = _searchQuery.toLowerCase();
                     list = list.where((c) {
@@ -151,8 +163,9 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                 }
 
                 return RefreshIndicator(
-                  onRefresh: () async =>
-                      context.read<CotizacionBloc>().add(LoadCotizaciones()),
+                  onRefresh: () async => context.read<CotizacionBloc>().add(
+                    LoadCotizaciones(page: currentPage),
+                  ),
                   backgroundColor: D.surface,
                   color: D.skyBlue,
                   child: CustomScrollView(
@@ -170,28 +183,45 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      const Expanded(child: _ScreenSectionHeader()),
+                                      const Expanded(
+                                        child: _ScreenSectionHeader(),
+                                      ),
                                       const SizedBox(width: 12),
                                       GestureDetector(
-                                        onTap: () => Navigator.pushNamed(context, AppRouter.cotizacionCreate),
+                                        onTap: () => Navigator.pushNamed(
+                                          context,
+                                          AppRouter.cotizacionCreate,
+                                        ),
                                         child: Container(
                                           width: 52,
                                           height: 52,
                                           decoration: BoxDecoration(
-                                            gradient: const LinearGradient(colors: [D.indigo, D.royalBlue]),
-                                            borderRadius: BorderRadius.circular(16),
+                                            gradient: const LinearGradient(
+                                              colors: [D.indigo, D.royalBlue],
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: D.indigo.withOpacity(0.3),
+                                                color: D.indigo.withOpacity(
+                                                  0.3,
+                                                ),
                                                 blurRadius: 15,
                                                 offset: const Offset(0, 6),
                                               ),
                                             ],
                                           ),
-                                          child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
+                                          child: const Icon(
+                                            Icons.add_rounded,
+                                            color: Colors.white,
+                                            size: 32,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -252,7 +282,7 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                                 GestureDetector(
                                   onTap: () => context
                                       .read<CotizacionBloc>()
-                                      .add(LoadCotizaciones()),
+                                      .add(LoadCotizaciones(page: currentPage)),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 20,
@@ -316,14 +346,25 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: _CotizacionCard(
                                     cotizacion: cot,
-                                    onTap: () => _showDetails(context, cot),
+                                    onTap: () => _onCotizacionTap(cot),
                                   ),
                                 ),
                               );
                             }, childCount: list.length),
                           ),
                         ),
-                      const SliverToBoxAdapter(child: SizedBox(height: 40)),
+
+                      if (state is CotizacionLoaded && totalPages > 1)
+                        SliverToBoxAdapter(
+                          child: _PaginationBar(
+                            page: currentPage,
+                            totalPages: totalPages,
+                            total: totalResults,
+                            onPageChanged: _goToPage,
+                          ),
+                        ),
+
+                      const SliverToBoxAdapter(child: SizedBox(height: 100)),
                     ],
                   ),
                 );
@@ -628,11 +669,20 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                         const SizedBox(width: 6),
                         // Badge estado
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: _estadoColors(c.estado).first.withOpacity(0.2),
+                            color: _estadoColors(
+                              c.estado,
+                            ).first.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(5),
-                            border: Border.all(color: _estadoColors(c.estado).first.withOpacity(0.5)),
+                            border: Border.all(
+                              color: _estadoColors(
+                                c.estado,
+                              ).first.withOpacity(0.5),
+                            ),
                           ),
                           child: Text(
                             c.estado.toUpperCase(),
@@ -647,7 +697,10 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                         if (isUnread) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: D.indigo.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(4),
@@ -691,10 +744,156 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                   ],
                 ),
               ),
+              if (context.canWrite('cotizaciones')) ...[
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.white70,
+                    size: 20,
+                  ),
+                  onPressed: () => _confirmDelete(context, c),
+                ),
+                const SizedBox(width: 4),
+              ],
               Icon(Icons.chevron_right_rounded, color: D.slate600),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, Cotizacion c) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: D.surfaceHigh.withOpacity(0.95),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          '¿Eliminar cotización?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Esta acción no se puede deshacer. ¿Deseas eliminar la cotización de ${c.nombreCompleto}?',
+          style: const TextStyle(color: D.slate400),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('CANCELAR', style: TextStyle(color: D.slate600)),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<CotizacionBloc>().add(DeleteCotizacion(c.id));
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Cotización eliminada correctamente'),
+                  backgroundColor: D.emerald.withOpacity(0.9),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            child: const Text(
+              'ELIMINAR',
+              style: TextStyle(color: D.rose, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaginationBar extends StatelessWidget {
+  final int page;
+  final int totalPages;
+  final int total;
+  final void Function(int) onPageChanged;
+
+  const _PaginationBar({
+    required this.page,
+    required this.totalPages,
+    required this.total,
+    required this.onPageChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: D.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: D.border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _PageBtn(
+              icon: Icons.chevron_left_rounded,
+              enabled: page > 1,
+              onTap: () => onPageChanged(page - 1),
+            ),
+            const SizedBox(width: 20),
+            Column(
+              children: [
+                Text(
+                  'Página $page de $totalPages',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$total resultados',
+                  style: const TextStyle(color: D.slate400, fontSize: 11),
+                ),
+              ],
+            ),
+            const SizedBox(width: 20),
+            _PageBtn(
+              icon: Icons.chevron_right_rounded,
+              enabled: page < totalPages,
+              onTap: () => onPageChanged(page + 1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PageBtn extends StatelessWidget {
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _PageBtn({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: enabled ? D.royalBlue.withOpacity(0.15) : D.surfaceHigh,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: enabled ? D.royalBlue.withOpacity(0.4) : D.border,
+          ),
+        ),
+        child: Icon(icon, color: enabled ? D.skyBlue : D.slate600, size: 22),
       ),
     );
   }

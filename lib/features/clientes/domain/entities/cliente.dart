@@ -8,7 +8,8 @@ class Cliente extends Equatable {
   final String tipoDocumento;
   final dynamic documento;
   final DateTime? fechaNacimiento;
-  final String notas;
+  final bool estado;
+  final DateTime? deletedAt;
 
   const Cliente({
     this.id,
@@ -18,7 +19,8 @@ class Cliente extends Equatable {
     required this.tipoDocumento,
     required this.documento,
     this.fechaNacimiento,
-    this.notas = '',
+    this.estado = true,
+    this.deletedAt,
   });
 
   Cliente copyWith({
@@ -39,7 +41,8 @@ class Cliente extends Equatable {
       tipoDocumento: tipoDocumento ?? this.tipoDocumento,
       documento: documento ?? this.documento,
       fechaNacimiento: fechaNacimiento ?? this.fechaNacimiento,
-      notas: notas ?? this.notas,
+      estado: estado ?? this.estado,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 
@@ -52,6 +55,7 @@ class Cliente extends Equatable {
     tipoDocumento,
     documento,
     fechaNacimiento,
-    notas,
+    estado,
+    deletedAt,
   ];
 }

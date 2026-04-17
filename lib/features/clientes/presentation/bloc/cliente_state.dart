@@ -30,10 +30,11 @@ class ClienteSaving extends ClienteState {
 
 class ClienteActionSuccess extends ClienteState {
   final List<Cliente> clientes;
-  const ClienteActionSuccess(this.clientes);
+  final String? message;
+  const ClienteActionSuccess(this.clientes, {this.message});
 
   @override
-  List<Object?> get props => [clientes];
+  List<Object?> get props => [clientes, message];
 }
 
 class ClienteError extends ClienteState {

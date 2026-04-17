@@ -496,6 +496,24 @@ class _PagoItem extends StatelessWidget {
   final PagoRealizado pago;
   const _PagoItem({required this.pago});
 
+  Color get _estadoColor {
+    if (pago.isRechazado) return D.rose;
+    if (pago.isValidated) return D.emerald;
+    return D.gold;
+  }
+
+  IconData get _estadoIcon {
+    if (pago.isRechazado) return Icons.cancel_rounded;
+    if (pago.isValidated) return Icons.check_circle_rounded;
+    return Icons.hourglass_empty_rounded;
+  }
+
+  String get _estadoLabel {
+    if (pago.isRechazado) return 'Rechazado';
+    if (pago.isValidated) return 'Validado';
+    return 'Por validar';
+  }
+
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(locale: 'es_CO', symbol: '\$', decimalDigits: 0);
@@ -509,14 +527,10 @@ class _PagoItem extends StatelessWidget {
             Container(
               width: 36, height: 36,
               decoration: BoxDecoration(
-                color: (pago.isValidated ? D.emerald : D.gold).withOpacity(0.1),
-                shape: BoxShape.circle
+                color: _estadoColor.withOpacity(0.1),
+                shape: BoxShape.circle,
               ),
-              child: Icon(
-                pago.isValidated ? Icons.check_circle_rounded : Icons.pending_actions_rounded,
-                color: pago.isValidated ? D.emerald : D.gold,
-                size: 20,
-              ),
+              child: Icon(_estadoIcon, color: _estadoColor, size: 20),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -534,6 +548,19 @@ class _PagoItem extends StatelessWidget {
               children: [
                 Text(currencyFormat.format(pago.monto), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                 Text(pago.fechaDocumento, style: TextStyle(color: D.slate600, fontSize: 11)),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _estadoColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: _estadoColor.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    _estadoLabel,
+                    style: TextStyle(color: _estadoColor, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
               ],
             ),
             const SizedBox(width: 8),

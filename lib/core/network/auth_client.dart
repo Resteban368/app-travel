@@ -2,14 +2,16 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:agente_viajes/core/constants/api_constants.dart';
+import 'session_expired_notifier.dart';
 
 class AuthClient extends http.BaseClient {
   final http.Client _inner;
   final FlutterSecureStorage _storage;
-  
+  final SessionExpiredNotifier _sessionExpiredNotifier;
+
   static String get _authBaseUrl => '${ApiConstants.kBaseUrl}/v1/auth';
 
-  AuthClient(this._inner, this._storage);
+  AuthClient(this._inner, this._storage, this._sessionExpiredNotifier);
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -63,11 +65,17 @@ class AuthClient extends http.BaseClient {
             return _inner.send(retryRequest);
           }
         } else {
-          // Si el refresh falla, cerramos sesión localmente
+          // Refresh falló — limpiar sesión y notificar UI
           await _storage.delete(key: 'access_token');
           await _storage.delete(key: 'refresh_token');
           await _storage.delete(key: 'user_data');
+          _sessionExpiredNotifier.notify();
         }
+      } else {
+        // Sin refresh token — sesión expirada sin posibilidad de recuperar
+        await _storage.delete(key: 'access_token');
+        await _storage.delete(key: 'user_data');
+        _sessionExpiredNotifier.notify();
       }
     }
 

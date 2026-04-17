@@ -31,7 +31,6 @@ import '../features/pagos_realizados/presentation/screens/pago_realizado_list_sc
 import '../features/pagos_realizados/presentation/screens/pago_realizado_form_screen.dart';
 import '../../features/pagos_realizados/domain/entities/pago_realizado.dart';
 import '../features/cotizaciones/presentation/screens/cotizaciones_list_screen.dart';
-import '../features/cotizaciones/presentation/screens/cotizacion_detail_screen.dart';
 import '../features/cotizaciones/presentation/screens/cotizacion_form_screen.dart';
 import '../features/cotizaciones/domain/entities/cotizacion.dart';
 import '../features/agentes/presentation/screens/agente_list_screen.dart';
@@ -78,7 +77,6 @@ class AppRouter {
   static const String pagoRealizadoEdit = '/pagos-realizados/edit';
   static const String cotizaciones = '/cotizaciones';
   static const String cotizacionCreate = '/cotizaciones/create';
-  static const String cotizacionDetail = '/cotizaciones/detail';
   static const String agentes = '/agentes';
   static const String agenteCreate = '/agentes/create';
   static const String agenteEdit = '/agentes/edit';
@@ -160,23 +158,19 @@ class AppRouter {
       case pagosRealizados:
         return _fadeRoute(const PagoRealizadoListScreen(), settings);
       case pagoRealizadoCreate:
-        return _fadeRoute(
-          const PagoRealizadoFormScreen(),
-          settings,
-        );
+        return _fadeRoute(const PagoRealizadoFormScreen(), settings);
       case pagoRealizadoEdit:
         final pago = settings.arguments as PagoRealizado;
-        return _fadeRoute(
-          PagoRealizadoFormScreen(pago: pago),
-          settings,
-        );
+        return _fadeRoute(PagoRealizadoFormScreen(pago: pago), settings);
       case cotizaciones:
         return _fadeRoute(const CotizacionesListScreen(), settings);
       case cotizacionCreate:
-        return _fadeRoute(const CotizacionFormScreen(), settings);
-      case cotizacionDetail:
-        final cotizacion = settings.arguments as Cotizacion;
-        return _fadeRoute(CotizacionDetailScreen(cotizacion: cotizacion), settings);
+        final cotizacion = settings.arguments as Cotizacion?;
+        return _fadeRoute(
+          CotizacionFormScreen(cotizacion: cotizacion),
+          settings,
+        );
+
       case agentes:
         return _fadeRoute(const AgenteListScreen(), settings);
       case agenteCreate:
@@ -201,7 +195,6 @@ class AppRouter {
       case profile:
         return _fadeRoute(const ProfileScreen(), settings);
       default:
-
         return _fadeRoute(const LoginScreen(), settings);
     }
   }

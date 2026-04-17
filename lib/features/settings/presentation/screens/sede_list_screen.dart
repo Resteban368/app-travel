@@ -409,7 +409,6 @@ class _SedeCardState extends State<_SedeCard> {
                         ],
                       ),
                     ),
-                    if (widget.canWrite) _buildDesktopActions(context),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -466,14 +465,6 @@ class _SedeCardState extends State<_SedeCard> {
           child: Text(text, style: TextStyle(color: D.slate400, fontSize: 13)),
         ),
       ],
-    );
-  }
-
-  Widget _buildDesktopActions(BuildContext context) {
-    return SmallBtn(
-      icon: Icons.delete_outline_rounded,
-      color: D.rose,
-      onTap: () => _confirmDelete(context),
     );
   }
 }

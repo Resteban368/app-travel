@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/theme/premium_palette.dart';
+import '../../../../core/widgets/premium_form_widgets.dart';
 import '../../domain/entities/cotizacion.dart';
 import '../bloc/cotizacion_bloc.dart';
 import '../bloc/cotizacion_event.dart';
 import '../bloc/cotizacion_state.dart';
-import '../../../../core/theme/premium_palette.dart';
 
 class CotizacionFormScreen extends StatefulWidget {
-  const CotizacionFormScreen({super.key});
+  final Cotizacion? cotizacion;
+  const CotizacionFormScreen({super.key, this.cotizacion});
 
   @override
   State<CotizacionFormScreen> createState() => _CotizacionFormScreenState();
 }
 
-class _CotizacionFormScreenState extends State<CotizacionFormScreen>
-    with SingleTickerProviderStateMixin {
+class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final _nombreCtrl = TextEditingController();
@@ -30,28 +31,27 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen>
   DateTime? _fechaRegreso;
   String _estado = 'pendiente';
 
-  late final AnimationController _entryCtrl;
-  late final Animation<double> _fade;
-  late final Animation<Offset> _slide;
-
-  static const _estados = ['pendiente', 'atendida', 'cancelada'];
-
   @override
   void initState() {
     super.initState();
-    _entryCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900));
-    _fade = Tween<double>(begin: 0, end: 1)
-        .animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut));
-    _slide =
-        Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(
-            CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
-    _entryCtrl.forward();
+    if (widget.cotizacion != null) {
+      final c = widget.cotizacion!;
+      _nombreCtrl.text = c.nombreCompleto;
+      _correoCtrl.text = c.correoElectronico ?? '';
+      _chatIdCtrl.text = c.chatId;
+      _detallesPlanCtrl.text = c.detallesPlan;
+      _origenDestinoCtrl.text = c.origenDestino ?? '';
+      _especificacionesCtrl.text = c.especificaciones ?? '';
+      _edadesMenoresCtrl.text = c.edadesMenuores ?? '';
+      _numeroPasajerosCtrl.text = c.numeroPasajeros.toString();
+      _estado = c.estado;
+      if (c.fechaSalida != null) _fechaSalida = DateTime.parse(c.fechaSalida!);
+      if (c.fechaRegreso != null) _fechaRegreso = DateTime.parse(c.fechaRegreso!);
+    }
   }
 
   @override
   void dispose() {
-    _entryCtrl.dispose();
     _nombreCtrl.dispose();
     _correoCtrl.dispose();
     _chatIdCtrl.dispose();
@@ -97,7 +97,7 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen>
     if (!_formKey.currentState!.validate()) return;
 
     final cotizacion = Cotizacion(
-      id: 0,
+      id: widget.cotizacion?.id ?? 0,
       chatId: _chatIdCtrl.text.trim(),
       nombreCompleto: _nombreCtrl.text.trim(),
       correoElectronico: _correoCtrl.text.trim().isEmpty
@@ -117,11 +117,15 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen>
           ? null
           : _especificacionesCtrl.text.trim(),
       estado: _estado,
-      isRead: true,
-      createdAt: DateTime.now(),
+      isRead: widget.cotizacion?.isRead ?? true,
+      createdAt: widget.cotizacion?.createdAt ?? DateTime.now(),
     );
 
-    context.read<CotizacionBloc>().add(CreateCotizacion(cotizacion));
+    if (widget.cotizacion != null) {
+      context.read<CotizacionBloc>().add(UpdateCotizacion(cotizacion));
+    } else {
+      context.read<CotizacionBloc>().add(CreateCotizacion(cotizacion));
+    }
   }
 
   @override
@@ -135,7 +139,8 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen>
               backgroundColor: D.emerald,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           );
           Navigator.pop(context, true);
@@ -146,427 +151,338 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen>
               backgroundColor: D.rose,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           );
         }
       },
       child: Scaffold(
         backgroundColor: D.bg,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white, size: 20),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: const Text(
-            'Nueva Cotización',
-            style: TextStyle(
-                color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ),
         body: Stack(
           children: [
-            // Orbes de fondo
-            Positioned(
-                top: -80,
-                right: -40,
-                child: _orb(220, D.indigo.withOpacity(0.12))),
-            Positioned(
-                bottom: -60,
-                left: -40,
-                child: _orb(180, D.royalBlue.withOpacity(0.08))),
-
-            SafeArea(
-              child: FadeTransition(
-                opacity: _fade,
-                child: SlideTransition(
-                  position: _slide,
-                  child: SingleChildScrollView(
+            const PremiumBackground(),
+            CustomScrollView(
+              slivers: [
+                PremiumSliverAppBar(
+                  title: widget.cotizacion != null
+                      ? 'Editar Cotización'
+                      : 'Nueva Cotización',
+                  actions: IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 16),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // --- Datos del Cliente ---
-                          _sectionLabel('DATOS DEL CLIENTE'),
-                          const SizedBox(height: 16),
-                          _card(children: [
-                            _field(
-                              ctrl: _nombreCtrl,
-                              label: 'Nombre Completo *',
-                              icon: Icons.person_outline_rounded,
-                              hint: 'Ej: Juan Carlos López',
-                              textCapitalization: TextCapitalization.words,
-                              required: true,
-                            ),
-                            const SizedBox(height: 16),
-                            _field(
-                              ctrl: _correoCtrl,
-                              label: 'Correo Electrónico',
-                              icon: Icons.email_outlined,
-                              hint: 'cliente@ejemplo.com',
-                              keyboardType: TextInputType.emailAddress,
-                            ),
-                            const SizedBox(height: 16),
-                            _field(
-                              ctrl: _chatIdCtrl,
-                              label: 'Número de WhatsApp *',
-                              icon: Icons.phone_outlined,
-                              hint: '573001234567',
-                              keyboardType: TextInputType.phone,
-                              required: true,
-                            ),
-                          ]),
-
-                          const SizedBox(height: 20),
-
-                          // --- Detalles del Viaje ---
-                          _sectionLabel('DETALLES DEL VIAJE'),
-                          const SizedBox(height: 16),
-                          _card(children: [
-                            _field(
-                              ctrl: _detallesPlanCtrl,
-                              label: 'Plan / Destino *',
-                              icon: Icons.flight_takeoff_rounded,
-                              hint: 'Ej: Vuelo + Hotel Cartagena 5 días',
-                              required: true,
-                              maxLines: 2,
-                            ),
-                            const SizedBox(height: 16),
-                            _field(
-                              ctrl: _origenDestinoCtrl,
-                              label: 'Origen → Destino',
-                              icon: Icons.route_rounded,
-                              hint: 'Ej: Bogotá → Cartagena',
-                            ),
-                            const SizedBox(height: 16),
-                            // Fechas
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _DatePickerBtn(
-                                    label: 'Fecha de Salida',
-                                    date: _fechaSalida,
-                                    onTap: () =>
-                                        _pickFecha(esSalida: true),
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 900),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              PremiumSectionCard(
+                                title: 'DATOS DEL CLIENTE',
+                                icon: Icons.person_rounded,
+                                children: [
+                                  PremiumTextField(
+                                    controller: _nombreCtrl,
+                                    label: 'Nombre Completo *',
+                                    icon: Icons.badge_rounded,
+                                    keyboardType: TextInputType.text,
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _DatePickerBtn(
-                                    label: 'Fecha de Regreso',
-                                    date: _fechaRegreso,
-                                    onTap: () =>
-                                        _pickFecha(esSalida: false),
+                                  const SizedBox(height: 20),
+                                  PremiumTextField(
+                                    controller: _chatIdCtrl,
+                                    label: 'Número de WhatsApp *',
+                                    icon: Icons.phone_android_rounded,
+                                    keyboardType: TextInputType.number,
+                                    isNumeric: true,
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            _field(
-                              ctrl: _numeroPasajerosCtrl,
-                              label: 'N° de Pasajeros *',
-                              icon: Icons.group_outlined,
-                              hint: '1',
-                              keyboardType: TextInputType.number,
-                              required: true,
-                              validator: (v) {
-                                if (v == null || v.isEmpty) return 'Requerido';
-                                if ((int.tryParse(v) ?? 0) < 1) {
-                                  return 'Mínimo 1';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            _field(
-                              ctrl: _edadesMenoresCtrl,
-                              label: 'Edades de Menores',
-                              icon: Icons.child_care_rounded,
-                              hint: 'Ej: 5, 8, 12',
-                            ),
-                          ]),
-
-                          const SizedBox(height: 20),
-
-                          // --- Especificaciones y Estado ---
-                          _sectionLabel('NOTAS Y ESTADO'),
-                          const SizedBox(height: 16),
-                          _card(children: [
-                            _field(
-                              ctrl: _especificacionesCtrl,
-                              label: 'Especificaciones / Notas',
-                              icon: Icons.notes_rounded,
-                              hint:
-                                  'Detalles adicionales, preferencias del cliente...',
-                              maxLines: 3,
-                            ),
-                            const SizedBox(height: 16),
-                            // Estado dropdown
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Estado',
-                                    style: TextStyle(
-                                        color: D.slate400,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600)),
-                                const SizedBox(height: 8),
-                                DropdownButtonFormField<String>(
-                                  value: _estado,
-                                  dropdownColor: D.surfaceHigh,
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 15),
-                                  decoration: InputDecoration(
-                                    prefixIcon: const Icon(
-                                        Icons.flag_outlined,
-                                        color: D.skyBlue,
-                                        size: 20),
-                                    filled: true,
-                                    fillColor: D.surfaceHigh.withOpacity(0.5),
-                                    border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                        borderSide: const BorderSide(color: D.border)),
-                                    enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                        borderSide: const BorderSide(color: D.border)),
-                                    focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(14),
-                                        borderSide: const BorderSide(
-                                            color: D.skyBlue, width: 1.5)),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 14),
+                                  const SizedBox(height: 20),
+                                  PremiumTextField(
+                                    controller: _correoCtrl,
+                                    label: 'Correo Electrónico',
+                                    icon: Icons.email_rounded,
+                                    keyboardType: TextInputType.emailAddress,
                                   ),
-                                  items: _estados
-                                      .map((e) => DropdownMenuItem(
-                                          value: e,
-                                          child: Text(
-                                              e[0].toUpperCase() +
-                                                  e.substring(1))))
-                                      .toList(),
-                                  onChanged: (v) =>
-                                      setState(() => _estado = v ?? _estado),
-                                ),
-                              ],
-                            ),
-                          ]),
-
-                          const SizedBox(height: 32),
-
-                          // Botón Guardar
-                          BlocBuilder<CotizacionBloc, CotizacionState>(
-                            builder: (context, state) {
-                              final isSaving = state is CotizacionSaving;
-                              return SizedBox(
-                                width: double.infinity,
-                                height: 58,
-                                child: ElevatedButton(
-                                  onPressed: isSaving ? null : _save,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: D.royalBlue,
-                                    foregroundColor: Colors.white,
-                                    disabledBackgroundColor:
-                                        D.slate600.withOpacity(0.3),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(18)),
-                                    elevation: 8,
-                                    shadowColor: D.royalBlue.withOpacity(0.4),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              PremiumSectionCard(
+                                title: 'DETALLES DEL VIAJE',
+                                icon: Icons.flight_takeoff_rounded,
+                                children: [
+                                  PremiumTextField(
+                                    controller: _detallesPlanCtrl,
+                                    label: 'Plan / Destino *',
+                                    icon: Icons.map_rounded,
+                                    maxLines: 2,
                                   ),
-                                  child: isSaving
-                                      ? const SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                              strokeWidth: 2))
-                                      : const Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.save_rounded, size: 20),
-                                            SizedBox(width: 10),
-                                            Text('GUARDAR COTIZACIÓN',
-                                                style: TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.w900,
-                                                    letterSpacing: 0.8)),
-                                          ],
+                                  const SizedBox(height: 20),
+                                  PremiumTextField(
+                                    controller: _origenDestinoCtrl,
+                                    label: 'Origen → Destino',
+                                    icon: Icons.route_rounded,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _DatePickerPremium(
+                                          label: 'Salida',
+                                          date: _fechaSalida,
+                                          onTap: () =>
+                                              _pickFecha(esSalida: true),
                                         ),
-                                ),
-                              );
-                            },
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: _DatePickerPremium(
+                                          label: 'Regreso',
+                                          date: _fechaRegreso,
+                                          onTap: () =>
+                                              _pickFecha(esSalida: false),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: PremiumTextField(
+                                          controller: _numeroPasajerosCtrl,
+                                          label: 'N° Pasajeros *',
+                                          icon: Icons.people_alt_rounded,
+                                          isNumeric: true,
+                                          validator: (v) {
+                                            if (v == null || v.isEmpty) {
+                                              return 'Requerido';
+                                            }
+                                            if ((int.tryParse(v) ?? 0) < 1) {
+                                              return 'Mínimo 1';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: PremiumTextField(
+                                          controller: _edadesMenoresCtrl,
+                                          label: 'Edades Menores',
+                                          icon: Icons.child_care_rounded,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              PremiumSectionCard(
+                                title: 'NOTAS Y ESTADO',
+                                icon: Icons.edit_note_rounded,
+                                children: [
+                                  PremiumTextField(
+                                    controller: _especificacionesCtrl,
+                                    label: 'Especificaciones / Notas',
+                                    icon: Icons.notes_rounded,
+                                    maxLines: 5,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  _StatusDropdownPremium(
+                                    value: _estado,
+                                    onChanged: (v) =>
+                                        setState(() => _estado = v ?? _estado),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 32),
+                              BlocBuilder<CotizacionBloc, CotizacionState>(
+                                builder: (context, state) {
+                                  return PremiumActionButton(
+                                    label: widget.cotizacion != null
+                                        ? 'ACTUALIZAR COTIZACIÓN'
+                                        : 'GUARDAR COTIZACIÓN',
+                                    icon: Icons.save_rounded,
+                                    isLoading: state is CotizacionSaving,
+                                    onTap: _save,
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 100),
+                            ],
                           ),
-                          const SizedBox(height: 24),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
-
-  Widget _sectionLabel(String label) => Row(
-        children: [
-          Container(
-              width: 4,
-              height: 14,
-              decoration: BoxDecoration(
-                  color: D.indigo, borderRadius: BorderRadius.circular(2))),
-          const SizedBox(width: 8),
-          Text(label,
-              style: TextStyle(
-                  color: D.slate600,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.6)),
-        ],
-      );
-
-  Widget _card({required List<Widget> children}) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: D.surface,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: D.border),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 16,
-                offset: const Offset(0, 6))
-          ],
-        ),
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, children: children),
-      );
-
-  Widget _field({
-    required TextEditingController ctrl,
-    required String label,
-    required IconData icon,
-    required String hint,
-    bool required = false,
-    int maxLines = 1,
-    TextInputType keyboardType = TextInputType.text,
-    TextCapitalization textCapitalization = TextCapitalization.none,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: TextStyle(
-                color: D.slate400,
-                fontSize: 12,
-                fontWeight: FontWeight.w600)),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: ctrl,
-          maxLines: maxLines,
-          keyboardType: keyboardType,
-          textCapitalization: textCapitalization,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
-          validator: validator ??
-              (v) =>
-                  required && (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: D.slate600, fontSize: 13),
-            prefixIcon: maxLines == 1
-                ? Icon(icon, color: D.skyBlue, size: 18)
-                : null,
-            filled: true,
-            fillColor: D.surfaceHigh.withOpacity(0.5),
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: D.border)),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: D.border)),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: D.skyBlue, width: 1.5)),
-            errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: D.rose)),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _orb(double size, Color color) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(colors: [color, Colors.transparent]),
-        ),
-      );
 }
 
-// ─── Date Picker Button ──────────────────────────────────────────────────────
-
-class _DatePickerBtn extends StatelessWidget {
+class _DatePickerPremium extends StatelessWidget {
   final String label;
   final DateTime? date;
   final VoidCallback onTap;
-  const _DatePickerBtn(
-      {required this.label, required this.date, required this.onTap});
+
+  const _DatePickerPremium({
+    required this.label,
+    required this.date,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final hasDate = date != null;
     final text = hasDate
         ? '${date!.day.toString().padLeft(2, '0')}/${date!.month.toString().padLeft(2, '0')}/${date!.year}'
-        : label;
+        : 'Seleccionar';
 
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        decoration: BoxDecoration(
-          color: hasDate
-              ? D.royalBlue.withOpacity(0.12)
-              : D.surfaceHigh.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-              color: hasDate ? D.royalBlue.withOpacity(0.4) : D.border),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: D.slate400,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
         ),
-        child: Row(
-          children: [
-            Icon(Icons.calendar_today_rounded,
-                color: hasDate ? D.skyBlue : D.slate600, size: 16),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                text,
-                style: TextStyle(
-                  color: hasDate ? Colors.white : D.slate600,
-                  fontSize: 12,
-                  fontWeight:
-                      hasDate ? FontWeight.w600 : FontWeight.normal,
-                ),
-                overflow: TextOverflow.ellipsis,
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: D.surfaceHigh.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: hasDate ? D.skyBlue : Colors.white.withOpacity(0.05),
+                width: hasDate ? 1.5 : 1,
               ),
             ),
-          ],
+            child: Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_rounded,
+                  color: hasDate ? D.skyBlue : D.slate400,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    text,
+                    style: TextStyle(
+                      color: hasDate ? Colors.white : D.slate600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
+      ],
     );
+  }
+}
+
+class _StatusDropdownPremium extends StatelessWidget {
+  final String value;
+  final ValueChanged<String?> onChanged;
+
+  const _StatusDropdownPremium({required this.value, required this.onChanged});
+
+  static const _estados = ['pendiente', 'atendida', 'cancelada'];
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _getStatusColor(value);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Estado Inicial',
+          style: TextStyle(
+            color: D.slate400,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 56,
+          decoration: BoxDecoration(
+            color: D.surfaceHigh.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: value,
+              dropdownColor: D.surfaceHigh,
+              icon: Icon(Icons.arrow_drop_down_rounded, color: color, size: 28),
+              isExpanded: true,
+              style: TextStyle(
+                color: color,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
+              ),
+              onChanged: onChanged,
+              items: _estados.map<DropdownMenuItem<String>>((String val) {
+                final itemColor = _getStatusColor(val);
+                return DropdownMenuItem<String>(
+                  value: val,
+                  child: Text(
+                    val.toUpperCase(),
+                    style: TextStyle(
+                      color: itemColor,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getStatusColor(String estado) {
+    switch (estado.toLowerCase()) {
+      case 'atendida':
+        return D.emerald;
+      case 'cancelada':
+        return D.rose;
+      default:
+        return Colors.amber.shade700;
+    }
   }
 }

@@ -1,4 +1,8 @@
 import 'package:get_it/get_it.dart';
+import '../network/session_expired_notifier.dart';
+import '../../features/uploads/data/repositories/api_upload_repository.dart';
+import '../../features/uploads/domain/repositories/upload_repository.dart';
+import '../../features/uploads/presentation/bloc/upload_bloc.dart';
 
 import '../../features/auth/data/repositories/api_auth_repository.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
@@ -63,7 +67,8 @@ final sl = GetIt.instance;
 void initDependencies() {
   // ─── Network ──────────────────────────────────────────
   sl.registerLazySingleton(() => const FlutterSecureStorage());
-  sl.registerLazySingleton<http.Client>(() => AuthClient(http.Client(), sl()));
+  sl.registerLazySingleton(() => SessionExpiredNotifier());
+  sl.registerLazySingleton<http.Client>(() => AuthClient(http.Client(), sl(), sl()));
 
   // ─── Repositories ─────────────────────────────────────
   sl.registerLazySingleton<AuthRepository>(() => ApiAuthRepository(storage: sl()));
@@ -85,6 +90,7 @@ void initDependencies() {
   sl.registerLazySingleton<AgenteRepository>(() => ApiAgenteRepository(client: sl()));
   sl.registerLazySingleton<ReservaRepository>(() => ApiReservaRepository(client: sl()));
   sl.registerLazySingleton<ClienteRepository>(() => ApiClienteRepository(client: sl()));
+  sl.registerLazySingleton<UploadRepository>(() => ApiUploadRepository(client: sl()));
 
   // ─── Use Cases ────────────────────────────────────────
   sl.registerLazySingleton(() => SendWhatsAppMessage(sl()));
@@ -107,4 +113,5 @@ void initDependencies() {
   sl.registerFactory(() => AgenteBloc(repository: sl()));
   sl.registerFactory(() => ReservaBloc(repository: sl()));
   sl.registerFactory(() => ClienteBloc(repository: sl()));
+  sl.registerFactory(() => UploadBloc(repository: sl()));
 }
