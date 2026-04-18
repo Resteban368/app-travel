@@ -46,6 +46,8 @@ class Tour extends Equatable {
   final bool isActive;
   final bool isDraft;
   final bool precioPorPareja;
+  final int? cupos;
+  final int? cuposDisponibles;
 
   const Tour({
     required this.id,
@@ -68,6 +70,8 @@ class Tour extends Equatable {
     this.isActive = true,
     this.isDraft = true,
     this.precioPorPareja = false,
+    this.cupos,
+    this.cuposDisponibles,
   });
 
   Tour copyWith({
@@ -91,6 +95,8 @@ class Tour extends Equatable {
     bool? isActive,
     bool? isDraft,
     bool? precioPorPareja,
+    int? cupos,
+    int? cuposDisponibles,
   }) {
     return Tour(
       id: id ?? this.id,
@@ -113,6 +119,8 @@ class Tour extends Equatable {
       isActive: isActive ?? this.isActive,
       isDraft: isDraft ?? this.isDraft,
       precioPorPareja: precioPorPareja ?? this.precioPorPareja,
+      cupos: cupos ?? this.cupos,
+      cuposDisponibles: cuposDisponibles ?? this.cuposDisponibles,
     );
   }
 
@@ -138,5 +146,7 @@ class Tour extends Equatable {
     isActive,
     isDraft,
     precioPorPareja,
+    cupos,
+    cuposDisponibles,
   ];
 }

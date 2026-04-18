@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/premium_palette.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
+import '../../../../config/app_router.dart';
 import '../../domain/entities/tour.dart';
 import '../../../../features/settings/domain/entities/sede.dart';
 import '../../../../features/settings/presentation/bloc/sede_bloc.dart';
@@ -31,6 +32,7 @@ class _TourFormScreenState extends State<TourFormScreen>
   late final TextEditingController _pdfLinkCtrl;
   late final TextEditingController _imageUrlCtrl;
   late final TextEditingController _idTourCtrl;
+  late final TextEditingController _cuposCtrl;
 
   DateTimeRange? _dateRange;
   String? _selectedSedeId;
@@ -63,6 +65,7 @@ class _TourFormScreenState extends State<TourFormScreen>
     _pdfLinkCtrl = TextEditingController(text: t?.pdfLink ?? '');
     _imageUrlCtrl = TextEditingController(text: t?.imageUrl ?? '');
     _idTourCtrl = TextEditingController(text: t?.idTour.toString() ?? '');
+    _cuposCtrl = TextEditingController(text: t?.cupos?.toString() ?? '');
     if (t != null) {
       _dateRange = DateTimeRange(start: t.startDate, end: t.endDate);
       _selectedSedeId = t.sedeId;
@@ -97,6 +100,7 @@ class _TourFormScreenState extends State<TourFormScreen>
     _pdfLinkCtrl.dispose();
     _imageUrlCtrl.dispose();
     _idTourCtrl.dispose();
+    _cuposCtrl.dispose();
     _inclusionCtrl.dispose();
     _exclusionCtrl.dispose();
     super.dispose();
@@ -159,6 +163,7 @@ class _TourFormScreenState extends State<TourFormScreen>
       isActive: _isActive,
       isDraft: !publish,
       precioPorPareja: _precioPorPareja,
+      cupos: int.tryParse(_cuposCtrl.text.trim()),
     );
 
     if (_isEditing) {
@@ -282,6 +287,33 @@ class _TourFormScreenState extends State<TourFormScreen>
                                       children: [
                                         Expanded(
                                           child: PremiumTextField(
+                                            controller: _cuposCtrl,
+                                            label: 'Cupos totales',
+                                            icon: Icons.people_alt_rounded,
+                                            isNumeric: true,
+                                            readOnly: !canWrite,
+                                          ),
+                                        ),
+                                        if (_isEditing &&
+                                            widget.tour?.cupos != null) ...[
+                                          const SizedBox(width: 20),
+                                          Expanded(
+                                            child: _CuposDisponiblesInfo(
+                                              cuposDisponibles:
+                                                  widget.tour!.cuposDisponibles,
+                                              cuposTotales:
+                                                  widget.tour!.cupos!,
+                                            ),
+                                          ),
+                                        ] else
+                                          const Expanded(child: SizedBox()),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: PremiumTextField(
                                             controller: _departurePointCtrl,
                                             label: 'Lugar Salida *',
                                             icon: Icons.place_rounded,
@@ -356,6 +388,10 @@ class _TourFormScreenState extends State<TourFormScreen>
                                 _buildItinerarySection(canWrite: canWrite),
                                 const SizedBox(height: 24),
                                 _buildStatusCard(canWrite: canWrite),
+                                if (_isEditing) ...[
+                                  const SizedBox(height: 24),
+                                  _buildPasajerosBtn(context),
+                                ],
                                 const SizedBox(height: 48),
                                 if (canWrite) _buildBottomActions(),
                                 const SizedBox(height: 100),
@@ -662,6 +698,79 @@ class _TourFormScreenState extends State<TourFormScreen>
     );
   }
 
+  Widget _buildPasajerosBtn(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.pushNamed(
+        context,
+        AppRouter.tourDetalle,
+        arguments: widget.tour,
+      ),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [D.royalBlue, D.indigo],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: D.royalBlue.withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.people_alt_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Ver Pasajeros',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    'Integrantes y reservas con cupo',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickDateRange() async {
     final range = await showDateRangePicker(
       context: context,
@@ -929,4 +1038,75 @@ class _MiniAddButton extends StatelessWidget {
       style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
     ),
   );
+}
+
+class _CuposDisponiblesInfo extends StatelessWidget {
+  final int? cuposDisponibles;
+  final int cuposTotales;
+
+  const _CuposDisponiblesInfo({
+    required this.cuposDisponibles,
+    required this.cuposTotales,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final disponibles = cuposDisponibles ?? cuposTotales;
+    final porcentaje = cuposTotales > 0 ? disponibles / cuposTotales : 1.0;
+    final color = porcentaje > 0.4
+        ? D.emerald
+        : porcentaje > 0
+        ? D.gold
+        : D.rose;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'CUPOS DISPONIBLES',
+          style: TextStyle(
+            color: D.slate400,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: D.surfaceHigh.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.event_seat_rounded, color: color, size: 20),
+              const SizedBox(width: 12),
+              Text(
+                '$disponibles / $cuposTotales',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: porcentaje.clamp(0.0, 1.0),
+                    backgroundColor: D.surfaceHigh,
+                    color: color,
+                    minHeight: 6,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }

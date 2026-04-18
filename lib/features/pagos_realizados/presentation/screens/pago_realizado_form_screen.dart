@@ -48,6 +48,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   bool _wasWhatsappSent = false;
   bool _waitingForUploadToSave = false;
   bool _showingLoadingDialog = false;
+  // true cuando el usuario confirmó "Validar" vía WA: el CambiarEstadoPago
+  // debe dispararse DESPUÉS de que el mensaje WA sea enviado, no antes.
+  bool _pendingCambiarEstadoAfterWA = false;
   // Imagen pendiente (seleccionada pero aún no subida)
   Uint8List? _pendingImageBytes;
   String? _pendingImageMimeType;
@@ -292,10 +295,21 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               );
             } else if (state is WhatsAppSent) {
               setState(() => _wasWhatsappSent = true);
-              Navigator.pop(context); // close WA loading
-              _doSave();
+              Navigator.pop(context); // cierra diálogo "Enviando mensaje..."
+              if (_pendingCambiarEstadoAfterWA) {
+                // Flujo: validar pago existente — ahora sí cambiamos estado en BD
+                _pendingCambiarEstadoAfterWA = false;
+                _showLoadingDialog('Procesando pago...');
+                context.read<PagoRealizadoBloc>().add(
+                  CambiarEstadoPago(idPago: widget.pago!.id, accion: 'validar'),
+                );
+              } else {
+                // Flujo: crear pago nuevo con validación marcada
+                _doSave();
+              }
             } else if (state is WhatsAppError) {
-              Navigator.pop(context); // close loading
+              _pendingCambiarEstadoAfterWA = false;
+              Navigator.pop(context); // cierra diálogo de carga
               _showToast(state.message, isError: true);
             }
           },
@@ -915,6 +929,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   }
 
   void _confirmarValidar() {
+    if (_selectedReservaId == null) {
+      _showToast('Debes asignar una reserva antes de validar el pago', isError: true);
+      return;
+    }
     _showWhatsAppConfirmationForValidar();
   }
 
@@ -928,12 +946,13 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       builder: (ctx) => _PremiumWhatsAppDialog(
         messageCtrl: messageCtrl,
         onConfirm: (msg) {
-          final bloc = context.read<WhatsAppBloc>();
           Navigator.pop(ctx);
-          bloc.add(SendMessage(to: _chatIdCtrl.text.trim(), body: msg));
+          // Marcar que al recibir WhatsAppSent debemos cambiar estado en BD.
+          // NO disparamos CambiarEstadoPago aquí para evitar la llamada duplicada.
+          _pendingCambiarEstadoAfterWA = true;
           _wasWhatsappSent = true;
-          context.read<PagoRealizadoBloc>().add(
-            CambiarEstadoPago(idPago: widget.pago!.id, accion: 'validar'),
+          context.read<WhatsAppBloc>().add(
+            SendMessage(to: _chatIdCtrl.text.trim(), body: msg),
           );
         },
       ),

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:agente_viajes/core/constants/api_constants.dart';
 import '../../domain/entities/tour.dart';
+import '../../domain/entities/tour_detalle.dart';
 import '../../domain/repositories/tour_repository.dart';
 
 class ApiTourRepository implements TourRepository {
@@ -78,6 +79,18 @@ class ApiTourRepository implements TourRepository {
   }
 
   @override
+  Future<TourDetalle> getTourDetalle(String id) async {
+    final response = await client.get(
+      Uri.parse('$_baseUrl/$id/detalle'),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return TourDetalle.fromJson(json.decode(response.body));
+    }
+    throw Exception('Failed to load tour detalle: ${response.statusCode}');
+  }
+
+  @override
   Future<void> toggleActive(String id, bool isActive) async {
     final response = await client.patch(
       Uri.parse('$_baseUrl/$id'),
@@ -119,6 +132,10 @@ class ApiTourRepository implements TourRepository {
       isActive: json['is_active'] ?? true,
       isDraft: json['es_borrador'] ?? false,
       precioPorPareja: json['precio_por_pareja'] ?? false,
+      cupos: json['cupos'] != null ? int.tryParse(json['cupos'].toString()) : null,
+      cuposDisponibles: json['cupos_disponibles'] != null
+          ? int.tryParse(json['cupos_disponibles'].toString())
+          : null,
     );
   }
 
@@ -151,6 +168,7 @@ class ApiTourRepository implements TourRepository {
       'is_active': tour.isActive,
       'es_borrador': tour.isDraft,
       'precio_por_pareja': tour.precioPorPareja,
+      if (tour.cupos != null) 'cupos': tour.cupos,
     };
   }
 }

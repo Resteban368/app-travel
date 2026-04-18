@@ -1,4 +1,5 @@
 import '../entities/tour.dart';
+import '../entities/tour_detalle.dart';
 
 /// Abstract contract for tour CRUD operations.
 abstract class TourRepository {
@@ -8,4 +9,5 @@ abstract class TourRepository {
   Future<void> updateTour(Tour tour);
   Future<void> deleteTour(String id);
   Future<void> toggleActive(String id, bool isActive);
+  Future<TourDetalle> getTourDetalle(String id);
 }

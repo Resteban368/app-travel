@@ -671,6 +671,13 @@ class _TourCardState extends State<_TourCard> {
                             : 'Sede #${tour.sedeId}';
                       }(),
                     ),
+                    if (tour.cuposDisponibles != null || tour.cupos != null) ...[
+                      const SizedBox(height: 8),
+                      _CuposRow(
+                        cuposDisponibles: tour.cuposDisponibles,
+                        cupos: tour.cupos,
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     Row(
                       children: [
@@ -737,6 +744,51 @@ class _InfoRow extends StatelessWidget {
       ),
     ],
   );
+}
+
+class _CuposRow extends StatelessWidget {
+  final int? cuposDisponibles;
+  final int? cupos;
+  const _CuposRow({this.cuposDisponibles, this.cupos});
+
+  @override
+  Widget build(BuildContext context) {
+    final disponibles = cuposDisponibles ?? 0;
+    final total = cupos;
+
+    Color indicatorColor;
+    if (disponibles == 0) {
+      indicatorColor = D.rose;
+    } else if (total != null && disponibles <= total * 0.2) {
+      indicatorColor = D.gold;
+    } else {
+      indicatorColor = const Color(0xFF34D399);
+    }
+
+    final label = total != null
+        ? '$disponibles / $total cupos disponibles'
+        : '$disponibles cupos disponibles';
+
+    return Row(
+      children: [
+        Icon(Icons.people_alt_rounded, color: D.slate600, size: 14),
+        const SizedBox(width: 8),
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: indicatorColor,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(color: D.slate400, fontSize: 13),
+        ),
+      ],
+    );
+  }
 }
 
 class _InclusionsStrip extends StatelessWidget {
