@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/premium_palette.dart';
 import '../../../../core/di/injection_container.dart';
-import '../../domain/entities/tour.dart';
+import '../../domain/entities/tour.dart' hide ItineraryDay;
 import '../../domain/entities/tour_detalle.dart';
 import '../../domain/repositories/tour_repository.dart';
 
@@ -15,7 +15,12 @@ class TourDetalleScreen extends StatefulWidget {
 }
 
 class _TourDetalleScreenState extends State<TourDetalleScreen> {
-  late Future<TourDetalle> _futureDetalle;
+  TourDetalle? _detalle;
+  Object? _loadError;
+  bool _loading = true;
+  final _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+
   final _currency = NumberFormat.currency(
     locale: 'es_CO',
     symbol: '\$',
@@ -25,12 +30,60 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
   @override
   void initState() {
     super.initState();
-    _futureDetalle =
-        sl<TourRepository>().getTourDetalle(widget.tour.id);
+    _searchCtrl.addListener(
+      () => setState(() => _searchQuery = _searchCtrl.text),
+    );
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+    try {
+      final d = await sl<TourRepository>().getTourDetalle(widget.tour.id);
+      if (mounted)
+        setState(() {
+          _detalle = d;
+          _loading = false;
+        });
+    } catch (e) {
+      if (mounted)
+        setState(() {
+          _loadError = e;
+          _loading = false;
+        });
+    }
+  }
+
+  List<ReservaDetalle> get _filteredReservas {
+    var list = List<ReservaDetalle>.from(_detalle?.reservas ?? []);
+    // Ordenar por fecha ascendente (más antigua primero)
+    list.sort((a, b) => a.fechaCreacion.compareTo(b.fechaCreacion));
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      list = list
+          .where(
+            (r) =>
+                r.responsable.nombre.toLowerCase().contains(q) ||
+                r.responsable.documento.toLowerCase().contains(q),
+          )
+          .toList();
+    }
+    return list;
   }
 
   @override
   Widget build(BuildContext context) {
+    final reservas = _filteredReservas;
+
     return Scaffold(
       backgroundColor: D.bg,
       body: CustomScrollView(
@@ -39,52 +92,95 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
           _buildAppBar(),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            sliver: SliverToBoxAdapter(
-              child: _buildCuposHeader(),
-            ),
+            sliver: SliverToBoxAdapter(child: _buildCuposHeader()),
           ),
+          // Buscador
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            sliver: SliverToBoxAdapter(child: _buildSearchBar()),
+          ),
+          // Lista de reservas
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: FutureBuilder<TourDetalle>(
-              future: _futureDetalle,
-              builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, i) => _SkelCard(),
-                      childCount: 3,
-                    ),
-                  );
-                }
-                if (snap.hasError) {
-                  return SliverFillRemaining(
-                    child: _ErrorState(
-                      message: snap.error.toString(),
-                      onRetry: () => setState(() {
-                        _futureDetalle = sl<TourRepository>()
-                            .getTourDetalle(widget.tour.id);
-                      }),
-                    ),
-                  );
-                }
-                final detalle = snap.data!;
-                if (detalle.reservas.isEmpty) {
-                  return const SliverFillRemaining(child: _EmptyState());
-                }
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, i) => _ReservaCard(
-                      reserva: detalle.reservas[i],
-                      currency: _currency,
-                    ),
-                    childCount: detalle.reservas.length,
-                  ),
-                );
-              },
-            ),
+            sliver: _buildReservasList(reservas),
           ),
           const SliverPadding(padding: EdgeInsets.only(bottom: 60)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    final active = _searchQuery.isNotEmpty;
+    return Container(
+      decoration: BoxDecoration(
+        color: D.surfaceHigh,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: active ? D.skyBlue.withValues(alpha: 0.6) : D.slate600,
+          width: active ? 1.5 : 1,
+        ),
+      ),
+      child: TextField(
+        controller: _searchCtrl,
+        style: const TextStyle(color: D.surface, fontSize: 14),
+        decoration: InputDecoration(
+          hintText: 'Buscar por nombre o cédula del responsable...',
+          hintStyle: TextStyle(color: D.slate400, fontSize: 14),
+          prefixIcon: Icon(
+            Icons.search_rounded,
+            color: active ? D.skyBlue : D.slate400,
+            size: 20,
+          ),
+          suffixIcon: active
+              ? IconButton(
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: D.slate400,
+                    size: 18,
+                  ),
+                  onPressed: () => _searchCtrl.clear(),
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReservasList(List<ReservaDetalle> reservas) {
+    if (_loading) {
+      return SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, _) => _SkelCard(),
+          childCount: 3,
+        ),
+      );
+    }
+    if (_loadError != null) {
+      return SliverFillRemaining(
+        child: _ErrorState(message: _loadError.toString(), onRetry: _load),
+      );
+    }
+    if (reservas.isEmpty) {
+      return SliverFillRemaining(
+        child: _searchQuery.isNotEmpty
+            ? _EmptySearch(query: _searchQuery)
+            : const _EmptyState(),
+      );
+    }
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (_, i) => _ReservaCard(
+          reserva: reservas[i],
+          currency: _currency,
+          tour: widget.tour,
+        ),
+        childCount: reservas.length,
       ),
     );
   }
@@ -224,10 +320,7 @@ class _StatChip extends StatelessWidget {
                 fontWeight: FontWeight.w900,
               ),
             ),
-            Text(
-              label,
-              style: TextStyle(color: D.slate400, fontSize: 10),
-            ),
+            Text(label, style: TextStyle(color: D.slate400, fontSize: 10)),
           ],
         ),
       ),
@@ -238,14 +331,19 @@ class _StatChip extends StatelessWidget {
 class _ReservaCard extends StatefulWidget {
   final ReservaDetalle reserva;
   final NumberFormat currency;
-  const _ReservaCard({required this.reserva, required this.currency});
+  final Tour tour;
+  const _ReservaCard({
+    required this.reserva,
+    required this.currency,
+    required this.tour,
+  });
 
   @override
   State<_ReservaCard> createState() => _ReservaCardState();
 }
 
 class _ReservaCardState extends State<_ReservaCard> {
-  bool _expanded = true;
+  bool _expanded = false;
 
   Color get _estadoColor {
     switch (widget.reserva.estado.toLowerCase()) {
@@ -263,8 +361,7 @@ class _ReservaCardState extends State<_ReservaCard> {
   @override
   Widget build(BuildContext context) {
     final reserva = widget.reserva;
-    final dateLabel =
-        DateFormat('dd/MM/yyyy').format(reserva.fechaCreacion);
+    final dateLabel = DateFormat('dd/MM/yyyy').format(reserva.fechaCreacion);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
@@ -273,9 +370,7 @@ class _ReservaCardState extends State<_ReservaCard> {
         color: D.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: reserva.ocupaCupo
-              ? D.border
-              : D.rose.withValues(alpha: 0.4),
+          color: reserva.ocupaCupo ? D.border : D.rose.withValues(alpha: 0.4),
         ),
       ),
       child: Column(
@@ -295,7 +390,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                         Row(
                           children: [
                             Text(
-                              reserva.idReserva,
+                              reserva.responsable.nombre,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w800,
@@ -309,18 +404,19 @@ class _ReservaCardState extends State<_ReservaCard> {
                             ),
                             if (!reserva.ocupaCupo) ...[
                               const SizedBox(width: 6),
-                              _EstadoBadge(
-                                label: 'SIN CUPO',
-                                color: D.rose,
-                              ),
+                              _EstadoBadge(label: 'SIN CUPO', color: D.rose),
                             ],
                           ],
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Creada $dateLabel · ${reserva.totalPersonas} persona${reserva.totalPersonas != 1 ? 's' : ''}',
-                          style:
-                              TextStyle(color: D.slate400, fontSize: 12),
+                          style: TextStyle(color: D.slate400, fontSize: 12),
+                        ),
+                        //numero de la reserva
+                        Text(
+                          'Reserva: #${reserva.idReserva}',
+                          style: TextStyle(color: D.slate400, fontSize: 12),
                         ),
                       ],
                     ),
@@ -352,18 +448,24 @@ class _ReservaCardState extends State<_ReservaCard> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Desglose de costos
+                  _DesgloseCard(reserva: reserva, currency: widget.currency),
+                  const SizedBox(height: 16),
+
                   // Notas
                   if (reserva.notas != null && reserva.notas!.isNotEmpty) ...[
                     Row(
                       children: [
-                        Icon(Icons.sticky_note_2_rounded,
-                            color: D.slate600, size: 14),
+                        Icon(
+                          Icons.sticky_note_2_rounded,
+                          color: D.slate600,
+                          size: 14,
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             reserva.notas!,
-                            style: TextStyle(
-                                color: D.slate400, fontSize: 12),
+                            style: TextStyle(color: D.slate400, fontSize: 12),
                           ),
                         ),
                       ],
@@ -387,8 +489,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                   if (reserva.integrantes.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     _SectionLabel(
-                      label:
-                          'INTEGRANTES (${reserva.integrantes.length})',
+                      label: 'INTEGRANTES (${reserva.integrantes.length})',
                     ),
                     const SizedBox(height: 8),
                     ...reserva.integrantes.map(
@@ -411,6 +512,142 @@ class _ReservaCardState extends State<_ReservaCard> {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _DesgloseCard extends StatelessWidget {
+  final ReservaDetalle reserva;
+  final NumberFormat currency;
+
+  const _DesgloseCard({required this.reserva, required this.currency});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasServicios =
+        reserva.servicios.isNotEmpty || reserva.costoServicios > 0;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: D.bg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: D.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.receipt_long_rounded, color: D.slate600, size: 14),
+              const SizedBox(width: 6),
+              Text(
+                'DESGLOSE DE COSTOS',
+                style: TextStyle(
+                  color: D.slate600,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Valor del tour contratado
+          _DesgloseRow(
+            label: 'Valor del tour',
+            value: currency.format(reserva.valorTourSnapshot),
+            valueColor: Colors.white,
+            icon: Icons.confirmation_number_rounded,
+          ),
+
+          // Servicios adicionales
+          if (hasServicios) ...[
+            const SizedBox(height: 4),
+            Divider(color: D.border, height: 12),
+            // Si el API retornó los servicios con detalle, los mostramos uno a uno
+            if (reserva.servicios.isNotEmpty)
+              ...reserva.servicios.map(
+                (s) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: _DesgloseRow(
+                    label: s.nombre,
+                    value: s.costo != null ? currency.format(s.costo) : '—',
+                    valueColor: D.skyBlue,
+                    icon: Icons.add_circle_outline_rounded,
+                  ),
+                ),
+              )
+            else
+              // Fallback: muestra el total de servicios sin desglose
+              _DesgloseRow(
+                label: 'Servicios adicionales',
+                value: currency.format(reserva.costoServicios),
+                valueColor: D.skyBlue,
+                icon: Icons.add_circle_outline_rounded,
+              ),
+          ],
+
+          Divider(color: D.border, height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total contratado',
+                style: TextStyle(
+                  color: D.slate400,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                currency.format(reserva.valorTotal),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DesgloseRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color valueColor;
+  final IconData icon;
+
+  const _DesgloseRow({
+    required this.label,
+    required this.value,
+    required this.valueColor,
+    this.icon = Icons.confirmation_number_rounded,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: D.slate600, size: 13),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(label, style: TextStyle(color: D.slate400, fontSize: 12)),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: valueColor,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -519,14 +756,10 @@ class _PersonaRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isResponsable
-            ? D.royalBlue.withValues(alpha: 0.08)
-            : D.bg,
+        color: isResponsable ? D.royalBlue.withValues(alpha: 0.08) : D.bg,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isResponsable
-              ? D.royalBlue.withValues(alpha: 0.25)
-              : D.border,
+          color: isResponsable ? D.royalBlue.withValues(alpha: 0.25) : D.border,
         ),
       ),
       child: Row(
@@ -572,15 +805,9 @@ class _PersonaRow extends StatelessWidget {
                       text: '$tipoDoc $documento',
                     ),
                     if (telefono != null)
-                      _Detail(
-                        icon: Icons.phone_rounded,
-                        text: telefono!,
-                      ),
+                      _Detail(icon: Icons.phone_rounded, text: telefono!),
                     if (correo != null)
-                      _Detail(
-                        icon: Icons.email_rounded,
-                        text: correo!,
-                      ),
+                      _Detail(icon: Icons.email_rounded, text: correo!),
                     if (fechaNacimiento != null)
                       _Detail(
                         icon: Icons.cake_rounded,
@@ -670,6 +897,35 @@ class _SkelCard extends StatelessWidget {
     decoration: BoxDecoration(
       color: D.surface.withValues(alpha: 0.5),
       borderRadius: BorderRadius.circular(24),
+    ),
+  );
+}
+
+class _EmptySearch extends StatelessWidget {
+  final String query;
+  const _EmptySearch({required this.query});
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.search_off_rounded, size: 64, color: D.slate800),
+        const SizedBox(height: 16),
+        Text(
+          'Sin resultados para "$query"',
+          style: TextStyle(
+            color: D.slate600,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Intenta con otro nombre o cédula',
+          style: TextStyle(color: D.slate800, fontSize: 12),
+        ),
+      ],
     ),
   );
 }

@@ -1119,22 +1119,66 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 : null;
 
             final unitPrice = tour?.price ?? 0.0;
-            final precioPorPareja = tour?.precioPorPareja ?? false;
-            final totalPersonas = 1 + _integrantes.length;
 
-            final double tourSubtotal;
-            final String precioLabel;
-            if (precioPorPareja) {
-              final parejas = (totalPersonas / 2).ceil();
-              tourSubtotal = unitPrice * parejas;
-              precioLabel =
-                  'Tour (${currencyFmt.format(unitPrice)}/pareja × $parejas pareja${parejas != 1 ? "s" : ""})';
-            } else {
-              tourSubtotal = unitPrice * totalPersonas;
-              precioLabel =
-                  'Tour (${currencyFmt.format(unitPrice)}/persona × $totalPersonas persona${totalPersonas != 1 ? "s" : ""})';
+            double vuelosTotal = 0;
+            for (final v in _vuelos) {
+              vuelosTotal += v.precio ?? 0.0;
             }
 
+            // ── Precio unitario ──────────────────────────────────────────────
+            // Al editar: derivar el precio-por-unidad del snapshot para no
+            // aplicar cambios futuros del tour a reservas ya acordadas.
+            // Al crear: usar el precio actual del tour.
+            final snapshotTotal =
+                _isEditing ? (widget.reserva?.valorTotal ?? 0.0) : null;
+            final useSnapshot = snapshotTotal != null && snapshotTotal > 0;
+
+            final precioPorPareja = tour?.precioPorPareja ?? false;
+            final currentPersonas = 1 + _integrantes.length;
+            final currentUnits = precioPorPareja
+                ? (currentPersonas / 2).ceil()
+                : currentPersonas;
+
+            final double efectiveUnitPrice;
+            final double tourSubtotalFinal;
+
+            if (useSnapshot) {
+              // Costo de los servicios ORIGINALES de la reserva (snapshot)
+              final originalIds = widget.reserva!.serviciosIds.toSet();
+              final originalSvcCost = allServices
+                  .where((s) => originalIds.contains(s.id))
+                  .fold<double>(0.0, (sum, s) => sum + (s.cost ?? 0));
+              final tourBaseSnapshot = snapshotTotal - originalSvcCost;
+
+              final originalPersonas =
+                  1 + widget.reserva!.integrantes.length;
+              final originalUnits = precioPorPareja
+                  ? (originalPersonas / 2).ceil()
+                  : originalPersonas;
+
+              efectiveUnitPrice = originalUnits > 0
+                  ? tourBaseSnapshot / originalUnits
+                  : 0.0;
+              tourSubtotalFinal = efectiveUnitPrice * currentUnits;
+            } else {
+              efectiveUnitPrice = unitPrice;
+              tourSubtotalFinal = precioPorPareja
+                  ? unitPrice * currentUnits
+                  : unitPrice * currentPersonas;
+            }
+
+            final String tourUnitLabel;
+            if (precioPorPareja) {
+              tourUnitLabel =
+                  'Tour (${currencyFmt.format(efectiveUnitPrice)}/pareja'
+                  ' × $currentUnits pareja${currentUnits != 1 ? "s" : ""})';
+            } else {
+              tourUnitLabel =
+                  'Tour (${currencyFmt.format(efectiveUnitPrice)}/persona'
+                  ' × $currentPersonas persona${currentPersonas != 1 ? "s" : ""})';
+            }
+
+            // ── Totales ──────────────────────────────────────────────────────
             double serviciosTotal = 0;
             for (final id in _servicios) {
               final svc = allServices.cast<Service?>().firstWhere(
@@ -1144,12 +1188,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               if (svc?.cost != null) serviciosTotal += svc!.cost!;
             }
 
-            double vuelosTotal = 0;
-            for (final v in _vuelos) {
-              vuelosTotal += v.precio ?? 0.0;
-            }
-
-            final valorTotal = tourSubtotal + serviciosTotal + vuelosTotal;
+            final valorTotal =
+                tourSubtotalFinal + serviciosTotal + vuelosTotal;
 
             final totalValidado = _pagos
                 .where((p) => p.isValidated)
@@ -1160,13 +1200,15 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               title: 'RESUMEN DE COSTOS',
               icon: Icons.payments_rounded,
               children: [
+                // Fila del tour con precio por unidad
                 if (_tipoReserva == 'tour')
                   _buildResumenRow(
-                    precioLabel,
-                    tourSubtotal,
+                    tourUnitLabel,
+                    tourSubtotalFinal,
                     currencyFmt,
                     isSubtitle: true,
                   ),
+                // Servicios adicionales
                 if (_servicios.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   ..._servicios.map((id) {
@@ -1186,6 +1228,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     );
                   }),
                 ],
+                // Vuelos
                 if (vuelosTotal > 0) ...[
                   const SizedBox(height: 8),
                   _buildResumenRow(
@@ -1982,7 +2025,7 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
   DateTime? _dob;
   late String _tipoDocumento;
 
-  static const _tiposDocumento = ['cedula', 'pasaporte', 'tarjeta identidad'];
+  static const _tiposDocumento = ['CC', 'TI', 'Pasaporte'];
 
   @override
   void initState() {
@@ -1991,7 +2034,24 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
     _phoneCtrl = TextEditingController(text: widget.integrante.telefono);
     _documentoCtrl = TextEditingController(text: widget.integrante.documento);
     _dob = widget.integrante.fechaNacimiento;
-    _tipoDocumento = widget.integrante.tipoDocumento;
+    _tipoDocumento = _normalizeTipoDocumento(widget.integrante.tipoDocumento);
+  }
+
+  static String _normalizeTipoDocumento(String raw) {
+    switch (raw.toLowerCase().trim()) {
+      case 'cc':
+      case 'cedula':
+      case 'cédula':
+        return 'CC';
+      case 'ti':
+      case 'tarjeta identidad':
+      case 'tarjeta de identidad':
+        return 'TI';
+      case 'pasaporte':
+        return 'Pasaporte';
+      default:
+        return _tiposDocumento.contains(raw) ? raw : 'CC';
+    }
   }
 
   @override
@@ -2002,7 +2062,7 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
       _phoneCtrl.text = widget.integrante.telefono;
       _documentoCtrl.text = widget.integrante.documento;
       _dob = widget.integrante.fechaNacimiento;
-      _tipoDocumento = widget.integrante.tipoDocumento;
+      _tipoDocumento = _normalizeTipoDocumento(widget.integrante.tipoDocumento);
     }
   }
 
@@ -2131,7 +2191,7 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
                           ),
                         ),
                         child: Text(
-                          tipo[0].toUpperCase() + tipo.substring(1),
+                          tipo,
                           style: TextStyle(
                             color: selected ? D.royalBlue : D.slate400,
                             fontSize: 12,

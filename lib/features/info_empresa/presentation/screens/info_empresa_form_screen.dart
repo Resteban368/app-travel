@@ -201,11 +201,9 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
-    final isAdmin =
-        authState is AuthAuthenticated && authState.user.role == 'admin';
-
-    // Para la info de la empresa, asumimos que solo los admins pueden modificarla
-    final canWrite = isAdmin;
+    final canWrite = authState is AuthAuthenticated
+        ? authState.user.canWrite('infoEmpresa')
+        : false;
 
     return BlocListener<InfoEmpresaBloc, InfoEmpresaState>(
       listener: (context, state) {

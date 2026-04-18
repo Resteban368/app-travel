@@ -184,7 +184,7 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
                                     const SizedBox(height: 20),
                                     PremiumTextField(
                                       controller: _correoCtrl,
-                                      label: 'Correo Electrónico *',
+                                      label: 'Correo Electrónico (opcional)',
                                       icon: Icons.email_rounded,
                                       keyboardType: TextInputType.emailAddress,
                                     ),

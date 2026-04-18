@@ -2,10 +2,12 @@ import 'dart:typed_data';
 import 'dart:ui';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
+import 'package:intl/intl.dart';
 import 'package:agente_viajes/core/widgets/dialog_loading_widget.dart';
 import 'package:agente_viajes/core/widgets/premium_form_widgets.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/premium_palette.dart';
@@ -36,6 +38,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _chatIdCtrl;
+  String _countryCode = '+57';
   late final TextEditingController _montoCtrl;
   late final TextEditingController _proveedorCtrl;
   late final TextEditingController _nitCtrl;
@@ -43,6 +46,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   late final TextEditingController _referenciaCtrl;
   late final TextEditingController _fechaDocumentoCtrl;
   late final TextEditingController _urlImagenCtrl;
+  DateTime? _fechaDocumento;
   String _tipoDocumento = 'Factura';
   late bool _isValidated;
   bool _wasWhatsappSent = false;
@@ -74,13 +78,18 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   void initState() {
     super.initState();
     final p = widget.pago;
-    _chatIdCtrl = TextEditingController(text: p?.chatId ?? '');
+    final parsedPhone = _parsePhone(p?.chatId ?? '');
+    _countryCode = parsedPhone.$1;
+    _chatIdCtrl = TextEditingController(text: parsedPhone.$2);
     _montoCtrl = TextEditingController(text: p?.monto.toString() ?? '');
     _proveedorCtrl = TextEditingController(text: p?.proveedorComercio ?? '');
     _nitCtrl = TextEditingController(text: p?.nit ?? '');
     _metodoPagoCtrl = TextEditingController(text: p?.metodoPago ?? '');
     _referenciaCtrl = TextEditingController(text: p?.referencia ?? '');
     _fechaDocumentoCtrl = TextEditingController(text: p?.fechaDocumento ?? '');
+    _fechaDocumento = p?.fechaDocumento != null && p!.fechaDocumento.isNotEmpty
+        ? DateTime.tryParse(p.fechaDocumento)
+        : null;
     _urlImagenCtrl = TextEditingController(text: p?.urlImagen ?? '');
     _tipoDocumento = p?.tipoDocumento ?? 'Factura';
     _isValidated = p?.isValidated ?? false;
@@ -151,21 +160,25 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
 
   /// Muestra diálogo de carga, sube imagen si hay pendiente y luego guarda.
   void _doSave() {
-    _showLoadingDialog(_pendingImageBytes != null ? 'Subiendo imagen...' : 'Procesando pago...');
+    _showLoadingDialog(
+      _pendingImageBytes != null ? 'Subiendo imagen...' : 'Procesando pago...',
+    );
 
     if (_pendingImageBytes != null) {
-      final phone = _chatIdCtrl.text.trim().replaceAll(RegExp(r'[^0-9]'), '');
+      final phone = _fullChatId;
       final ts = DateTime.now().millisecondsSinceEpoch;
       final ext = _mimeToExt(_pendingImageMimeType ?? 'image/jpeg');
       final filename = 'pago_${phone}_$ts.$ext';
 
       _waitingForUploadToSave = true;
-      context.read<UploadBloc>().add(UploadFile(
-        folderId: _pagosFolderId,
-        filename: filename,
-        bytes: _pendingImageBytes!,
-        mimeType: _pendingImageMimeType ?? 'image/jpeg',
-      ));
+      context.read<UploadBloc>().add(
+        UploadFile(
+          folderId: _pagosFolderId,
+          filename: filename,
+          bytes: _pendingImageBytes!,
+          mimeType: _pendingImageMimeType ?? 'image/jpeg',
+        ),
+      );
     } else {
       _executeSave();
     }
@@ -187,26 +200,198 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     }
   }
 
+  // Número completo con indicativo (sin +), listo para WhatsApp API
+  String get _fullChatId =>
+      '${_countryCode.replaceAll('+', '')}${_chatIdCtrl.text.trim()}';
+
+  // Intenta detectar el indicativo al cargar un chatId existente.
+  // Retorna (countryCode, localNumber).
+  static (String, String) _parsePhone(String raw) {
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    // Buscar de más largo a más corto
+    final sorted = _kCountryCodes.toList()
+      ..sort((a, b) => b.code.length.compareTo(a.code.length));
+    for (final cc in sorted) {
+      final dial = cc.code.replaceAll('+', '');
+      if (digits.startsWith(dial) && digits.length > dial.length) {
+        return (cc.code, digits.substring(dial.length));
+      }
+    }
+    return ('+57', digits);
+  }
+
+  Widget _buildPhoneField({required bool canWrite}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Chat - WhatsApp *',
+          style: TextStyle(
+            color: D.slate400,
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: D.surfaceHigh.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          ),
+          child: Row(
+            children: [
+              // Selector de indicativo
+              DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _countryCode,
+                  dropdownColor: D.surface,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  icon: const Icon(
+                    Icons.arrow_drop_down_rounded,
+                    color: D.slate400,
+                    size: 18,
+                  ),
+                  onChanged: canWrite
+                      ? (v) => setState(() => _countryCode = v!)
+                      : null,
+                  items: _kCountryCodes
+                      .map(
+                        (cc) => DropdownMenuItem(
+                          value: cc.code,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Text(
+                              '${cc.flag} ${cc.code}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+              Container(width: 1, height: 24, color: D.border),
+              // Campo numérico
+              Expanded(
+                child: TextFormField(
+                  controller: _chatIdCtrl,
+                  readOnly: !canWrite,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Número sin indicativo',
+                    hintStyle: TextStyle(color: D.slate600, fontSize: 13),
+                    border: InputBorder.none,
+                    filled: true,
+                    fillColor: Colors.transparent,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
+                  ),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickFechaDocumento() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _fechaDocumento ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      builder: (context, child) => Theme(
+        data: ThemeData.dark().copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: D.royalBlue,
+            onPrimary: Colors.white,
+            surface: D.surface,
+            onSurface: Colors.white,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() => _fechaDocumento = picked);
+    }
+  }
+
+  Widget _buildFechaDocumentoPicker({required bool canWrite}) {
+    return GestureDetector(
+      onTap: canWrite ? _pickFechaDocumento : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: D.surfaceHigh.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.event_note_rounded, color: D.skyBlue, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _fechaDocumento != null
+                    ? DateFormat('dd/MM/yyyy').format(_fechaDocumento!)
+                    : 'Fecha del Documento *',
+                style: TextStyle(
+                  color: _fechaDocumento != null ? Colors.white : D.slate400,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            if (canWrite)
+              const Icon(
+                Icons.calendar_today_rounded,
+                color: D.slate400,
+                size: 16,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   String _mimeToExt(String mime) {
     switch (mime) {
-      case 'image/png':  return 'png';
-      case 'image/webp': return 'webp';
-      case 'image/gif':  return 'gif';
-      default:           return 'jpg';
+      case 'image/png':
+        return 'png';
+      case 'image/webp':
+        return 'webp';
+      case 'image/gif':
+        return 'gif';
+      default:
+        return 'jpg';
     }
   }
 
   void _executeSave() {
     final pago = PagoRealizado(
       id: _isEditing ? widget.pago!.id : 0,
-      chatId: _chatIdCtrl.text.trim(),
+      chatId: _fullChatId,
       tipoDocumento: _tipoDocumento,
       monto: double.tryParse(_montoCtrl.text) ?? 0.0,
       proveedorComercio: _proveedorCtrl.text.trim(),
       nit: _nitCtrl.text.trim(),
       metodoPago: _metodoPagoCtrl.text.trim(),
       referencia: _referenciaCtrl.text.trim(),
-      fechaDocumento: _fechaDocumentoCtrl.text.trim(),
+      fechaDocumento: _fechaDocumento != null
+          ? DateFormat('yyyy-MM-dd').format(_fechaDocumento!)
+          : '',
       isValidated: _isValidated,
       urlImagen: _urlImagenCtrl.text.trim(),
       reservaId: _selectedReservaId,
@@ -232,7 +417,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         onConfirm: (msg) {
           final bloc = context.read<WhatsAppBloc>();
           Navigator.pop(ctx);
-          bloc.add(SendMessage(to: _chatIdCtrl.text.trim(), body: msg));
+          bloc.add(SendMessage(to: _fullChatId, body: msg));
         },
       ),
     ).then((_) => messageCtrl.dispose());
@@ -278,7 +463,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               }
             } else if (state is UploadError) {
               _closeLoadingDialog();
-              _showToast('Error al subir imagen: ${state.message}', isError: true);
+              _showToast(
+                'Error al subir imagen: ${state.message}',
+                isError: true,
+              );
               context.read<UploadBloc>().add(const ResetUpload());
               _waitingForUploadToSave = false;
             }
@@ -375,12 +563,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                                     children: [
                                       _buildReservaSelector(canWrite: canWrite),
                                       const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _chatIdCtrl,
-                                        label: 'Chat - WhatsApp *',
-                                        icon: Icons.person_outline_rounded,
-                                        readOnly: !canWrite,
-                                      ),
+                                      _buildPhoneField(canWrite: canWrite),
                                       const SizedBox(height: 20),
                                       _buildTypeDropdown(canWrite: canWrite),
                                       const SizedBox(height: 20),
@@ -393,7 +576,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                                       const SizedBox(height: 20),
                                       PremiumTextField(
                                         controller: _nitCtrl,
-                                        label: 'NIT / ID Fiscal',
+                                        label: 'NIT / ID Fiscal (opcional)',
                                         icon: Icons.badge_outlined,
                                         readOnly: !canWrite,
                                       ),
@@ -421,11 +604,8 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                                         readOnly: !canWrite,
                                       ),
                                       const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _fechaDocumentoCtrl,
-                                        label: 'Fecha Documento (DD-MM-YYYY) *',
-                                        icon: Icons.event_note_rounded,
-                                        readOnly: !canWrite,
+                                      _buildFechaDocumentoPicker(
+                                        canWrite: canWrite,
                                       ),
                                       const SizedBox(height: 20),
                                       PremiumTextField(
@@ -675,7 +855,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                           _reservaSearchCtrl.text =
                               '${result.idReserva ?? 'Reserva #${result.id}'} - ${responsable?.nombre ?? result.correo}';
                           if (_chatIdCtrl.text.isEmpty && responsable != null) {
-                            _chatIdCtrl.text = responsable.telefono;
+                            final parsed = _parsePhone(responsable.telefono);
+                            _countryCode = parsed.$1;
+                            _chatIdCtrl.text = parsed.$2;
                           }
                         });
                       }
@@ -838,8 +1020,8 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                 pago?.isValidated == true
                     ? Icons.check_circle_rounded
                     : pago?.isRechazado == true
-                        ? Icons.cancel_rounded
-                        : Icons.hourglass_empty_rounded,
+                    ? Icons.cancel_rounded
+                    : Icons.hourglass_empty_rounded,
                 color: estadoColor,
                 size: 18,
               ),
@@ -930,7 +1112,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
 
   void _confirmarValidar() {
     if (_selectedReservaId == null) {
-      _showToast('Debes asignar una reserva antes de validar el pago', isError: true);
+      _showToast(
+        'Debes asignar una reserva antes de validar el pago',
+        isError: true,
+      );
       return;
     }
     _showWhatsAppConfirmationForValidar();
@@ -938,7 +1123,8 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
 
   void _showWhatsAppConfirmationForValidar() {
     final messageCtrl = TextEditingController(
-      text: 'Tu pago ya fue validado con éxito. Muchas gracias por preferirnos ✅🙏✨',
+      text:
+          'Tu pago ya fue validado con éxito. Muchas gracias por preferirnos ✅🙏✨',
     );
     showDialog(
       context: context,
@@ -952,7 +1138,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           _pendingCambiarEstadoAfterWA = true;
           _wasWhatsappSent = true;
           context.read<WhatsAppBloc>().add(
-            SendMessage(to: _chatIdCtrl.text.trim(), body: msg),
+            SendMessage(to: _fullChatId, body: msg),
           );
         },
       ),
@@ -1014,7 +1200,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                       onPressed: () => Navigator.pop(ctx),
                       child: const Text(
                         'Cancelar',
-                        style: TextStyle(color: D.slate400, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: D.slate400,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -1041,7 +1230,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                       ),
                       child: const Text(
                         'Confirmar',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -1212,7 +1404,11 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
             Expanded(
               child: Text(
                 _pendingImageOriginalName ?? 'Imagen seleccionada',
-                style: const TextStyle(color: D.emerald, fontSize: 13, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  color: D.emerald,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -1222,7 +1418,11 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                 _pendingImageMimeType = null;
                 _pendingImageOriginalName = null;
               }),
-              child: const Icon(Icons.close_rounded, color: D.slate400, size: 18),
+              child: const Icon(
+                Icons.close_rounded,
+                color: D.slate400,
+                size: 18,
+              ),
             ),
           ],
         ),
@@ -1239,7 +1439,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           foregroundColor: D.skyBlue,
           side: const BorderSide(color: D.skyBlue),
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
       ),
     );
@@ -1486,6 +1688,40 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
 }
 
 // ─── WhatsApp Dialog ──────────────────────────────────────────────────────────
+
+// ─── Country Code ─────────────────────────────────────────────────────────────
+
+class _CountryCode {
+  final String code;
+  final String name;
+  final String flag;
+  const _CountryCode({
+    required this.code,
+    required this.name,
+    required this.flag,
+  });
+}
+
+const _kCountryCodes = [
+  _CountryCode(code: '+57', name: 'Colombia', flag: '🇨🇴'),
+  _CountryCode(code: '+1', name: 'EE.UU./Canadá', flag: '🇺🇸'),
+  _CountryCode(code: '+34', name: 'España', flag: '🇪🇸'),
+  _CountryCode(code: '+52', name: 'México', flag: '🇲🇽'),
+  _CountryCode(code: '+54', name: 'Argentina', flag: '🇦🇷'),
+  _CountryCode(code: '+55', name: 'Brasil', flag: '🇧🇷'),
+  _CountryCode(code: '+56', name: 'Chile', flag: '🇨🇱'),
+  _CountryCode(code: '+51', name: 'Perú', flag: '🇵🇪'),
+  _CountryCode(code: '+58', name: 'Venezuela', flag: '🇻🇪'),
+  _CountryCode(code: '+593', name: 'Ecuador', flag: '🇪🇨'),
+  _CountryCode(code: '+507', name: 'Panamá', flag: '🇵🇦'),
+  _CountryCode(code: '+506', name: 'Costa Rica', flag: '🇨🇷'),
+  _CountryCode(code: '+591', name: 'Bolivia', flag: '🇧🇴'),
+  _CountryCode(code: '+595', name: 'Paraguay', flag: '🇵🇾'),
+  _CountryCode(code: '+598', name: 'Uruguay', flag: '🇺🇾'),
+  _CountryCode(code: '+44', name: 'Reino Unido', flag: '🇬🇧'),
+  _CountryCode(code: '+49', name: 'Alemania', flag: '🇩🇪'),
+  _CountryCode(code: '+33', name: 'Francia', flag: '🇫🇷'),
+];
 
 class _PremiumWhatsAppDialog extends StatefulWidget {
   final TextEditingController messageCtrl;

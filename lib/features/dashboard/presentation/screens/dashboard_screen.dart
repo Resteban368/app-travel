@@ -473,7 +473,7 @@ class _DashboardHeader extends StatelessWidget {
             colors: [D.white, D.skyBlue],
           ).createShader(r),
           child: Text(
-            '${_greeting()}, Admin',
+            _greeting(),
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,

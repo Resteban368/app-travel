@@ -187,7 +187,7 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
       'tipo_documento': pago.tipoDocumento,
       'monto': pago.monto,
       'proveedor_comercio': pago.proveedorComercio,
-      'nit': pago.nit,
+      if (pago.nit.isNotEmpty) 'nit': pago.nit,
       'metodo_pago': pago.metodoPago,
       'referencia': pago.referencia,
       'fecha_documento': pago.fechaDocumento,
