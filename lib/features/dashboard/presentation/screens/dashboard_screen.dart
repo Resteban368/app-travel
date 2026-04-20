@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:agente_viajes/features/cotizaciones/presentation/bloc/cotizacion_bloc.dart';
 import 'package:agente_viajes/features/cotizaciones/presentation/bloc/cotizacion_event.dart';
 import 'package:agente_viajes/features/cotizaciones/presentation/bloc/cotizacion_state.dart';
@@ -12,6 +13,9 @@ import '../../../pagos_realizados/presentation/bloc/pago_realizado_bloc.dart';
 import '../../../../core/widgets/shimmer_loading.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/theme/premium_palette.dart';
+import '../../../../core/constants/api_constants.dart';
+import '../../../../core/di/injection_container.dart';
+import 'package:http/http.dart' as http;
 
 // ─── Root screen ─────────────────────────────────────────────────────────────
 class DashboardScreen extends StatelessWidget {
@@ -33,17 +37,8 @@ class _DashboardBody extends StatefulWidget {
 class _DashboardBodyState extends State<_DashboardBody>
     with TickerProviderStateMixin {
   // ── controllers de filtrado/búsqueda ──
-  final _searchCtrl = TextEditingController();
   final _minPriceCtrl = TextEditingController();
   final _maxPriceCtrl = TextEditingController();
-  String _searchQuery = '';
-  bool _filtersVisible = false;
-  DateTimeRange? _dateRange;
-  final _currencyFormat = NumberFormat.currency(
-    locale: 'es_CO',
-    symbol: '\$',
-    decimalDigits: 0,
-  );
 
   // ── animation controllers ──
   late final AnimationController _entryCtrl;
@@ -54,9 +49,6 @@ class _DashboardBodyState extends State<_DashboardBody>
   late final Animation<Offset> _headerSlide;
   late final Animation<double> _cardsOpacity;
   late final Animation<Offset> _cardsSlide;
-  late final Animation<double> _searchOpacity;
-  late final Animation<Offset> _searchSlide;
-  late final Animation<double> _contentOpacity;
   late final Animation<double> _floatY;
   late final Animation<double> _shimmer;
 
@@ -83,10 +75,6 @@ class _DashboardBodyState extends State<_DashboardBody>
     _headerSlide = _slideAnim(0.00, 0.35, const Offset(0, -0.06));
     _cardsOpacity = _fade(0.20, 0.55);
     _cardsSlide = _slideAnim(0.20, 0.55, const Offset(0, 0.08));
-    _searchOpacity = _fade(0.42, 0.72);
-    _searchSlide = _slideAnim(0.42, 0.72, const Offset(0, 0.06));
-    _contentOpacity = _fade(0.60, 1.00);
-
     _floatY = Tween<double>(
       begin: -8,
       end: 8,
@@ -120,53 +108,7 @@ class _DashboardBodyState extends State<_DashboardBody>
     _entryCtrl.dispose();
     _floatCtrl.dispose();
     _shimmerCtrl.dispose();
-    _searchCtrl.dispose();
-    _minPriceCtrl.dispose();
-    _maxPriceCtrl.dispose();
     super.dispose();
-  }
-
-  List<Tour> _applyLocalFilters(List<Tour> tours) {
-    var result = tours;
-    if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
-      result = result.where((t) => t.name.toLowerCase().contains(q)).toList();
-    }
-    if (_dateRange != null) {
-      result = result
-          .where(
-            (t) =>
-                !t.endDate.isBefore(_dateRange!.start) &&
-                !t.startDate.isAfter(_dateRange!.end),
-          )
-          .toList();
-    }
-    final minP = double.tryParse(
-      _minPriceCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
-    );
-    final maxP = double.tryParse(
-      _maxPriceCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
-    );
-    if (minP != null) result = result.where((t) => t.price >= minP).toList();
-    if (maxP != null) result = result.where((t) => t.price <= maxP).toList();
-    return result;
-  }
-
-  void _clearFilters() {
-    _minPriceCtrl.clear();
-    _maxPriceCtrl.clear();
-    setState(() => _dateRange = null);
-  }
-
-  void _showTourDetail(BuildContext context, Tour tour) {
-    showDialog(
-      context: context,
-      builder: (_) => DialogDetailTour(
-        currencyFormat: _currencyFormat,
-        dateFormat: DateFormat('dd MMM yyyy', 'es'),
-        tour: tour,
-      ),
-    );
   }
 
   @override
@@ -175,18 +117,6 @@ class _DashboardBodyState extends State<_DashboardBody>
       builder: (context, tourState) {
         return BlocBuilder<PagoRealizadoBloc, PagoRealizadoState>(
           builder: (context, pagosState) {
-            List<Tour> allTours = [];
-            List<Tour> promotionTours = [];
-
-            if (tourState is ToursLoaded) {
-              final pub = tourState.tours.where((t) => !t.isDraft).toList();
-              allTours = pub.where((t) => !t.isPromotion).toList();
-              promotionTours = pub.where((t) => t.isPromotion).toList();
-            }
-
-            allTours = _applyLocalFilters(allTours);
-            promotionTours = _applyLocalFilters(promotionTours);
-
             final totalActive = tourState is ToursLoaded
                 ? tourState.tours.where((t) => !t.isPromotion).length
                 : 0;
@@ -294,72 +224,9 @@ class _DashboardBodyState extends State<_DashboardBody>
                           ),
                         ),
                         const SizedBox(height: 20),
-
-                        // Búsqueda y filtros
-                        AnimatedBuilder(
-                          animation: _entryCtrl,
-                          builder: (_, child) => FadeTransition(
-                            opacity: _searchOpacity,
-                            child: SlideTransition(
-                              position: _searchSlide,
-                              child: _SearchFilterPanel(
-                                searchCtrl: _searchCtrl,
-                                minPriceCtrl: _minPriceCtrl,
-                                maxPriceCtrl: _maxPriceCtrl,
-                                searchQuery: _searchQuery,
-                                filtersVisible: _filtersVisible,
-                                dateRange: _dateRange,
-                                onSearchChanged: (v) =>
-                                    setState(() => _searchQuery = v),
-                                onToggleFilters: () => setState(
-                                  () => _filtersVisible = !_filtersVisible,
-                                ),
-                                onClearSearch: () {
-                                  _searchCtrl.clear();
-                                  setState(() => _searchQuery = '');
-                                },
-                                onClearFilters: () {
-                                  _clearFilters();
-                                  setState(() {});
-                                },
-                                onDateRangePicked: (r) =>
-                                    setState(() => _dateRange = r),
-                                onFilterChanged: () => setState(() {}),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 28),
-
-                        // Sliders de tours
-                        FadeTransition(
-                          opacity: _contentOpacity,
-                          child: Column(
-                            children: [
-                              _DarkSliderSection(
-                                title: 'Promociones',
-                                icon: Icons.local_offer_rounded,
-                                accentColor: D.gold,
-                                tours: promotionTours,
-                                currencyFormat: _currencyFormat,
-                                isLoading: tourState is TourLoading,
-                                emptyMessage: 'No se encontraron promociones',
-                                onTourTap: (t) => _showTourDetail(context, t),
-                              ),
-                              const SizedBox(height: 36),
-                              _DarkSliderSection(
-                                title: 'Todos los Tours',
-                                icon: Icons.tour_rounded,
-                                accentColor: D.skyBlue,
-                                tours: allTours,
-                                currencyFormat: _currencyFormat,
-                                isLoading: tourState is TourLoading,
-                                emptyMessage: 'No se encontraron tours',
-                                onTourTap: (t) => _showTourDetail(context, t),
-                              ),
-                            ],
-                          ),
-                        ),
+                        // Analytics section
+                        const _AnalyticsSection(),
+                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
@@ -1877,6 +1744,992 @@ class _DarkTourCardState extends State<_DarkTourCard> {
       ),
     ),
   );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ANALYTICS DATA MODELS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _AnalyticsPago {
+  final int idPago;
+  final double monto;
+  final String metodoPago;
+  final String referencia;
+  final String proveedorComercio;
+  final int? reservaId;
+  final DateTime fechaCreacion;
+
+  _AnalyticsPago({
+    required this.idPago,
+    required this.monto,
+    required this.metodoPago,
+    required this.referencia,
+    required this.proveedorComercio,
+    this.reservaId,
+    required this.fechaCreacion,
+  });
+
+  factory _AnalyticsPago.fromJson(Map<String, dynamic> j) => _AnalyticsPago(
+    idPago: j['id_pago'] as int,
+    monto: (j['monto'] as num).toDouble(),
+    metodoPago: j['metodo_pago'] as String? ?? '',
+    referencia: j['referencia'] as String? ?? '',
+    proveedorComercio: j['proveedor_comercio'] as String? ?? '',
+    reservaId: j['reserva_id'] as int?,
+    fechaCreacion: DateTime.parse(j['fecha_creacion'] as String),
+  );
+}
+
+class _AnalyticsReserva {
+  final int id;
+  final String idReserva;
+  final String correo;
+  final String estado;
+  final double valorTotal;
+  final int integrantesCount;
+  final String? tourNombre;
+  final DateTime fechaCreacion;
+
+  _AnalyticsReserva({
+    required this.id,
+    required this.idReserva,
+    required this.correo,
+    required this.estado,
+    required this.valorTotal,
+    required this.integrantesCount,
+    this.tourNombre,
+    required this.fechaCreacion,
+  });
+
+  factory _AnalyticsReserva.fromJson(Map<String, dynamic> j) => _AnalyticsReserva(
+    id: j['id'] as int,
+    idReserva: j['id_reserva'] as String? ?? '',
+    correo: j['correo'] as String? ?? '',
+    estado: j['estado'] as String? ?? '',
+    valorTotal: (j['valor_total'] as num).toDouble(),
+    integrantesCount: (j['integrantes_count'] as num?)?.toInt() ?? 1,
+    tourNombre: j['tour_nombre'] as String?,
+    fechaCreacion: DateTime.parse(j['fecha_creacion'] as String),
+  );
+}
+
+class _AnalyticsCotizacion {
+  final int id;
+  final String nombreCompleto;
+  final String detallesPlan;
+  final int numeroPasajeros;
+  final String? origenDestino;
+  final String estado;
+  final bool isRead;
+  final DateTime createdAt;
+
+  _AnalyticsCotizacion({
+    required this.id,
+    required this.nombreCompleto,
+    required this.detallesPlan,
+    required this.numeroPasajeros,
+    this.origenDestino,
+    required this.estado,
+    required this.isRead,
+    required this.createdAt,
+  });
+
+  factory _AnalyticsCotizacion.fromJson(Map<String, dynamic> j) => _AnalyticsCotizacion(
+    id: j['id'] as int,
+    nombreCompleto: j['nombre_completo'] as String? ?? '',
+    detallesPlan: j['detalles_plan'] as String? ?? '',
+    numeroPasajeros: (j['numero_pasajeros'] as num?)?.toInt() ?? 1,
+    origenDestino: j['origen_destino'] as String?,
+    estado: j['estado'] as String? ?? '',
+    isRead: j['is_read'] as bool? ?? false,
+    createdAt: DateTime.parse(j['created_at'] as String),
+  );
+}
+
+class _VueloReservaItem {
+  final int id;
+  final String idReserva;
+  final String correo;
+  final String estado;
+  final double valorTotal;
+  final DateTime fechaCreacion;
+
+  _VueloReservaItem({
+    required this.id,
+    required this.idReserva,
+    required this.correo,
+    required this.estado,
+    required this.valorTotal,
+    required this.fechaCreacion,
+  });
+
+  factory _VueloReservaItem.fromJson(Map<String, dynamic> j) => _VueloReservaItem(
+    id: j['id'] as int,
+    idReserva: j['id_reserva'] as String? ?? '',
+    correo: j['correo'] as String? ?? '',
+    estado: j['estado'] as String? ?? '',
+    valorTotal: (j['valor_total'] as num).toDouble(),
+    fechaCreacion: DateTime.parse(j['fecha_creacion'] as String),
+  );
+}
+
+class _AgentGroup {
+  final int? agenteId;
+  final String agenteNombre;
+  final int totalReservas;
+  final List<_VueloReservaItem> reservas;
+
+  _AgentGroup({
+    this.agenteId,
+    required this.agenteNombre,
+    required this.totalReservas,
+    required this.reservas,
+  });
+
+  factory _AgentGroup.fromJson(Map<String, dynamic> j) => _AgentGroup(
+    agenteId: j['agente_id'] as int?,
+    agenteNombre: j['agente_nombre'] as String? ?? 'Sin agente',
+    totalReservas: (j['total_reservas'] as num).toInt(),
+    reservas: (j['reservas'] as List<dynamic>)
+        .map((r) => _VueloReservaItem.fromJson(r as Map<String, dynamic>))
+        .toList(),
+  );
+}
+
+class _AnalyticsData {
+  final String periodo;
+  final int pagosTotal;
+  final double pagosMontoTotal;
+  final List<_AnalyticsPago> pagos;
+  final int reservasTourTotal;
+  final List<_AnalyticsReserva> reservasTour;
+  final int cotizacionesTotal;
+  final List<_AnalyticsCotizacion> cotizaciones;
+  final List<_AgentGroup> vuelosPorAgente;
+
+  _AnalyticsData({
+    required this.periodo,
+    required this.pagosTotal,
+    required this.pagosMontoTotal,
+    required this.pagos,
+    required this.reservasTourTotal,
+    required this.reservasTour,
+    required this.cotizacionesTotal,
+    required this.cotizaciones,
+    required this.vuelosPorAgente,
+  });
+
+  factory _AnalyticsData.fromJson(Map<String, dynamic> j) => _AnalyticsData(
+    periodo: j['periodo'] as String,
+    pagosTotal: (j['pagos_validados']['total'] as num).toInt(),
+    pagosMontoTotal: (j['pagos_validados']['monto_total'] as num).toDouble(),
+    pagos: (j['pagos_validados']['items'] as List<dynamic>)
+        .map((p) => _AnalyticsPago.fromJson(p as Map<String, dynamic>))
+        .toList(),
+    reservasTourTotal: (j['reservas_tour']['total'] as num).toInt(),
+    reservasTour: (j['reservas_tour']['items'] as List<dynamic>)
+        .map((r) => _AnalyticsReserva.fromJson(r as Map<String, dynamic>))
+        .toList(),
+    cotizacionesTotal: (j['cotizaciones']['total'] as num).toInt(),
+    cotizaciones: (j['cotizaciones']['items'] as List<dynamic>)
+        .map((c) => _AnalyticsCotizacion.fromJson(c as Map<String, dynamic>))
+        .toList(),
+    vuelosPorAgente: (j['vuelos_por_agente'] as List<dynamic>)
+        .map((a) => _AgentGroup.fromJson(a as Map<String, dynamic>))
+        .toList(),
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ANALYTICS SECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _AnalyticsSection extends StatefulWidget {
+  const _AnalyticsSection();
+
+  @override
+  State<_AnalyticsSection> createState() => _AnalyticsSectionState();
+}
+
+class _AnalyticsSectionState extends State<_AnalyticsSection> {
+  String _periodo = 'mes';
+  Future<_AnalyticsData>? _future;
+
+  static const _periodos = [
+    ('dia', 'Hoy'),
+    ('semana', 'Semana'),
+    ('mes', 'Mes'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetch();
+  }
+
+  void _fetch() {
+    setState(() {
+      _future = _loadAnalytics(_periodo);
+    });
+  }
+
+  Future<_AnalyticsData> _loadAnalytics(String periodo) async {
+    final client = sl<http.Client>();
+    final uri = Uri.parse('${ApiConstants.kBaseUrl}/v1/analytics?periodo=$periodo');
+    final response = await client.get(uri, headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    });
+    if (response.statusCode == 200) {
+      return _AnalyticsData.fromJson(json.decode(response.body) as Map<String, dynamic>);
+    }
+    throw Exception('Error al cargar analítica: ${response.statusCode}');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currFmt = NumberFormat.currency(locale: 'es_CO', symbol: '\$', decimalDigits: 0);
+    final dateFmt = DateFormat('dd MMM · HH:mm', 'es');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Header ────────────────────────────────────────────────────────────
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: D.indigo.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: D.indigo.withOpacity(0.25)),
+              ),
+              child: const Icon(Icons.bar_chart_rounded, color: D.indigo, size: 18),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'Analítica',
+              style: TextStyle(
+                color: D.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.2,
+              ),
+            ),
+            const Spacer(),
+            // Período selector
+            Container(
+              decoration: BoxDecoration(
+                color: D.surface,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: D.border),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: _periodos.map((p) {
+                  final selected = _periodo == p.$1;
+                  return GestureDetector(
+                    onTap: () {
+                      if (_periodo != p.$1) {
+                        _periodo = p.$1;
+                        _fetch();
+                      }
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: selected ? D.indigo : Colors.transparent,
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: Text(
+                        p.$2,
+                        style: TextStyle(
+                          color: selected ? Colors.white : D.slate400,
+                          fontSize: 12,
+                          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        // ── Content ───────────────────────────────────────────────────────────
+        FutureBuilder<_AnalyticsData>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Column(
+                children: List.generate(
+                  3,
+                  (_) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: ShimmerLoading(
+                      child: Container(
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: D.surface,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+            if (snapshot.hasError) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: D.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: D.border),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: D.rose, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Error al cargar datos. Toca para reintentar.',
+                        style: const TextStyle(color: D.slate400, fontSize: 13),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _fetch,
+                      child: const Text('Reintentar', style: TextStyle(color: D.indigo)),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final data = snapshot.data!;
+
+            return Column(
+              children: [
+                // ── Summary cards ──────────────────────────────────────────
+                Row(
+                  children: [
+                    Expanded(
+                      child: _SummaryCard(
+                        icon: Icons.check_circle_rounded,
+                        color: D.emerald,
+                        label: 'Pagos validados',
+                        value: '${data.pagosTotal}',
+                        sub: currFmt.format(data.pagosMontoTotal),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _SummaryCard(
+                        icon: Icons.tour_rounded,
+                        color: D.skyBlue,
+                        label: 'Reservas tour',
+                        value: '${data.reservasTourTotal}',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _SummaryCard(
+                        icon: Icons.request_quote_rounded,
+                        color: D.gold,
+                        label: 'Cotizaciones',
+                        value: '${data.cotizacionesTotal}',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // ── Pagos validados ────────────────────────────────────────
+                _AnalyticsExpansionCard(
+                  icon: Icons.payments_rounded,
+                  color: D.emerald,
+                  title: 'Pagos validados',
+                  count: data.pagosTotal,
+                  emptyText: 'Sin pagos validados en este período',
+                  children: data.pagos.map((p) => _PagoTile(
+                    pago: p,
+                    currFmt: currFmt,
+                    dateFmt: dateFmt,
+                  )).toList(),
+                ),
+                const SizedBox(height: 10),
+
+                // ── Reservas de tour ───────────────────────────────────────
+                _AnalyticsExpansionCard(
+                  icon: Icons.tour_rounded,
+                  color: D.skyBlue,
+                  title: 'Reservas de tour',
+                  count: data.reservasTourTotal,
+                  emptyText: 'Sin reservas de tour en este período',
+                  children: data.reservasTour.map((r) => _ReservaTourTile(
+                    reserva: r,
+                    currFmt: currFmt,
+                    dateFmt: dateFmt,
+                  )).toList(),
+                ),
+                const SizedBox(height: 10),
+
+                // ── Cotizaciones ───────────────────────────────────────────
+                _AnalyticsExpansionCard(
+                  icon: Icons.request_quote_rounded,
+                  color: D.gold,
+                  title: 'Cotizaciones recibidas',
+                  count: data.cotizacionesTotal,
+                  emptyText: 'Sin cotizaciones en este período',
+                  children: data.cotizaciones.map((c) => _CotizacionTile(
+                    cot: c,
+                    dateFmt: dateFmt,
+                  )).toList(),
+                ),
+                const SizedBox(height: 10),
+
+                // ── Vuelos por agente ──────────────────────────────────────
+                if (data.vuelosPorAgente.isNotEmpty)
+                  _VuelosPorAgenteCard(
+                    grupos: data.vuelosPorAgente,
+                    currFmt: currFmt,
+                    dateFmt: dateFmt,
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Summary card ─────────────────────────────────────────────────────────────
+class _SummaryCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final String value;
+  final String? sub;
+
+  const _SummaryCard({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.value,
+    this.sub,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: D.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+          Text(
+            label,
+            style: const TextStyle(color: D.slate400, fontSize: 10, fontWeight: FontWeight.w500),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (sub != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              sub!,
+              style: TextStyle(color: color.withOpacity(0.8), fontSize: 10, fontWeight: FontWeight.w700),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Analytics expansion card ─────────────────────────────────────────────────
+class _AnalyticsExpansionCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final int count;
+  final String emptyText;
+  final List<Widget> children;
+
+  const _AnalyticsExpansionCard({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.count,
+    required this.emptyText,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: D.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: D.border),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          childrenPadding: EdgeInsets.zero,
+          leading: Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, color: color, size: 16),
+          ),
+          title: Row(
+            children: [
+              Text(
+                title,
+                style: const TextStyle(color: D.white, fontSize: 13, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$count',
+                  style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          iconColor: D.slate400,
+          collapsedIconColor: D.slate400,
+          children: count == 0
+              ? [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Text(emptyText, style: const TextStyle(color: D.slate400, fontSize: 12)),
+                  ),
+                ]
+              : children,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Pago tile ────────────────────────────────────────────────────────────────
+class _PagoTile extends StatelessWidget {
+  final _AnalyticsPago pago;
+  final NumberFormat currFmt;
+  final DateFormat dateFmt;
+
+  const _PagoTile({required this.pago, required this.currFmt, required this.dateFmt});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: D.bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: D.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  pago.proveedorComercio,
+                  style: const TextStyle(color: D.white, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${pago.metodoPago} · Ref: ${pago.referencia}',
+                  style: const TextStyle(color: D.slate400, fontSize: 11),
+                ),
+                Text(
+                  dateFmt.format(pago.fechaCreacion.toLocal()),
+                  style: const TextStyle(color: D.slate400, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            currFmt.format(pago.monto),
+            style: const TextStyle(color: D.emerald, fontSize: 13, fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Reserva tour tile ────────────────────────────────────────────────────────
+class _ReservaTourTile extends StatelessWidget {
+  final _AnalyticsReserva reserva;
+  final NumberFormat currFmt;
+  final DateFormat dateFmt;
+
+  const _ReservaTourTile({required this.reserva, required this.currFmt, required this.dateFmt});
+
+  Color _estadoColor(String e) {
+    switch (e) {
+      case 'al dia':
+        return D.emerald;
+      case 'cancelado':
+        return D.rose;
+      default:
+        return D.gold;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _estadoColor(reserva.estado);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: D.bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: D.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      reserva.idReserva,
+                      style: const TextStyle(
+                        color: D.white, fontSize: 12, fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        reserva.estado,
+                        style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                if (reserva.tourNombre != null)
+                  Text(
+                    reserva.tourNombre!,
+                    style: const TextStyle(color: D.slate400, fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                Text(
+                  '${reserva.correo} · ${reserva.integrantesCount} persona${reserva.integrantesCount != 1 ? "s" : ""}',
+                  style: const TextStyle(color: D.slate400, fontSize: 11),
+                ),
+                Text(
+                  dateFmt.format(reserva.fechaCreacion.toLocal()),
+                  style: const TextStyle(color: D.slate400, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            currFmt.format(reserva.valorTotal),
+            style: const TextStyle(color: D.skyBlue, fontSize: 13, fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Cotizacion tile ──────────────────────────────────────────────────────────
+class _CotizacionTile extends StatelessWidget {
+  final _AnalyticsCotizacion cot;
+  final DateFormat dateFmt;
+
+  const _CotizacionTile({required this.cot, required this.dateFmt});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: D.bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: cot.isRead ? D.border : D.gold.withOpacity(0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!cot.isRead)
+            Padding(
+              padding: const EdgeInsets.only(top: 3, right: 6),
+              child: Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(color: D.gold, shape: BoxShape.circle),
+              ),
+            ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  cot.nombreCompleto,
+                  style: const TextStyle(color: D.white, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  cot.detallesPlan,
+                  style: const TextStyle(color: D.slate400, fontSize: 11),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${cot.numeroPasajeros} pax${cot.origenDestino != null ? " · ${cot.origenDestino}" : ""} · ${dateFmt.format(cot.createdAt.toLocal())}',
+                  style: const TextStyle(color: D.slate400, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Vuelos por agente card ───────────────────────────────────────────────────
+class _VuelosPorAgenteCard extends StatelessWidget {
+  final List<_AgentGroup> grupos;
+  final NumberFormat currFmt;
+  final DateFormat dateFmt;
+
+  const _VuelosPorAgenteCard({
+    required this.grupos,
+    required this.currFmt,
+    required this.dateFmt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final total = grupos.fold(0, (sum, g) => sum + g.totalReservas);
+    return Container(
+      decoration: BoxDecoration(
+        color: D.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: D.border),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          childrenPadding: EdgeInsets.zero,
+          initiallyExpanded: true,
+          leading: Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: D.royalBlue.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: const Icon(Icons.flight_rounded, color: D.royalBlue, size: 16),
+          ),
+          title: Row(
+            children: [
+              const Text(
+                'Vuelos por agente',
+                style: TextStyle(color: D.white, fontSize: 13, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: D.royalBlue.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$total reservas',
+                  style: const TextStyle(
+                    color: D.royalBlue, fontSize: 11, fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          iconColor: D.slate400,
+          collapsedIconColor: D.slate400,
+          children: grupos.map((g) => _AgentGroupTile(
+            grupo: g,
+            currFmt: currFmt,
+            dateFmt: dateFmt,
+          )).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class _AgentGroupTile extends StatelessWidget {
+  final _AgentGroup grupo;
+  final NumberFormat currFmt;
+  final DateFormat dateFmt;
+
+  const _AgentGroupTile({
+    required this.grupo,
+    required this.currFmt,
+    required this.dateFmt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      decoration: BoxDecoration(
+        color: D.bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: D.royalBlue.withOpacity(0.2)),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          childrenPadding: EdgeInsets.zero,
+          leading: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: D.royalBlue.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                grupo.agenteNombre.isNotEmpty ? grupo.agenteNombre[0].toUpperCase() : '?',
+                style: const TextStyle(
+                  color: D.royalBlue, fontSize: 14, fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+          title: Text(
+            grupo.agenteNombre,
+            style: const TextStyle(color: D.white, fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            '${grupo.totalReservas} reserva${grupo.totalReservas != 1 ? "s" : ""}',
+            style: const TextStyle(color: D.slate400, fontSize: 11),
+          ),
+          iconColor: D.slate400,
+          collapsedIconColor: D.slate400,
+          children: grupo.reservas.map((r) {
+            Color estadoColor;
+            switch (r.estado) {
+              case 'al dia':
+                estadoColor = D.emerald;
+                break;
+              case 'cancelado':
+                estadoColor = D.rose;
+                break;
+              default:
+                estadoColor = D.gold;
+            }
+            return Container(
+              margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: D.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: D.border),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              r.idReserva,
+                              style: const TextStyle(
+                                color: D.white, fontSize: 11, fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: estadoColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                r.estado,
+                                style: TextStyle(
+                                  color: estadoColor, fontSize: 9, fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '${r.correo} · ${dateFmt.format(r.fechaCreacion.toLocal())}',
+                          style: const TextStyle(color: D.slate400, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    currFmt.format(r.valorTotal),
+                    style: const TextStyle(
+                      color: D.royalBlue, fontSize: 12, fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

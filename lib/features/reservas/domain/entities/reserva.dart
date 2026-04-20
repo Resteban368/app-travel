@@ -10,6 +10,8 @@ class Reserva extends Equatable {
   final String tipoReserva; // 'tour' | 'vuelos'
   final String correo;
   final String estado; // 'al dia', 'pendiente', 'cancelado'
+  final double? descuentoPorPersona;
+  final double? valorSinDescuento;
   final double? valorTotal;
   final DateTime fechaCreacion;
   final DateTime fechaActualizacion;
@@ -30,6 +32,8 @@ class Reserva extends Equatable {
     this.tipoReserva = 'tour',
     required this.correo,
     required this.estado,
+    this.descuentoPorPersona,
+    this.valorSinDescuento,
     this.valorTotal,
     required this.fechaCreacion,
     required this.fechaActualizacion,
@@ -50,6 +54,8 @@ class Reserva extends Equatable {
     String? tipoReserva,
     String? correo,
     String? estado,
+    double? descuentoPorPersona,
+    double? valorSinDescuento,
     double? valorTotal,
     DateTime? fechaCreacion,
     DateTime? fechaActualizacion,
@@ -69,6 +75,8 @@ class Reserva extends Equatable {
       tipoReserva: tipoReserva ?? this.tipoReserva,
       correo: correo ?? this.correo,
       estado: estado ?? this.estado,
+      descuentoPorPersona: descuentoPorPersona ?? this.descuentoPorPersona,
+      valorSinDescuento: valorSinDescuento ?? this.valorSinDescuento,
       valorTotal: valorTotal ?? this.valorTotal,
       fechaCreacion: fechaCreacion ?? this.fechaCreacion,
       fechaActualizacion: fechaActualizacion ?? this.fechaActualizacion,
@@ -91,6 +99,8 @@ class Reserva extends Equatable {
     tipoReserva,
     correo,
     estado,
+    descuentoPorPersona,
+    valorSinDescuento,
     valorTotal,
     fechaCreacion,
     fechaActualizacion,

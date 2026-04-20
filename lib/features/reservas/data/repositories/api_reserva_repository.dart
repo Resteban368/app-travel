@@ -101,6 +101,7 @@ class ApiReservaRepository implements ReservaRepository {
 
     if (reserva.tipoReserva == 'tour') {
       bodyMap['id_tour'] = int.tryParse(reserva.idTour ?? '') ?? 0;
+      bodyMap['descuento_por_persona'] = reserva.descuentoPorPersona ?? 0;
     } else {
       bodyMap['valor_total'] = reserva.valorTotal ?? 0;
     }
@@ -137,6 +138,7 @@ class ApiReservaRepository implements ReservaRepository {
 
     if (reserva.tipoReserva == 'tour') {
       bodyMap['id_tour'] = int.tryParse(reserva.idTour ?? '') ?? 0;
+      bodyMap['descuento_por_persona'] = reserva.descuentoPorPersona ?? 0;
     } else {
       if (reserva.valorTotal != null) {
         bodyMap['valor_total'] = reserva.valorTotal;
@@ -301,6 +303,8 @@ class ApiReservaRepository implements ReservaRepository {
       tipoReserva: json['tipo_reserva']?.toString() ?? 'tour',
       correo: json['correo'] ?? '',
       estado: json['estado'] ?? 'pendiente',
+      descuentoPorPersona: double.tryParse(json['descuento_por_persona']?.toString() ?? ''),
+      valorSinDescuento: double.tryParse(json['valor_sin_descuento']?.toString() ?? ''),
       valorTotal: double.tryParse(json['valor_total']?.toString() ?? ''),
       saldoPendiente: double.tryParse(
         json['saldo_pendiente']?.toString() ?? '',

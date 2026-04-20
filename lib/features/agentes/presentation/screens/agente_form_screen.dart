@@ -18,6 +18,8 @@ class _Module {
 }
 
 const _modules = [
+  //dashboard
+  _Module(key: 'dashboard', label: 'Dashboard', icon: Icons.dashboard_rounded),
   _Module(key: 'tours', label: 'Tours y Promociones', icon: Icons.tour_rounded),
   _Module(key: 'sedes', label: 'Sedes', icon: Icons.store_rounded),
   _Module(
@@ -70,11 +72,7 @@ const _modules = [
     label: 'Cotizaciones',
     icon: Icons.request_quote_rounded,
   ),
-  _Module(
-    key: 'clientes',
-    label: 'Clientes',
-    icon: Icons.people_rounded,
-  ),
+  _Module(key: 'clientes', label: 'Clientes', icon: Icons.people_rounded),
 ];
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
@@ -212,7 +210,10 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                 PremiumSliverAppBar(
                   title: _isEditing ? 'Editar Agente' : 'Nuevo Agente',
                   actions: IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: Colors.white,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
@@ -222,7 +223,10 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                     child: SlideTransition(
                       position: _slide,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
                         child: Center(
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 800),
@@ -241,7 +245,9 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                                         ),
                                         decoration: BoxDecoration(
                                           color: D.skyBlue.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(20),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
                                           border: Border.all(
                                             color: D.skyBlue.withOpacity(0.2),
                                           ),
@@ -250,7 +256,8 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                                           mainAxisSize: MainAxisSize.min,
                                           children: const [
                                             Icon(
-                                              Icons.admin_panel_settings_rounded,
+                                              Icons
+                                                  .admin_panel_settings_rounded,
                                               color: D.skyBlue,
                                               size: 14,
                                             ),
@@ -285,7 +292,8 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                                         controller: _correoCtrl,
                                         label: 'Correo Electrónico *',
                                         icon: Icons.email_rounded,
-                                        keyboardType: TextInputType.emailAddress,
+                                        keyboardType:
+                                            TextInputType.emailAddress,
                                       ),
                                       const SizedBox(height: 20),
                                       if (!_isEditing) ...[
@@ -315,7 +323,10 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                                     children: [
                                       Text(
                                         'Define a qué módulos podrá acceder y qué acciones podrá realizar.',
-                                        style: TextStyle(color: D.slate400, fontSize: 13),
+                                        style: TextStyle(
+                                          color: D.slate400,
+                                          fontSize: 13,
+                                        ),
                                       ),
                                       const SizedBox(height: 20),
                                       Row(
@@ -334,22 +345,27 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                                         ],
                                       ),
                                       const SizedBox(height: 24),
-                                      ..._modules.map((m) => _buildModuleRow(m)),
+                                      ..._modules.map(
+                                        (m) => _buildModuleRow(m),
+                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: 48),
 
                                   Builder(
-                                    builder: (ctx) => BlocBuilder<AgenteBloc, AgenteState>(
-                                      builder: (context, state) {
-                                        return PremiumActionButton(
-                                          label: _isEditing ? 'ACTUALIZAR AGENTE' : 'GUARDAR AGENTE',
-                                          icon: Icons.save_rounded,
-                                          isLoading: state is AgenteSaving,
-                                          onTap: () => _save(ctx),
-                                        );
-                                      },
-                                    ),
+                                    builder: (ctx) =>
+                                        BlocBuilder<AgenteBloc, AgenteState>(
+                                          builder: (context, state) {
+                                            return PremiumActionButton(
+                                              label: _isEditing
+                                                  ? 'ACTUALIZAR AGENTE'
+                                                  : 'GUARDAR AGENTE',
+                                              icon: Icons.save_rounded,
+                                              isLoading: state is AgenteSaving,
+                                              onTap: () => _save(ctx),
+                                            );
+                                          },
+                                        ),
                                   ),
                                   const SizedBox(height: 100),
                                 ],
@@ -452,7 +468,9 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: (enabled ? activeColor : D.slate600).withOpacity(0.1),
+                    color: (enabled ? activeColor : D.slate600).withOpacity(
+                      0.1,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -536,7 +554,9 @@ class _LevelChip extends StatelessWidget {
           color: active ? color.withOpacity(0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: active ? color.withOpacity(0.5) : Colors.white.withOpacity(0.1),
+            color: active
+                ? color.withOpacity(0.5)
+                : Colors.white.withOpacity(0.1),
           ),
         ),
         child: Row(

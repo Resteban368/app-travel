@@ -71,6 +71,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   bool _loadingAerolineas = false;
   List<VueloReserva> _vuelos = [];
 
+  // Descuento por persona
+  double _descuentoPorPersona = 0.0;
+  late final TextEditingController _descuentoCtrl;
+
   // Dynamic lists
   List<Integrante> _integrantes = [];
   List<int> _servicios = [];
@@ -84,6 +88,12 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     super.initState();
 
     _notasCtrl = TextEditingController(text: widget.reserva?.notas ?? '');
+    _descuentoPorPersona = widget.reserva?.descuentoPorPersona ?? 0.0;
+    _descuentoCtrl = TextEditingController(
+      text: _descuentoPorPersona > 0
+          ? _descuentoPorPersona.toStringAsFixed(0)
+          : '',
+    );
 
     if (_isEditing) {
       _estado = widget.reserva!.estado;
@@ -229,6 +239,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       correo: _selectedCliente?.correo ?? widget.reserva?.correo ?? '',
       estado: _estado,
       notas: _notasCtrl.text.trim(),
+      descuentoPorPersona: _descuentoPorPersona,
       serviciosIds: _servicios.where((s) => s != 0).toList(),
       integrantes: _integrantes,
       vuelos: _vuelos,
@@ -1129,8 +1140,13 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             // Al editar: derivar el precio-por-unidad del snapshot para no
             // aplicar cambios futuros del tour a reservas ya acordadas.
             // Al crear: usar el precio actual del tour.
-            final snapshotTotal =
-                _isEditing ? (widget.reserva?.valorTotal ?? 0.0) : null;
+            // Usamos valorSinDescuento como base del snapshot para no mezclar
+            // el precio pactado con el descuento aplicado.
+            final snapshotTotal = _isEditing
+                ? (widget.reserva?.valorSinDescuento ??
+                      widget.reserva?.valorTotal ??
+                      0.0)
+                : null;
             final useSnapshot = snapshotTotal != null && snapshotTotal > 0;
 
             final precioPorPareja = tour?.precioPorPareja ?? false;
@@ -1150,8 +1166,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   .fold<double>(0.0, (sum, s) => sum + (s.cost ?? 0));
               final tourBaseSnapshot = snapshotTotal - originalSvcCost;
 
-              final originalPersonas =
-                  1 + widget.reserva!.integrantes.length;
+              final originalPersonas = 1 + widget.reserva!.integrantes.length;
               final originalUnits = precioPorPareja
                   ? (originalPersonas / 2).ceil()
                   : originalPersonas;
@@ -1188,8 +1203,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               if (svc?.cost != null) serviciosTotal += svc!.cost!;
             }
 
-            final valorTotal =
+            final valorSinDescuento =
                 tourSubtotalFinal + serviciosTotal + vuelosTotal;
+
+            final descuentoTotal = _descuentoPorPersona * currentUnits;
+            final valorTotal = valorSinDescuento - descuentoTotal;
 
             final totalValidado = _pagos
                 .where((p) => p.isValidated)
@@ -1237,6 +1255,79 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     currencyFmt,
                     isSubtitle: true,
                   ),
+                ],
+                // Campo de descuento por persona
+                if (_tipoReserva == 'tour') ...[
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          precioPorPareja
+                              ? '− Descuento por pareja'
+                              : '− Descuento por persona',
+                          style: const TextStyle(
+                            color: D.slate400,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: D.bg,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        width: 130,
+                        child: TextFormField(
+                          controller: _descuentoCtrl,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(color: D.white, fontSize: 13),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            prefixText: '\$ ',
+                            prefixStyle: TextStyle(
+                              color: D.slate400,
+                              fontSize: 13,
+                            ),
+                            hintText: '0',
+                            hintStyle: TextStyle(color: D.slate400),
+                            //color de fondo
+                            fillColor: D.border,
+
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 6,
+                            ),
+                          ),
+
+                          onChanged: (val) {
+                            setState(() {
+                              _descuentoPorPersona =
+                                  double.tryParse(val.replaceAll(',', '')) ??
+                                  0.0;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (descuentoTotal > 0) ...[
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '− ${currencyFmt.format(descuentoTotal)} total ($currentUnits ${precioPorPareja ? "pareja${currentUnits != 1 ? "s" : ""}" : "persona${currentUnits != 1 ? "s" : ""}"})',
+                        style: const TextStyle(color: D.rose, fontSize: 11),
+                      ),
+                    ),
+                  ],
                 ],
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),

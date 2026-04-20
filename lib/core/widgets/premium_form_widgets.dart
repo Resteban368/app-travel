@@ -104,19 +104,21 @@ class PremiumSliverAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SliverAppBar(
       expandedHeight: 120,
-      backgroundColor: Colors.transparent,
+      backgroundColor: D.bg,
       elevation: 0,
       pinned: true,
       //flecga de atras
       leading: actions,
       flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 24, bottom: 16),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-            letterSpacing: -0.5,
+        titlePadding: const EdgeInsets.symmetric(horizontal: 24),
+        title: Center(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: -0.5,
+            ),
           ),
         ),
       ),
