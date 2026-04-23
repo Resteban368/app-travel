@@ -56,6 +56,9 @@ import '../../features/reservas/presentation/bloc/reserva_bloc.dart';
 import '../../features/clientes/data/repositories/api_cliente_repository.dart';
 import '../../features/clientes/domain/repositories/cliente_repository.dart';
 import '../../features/clientes/presentation/bloc/cliente_bloc.dart';
+import '../../features/hoteles/data/repositories/api_hotel_repository.dart';
+import '../../features/hoteles/domain/repositories/hotel_repository.dart';
+import '../../features/hoteles/presentation/bloc/hotel_bloc.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -90,6 +93,7 @@ void initDependencies() {
   sl.registerLazySingleton<AgenteRepository>(() => ApiAgenteRepository(client: sl()));
   sl.registerLazySingleton<ReservaRepository>(() => ApiReservaRepository(client: sl()));
   sl.registerLazySingleton<ClienteRepository>(() => ApiClienteRepository(client: sl()));
+  sl.registerLazySingleton<HotelRepository>(() => ApiHotelRepository(client: sl()));
   sl.registerLazySingleton<UploadRepository>(() => ApiUploadRepository(client: sl()));
 
   // ─── Use Cases ────────────────────────────────────────
@@ -113,5 +117,6 @@ void initDependencies() {
   sl.registerFactory(() => AgenteBloc(repository: sl()));
   sl.registerFactory(() => ReservaBloc(repository: sl()));
   sl.registerFactory(() => ClienteBloc(repository: sl()));
+  sl.registerLazySingleton(() => HotelBloc(repository: sl()));
   sl.registerFactory(() => UploadBloc(repository: sl()));
 }

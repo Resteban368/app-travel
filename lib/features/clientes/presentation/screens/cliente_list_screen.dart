@@ -1,3 +1,5 @@
+import 'package:agente_viajes/core/theme/saas_palette.dart';
+import 'package:agente_viajes/core/widgets/saas_ui_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:math' as math;
@@ -79,28 +81,8 @@ class _ClienteListScreenState extends State<ClienteListScreen>
     return AdminShell(
       currentIndex: 13,
       child: Scaffold(
-        backgroundColor: D.bg,
         body: Stack(
           children: [
-            AnimatedBuilder(
-              animation: _bgCtrl,
-              builder: (context, _) => Stack(
-                children: [
-                  Positioned(
-                    top: -100 + math.sin(_bgCtrl.value * math.pi * 2) * 50,
-                    right: -50 + math.cos(_bgCtrl.value * math.pi * 2) * 40,
-                    child: _Orb(color: D.royalBlue.withOpacity(0.1), size: 450),
-                  ),
-                  Positioned(
-                    bottom: -50 + math.cos(_bgCtrl.value * math.pi * 2) * 30,
-                    left: -100 + math.sin(_bgCtrl.value * math.pi * 2) * 50,
-                    child: _Orb(color: D.indigo.withOpacity(0.08), size: 350),
-                  ),
-                ],
-              ),
-            ),
-            Positioned.fill(child: CustomPaint(painter: _DotGridPainter())),
-
             BlocConsumer<ClienteBloc, ClienteState>(
               listener: (context, state) {
                 if (state is ClienteError) {
@@ -129,27 +111,50 @@ class _ClienteListScreenState extends State<ClienteListScreen>
                   clientes = state.clientes;
                 }
 
-                return CustomScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-                      sliver: SliverToBoxAdapter(
-                        child: FadeTransition(
-                          opacity: _headerOpacity,
-                          child: SlideTransition(
-                            position: _headerSlide,
-                            child: _buildHeader(context, canWrite),
-                          ),
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                      child: FadeTransition(
+                        opacity: _headerOpacity,
+                        child: SlideTransition(
+                          position: _headerSlide,
+                          child: _buildHeader(context, canWrite),
                         ),
                       ),
                     ),
-                    _buildSearchBar(),
-                    SliverFadeTransition(
-                      opacity: _contentOpacity,
-                      sliver: _buildContent(context, state, clientes, canWrite),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(32, 24, 32, 10),
+                      child: SaasSearchField(
+                        controller: _searchCtrl,
+                        hintText: 'Buscar clientes',
+                        onChanged: (v) => setState(() => _searchQuery = v),
+                        onClear: () {
+                          _searchCtrl.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      ),
                     ),
-                    const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: CustomScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        slivers: [
+                          SliverFadeTransition(
+                            opacity: _contentOpacity,
+                            sliver: _buildContent(
+                              context,
+                              state,
+                              clientes,
+                              canWrite,
+                            ),
+                          ),
+                          const SliverPadding(
+                            padding: EdgeInsets.only(bottom: 100),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 );
               },
@@ -161,92 +166,48 @@ class _ClienteListScreenState extends State<ClienteListScreen>
   }
 
   Widget _buildHeader(BuildContext context, bool canWrite) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        const SaasBreadcrumbs(items: ['Inicio', 'Operaciones', 'Clientes']),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [D.royalBlue, D.cyan]),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.people_rounded, color: Colors.white, size: 10),
-                  SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
                   Text(
-                    'GESTIÓN DE CLIENTES',
+                    'Gestión de Clientes',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.1,
+                      color: SaasPalette.textPrimary,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Administra la información y el historial de tus clientes.',
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 14,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            const Text(
-              'Clientes',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.8,
+            if (canWrite)
+              SaasButton(
+                label: 'Nuevo Cliente',
+                icon: Icons.add_rounded,
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRouter.clienteCreate),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Administra la información de tus clientes.',
-              style: TextStyle(color: D.slate400, fontSize: 13),
-            ),
           ],
         ),
-        if (canWrite)
-          _AddBtn(
-            onPressed: () =>
-                Navigator.pushNamed(context, AppRouter.clienteCreate),
-          ),
       ],
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: D.surface.withOpacity(0.6),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: D.border.withOpacity(0.5)),
-          ),
-          child: TextField(
-            controller: _searchCtrl,
-            onChanged: (v) => setState(() => _searchQuery = v),
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Buscar clientes...',
-              hintStyle: TextStyle(color: D.slate600, fontSize: 14),
-              prefixIcon: Icon(
-                Icons.search_rounded,
-                color: D.slate600,
-                size: 20,
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 15,
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -339,12 +300,19 @@ class _ClienteCardState extends State<_ClienteCard> {
         duration: const Duration(milliseconds: 300),
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: D.surface,
-          borderRadius: BorderRadius.circular(22),
+          color: SaasPalette.bgCanvas,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _hovered ? D.royalBlue.withOpacity(0.5) : D.border,
-            width: 1.5,
+            color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
+            width: _hovered ? 1.5 : 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(_hovered ? 0.08 : 0.03),
+              blurRadius: _hovered ? 16 : 8,
+              offset: Offset(0, _hovered ? 4 : 2),
+            ),
+          ],
         ),
         child: InkWell(
           onTap: widget.canWrite
@@ -380,7 +348,7 @@ class _ClienteCardState extends State<_ClienteCard> {
                       Text(
                         c.nombre,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: D.surface,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -393,11 +361,11 @@ class _ClienteCardState extends State<_ClienteCard> {
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          Icon(Icons.phone_rounded, size: 12, color: D.white),
+                          Icon(Icons.phone_rounded, size: 12, color: D.bg),
                           const SizedBox(width: 4),
                           Text(
                             c.telefono,
-                            style: TextStyle(color: D.white, fontSize: 12),
+                            style: TextStyle(color: D.surface, fontSize: 12),
                           ),
                           const SizedBox(width: 12),
                         ],
@@ -405,11 +373,11 @@ class _ClienteCardState extends State<_ClienteCard> {
                       const SizedBox(width: 12),
                       Row(
                         children: [
-                          Icon(Icons.badge_outlined, size: 12, color: D.white),
+                          Icon(Icons.badge_outlined, size: 12, color: D.bg),
                           const SizedBox(width: 4),
                           Text(
                             '${c.tipoDocumento}: ${c.documento}',
-                            style: TextStyle(color: D.white, fontSize: 12),
+                            style: TextStyle(color: D.surface, fontSize: 12),
                           ),
                         ],
                       ),
@@ -480,34 +448,6 @@ class _DotGridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
-}
-
-class _AddBtn extends StatelessWidget {
-  final VoidCallback onPressed;
-  const _AddBtn({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [D.royalBlue, D.indigo]),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: D.royalBlue.withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
-      ),
-    );
-  }
 }
 
 class _SkelCard extends StatefulWidget {
@@ -607,7 +547,6 @@ class _SkelCardState extends State<_SkelCard>
     );
   }
 }
-
 
 class _EmptyState extends StatelessWidget {
   final bool isSearch;

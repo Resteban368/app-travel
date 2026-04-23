@@ -9,12 +9,12 @@ class RedSocial extends Equatable {
   @override
   List<Object?> get props => [nombre, link];
 
-  Map<String, dynamic> toJson() => {'nombre': nombre, 'link': link};
+  Map<String, dynamic> toJson() => {'red': nombre, 'url': link};
 
   factory RedSocial.fromJson(Map<String, dynamic> json) {
     return RedSocial(
-      nombre: json['nombre'] ?? '',
-      link: json['link'] ?? '',
+      nombre: json['red'] ?? json['nombre'] ?? '',
+      link: json['url'] ?? json['link'] ?? '',
     );
   }
 }

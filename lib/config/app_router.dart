@@ -44,6 +44,9 @@ import '../features/reservas/domain/entities/reserva.dart';
 import '../features/clientes/presentation/screens/cliente_list_screen.dart';
 import '../features/clientes/presentation/screens/cliente_form_screen.dart';
 import '../features/clientes/domain/entities/cliente.dart';
+import '../features/hoteles/presentation/screens/hotel_list_screen.dart';
+import '../features/hoteles/presentation/screens/hotel_form_screen.dart';
+import '../features/hoteles/domain/entities/hotel.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
 
 /// Centralised route configuration.
@@ -89,6 +92,9 @@ class AppRouter {
   static const String clientes = '/clientes';
   static const String clienteCreate = '/clientes/create';
   static const String clienteEdit = '/clientes/edit';
+  static const String hoteles = '/hoteles';
+  static const String hotelCreate = '/hoteles/create';
+  static const String hotelEdit = '/hoteles/edit';
   static const String profile = '/profile';
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -197,6 +203,13 @@ class AppRouter {
       case clienteEdit:
         final cliente = settings.arguments as Cliente;
         return _fadeRoute(ClienteFormScreen(cliente: cliente), settings);
+      case hoteles:
+        return _fadeRoute(const HotelListScreen(), settings);
+      case hotelCreate:
+        return _fadeRoute(const HotelFormScreen(), settings);
+      case hotelEdit:
+        final hotel = settings.arguments as Hotel;
+        return _fadeRoute(HotelFormScreen(hotel: hotel), settings);
       case profile:
         return _fadeRoute(const ProfileScreen(), settings);
       default:
@@ -217,14 +230,14 @@ class AppRouter {
           opacity: curve,
           child: SlideTransition(
             position: Tween<Offset>(
-              begin: const Offset(0, 0.05),
+              begin: const Offset(0, 0.02),
               end: Offset.zero,
             ).animate(curve),
             child: child,
           ),
         );
       },
-      transitionDuration: const Duration(milliseconds: 350),
+      transitionDuration: const Duration(milliseconds: 200),
     );
   }
 }

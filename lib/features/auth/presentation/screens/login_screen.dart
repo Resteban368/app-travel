@@ -512,11 +512,7 @@ class _LoginScreenState extends State<LoginScreen>
           animation: _floatCtrl,
           builder: (_, _) => Transform.translate(
             offset: Offset(0, _floatY.value * 0.3),
-            child: Icon(
-              Icons.flight,
-              size: size * 0.7,
-              color: _C.white,
-            ),
+            child: Icon(Icons.flight, size: size * 0.7, color: _C.white),
           ),
         ),
       ),
@@ -803,7 +799,7 @@ class _LoginScreenState extends State<LoginScreen>
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
-                    'AgenteViajes Platform',
+                    'AgenteViajes Platform v1.2.7',
                     style: TextStyle(
                       fontSize: 11,
                       color: _C.slate600.withOpacity(0.5),

@@ -1,3 +1,4 @@
+import 'package:agente_viajes/core/theme/saas_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/premium_palette.dart';
@@ -143,10 +144,8 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: D.bg,
         body: Stack(
           children: [
-            const PremiumBackground(),
             FadeTransition(
               opacity: _fade,
               child: CustomScrollView(
@@ -165,75 +164,72 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
                         vertical: 32,
                       ),
                       child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 800),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              children: [
-                                // ── Datos Personales ─────────────────────────
-                                PremiumSectionCard(
-                                  title: 'DATOS PERSONALES',
-                                  icon: Icons.person_rounded,
-                                  children: [
-                                    PremiumTextField(
-                                      controller: _nombreCtrl,
-                                      label: 'Nombre Completo *',
-                                      icon: Icons.badge_rounded,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    PremiumTextField(
-                                      controller: _correoCtrl,
-                                      label: 'Correo Electrónico (opcional)',
-                                      icon: Icons.email_rounded,
-                                      keyboardType: TextInputType.emailAddress,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    PremiumTextField(
-                                      controller: _telefonoCtrl,
-                                      label: 'Teléfono de Contacto *',
-                                      icon: Icons.phone_rounded,
-                                      keyboardType: TextInputType.number,
-                                      isNumeric: true,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              // ── Datos Personales ─────────────────────────
+                              PremiumSectionCard(
+                                title: 'DATOS PERSONALES',
+                                icon: Icons.person_rounded,
+                                children: [
+                                  PremiumTextField(
+                                    controller: _nombreCtrl,
+                                    label: 'Nombre Completo *',
+                                    icon: Icons.badge_rounded,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  PremiumTextField(
+                                    controller: _correoCtrl,
+                                    label: 'Correo Electrónico (opcional)',
+                                    icon: Icons.email_rounded,
+                                    keyboardType: TextInputType.emailAddress,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  PremiumTextField(
+                                    controller: _telefonoCtrl,
+                                    label: 'Teléfono de Contacto *',
+                                    icon: Icons.phone_rounded,
+                                    keyboardType: TextInputType.number,
+                                    isNumeric: true,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
 
-                                // ── Identificación ───────────────────────────
-                                PremiumSectionCard(
-                                  title: 'IDENTIFICACIÓN',
-                                  icon: Icons.assignment_ind_rounded,
-                                  children: [
-                                    _buildTipoDocumentoSelector(),
-                                    const SizedBox(height: 20),
-                                    PremiumTextField(
-                                      controller: _numeroDocumentoCtrl,
-                                      label: 'Número de Documento *',
-                                      icon: Icons.numbers_rounded,
-                                      keyboardType: TextInputType.number,
-                                      isNumeric: true,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
+                              // ── Identificación ───────────────────────────
+                              PremiumSectionCard(
+                                title: 'IDENTIFICACIÓN',
+                                icon: Icons.assignment_ind_rounded,
+                                children: [
+                                  _buildTipoDocumentoSelector(),
+                                  const SizedBox(height: 20),
+                                  PremiumTextField(
+                                    controller: _numeroDocumentoCtrl,
+                                    label: 'Número de Documento *',
+                                    icon: Icons.numbers_rounded,
+                                    keyboardType: TextInputType.number,
+                                    isNumeric: true,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
 
-                                const SizedBox(height: 48),
+                              const SizedBox(height: 48),
 
-                                // ── Submit ──────────────────────────────────
-                                BlocBuilder<ClienteBloc, ClienteState>(
-                                  builder: (context, state) {
-                                    return PremiumActionButton(
-                                      label: 'GUARDAR CLIENTE',
-                                      icon: Icons.save_rounded,
-                                      isLoading: state is ClienteSaving,
-                                      onTap: _save,
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 100),
-                              ],
-                            ),
+                              // ── Submit ──────────────────────────────────
+                              BlocBuilder<ClienteBloc, ClienteState>(
+                                builder: (context, state) {
+                                  return PremiumActionButton(
+                                    label: 'GUARDAR CLIENTE',
+                                    icon: Icons.save_rounded,
+                                    isLoading: state is ClienteSaving,
+                                    onTap: _save,
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 100),
+                            ],
                           ),
                         ),
                       ),
@@ -264,24 +260,26 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _tipoDocumento,
-          dropdownColor: D.surface,
+          dropdownColor: D.white,
           iconEnabledColor: D.slate400,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: const TextStyle(color: Colors.black, fontSize: 14),
           decoration: InputDecoration(
             prefixIcon: const Icon(
               Icons.badge_rounded,
-              color: D.skyBlue,
+              color: SaasPalette.brand600,
               size: 20,
             ),
             filled: true,
-            fillColor: D.surfaceHigh.withOpacity(0.5),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide(color: Colors.white.withOpacity(0.05)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: D.skyBlue, width: 1.5),
+              borderSide: const BorderSide(
+                color: SaasPalette.brand600,
+                width: 1.5,
+              ),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -294,7 +292,7 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
                   value: tipo,
                   child: Text(
                     tipo,
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Colors.black),
                   ),
                 ),
               )

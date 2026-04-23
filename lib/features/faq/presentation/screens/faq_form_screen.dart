@@ -17,7 +17,8 @@ class FaqFormScreen extends StatefulWidget {
   State<FaqFormScreen> createState() => _FaqFormScreenState();
 }
 
-class _FaqFormScreenState extends State<FaqFormScreen> with SingleTickerProviderStateMixin {
+class _FaqFormScreenState extends State<FaqFormScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _questionCtrl;
   late final TextEditingController _answerCtrl;
@@ -36,9 +37,18 @@ class _FaqFormScreenState extends State<FaqFormScreen> with SingleTickerProvider
     _answerCtrl = TextEditingController(text: widget.faq?.answer ?? '');
     _isActive = widget.faq?.isActive ?? true;
 
-    _entryCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
-    _fade = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut));
-    _slide = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
+    _entryCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _fade = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut));
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.05),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
     _entryCtrl.forward();
   }
 
@@ -82,23 +92,24 @@ class _FaqFormScreenState extends State<FaqFormScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
     final canWrite = authState is AuthAuthenticated
-        ? authState.user.canWrite('faq')
-        : true; // Default fallback if not auth checking
+        ? authState.user.canWrite('faqs')
+        : false;
 
     return BlocListener<FaqBloc, FaqState>(
       listener: (context, state) {
         if (state is FaqSaved) {
-          _showToast(context, _isEditing ? 'Pregunta actualizada' : 'Pregunta creada');
+          _showToast(
+            context,
+            _isEditing ? 'Pregunta actualizada' : 'Pregunta creada',
+          );
           Navigator.pop(context);
         } else if (state is FaqError) {
           _showToast(context, state.message, isError: true);
         }
       },
       child: Scaffold(
-        backgroundColor: D.bg,
         body: Stack(
           children: [
-            const PremiumBackground(),
             CustomScrollView(
               slivers: [
                 PremiumSliverAppBar(
@@ -106,7 +117,10 @@ class _FaqFormScreenState extends State<FaqFormScreen> with SingleTickerProvider
                       ? 'Ver Pregunta'
                       : (_isEditing ? 'Editar Pregunta' : 'Nueva Pregunta'),
                   actions: IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: Colors.white,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
@@ -116,89 +130,101 @@ class _FaqFormScreenState extends State<FaqFormScreen> with SingleTickerProvider
                     child: SlideTransition(
                       position: _slide,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
                         child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 800),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Etiqueta de información
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: D.skyBlue.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: D.skyBlue.withOpacity(0.3)),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Etiqueta de información
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: D.skyBlue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: D.skyBlue.withOpacity(0.3),
                                     ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.help_outline_rounded, color: D.skyBlue, size: 16),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          'PREGUNTAS FRECUENTES',
-                                          style: TextStyle(
-                                            color: D.skyBlue,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.help_outline_rounded,
+                                        color: D.skyBlue,
+                                        size: 16,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'PREGUNTAS FRECUENTES',
+                                        style: TextStyle(
+                                          color: D.skyBlue,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  
-                                  PremiumSectionCard(
-                                    title: 'INFORMACIÓN DE LA PREGUNTA',
-                                    icon: Icons.question_answer_rounded,
-                                    children: [
-                                      PremiumTextField(
-                                        controller: _questionCtrl,
-                                        label: 'Pregunta *',
-                                        icon: Icons.help_outline_rounded,
-                                        maxLines: 2,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _answerCtrl,
-                                        label: 'Respuesta *',
-                                        icon: Icons.notes_rounded,
-                                        maxLines: 5,
-                                        readOnly: !canWrite,
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 24),
+                                ),
+                                const SizedBox(height: 24),
 
-                                  PremiumSectionCard(
-                                    title: 'VISIBILIDAD',
-                                    icon: Icons.visibility_rounded,
-                                    children: [
-                                      _buildVisibilitySwitch(canWrite: canWrite),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 48),
-
-                                  if (canWrite)
-                                    Builder(
-                                      builder: (ctx) => BlocBuilder<FaqBloc, FaqState>(
-                                        builder: (context, state) {
-                                          return PremiumActionButton(
-                                            label: _isEditing ? 'ACTUALIZAR PREGUNTA' : 'GUARDAR PREGUNTA',
-                                            icon: Icons.save_rounded,
-                                            isLoading: state is FaqSaving,
-                                            onTap: () => _save(ctx),
-                                          );
-                                        },
-                                      ),
+                                PremiumSectionCard(
+                                  title: 'INFORMACIÓN DE LA PREGUNTA',
+                                  icon: Icons.question_answer_rounded,
+                                  children: [
+                                    PremiumTextField(
+                                      controller: _questionCtrl,
+                                      label: 'Pregunta *',
+                                      icon: Icons.help_outline_rounded,
+                                      maxLines: 2,
+                                      readOnly: !canWrite,
                                     ),
-                                  const SizedBox(height: 100),
-                                ],
-                              ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _answerCtrl,
+                                      label: 'Respuesta *',
+                                      icon: Icons.notes_rounded,
+                                      maxLines: 5,
+                                      readOnly: !canWrite,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+
+                                PremiumSectionCard(
+                                  title: 'VISIBILIDAD',
+                                  icon: Icons.visibility_rounded,
+                                  children: [
+                                    _buildVisibilitySwitch(canWrite: canWrite),
+                                  ],
+                                ),
+                                const SizedBox(height: 48),
+
+                                if (canWrite)
+                                  Builder(
+                                    builder: (ctx) =>
+                                        BlocBuilder<FaqBloc, FaqState>(
+                                          builder: (context, state) {
+                                            return PremiumActionButton(
+                                              label: _isEditing
+                                                  ? 'ACTUALIZAR PREGUNTA'
+                                                  : 'GUARDAR PREGUNTA',
+                                              icon: Icons.save_rounded,
+                                              isLoading: state is FaqSaving,
+                                              onTap: () => _save(ctx),
+                                            );
+                                          },
+                                        ),
+                                  ),
+                                const SizedBox(height: 100),
+                              ],
                             ),
                           ),
                         ),
@@ -221,7 +247,7 @@ class _FaqFormScreenState extends State<FaqFormScreen> with SingleTickerProvider
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: Container(
           decoration: BoxDecoration(
-            color: D.surfaceHigh.withOpacity(0.3),
+            color: D.bg,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withOpacity(0.05)),
           ),

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/theme/premium_palette.dart';
+import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../domain/entities/tour.dart' hide ItineraryDay;
 import '../../domain/entities/tour_detalle.dart';
 import '../../domain/repositories/tour_repository.dart';
+import '../../../../core/widgets/premium_form_widgets.dart';
 
 class TourDetalleScreen extends StatefulWidget {
   final Tour tour;
@@ -65,7 +66,6 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
 
   List<ReservaDetalle> get _filteredReservas {
     var list = List<ReservaDetalle>.from(_detalle?.reservas ?? []);
-    // Ordenar por fecha ascendente (más antigua primero)
     list.sort((a, b) => a.fechaCreacion.compareTo(b.fechaCreacion));
     final q = _searchQuery.trim().toLowerCase();
     if (q.isNotEmpty) {
@@ -85,7 +85,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
     final reservas = _filteredReservas;
 
     return Scaffold(
-      backgroundColor: D.bg,
+      backgroundColor: SaasPalette.bgApp,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -94,12 +94,10 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             sliver: SliverToBoxAdapter(child: _buildCuposHeader()),
           ),
-          // Buscador
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             sliver: SliverToBoxAdapter(child: _buildSearchBar()),
           ),
-          // Lista de reservas
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             sliver: _buildReservasList(reservas),
@@ -114,29 +112,32 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
     final active = _searchQuery.isNotEmpty;
     return Container(
       decoration: BoxDecoration(
-        color: D.surfaceHigh,
-        borderRadius: BorderRadius.circular(16),
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: active ? D.skyBlue.withValues(alpha: 0.6) : D.slate600,
+          color: active ? SaasPalette.brand600 : SaasPalette.border,
           width: active ? 1.5 : 1,
         ),
       ),
       child: TextField(
         controller: _searchCtrl,
-        style: const TextStyle(color: D.surface, fontSize: 14),
+        style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: 'Buscar por nombre o cédula del responsable...',
-          hintStyle: TextStyle(color: D.slate400, fontSize: 14),
+          hintStyle: const TextStyle(
+            color: SaasPalette.textTertiary,
+            fontSize: 14,
+          ),
           prefixIcon: Icon(
             Icons.search_rounded,
-            color: active ? D.skyBlue : D.slate400,
+            color: active ? SaasPalette.brand600 : SaasPalette.textTertiary,
             size: 20,
           ),
           suffixIcon: active
               ? IconButton(
                   icon: const Icon(
                     Icons.close_rounded,
-                    color: D.slate400,
+                    color: SaasPalette.textTertiary,
                     size: 18,
                   ),
                   onPressed: () => _searchCtrl.clear(),
@@ -186,38 +187,11 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
   }
 
   Widget _buildAppBar() {
-    return SliverAppBar(
-      expandedHeight: 130,
-      pinned: true,
-      backgroundColor: D.surface,
-      leading: IconButton(
+    return PremiumSliverAppBar(
+      title: widget.tour.name,
+      actions: IconButton(
         icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
         onPressed: () => Navigator.pop(context),
-      ),
-      flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 56, bottom: 16),
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.tour.name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                fontSize: 15,
-                letterSpacing: -0.3,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Pasajeros y Reservas',
-              style: TextStyle(color: D.slate400, fontSize: 11),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -231,17 +205,17 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
     final usados = cupos - (disponibles ?? cupos);
     final porcentajeUsado = cupos > 0 ? usados / cupos : 0.0;
     final Color barColor = porcentajeUsado >= 1.0
-        ? D.rose
+        ? SaasPalette.danger
         : porcentajeUsado >= 0.8
-        ? D.gold
-        : const Color(0xFF34D399);
+        ? SaasPalette.warning
+        : SaasPalette.success;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: D.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: D.border),
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
       ),
       child: Column(
         children: [
@@ -250,14 +224,14 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
               _StatChip(
                 label: 'Cupos totales',
                 value: '$cupos',
-                color: D.royalBlue,
+                color: SaasPalette.brand600,
                 icon: Icons.event_seat_rounded,
               ),
               const SizedBox(width: 12),
               _StatChip(
                 label: 'Ocupados',
                 value: '$usados',
-                color: D.gold,
+                color: SaasPalette.warning,
                 icon: Icons.people_rounded,
               ),
               const SizedBox(width: 12),
@@ -274,7 +248,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: porcentajeUsado.clamp(0.0, 1.0),
-              backgroundColor: D.surfaceHigh,
+              backgroundColor: SaasPalette.bgSubtle,
               color: barColor,
               minHeight: 8,
             ),
@@ -303,9 +277,9 @@ class _StatChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,11 +290,17 @@ class _StatChip extends StatelessWidget {
               value,
               style: TextStyle(
                 color: color,
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
               ),
             ),
-            Text(label, style: TextStyle(color: D.slate400, fontSize: 10)),
+            Text(
+              label,
+              style: const TextStyle(
+                color: SaasPalette.textTertiary,
+                fontSize: 10,
+              ),
+            ),
           ],
         ),
       ),
@@ -348,13 +328,13 @@ class _ReservaCardState extends State<_ReservaCard> {
   Color get _estadoColor {
     switch (widget.reserva.estado.toLowerCase()) {
       case 'al dia':
-        return const Color(0xFF34D399);
+        return SaasPalette.success;
       case 'pendiente':
-        return D.gold;
+        return SaasPalette.warning;
       case 'cancelado':
-        return D.rose;
+        return SaasPalette.danger;
       default:
-        return D.slate400;
+        return SaasPalette.textTertiary;
     }
   }
 
@@ -367,18 +347,19 @@ class _ReservaCardState extends State<_ReservaCard> {
       duration: const Duration(milliseconds: 250),
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: D.surface,
-        borderRadius: BorderRadius.circular(24),
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: reserva.ocupaCupo ? D.border : D.rose.withValues(alpha: 0.4),
+          color: reserva.ocupaCupo
+              ? SaasPalette.border
+              : SaasPalette.danger.withValues(alpha: 0.4),
         ),
       ),
       child: Column(
         children: [
-          // Header
           InkWell(
             onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
               child: Row(
@@ -389,12 +370,15 @@ class _ReservaCardState extends State<_ReservaCard> {
                       children: [
                         Row(
                           children: [
-                            Text(
-                              reserva.responsable.nombre,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 15,
+                            Flexible(
+                              child: Text(
+                                reserva.responsable.nombre,
+                                style: const TextStyle(
+                                  color: SaasPalette.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -404,19 +388,27 @@ class _ReservaCardState extends State<_ReservaCard> {
                             ),
                             if (!reserva.ocupaCupo) ...[
                               const SizedBox(width: 6),
-                              _EstadoBadge(label: 'SIN CUPO', color: D.rose),
+                              _EstadoBadge(
+                                label: 'SIN CUPO',
+                                color: SaasPalette.danger,
+                              ),
                             ],
                           ],
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Creada $dateLabel · ${reserva.totalPersonas} persona${reserva.totalPersonas != 1 ? 's' : ''}',
-                          style: TextStyle(color: D.slate400, fontSize: 12),
+                          style: const TextStyle(
+                            color: SaasPalette.textSecondary,
+                            fontSize: 12,
+                          ),
                         ),
-                        //numero de la reserva
                         Text(
                           'Reserva: #${reserva.idReserva}',
-                          style: TextStyle(color: D.slate400, fontSize: 12),
+                          style: const TextStyle(
+                            color: SaasPalette.textTertiary,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -425,7 +417,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                     _expanded
                         ? Icons.keyboard_arrow_up_rounded
                         : Icons.keyboard_arrow_down_rounded,
-                    color: D.slate600,
+                    color: SaasPalette.textTertiary,
                   ),
                 ],
               ),
@@ -433,13 +425,12 @@ class _ReservaCardState extends State<_ReservaCard> {
           ),
 
           if (_expanded) ...[
-            Divider(color: D.border, height: 1),
+            const Divider(color: SaasPalette.border, height: 1),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Financiero
                   _FinancieroRow(
                     total: reserva.valorTotal,
                     cancelado: reserva.valorCancelado,
@@ -447,25 +438,25 @@ class _ReservaCardState extends State<_ReservaCard> {
                     currency: widget.currency,
                   ),
                   const SizedBox(height: 16),
-
-                  // Desglose de costos
                   _DesgloseCard(reserva: reserva, currency: widget.currency),
                   const SizedBox(height: 16),
 
-                  // Notas
                   if (reserva.notas != null && reserva.notas!.isNotEmpty) ...[
                     Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.sticky_note_2_rounded,
-                          color: D.slate600,
+                          color: SaasPalette.textTertiary,
                           size: 14,
                         ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             reserva.notas!,
-                            style: TextStyle(color: D.slate400, fontSize: 12),
+                            style: const TextStyle(
+                              color: SaasPalette.textSecondary,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                       ],
@@ -473,8 +464,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                     const SizedBox(height: 16),
                   ],
 
-                  // Responsable
-                  _SectionLabel(label: 'RESPONSABLE'),
+                  const _SectionLabel(label: 'RESPONSABLE'),
                   const SizedBox(height: 8),
                   _PersonaRow(
                     nombre: reserva.responsable.nombre,
@@ -485,7 +475,6 @@ class _ReservaCardState extends State<_ReservaCard> {
                     isResponsable: true,
                   ),
 
-                  // Integrantes
                   if (reserva.integrantes.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     _SectionLabel(
@@ -530,21 +519,25 @@ class _DesgloseCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: D.bg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: D.border),
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SaasPalette.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.receipt_long_rounded, color: D.slate600, size: 14),
+              const Icon(
+                Icons.receipt_long_rounded,
+                color: SaasPalette.textTertiary,
+                size: 14,
+              ),
               const SizedBox(width: 6),
-              Text(
+              const Text(
                 'DESGLOSE DE COSTOS',
                 style: TextStyle(
-                  color: D.slate600,
+                  color: SaasPalette.textTertiary,
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.8,
@@ -554,19 +547,16 @@ class _DesgloseCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Valor del tour contratado
           _DesgloseRow(
             label: 'Valor del tour',
             value: currency.format(reserva.valorTourSnapshot),
-            valueColor: Colors.white,
+            valueColor: SaasPalette.textPrimary,
             icon: Icons.confirmation_number_rounded,
           ),
 
-          // Servicios adicionales
           if (hasServicios) ...[
             const SizedBox(height: 4),
-            Divider(color: D.border, height: 12),
-            // Si el API retornó los servicios con detalle, los mostramos uno a uno
+            const Divider(color: SaasPalette.border, height: 12),
             if (reserva.servicios.isNotEmpty)
               ...reserva.servicios.map(
                 (s) => Padding(
@@ -574,29 +564,28 @@ class _DesgloseCard extends StatelessWidget {
                   child: _DesgloseRow(
                     label: s.nombre,
                     value: s.costo != null ? currency.format(s.costo) : '—',
-                    valueColor: D.skyBlue,
+                    valueColor: SaasPalette.brand600,
                     icon: Icons.add_circle_outline_rounded,
                   ),
                 ),
               )
             else
-              // Fallback: muestra el total de servicios sin desglose
               _DesgloseRow(
                 label: 'Servicios adicionales',
                 value: currency.format(reserva.costoServicios),
-                valueColor: D.skyBlue,
+                valueColor: SaasPalette.brand600,
                 icon: Icons.add_circle_outline_rounded,
               ),
           ],
 
-          Divider(color: D.border, height: 16),
+          const Divider(color: SaasPalette.border, height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 'Total contratado',
                 style: TextStyle(
-                  color: D.slate400,
+                  color: SaasPalette.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
@@ -604,9 +593,9 @@ class _DesgloseCard extends StatelessWidget {
               Text(
                 currency.format(reserva.valorTotal),
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: SaasPalette.textPrimary,
                   fontSize: 14,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
@@ -634,10 +623,16 @@ class _DesgloseRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: D.slate600, size: 13),
+        Icon(icon, color: SaasPalette.textTertiary, size: 13),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(label, style: TextStyle(color: D.slate400, fontSize: 12)),
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: SaasPalette.textSecondary,
+              fontSize: 12,
+            ),
+          ),
         ),
         Text(
           value,
@@ -669,28 +664,28 @@ class _FinancieroRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: D.bg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: D.border),
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SaasPalette.border),
       ),
       child: Row(
         children: [
           _Money(
             label: 'Total',
             value: currency.format(total),
-            color: Colors.white,
+            color: SaasPalette.textPrimary,
           ),
           _Divider(),
           _Money(
             label: 'Cancelado',
             value: currency.format(cancelado),
-            color: const Color(0xFF34D399),
+            color: SaasPalette.success,
           ),
           _Divider(),
           _Money(
             label: 'Saldo',
             value: currency.format(saldo),
-            color: saldo > 0 ? D.gold : D.slate400,
+            color: saldo > 0 ? SaasPalette.warning : SaasPalette.textTertiary,
           ),
         ],
       ),
@@ -716,7 +711,10 @@ class _Money extends StatelessWidget {
             fontSize: 13,
           ),
         ),
-        Text(label, style: TextStyle(color: D.slate600, fontSize: 10)),
+        Text(
+          label,
+          style: const TextStyle(color: SaasPalette.textTertiary, fontSize: 10),
+        ),
       ],
     ),
   );
@@ -727,7 +725,7 @@ class _Divider extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: 1,
     height: 28,
-    color: D.border,
+    color: SaasPalette.border,
     margin: const EdgeInsets.symmetric(horizontal: 8),
   );
 }
@@ -756,10 +754,12 @@ class _PersonaRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isResponsable ? D.royalBlue.withValues(alpha: 0.08) : D.bg,
-        borderRadius: BorderRadius.circular(14),
+        color: isResponsable ? SaasPalette.brand50 : SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isResponsable ? D.royalBlue.withValues(alpha: 0.25) : D.border,
+          color: isResponsable
+              ? SaasPalette.brand600.withValues(alpha: 0.2)
+              : SaasPalette.border,
         ),
       ),
       child: Row(
@@ -770,15 +770,17 @@ class _PersonaRow extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               color: isResponsable
-                  ? D.royalBlue.withValues(alpha: 0.2)
-                  : D.surfaceHigh,
+                  ? SaasPalette.brand600.withValues(alpha: 0.15)
+                  : SaasPalette.border,
               shape: BoxShape.circle,
             ),
             child: Icon(
               isResponsable
                   ? Icons.manage_accounts_rounded
                   : Icons.person_rounded,
-              color: isResponsable ? D.royalBlue : D.slate400,
+              color: isResponsable
+                  ? SaasPalette.brand600
+                  : SaasPalette.textTertiary,
               size: 18,
             ),
           ),
@@ -790,7 +792,7 @@ class _PersonaRow extends StatelessWidget {
                 Text(
                   nombre,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: SaasPalette.textPrimary,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -841,9 +843,12 @@ class _Detail extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(icon, color: D.slate600, size: 12),
+      Icon(icon, color: SaasPalette.textTertiary, size: 12),
       const SizedBox(width: 4),
-      Text(text, style: TextStyle(color: D.slate400, fontSize: 11)),
+      Text(
+        text,
+        style: const TextStyle(color: SaasPalette.textSecondary, fontSize: 11),
+      ),
     ],
   );
 }
@@ -855,8 +860,8 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     label,
-    style: TextStyle(
-      color: D.slate600,
+    style: const TextStyle(
+      color: SaasPalette.textTertiary,
       fontSize: 10,
       fontWeight: FontWeight.w800,
       letterSpacing: 0.8,
@@ -873,16 +878,16 @@ class _EstadoBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.15),
+      color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(6),
-      border: Border.all(color: color.withValues(alpha: 0.4)),
+      border: Border.all(color: color.withValues(alpha: 0.35)),
     ),
     child: Text(
       label,
       style: TextStyle(
         color: color,
         fontSize: 9,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w800,
         letterSpacing: 0.5,
       ),
     ),
@@ -892,11 +897,12 @@ class _EstadoBadge extends StatelessWidget {
 class _SkelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
-    height: 140,
+    height: 120,
     margin: const EdgeInsets.only(bottom: 16),
     decoration: BoxDecoration(
-      color: D.surface.withValues(alpha: 0.5),
-      borderRadius: BorderRadius.circular(24),
+      color: SaasPalette.bgSubtle,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: SaasPalette.border),
     ),
   );
 }
@@ -909,21 +915,25 @@ class _EmptySearch extends StatelessWidget {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.search_off_rounded, size: 64, color: D.slate800),
+        const Icon(
+          Icons.search_off_rounded,
+          size: 64,
+          color: SaasPalette.textTertiary,
+        ),
         const SizedBox(height: 16),
         Text(
           'Sin resultados para "$query"',
-          style: TextStyle(
-            color: D.slate600,
+          style: const TextStyle(
+            color: SaasPalette.textPrimary,
             fontSize: 15,
             fontWeight: FontWeight.bold,
           ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 6),
-        Text(
+        const Text(
           'Intenta con otro nombre o cédula',
-          style: TextStyle(color: D.slate800, fontSize: 12),
+          style: TextStyle(color: SaasPalette.textSecondary, fontSize: 12),
         ),
       ],
     ),
@@ -937,12 +947,16 @@ class _EmptyState extends StatelessWidget {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.people_outline_rounded, size: 72, color: D.slate800),
+        const Icon(
+          Icons.people_outline_rounded,
+          size: 72,
+          color: SaasPalette.textTertiary,
+        ),
         const SizedBox(height: 16),
-        Text(
+        const Text(
           'No hay reservas para este tour',
           style: TextStyle(
-            color: D.slate600,
+            color: SaasPalette.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -962,12 +976,16 @@ class _ErrorState extends StatelessWidget {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.error_outline_rounded, size: 72, color: D.rose),
+        const Icon(
+          Icons.error_outline_rounded,
+          size: 72,
+          color: SaasPalette.danger,
+        ),
         const SizedBox(height: 16),
-        Text(
+        const Text(
           'Error al cargar los datos',
           style: TextStyle(
-            color: D.slate400,
+            color: SaasPalette.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -975,7 +993,10 @@ class _ErrorState extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           message,
-          style: TextStyle(color: D.slate600, fontSize: 12),
+          style: const TextStyle(
+            color: SaasPalette.textSecondary,
+            fontSize: 12,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
@@ -984,9 +1005,10 @@ class _ErrorState extends StatelessWidget {
           icon: const Icon(Icons.refresh_rounded),
           label: const Text('Reintentar'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: D.royalBlue,
+            backgroundColor: SaasPalette.brand600,
+            foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
         ),

@@ -30,12 +30,10 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 900),
     );
 
-    _textSlide = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
-    );
+    _textSlide = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
+        );
     _textOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _textController,
@@ -81,11 +79,7 @@ class _SplashScreenState extends State<SplashScreen>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                AppColors.navy,
-                Color(0xFF12283D),
-                AppColors.cobalt,
-              ],
+              colors: [AppColors.navy, Color(0xFF12283D), AppColors.cobalt],
               stops: [0.0, 0.5, 1.0],
             ),
           ),
@@ -118,7 +112,7 @@ class _SplashScreenState extends State<SplashScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Travel Tours',
+                          'Agente de Viajes',
                           style: GoogleFonts.inter(
                             fontSize: 42,
                             fontWeight: FontWeight.w800,
@@ -128,7 +122,7 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                         ),
                         Text(
-                          'FLORENCIA',
+                          'Panel Administrativo',
                           style: GoogleFonts.inter(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,

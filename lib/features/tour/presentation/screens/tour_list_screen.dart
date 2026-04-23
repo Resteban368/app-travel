@@ -1,17 +1,13 @@
-import 'package:agente_viajes/core/widgets/SmallBtn_widget.dart';
-import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'dart:math' as math;
-import '../../../../core/theme/premium_palette.dart';
+import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/layout/admin_shell.dart';
-import '../../../../core/di/injection_container.dart';
 import '../../../../config/app_router.dart';
+import '../../../../core/widgets/saas_ui_components.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/tour.dart';
 import '../bloc/tour_bloc.dart';
-import '../../../settings/domain/entities/sede.dart';
-import '../../../settings/presentation/bloc/sede_bloc.dart';
 
 class TourListScreen extends StatefulWidget {
   const TourListScreen({super.key});
@@ -20,21 +16,12 @@ class TourListScreen extends StatefulWidget {
   State<TourListScreen> createState() => _TourListScreenState();
 }
 
-class _TourListScreenState extends State<TourListScreen>
-    with TickerProviderStateMixin {
-  late final AnimationController _bgCtrl;
-  late final AnimationController _entryCtrl;
-
-  late final Animation<double> _headerOpacity;
-  late final Animation<Offset> _headerSlide;
-  late final Animation<double> _contentOpacity;
-
+class _TourListScreenState extends State<TourListScreen> {
   bool _filtersVisible = false;
   DateTimeRange? _dateRange;
-  final _minPriceCtrl = TextEditingController();
-  final _maxPriceCtrl = TextEditingController();
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
+  String _activeTab = 'Todos'; // Todos, Tours, Promos
   final _currencyFormat = NumberFormat.currency(
     locale: 'es_CO',
     symbol: '\$',
@@ -42,419 +29,385 @@ class _TourListScreenState extends State<TourListScreen>
   );
 
   @override
-  void initState() {
-    super.initState();
-    _bgCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 10),
-    )..repeat();
-
-    _entryCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-
-    _headerOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0, 0.4, curve: Curves.easeOut),
-      ),
-    );
-    _headerSlide =
-        Tween<Offset>(begin: const Offset(0, -0.05), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _entryCtrl,
-            curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
-          ),
-        );
-    _contentOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
-      ),
-    );
-
-    _entryCtrl.forward();
-  }
-
-  @override
   void dispose() {
-    _bgCtrl.dispose();
-    _entryCtrl.dispose();
-    _minPriceCtrl.dispose();
-    _maxPriceCtrl.dispose();
     _searchCtrl.dispose();
     super.dispose();
   }
 
   void _applyFilters() {
-    final minPrice = double.tryParse(
-      _minPriceCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
-    );
-    final maxPrice = double.tryParse(
-      _maxPriceCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
-    );
-    context.read<TourBloc>().add(
-      FilterTours(
-        startDate: _dateRange?.start,
-        endDate: _dateRange?.end,
-        minPrice: minPrice,
-        maxPrice: maxPrice,
-      ),
-    );
     setState(() => _filtersVisible = false);
+    context.read<TourBloc>().add(
+      FilterTours(startDate: _dateRange?.start, endDate: _dateRange?.end),
+    );
   }
 
   void _clearFilters() {
-    _minPriceCtrl.clear();
-    _maxPriceCtrl.clear();
     setState(() {
       _dateRange = null;
       _searchQuery = '';
       _searchCtrl.clear();
+      _filtersVisible = false;
     });
     context.read<TourBloc>().add(LoadTours());
   }
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isDesktop = width >= 800;
+
     return AdminShell(
       currentIndex: 1,
       child: Scaffold(
-        backgroundColor: D.bg,
-        body: Stack(
-          children: [
-            // Background Orbs
-            AnimatedBuilder(
-              animation: _bgCtrl,
-              builder: (context, _) => Stack(
-                children: [
-                  Positioned(
-                    top: -150 + math.sin(_bgCtrl.value * math.pi * 2) * 40,
-                    right: -100 + math.cos(_bgCtrl.value * math.pi * 2) * 30,
-                    child: _Orb(
-                      color: D.royalBlue.withOpacity(0.12),
-                      size: 500,
-                    ),
+        backgroundColor: SaasPalette.bgApp,
+        body: BlocBuilder<TourBloc, TourState>(
+          builder: (context, state) {
+            final authState = context.watch<AuthBloc>().state;
+            final canWrite =
+                authState is AuthAuthenticated &&
+                authState.user.hasPermission('tours');
+
+            List<Tour>? tours;
+            if (state is ToursLoaded) {
+              tours = state.filteredTours;
+            } else if (state is TourSaving && state.tours != null) {
+              tours = state.tours;
+            } else if (state is TourSaved && state.tours != null) {
+              tours = state.tours;
+            }
+
+            if (tours != null) {
+              if (_searchQuery.isNotEmpty) {
+                final query = _searchQuery.toLowerCase();
+                tours = tours
+                    .where((t) => t.name.toLowerCase().contains(query))
+                    .toList();
+              }
+              if (_activeTab == 'Tours') {
+                tours = tours.where((t) => !t.isPromotion).toList();
+              } else if (_activeTab == 'Promos') {
+                tours = tours.where((t) => t.isPromotion).toList();
+              }
+            }
+
+            return CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    isDesktop ? 32 : 16,
+                    32,
+                    isDesktop ? 32 : 16,
+                    0,
                   ),
-                  Positioned(
-                    bottom: -100 + math.cos(_bgCtrl.value * math.pi * 2) * 50,
-                    left: -50 + math.sin(_bgCtrl.value * math.pi * 2) * 40,
-                    child: _Orb(color: D.indigo.withOpacity(0.08), size: 400),
-                  ),
-                ],
-              ),
-            ),
-            Positioned.fill(child: CustomPaint(painter: _DotGridPainter())),
-
-            BlocProvider(
-              create: (_) => sl<SedeBloc>()..add(LoadSedes()),
-              child: BlocBuilder<SedeBloc, SedeState>(
-                builder: (context, sedeState) {
-                  final sedes = sedeState is SedesLoaded
-                      ? sedeState.sedes
-                      : <Sede>[];
-                  return BlocBuilder<TourBloc, TourState>(
-                    builder: (context, state) {
-                      final authState = context.watch<AuthBloc>().state;
-                      final canWrite =
-                          authState is AuthAuthenticated &&
-                          authState.user.canWrite('tours');
-
-                      List<Tour>? tours;
-                      if (state is ToursLoaded) {
-                        tours = state.filteredTours;
-                      } else if (state is TourSaving && state.tours != null) {
-                        tours = state.tours;
-                      } else if (state is TourSaved && state.tours != null) {
-                        tours = state.tours;
-                      }
-
-                      if (tours != null && _searchQuery.isNotEmpty) {
-                        final query = _searchQuery.toLowerCase();
-                        tours = tours
-                            .where((t) => t.name.toLowerCase().contains(query))
-                            .toList();
-                      }
-
-                      return CustomScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        slivers: [
-                          // Header
-                          SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-                            sliver: SliverToBoxAdapter(
-                              child: FadeTransition(
-                                opacity: _headerOpacity,
-                                child: SlideTransition(
-                                  position: _headerSlide,
-                                  child: _buildHeader(context, canWrite),
-                                ),
-                              ),
-                            ),
-                          ),
-                          _buildSearchBar(),
-                          if (_filtersVisible) _buildFilterPanel(context),
-                          SliverFadeTransition(
-                            opacity: _contentOpacity,
-                            sliver: _buildListContent(
-                              context,
-                              state,
-                              tours,
-                              canWrite,
-                              sedes,
-                            ),
-                          ),
-                          const SliverPadding(
-                            padding: EdgeInsets.only(bottom: 100),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, bool canWrite) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [D.royalBlue, D.cyan]),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.explore_rounded, color: Colors.white, size: 10),
-                  SizedBox(width: 6),
-                  Text(
-                    'GESTIÓN DE TOURS',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Catálogo de Aventuras',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.8,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Explora y administra tours mundiales.',
-              style: TextStyle(color: D.slate400, fontSize: 13),
-            ),
-          ],
-        ),
-        if (canWrite)
-          _AddBtn(
-            onPressed: () => Navigator.pushNamed(context, AppRouter.tourCreate),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        child: Row(
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: D.surface.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: D.border.withOpacity(0.5)),
-                ),
-                child: TextField(
-                  controller: _searchCtrl,
-                  onChanged: (v) => setState(() => _searchQuery = v),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'Buscar experiencia...',
-                    hintStyle: TextStyle(color: D.slate600, fontSize: 14),
-                    prefixIcon: Icon(
-                      Icons.search_rounded,
-                      color: D.slate600,
-                      size: 20,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 15,
-                    ),
+                  sliver: SliverToBoxAdapter(
+                    child: _buildModernHeader(context, canWrite, width),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            _FilterToggle(
-              isActive: _filtersVisible,
-              onTap: () => setState(() => _filtersVisible = !_filtersVisible),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterPanel(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: D.surface,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: D.border),
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _buildFilterInput(
-                    'Precio Mín',
-                    _minPriceCtrl,
-                    Icons.attach_money_rounded,
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    isDesktop ? 32 : 16,
+                    24,
+                    isDesktop ? 32 : 16,
+                    16,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: _buildSearchAndFilterTabs(width),
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildFilterInput(
-                    'Precio Máx',
-                    _maxPriceCtrl,
-                    Icons.attach_money_rounded,
+                if (_filtersVisible)
+                  SliverPadding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isDesktop ? 32 : 16,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: _buildFilterPanel(context),
+                    ),
                   ),
+                _buildListGridContent(
+                  context,
+                  state,
+                  tours,
+                  canWrite,
+                  isDesktop,
                 ),
+                const SliverPadding(padding: EdgeInsets.only(bottom: 60)),
               ],
-            ),
-            const SizedBox(height: 16),
-            _DateRangePicker(
-              range: _dateRange,
-              onTap: () async {
-                final range = await showDateRangePicker(
-                  context: context,
-                  firstDate: DateTime(2023),
-                  lastDate: DateTime(2030),
-                );
-                if (range != null) setState(() => _dateRange = range);
-              },
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: _clearFilters,
-                    child: const Text(
-                      'Limpiar Todo',
-                      style: TextStyle(color: D.slate400),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _applyFilters,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: D.royalBlue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text(
-                      'Aplicar Filtros',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildFilterInput(
-    String label,
-    TextEditingController ctrl,
-    IconData icon,
-  ) {
+  Widget _buildModernHeader(BuildContext context, bool canWrite, double width) {
+    final isTab = width < 900;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: D.slate600,
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-          ),
+        const SaasBreadcrumbs(
+          items: ['Inicio', 'Gestión de Tours', 'Catálogo'],
         ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: D.bg.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: D.border),
-          ),
-          child: TextField(
-            controller: ctrl,
-            keyboardType: TextInputType.number,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              hintText: '\$',
-              hintStyle: TextStyle(color: D.slate800),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Catálogo de aventuras',
+                    style: TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Explora y administra los tours mundiales disponibles para tus clientes.',
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+            const SizedBox(width: 16),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SaasButton(
+                  label: isTab ? '' : 'Filtros',
+                  icon: Icons.filter_list_rounded,
+                  isPrimary: false,
+                  onPressed: () =>
+                      setState(() => _filtersVisible = !_filtersVisible),
+                ),
+                const SizedBox(width: 12),
+                if (canWrite)
+                  SaasButton(
+                    label: isTab ? '' : 'Nuevo tour',
+                    icon: Icons.add,
+                    onPressed: () =>
+                        Navigator.pushNamed(context, AppRouter.tourCreate),
+                  ),
+              ],
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildListContent(
+  Widget _buildSearchAndFilterTabs(double width) {
+    final isMobile = width < 650;
+
+    final content = [
+      Expanded(
+        flex: isMobile ? 0 : 1,
+        child: Container(
+          height: 44,
+          decoration: BoxDecoration(
+            color: SaasPalette.bgCanvas,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: SaasPalette.border),
+          ),
+          child: Row(
+            children: [
+              const SizedBox(width: 12),
+              const Icon(
+                Icons.search,
+                size: 18,
+                color: SaasPalette.textTertiary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _searchCtrl,
+                  onChanged: (v) => setState(() => _searchQuery = v),
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 14,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'Buscar experiencia...',
+                    hintStyle: TextStyle(
+                      color: SaasPalette.textTertiary,
+                      fontSize: 14,
+                    ),
+                    border: InputBorder.none,
+                    isDense: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      if (isMobile) const SizedBox(height: 12),
+      Container(
+        height: 44,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: SaasPalette.bgSubtle,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: isMobile ? MainAxisSize.max : MainAxisSize.min,
+          children: ['Todos', 'Tours', 'Promos'].map((tab) {
+            final isSelected = _activeTab == tab;
+            return Expanded(
+              flex: isMobile ? 1 : 0,
+              child: GestureDetector(
+                onTap: () => setState(() => _activeTab = tab),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? SaasPalette.bgCanvas
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Text(
+                    tab,
+                    style: TextStyle(
+                      color: isSelected
+                          ? SaasPalette.textPrimary
+                          : SaasPalette.textTertiary,
+                      fontSize: 13,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    ];
+
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: content.map((e) => e is Expanded ? e.child : e).toList(),
+      );
+    }
+
+    return Row(children: content);
+  }
+
+  Widget _buildFilterPanel(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Filtrar por fecha',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: SaasPalette.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: () async {
+              final range = await showDateRangePicker(
+                context: context,
+                firstDate: DateTime(2023),
+                lastDate: DateTime(2030),
+              );
+              if (range != null) setState(() => _dateRange = range);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: SaasPalette.border),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 16,
+                    color: SaasPalette.textTertiary,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    _dateRange == null
+                        ? 'Seleccionar rango'
+                        : '${DateFormat('dd/MM').format(_dateRange!.start)} - ${DateFormat('dd/MM').format(_dateRange!.end)}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: SaasPalette.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: _clearFilters,
+                child: const Text('Limpiar'),
+              ),
+              const SizedBox(width: 12),
+              SaasButton(label: 'Aplicar', onPressed: _applyFilters),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildListGridContent(
     BuildContext context,
     TourState state,
     List<Tour>? tours,
     bool canWrite,
-    List<Sede> sedes,
+    bool isDesktop,
   ) {
     if (state is TourLoading && tours == null) {
-      return SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (_, i) => _SkelCard(),
-          childCount: 3,
+      return SliverPadding(
+        padding: EdgeInsets.symmetric(horizontal: isDesktop ? 32 : 16),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (_, i) => _SkelCard(),
+            childCount: 5,
+          ),
         ),
       );
     }
+
     if (tours == null || tours.isEmpty) {
       return SliverFillRemaining(
         child: _EmptyState(
@@ -464,48 +417,47 @@ class _TourListScreenState extends State<TourListScreen>
     }
 
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+      padding: EdgeInsets.fromLTRB(
+        isDesktop ? 32 : 16,
+        4,
+        isDesktop ? 32 : 16,
+        10,
+      ),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate((context, index) {
-          final tour = tours[index];
-          return _TourCard(
-            tour: tour,
+        delegate: SliverChildBuilderDelegate(
+          (context, index) => _TourRow(
+            tour: tours[index],
             canWrite: canWrite,
-            index: index,
             currencyFormat: _currencyFormat,
-            sedes: sedes,
-          );
-        }, childCount: tours.length),
+          ),
+          childCount: tours.length,
+        ),
       ),
     );
   }
 }
 
-class _TourCard extends StatefulWidget {
+class _TourRow extends StatefulWidget {
   final Tour tour;
   final bool canWrite;
-  final int index;
   final NumberFormat currencyFormat;
-  final List<Sede> sedes;
-  const _TourCard({
+  const _TourRow({
     required this.tour,
     required this.canWrite,
-    required this.index,
     required this.currencyFormat,
-    required this.sedes,
   });
 
   @override
-  State<_TourCard> createState() => _TourCardState();
+  State<_TourRow> createState() => _TourRowState();
 }
 
-class _TourCardState extends State<_TourCard> {
+class _TourRowState extends State<_TourRow> {
   bool _hovered = false;
 
   void _confirmDelete(BuildContext context) {
     showDialog(
       context: context,
-      builder: (ctx) => _PremiumConfirmDialog(
+      builder: (ctx) => _SaaSConfirmDialog(
         title: '¿Eliminar Experiencia?',
         content:
             'Confirma si deseas eliminar "${widget.tour.name}". Esta acción no se puede deshacer.',
@@ -520,428 +472,239 @@ class _TourCardState extends State<_TourCard> {
   @override
   Widget build(BuildContext context) {
     final tour = widget.tour;
-    final isActive = tour.isActive && !tour.isDraft;
+    final isPromo = tour.isPromotion;
+
+    final Color typeColor =
+        isPromo ? SaasPalette.warning.withValues(alpha: 0.12) : SaasPalette.brand50;
+    final Color typeText =
+        isPromo ? SaasPalette.warning : SaasPalette.brand600;
+
+    final ocupados = (tour.cupos ?? 0) - (tour.cuposDisponibles ?? 0);
+    final total = tour.cupos ?? 1;
+    final double progress = (ocupados / total).clamp(0.0, 1.0);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        margin: const EdgeInsets.only(bottom: 20),
+        duration: const Duration(milliseconds: 180),
+        margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          color: isActive ? D.surface : D.surface.withOpacity(0.4),
-          borderRadius: BorderRadius.circular(28),
+          color: SaasPalette.bgCanvas,
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: _hovered ? D.royalBlue.withOpacity(0.5) : D.border,
-            width: 1.5,
+            color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
           ),
-          boxShadow: _hovered
-              ? [
-                  BoxShadow(
-                    color: D.royalBlue.withOpacity(0.15),
-                    blurRadius: 40,
-                    offset: const Offset(0, 10),
-                  ),
-                ]
-              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(_hovered ? 0.07 : 0.03),
+              blurRadius: _hovered ? 16 : 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: InkWell(
           onTap: () =>
               Navigator.pushNamed(context, AppRouter.tourEdit, arguments: tour),
-          borderRadius: BorderRadius.circular(28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Image Header
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(26),
-                    ),
-                    child: Container(
-                      height: 180,
-                      width: double.infinity,
-                      decoration: BoxDecoration(color: D.bg),
-                      child: Image.network(
-                        tour.imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Center(
-                          child: Icon(
-                            Icons.image_not_supported_rounded,
-                            color: D.slate800,
-                            size: 40,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Left icon
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: typeColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isPromo
+                        ? Icons.local_offer_rounded
+                        : Icons.map_outlined,
+                    color: typeText,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+
+                // Main info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Name + badges
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              tour.name,
+                              style: const TextStyle(
+                                color: SaasPalette.textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 16,
-                    left: 16,
-                    child: _Tag(
-                      label: tour.isPromotion ? 'PROMO' : 'TOUR',
-                      color: tour.isPromotion ? D.gold : D.royalBlue,
-                    ),
-                  ),
-                  if (tour.isDraft)
-                    Positioned(
-                      top: 16,
-                      right: 16,
-                      child: _Tag(label: 'BORRADOR', color: D.rose),
-                    ),
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 80,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [D.surface, Colors.transparent],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 12,
-                    right: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: D.royalBlue,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black26, blurRadius: 10),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: typeColor,
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              isPromo ? 'PROMO' : 'TOUR',
+                              style: TextStyle(
+                                color: typeText,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: SaasPalette.bgSubtle,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '#TT-${tour.idTour}',
+                              style: const TextStyle(
+                                color: SaasPalette.textTertiary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                      child: Text(
-                        widget.currencyFormat.format(tour.price),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 16,
-                        ),
+                      const SizedBox(height: 4),
+                      // Dates + location
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today_outlined,
+                            size: 12,
+                            color: SaasPalette.textTertiary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${DateFormat('dd MMM').format(tour.startDate)} — ${DateFormat('dd MMM yyyy').format(tour.endDate)}',
+                            style: const TextStyle(
+                              color: SaasPalette.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Icon(
+                            Icons.location_on_outlined,
+                            size: 12,
+                            color: SaasPalette.textTertiary,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              tour.departurePoint,
+                              style: const TextStyle(
+                                color: SaasPalette.textSecondary,
+                                fontSize: 12,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Progress bar
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                minHeight: 5,
+                                backgroundColor: SaasPalette.bgSubtle,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  progress > 0.8
+                                      ? SaasPalette.warning
+                                      : SaasPalette.brand600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '$ocupados/$total cupos',
+                            style: const TextStyle(
+                              color: SaasPalette.textTertiary,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Price
+                Text(
+                  widget.currencyFormat.format(tour.price),
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // Actions
+                if (widget.canWrite)
+                  InkWell(
+                    onTap: () => _confirmDelete(context),
+                    borderRadius: BorderRadius.circular(8),
+                    child: const Padding(
+                      padding: EdgeInsets.all(6),
+                      child: Icon(
+                        Icons.delete_outline_rounded,
+                        color: SaasPalette.danger,
+                        size: 18,
                       ),
                     ),
                   ),
-                ],
-              ),
-
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      tour.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 19,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _InfoRow(
-                      icon: Icons.calendar_today_rounded,
-                      text:
-                          '${DateFormat('MMM dd').format(tour.startDate)} - ${DateFormat('MMM dd, yyyy').format(tour.endDate)}',
-                    ),
-                    const SizedBox(height: 8),
-                    _InfoRow(
-                      icon: Icons.place_rounded,
-                      text: 'Salida: ${tour.departurePoint}',
-                    ),
-                    const SizedBox(height: 8),
-                    _InfoRow(
-                      icon: Icons.business_rounded,
-                      text: () {
-                        if (tour.sedeId == null) return 'Sin sede asignada';
-                        final sede = widget.sedes
-                            .where((s) => s.id == tour.sedeId)
-                            .firstOrNull;
-                        return sede != null
-                            ? 'Sede: ${sede.nombreSede}'
-                            : 'Sede #${tour.sedeId}';
-                      }(),
-                    ),
-                    if (tour.cuposDisponibles != null || tour.cupos != null) ...[
-                      const SizedBox(height: 8),
-                      _CuposRow(
-                        cuposDisponibles: tour.cuposDisponibles,
-                        cupos: tour.cupos,
-                      ),
-                    ],
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _InclusionsStrip(items: tour.inclusions),
-                        ),
-                        if (widget.canWrite) _buildAdminActions(context),
-                      ],
-                    ),
-                  ],
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: SaasPalette.textTertiary,
+                  size: 20,
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAdminActions(BuildContext context) {
-    return SmallBtn(
-      icon: Icons.delete_outline_rounded,
-      color: D.rose,
-      onTap: () => _confirmDelete(context),
-    );
-  }
-}
-
-class _Tag extends StatelessWidget {
-  final String label;
-  final Color color;
-  const _Tag({required this.label, required this.color});
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: color,
-      borderRadius: BorderRadius.circular(8),
-      boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
-    ),
-    child: Text(
-      label,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 10,
-        fontWeight: FontWeight.w900,
-        letterSpacing: 1,
-      ),
-    ),
-  );
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _InfoRow({required this.icon, required this.text});
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Icon(icon, color: D.slate600, size: 14),
-      const SizedBox(width: 8),
-      Expanded(
-        child: Text(text, style: TextStyle(color: D.slate400, fontSize: 13)),
-      ),
-    ],
-  );
-}
-
-class _CuposRow extends StatelessWidget {
-  final int? cuposDisponibles;
-  final int? cupos;
-  const _CuposRow({this.cuposDisponibles, this.cupos});
-
-  @override
-  Widget build(BuildContext context) {
-    final disponibles = cuposDisponibles ?? 0;
-    final total = cupos;
-
-    Color indicatorColor;
-    if (disponibles == 0) {
-      indicatorColor = D.rose;
-    } else if (total != null && disponibles <= total * 0.2) {
-      indicatorColor = D.gold;
-    } else {
-      indicatorColor = const Color(0xFF34D399);
-    }
-
-    final label = total != null
-        ? '$disponibles / $total cupos disponibles'
-        : '$disponibles cupos disponibles';
-
-    return Row(
-      children: [
-        Icon(Icons.people_alt_rounded, color: D.slate600, size: 14),
-        const SizedBox(width: 8),
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: indicatorColor,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: TextStyle(color: D.slate400, fontSize: 13),
-        ),
-      ],
-    );
-  }
-}
-
-class _InclusionsStrip extends StatelessWidget {
-  final List<String> items;
-  const _InclusionsStrip({required this.items});
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 30,
-    child: ListView.separated(
-      scrollDirection: Axis.horizontal,
-      itemCount: math.min(items.length, 3),
-      separatorBuilder: (_, __) => const SizedBox(width: 8),
-      itemBuilder: (context, i) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: D.bg,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: D.border),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          items[i],
-          style: TextStyle(color: D.slate400, fontSize: 11),
-        ),
-      ),
-    ),
-  );
-}
-
-class _FilterToggle extends StatelessWidget {
-  final bool isActive;
-  final VoidCallback onTap;
-  const _FilterToggle({required this.isActive, required this.onTap});
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(16),
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isActive ? D.royalBlue : D.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isActive ? D.royalBlue : D.border),
-      ),
-      child: Icon(
-        isActive ? Icons.filter_list_off_rounded : Icons.filter_list_rounded,
-        color: isActive ? Colors.white : D.slate600,
-        size: 24,
-      ),
-    ),
-  );
-}
-
-class _DateRangePicker extends StatelessWidget {
-  final DateTimeRange? range;
-  final VoidCallback onTap;
-  const _DateRangePicker({required this.range, required this.onTap});
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: D.bg.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: D.border),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.date_range_rounded, color: D.slate600, size: 20),
-          const SizedBox(width: 12),
-          Text(
-            range == null
-                ? 'Cualquier Fecha'
-                : '${DateFormat('dd/MM/yyyy').format(range!.start)} - ${DateFormat('dd/MM/yyyy').format(range!.end)}',
-            style: TextStyle(color: range == null ? D.slate600 : Colors.white),
-          ),
-          const Spacer(),
-          Icon(Icons.expand_more_rounded, color: D.slate600),
-        ],
-      ),
-    ),
-  );
-}
-
-class _AddBtn extends StatelessWidget {
-  final VoidCallback onPressed;
-  const _AddBtn({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [D.royalBlue, D.indigo]),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: D.royalBlue.withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
+              ],
             ),
-          ],
+          ),
         ),
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
       ),
     );
   }
 }
 
-class _Orb extends StatelessWidget {
-  final Color color;
-  final double size;
-  const _Orb({required this.color, required this.size});
-  @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: RadialGradient(colors: [color, Colors.transparent]),
-    ),
-  );
-}
-
-class _DotGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = D.border.withOpacity(0.3);
-    const spacing = 32.0;
-    for (double i = 0; i < size.width; i += spacing) {
-      for (double j = 0; j < size.height; j += spacing) {
-        canvas.drawCircle(Offset(i, j), 0.8, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
-}
 
 class _SkelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
-    height: 300,
-    margin: const EdgeInsets.only(bottom: 20, left: 24, right: 24),
+    height: 120,
+    margin: const EdgeInsets.only(bottom: 16),
     decoration: BoxDecoration(
-      color: D.surface.withOpacity(0.5),
-      borderRadius: BorderRadius.circular(28),
+      color: SaasPalette.bgCanvas,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: SaasPalette.border),
     ),
   );
 }
@@ -956,18 +719,28 @@ class _EmptyState extends StatelessWidget {
       children: [
         Icon(
           isSearch ? Icons.search_off_rounded : Icons.tour_rounded,
-          size: 80,
-          color: D.slate800,
+          size: 64,
+          color: SaasPalette.textTertiary,
         ),
         const SizedBox(height: 16),
         Text(
           isSearch
-              ? 'No hay tours bajo esos filtros'
-              : 'Aún no hay tours registrados',
-          style: TextStyle(
-            color: D.slate600,
+              ? 'No se encontraron resultados'
+              : 'No hay tours disponibles',
+          style: const TextStyle(
+            color: SaasPalette.textPrimary,
             fontSize: 16,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          isSearch
+              ? 'Intenta con otros términos o filtros.'
+              : 'Pronto tendremos nuevas aventuras para ti.',
+          style: const TextStyle(
+            color: SaasPalette.textSecondary,
+            fontSize: 14,
           ),
         ),
       ],
@@ -975,34 +748,47 @@ class _EmptyState extends StatelessWidget {
   );
 }
 
-class _PremiumConfirmDialog extends StatelessWidget {
+class _SaaSConfirmDialog extends StatelessWidget {
   final String title, content;
   final VoidCallback onConfirm;
-  const _PremiumConfirmDialog({
+  const _SaaSConfirmDialog({
     required this.title,
     required this.content,
     required this.onConfirm,
   });
   @override
   Widget build(BuildContext context) => Dialog(
+    elevation: 0,
     backgroundColor: Colors.transparent,
     child: Container(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(24),
+      constraints: const BoxConstraints(maxWidth: 400),
       decoration: BoxDecoration(
-        color: D.surface,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: D.border),
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.warning_amber_rounded, color: D.rose, size: 54),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: SaasPalette.danger.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: SaasPalette.danger,
+              size: 32,
+            ),
+          ),
           const SizedBox(height: 20),
           Text(
             title,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
+              color: SaasPalette.textPrimary,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1010,7 +796,10 @@ class _PremiumConfirmDialog extends StatelessWidget {
           Text(
             content,
             textAlign: TextAlign.center,
-            style: TextStyle(color: D.slate400, fontSize: 14),
+            style: const TextStyle(
+              color: SaasPalette.textSecondary,
+              fontSize: 14,
+            ),
           ),
           const SizedBox(height: 32),
           Row(
@@ -1020,25 +809,13 @@ class _PremiumConfirmDialog extends StatelessWidget {
                   onPressed: () => Navigator.pop(context),
                   child: const Text(
                     'Cancelar',
-                    style: TextStyle(color: D.slate400),
+                    style: TextStyle(color: SaasPalette.textTertiary),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: ElevatedButton(
-                  onPressed: onConfirm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: D.rose,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
-                    'Confirmar',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
+                child: SaasButton(label: 'Eliminar', onPressed: onConfirm),
               ),
             ],
           ),

@@ -145,7 +145,7 @@ class ApiClienteRepository implements ClienteRepository {
     return {
       if (cliente.id != null) 'id_cliente': cliente.id,
       'nombre': cliente.nombre,
-      'correo': cliente.correo,
+      if (cliente.correo.isNotEmpty) 'correo': cliente.correo,
       'telefono': cliente.telefono,
       'tipo_documento': cliente.tipoDocumento,
       'documento': cliente.documento,

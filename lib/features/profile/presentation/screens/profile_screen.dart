@@ -1,7 +1,7 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/theme/premium_palette.dart';
+import '../../../../core/theme/saas_palette.dart';
+import '../../../../core/widgets/saas_ui_components.dart';
 import '../../../../core/layout/admin_shell.dart';
 import '../../../../config/app_router.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -16,6 +16,9 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  BODY
+// ─────────────────────────────────────────────────────────────────────────────
 class _ProfileBody extends StatefulWidget {
   const _ProfileBody();
 
@@ -23,62 +26,13 @@ class _ProfileBody extends StatefulWidget {
   State<_ProfileBody> createState() => _ProfileBodyState();
 }
 
-class _ProfileBodyState extends State<_ProfileBody>
-    with TickerProviderStateMixin {
-  late final AnimationController _bgCtrl;
-  late final AnimationController _entryCtrl;
-
-  late final Animation<double> _headerOpacity;
-  late final Animation<Offset> _headerSlide;
-  late final Animation<double> _contentOpacity;
-
+class _ProfileBodyState extends State<_ProfileBody> {
   @override
   void initState() {
     super.initState();
-    _bgCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 14),
-    )..repeat();
-
-    _entryCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-
-    _headerOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0, 0.4, curve: Curves.easeOut),
-      ),
-    );
-    _headerSlide = Tween<Offset>(
-      begin: const Offset(0, -0.05),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
-      ),
-    );
-    _contentOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
-      ),
-    );
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) context.read<AuthBloc>().add(const RefreshProfile());
     });
-
-    _entryCtrl.forward();
-  }
-
-  @override
-  void dispose() {
-    _bgCtrl.dispose();
-    _entryCtrl.dispose();
-    super.dispose();
   }
 
   @override
@@ -94,180 +48,114 @@ class _ProfileBodyState extends State<_ProfileBody>
     }
 
     return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (previous, current) {
+        if (current is AuthInitial) return true;
+        if (current is ChangePasswordFailed) return true;
+        if (current is AuthAuthenticated && previous is ChangePasswordLoading) return true;
+        return false;
+      },
       listener: (context, state) {
         if (state is AuthInitial) {
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            AppRouter.login,
-            (_) => false,
-          );
+          Navigator.of(
+            context,
+          ).pushNamedAndRemoveUntil(AppRouter.login, (_) => false);
         } else if (state is ChangePasswordFailed) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
-              backgroundColor: D.rose,
+              backgroundColor: SaasPalette.danger,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              margin: const EdgeInsets.all(16),
+            ),
+          );
+        } else if (state is AuthAuthenticated) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Contraseña actualizada correctamente'),
+              backgroundColor: SaasPalette.success,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               margin: const EdgeInsets.all(16),
             ),
           );
         }
       },
       child: Scaffold(
-      backgroundColor: D.bg,
-      body: Stack(
-        children: [
-          // Background orbs
-          AnimatedBuilder(
-            animation: _bgCtrl,
-            builder: (context2, child2) => Stack(
+        backgroundColor: SaasPalette.bgApp,
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+          child: Center(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Positioned(
-                  top: -80 + math.sin(_bgCtrl.value * math.pi * 2) * 40,
-                  right: -60 + math.cos(_bgCtrl.value * math.pi * 2) * 30,
-                  child: _Orb(
-                    color: D.royalBlue.withValues(alpha: 0.08),
-                    size: 420,
+                // ── Header ───────────────────────────────────────────────
+                const SaasBreadcrumbs(items: ['Inicio', 'Mi Perfil']),
+                const SizedBox(height: 16),
+                const Text(
+                  'Configuración de Perfil',
+                  style: TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
                   ),
                 ),
-                Positioned(
-                  bottom: -40 + math.cos(_bgCtrl.value * math.pi * 2) * 35,
-                  left: -80 + math.sin(_bgCtrl.value * math.pi * 2) * 50,
-                  child: _Orb(
-                    color: D.indigo.withValues(alpha: 0.06),
-                    size: 320,
+                const SizedBox(height: 4),
+                const Text(
+                  'Gestiona tu información personal y niveles de acceso.',
+                  style: TextStyle(
+                    color: SaasPalette.textSecondary,
+                    fontSize: 14,
                   ),
                 ),
+                const SizedBox(height: 32),
+
+                if (user != null) ...[
+                  _AvatarCard(user: user),
+                  const SizedBox(height: 16),
+                  _InfoCard(user: user),
+                  const SizedBox(height: 16),
+                  _PermissionsCard(user: user),
+                  const SizedBox(height: 16),
+                  const _ChangePasswordCard(),
+                ] else
+                  const SaasEmptyState(
+                    icon: Icons.person_off_outlined,
+                    title: 'Usuario no disponible',
+                    subtitle: 'No se pudo cargar la información del usuario.',
+                  ),
+
+                const SizedBox(height: 48),
               ],
             ),
           ),
-          Positioned.fill(child: CustomPaint(painter: _DotGridPainter())),
-
-          // Content
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: Center(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header Section
-                    FadeTransition(
-                      opacity: _headerOpacity,
-                      child: SlideTransition(
-                        position: _headerSlide,
-                        child: _buildHeader(),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    if (user != null)
-                      FadeTransition(
-                        opacity: _contentOpacity,
-                        child: Column(
-                          children: [
-                            _AvatarCard(user: user),
-                            const SizedBox(height: 16),
-                            _InfoCard(user: user),
-                            const SizedBox(height: 16),
-                            _PermissionsCard(user: user),
-                            const SizedBox(height: 16),
-                            const _ChangePasswordCard(),
-                          ],
-                        ),
-                      )
-                    else
-                      const Center(
-                        child: Text(
-                          'No se pudo cargar la información del usuario.',
-                          style: TextStyle(color: D.slate400),
-                        ),
-                      ),
-
-                    const SizedBox(height: 48),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
-    ));
-  }
-
-  Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [D.royalBlue, D.cyan]),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.badge_rounded,
-                color: Colors.white,
-                size: 10,
-              ),
-              SizedBox(width: 6),
-              Text(
-                'MI CUENTA',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.1,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Configuración de Perfil',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.8,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Gestiona tu información y niveles de acceso.',
-          style: TextStyle(color: D.slate400, fontSize: 13),
-        ),
-      ],
     );
   }
 }
 
-// ─── Avatar + nombre card ────────────────────────────────────────────────────
-
+// ─────────────────────────────────────────────────────────────────────────────
+//  AVATAR CARD
+// ─────────────────────────────────────────────────────────────────────────────
 class _AvatarCard extends StatelessWidget {
   final User user;
   const _AvatarCard({required this.user});
 
   String get _initials {
     final parts = user.name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
+    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     return user.name.isNotEmpty ? user.name[0].toUpperCase() : '?';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: D.surface,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: D.border),
-      ),
+    return _SaasCard(
       child: Row(
         children: [
           // Avatar con iniciales
@@ -275,19 +163,8 @@ class _AvatarCard extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [D.royalBlue, D.cyan],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: SaasPalette.brand600,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: D.royalBlue.withValues(alpha: 0.35),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
             ),
             child: Center(
               child: Text(
@@ -309,16 +186,18 @@ class _AvatarCard extends StatelessWidget {
                 Text(
                   user.name,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: SaasPalette.textPrimary,
                     fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.3,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   user.username,
-                  style: TextStyle(color: D.slate400, fontSize: 13),
+                  style: const TextStyle(
+                    color: SaasPalette.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 _RoleBadge(role: user.role),
@@ -339,15 +218,15 @@ class _RoleBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final isAdmin = role == 'admin';
     final label = isAdmin ? 'Administrador' : 'Agente';
-    final color = isAdmin ? D.gold : D.skyBlue;
+    final color = isAdmin ? SaasPalette.warning : SaasPalette.brand600;
     final icon = isAdmin ? Icons.shield_rounded : Icons.badge_rounded;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withOpacity(0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -369,44 +248,33 @@ class _RoleBadge extends StatelessWidget {
   }
 }
 
-// ─── Info card ───────────────────────────────────────────────────────────────
-
+// ─────────────────────────────────────────────────────────────────────────────
+//  INFO CARD
+// ─────────────────────────────────────────────────────────────────────────────
 class _InfoCard extends StatelessWidget {
   final User user;
   const _InfoCard({required this.user});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: D.surface,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: D.border),
-      ),
+    return _SaasCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionLabel('INFORMACIÓN DE CUENTA'),
+          _SectionLabel(text: 'INFORMACIÓN DE CUENTA'),
           const SizedBox(height: 16),
           _InfoRow(
             icon: Icons.person_outline_rounded,
             label: 'Nombre',
             value: user.name,
           ),
-          const Divider(color: D.border, height: 24),
+          const Divider(color: SaasPalette.border, height: 24),
           _InfoRow(
             icon: Icons.email_outlined,
-            label: 'Correo',
+            label: 'Correo electrónico',
             value: user.username,
           ),
-          // const Divider(color: D.border, height: 24),
-          // _InfoRow(
-          //   icon: Icons.badge_outlined,
-          //   label: 'ID de usuario',
-          //   value: '#${user.id}',
-          // ),
-          const Divider(color: D.border, height: 24),
+          const Divider(color: SaasPalette.border, height: 24),
           _InfoRow(
             icon: Icons.manage_accounts_outlined,
             label: 'Rol',
@@ -422,6 +290,7 @@ class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+
   const _InfoRow({
     required this.icon,
     required this.label,
@@ -436,10 +305,10 @@ class _InfoRow extends StatelessWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: D.royalBlue.withValues(alpha: 0.1),
+            color: SaasPalette.brand600.withOpacity(0.08),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: D.skyBlue, size: 18),
+          child: Icon(icon, color: SaasPalette.brand600, size: 18),
         ),
         const SizedBox(width: 14),
         Expanded(
@@ -447,9 +316,9 @@ class _InfoRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                label,
-                style: TextStyle(
-                  color: D.slate600,
+                label.toUpperCase(),
+                style: const TextStyle(
+                  color: SaasPalette.textTertiary,
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
@@ -459,7 +328,7 @@ class _InfoRow extends StatelessWidget {
               Text(
                 value,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: SaasPalette.textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -472,8 +341,9 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-// ─── Permisos card ───────────────────────────────────────────────────────────
-
+// ─────────────────────────────────────────────────────────────────────────────
+//  PERMISSIONS CARD
+// ─────────────────────────────────────────────────────────────────────────────
 class _PermissionsCard extends StatelessWidget {
   final User user;
   const _PermissionsCard({required this.user});
@@ -512,30 +382,24 @@ class _PermissionsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final permisos = user.permisos;
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: D.surface,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: D.border),
-      ),
+    return _SaasCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              _sectionLabel('PERMISOS ASIGNADOS'),
+              const _SectionLabel(text: 'PERMISOS ASIGNADOS'),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: D.skyBlue.withValues(alpha: 0.1),
+                  color: SaasPalette.brand50,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '${permisos.length} módulo${permisos.length != 1 ? 's' : ''}',
                   style: const TextStyle(
-                    color: D.skyBlue,
+                    color: SaasPalette.brand600,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -545,13 +409,13 @@ class _PermissionsCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           if (permisos.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
               child: Center(
                 child: Text(
                   'Sin permisos asignados',
                   style: TextStyle(
-                    color: D.slate400,
+                    color: SaasPalette.textTertiary,
                     fontSize: 13,
                     fontStyle: FontStyle.italic,
                   ),
@@ -571,7 +435,6 @@ class _PermissionsCard extends StatelessWidget {
                 child: _PermissionRow(
                   icon: icon,
                   label: label,
-                  level: value,
                   isCompleto: isCompleto,
                 ),
               );
@@ -585,19 +448,17 @@ class _PermissionsCard extends StatelessWidget {
 class _PermissionRow extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String level;
   final bool isCompleto;
 
   const _PermissionRow({
     required this.icon,
     required this.label,
-    required this.level,
     required this.isCompleto,
   });
 
   @override
   Widget build(BuildContext context) {
-    final badgeColor = isCompleto ? D.emerald : D.skyBlue;
+    final badgeColor = isCompleto ? SaasPalette.success : SaasPalette.brand600;
     final badgeLabel = isCompleto ? 'Completo' : 'Lectura';
     final badgeIcon = isCompleto
         ? Icons.edit_rounded
@@ -606,9 +467,9 @@ class _PermissionRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: D.bg.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: D.border),
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SaasPalette.border),
       ),
       child: Row(
         children: [
@@ -616,7 +477,7 @@ class _PermissionRow extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: badgeColor.withValues(alpha: 0.1),
+              color: badgeColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: badgeColor, size: 17),
@@ -626,7 +487,7 @@ class _PermissionRow extends StatelessWidget {
             child: Text(
               label,
               style: const TextStyle(
-                color: Colors.white,
+                color: SaasPalette.textPrimary,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -635,9 +496,9 @@ class _PermissionRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
             decoration: BoxDecoration(
-              color: badgeColor.withValues(alpha: 0.12),
+              color: badgeColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
+              border: Border.all(color: badgeColor.withOpacity(0.25)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -661,8 +522,9 @@ class _PermissionRow extends StatelessWidget {
   }
 }
 
-// ─── Change Password card ─────────────────────────────────────────────────────
-
+// ─────────────────────────────────────────────────────────────────────────────
+//  CHANGE PASSWORD CARD
+// ─────────────────────────────────────────────────────────────────────────────
 class _ChangePasswordCard extends StatefulWidget {
   const _ChangePasswordCard();
 
@@ -690,29 +552,25 @@ class _ChangePasswordCardState extends State<_ChangePasswordCard> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    context.read<AuthBloc>().add(ChangePasswordRequested(
-      currentPassword: _currentCtrl.text,
-      newPassword: _newCtrl.text,
-    ));
+    context.read<AuthBloc>().add(
+      ChangePasswordRequested(
+        currentPassword: _currentCtrl.text,
+        newPassword: _newCtrl.text,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final isLoading = context.watch<AuthBloc>().state is ChangePasswordLoading;
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: D.surface,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: D.border),
-      ),
+    return _SaasCard(
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionLabel('CAMBIAR CONTRASEÑA'),
+            const _SectionLabel(text: 'CAMBIAR CONTRASEÑA'),
             const SizedBox(height: 20),
             _PasswordField(
               controller: _currentCtrl,
@@ -720,8 +578,9 @@ class _ChangePasswordCardState extends State<_ChangePasswordCard> {
               hint: 'Ingresa tu contraseña actual',
               visible: _showCurrent,
               onToggle: () => setState(() => _showCurrent = !_showCurrent),
-              validator: (v) =>
-                  (v == null || v.isEmpty) ? 'Ingresa tu contraseña actual' : null,
+              validator: (v) => (v == null || v.isEmpty)
+                  ? 'Ingresa tu contraseña actual'
+                  : null,
             ),
             const SizedBox(height: 14),
             _PasswordField(
@@ -731,7 +590,8 @@ class _ChangePasswordCardState extends State<_ChangePasswordCard> {
               visible: _showNew,
               onToggle: () => setState(() => _showNew = !_showNew),
               validator: (v) {
-                if (v == null || v.isEmpty) return 'Ingresa la nueva contraseña';
+                if (v == null || v.isEmpty)
+                  return 'Ingresa la nueva contraseña';
                 if (v.length < 8) return 'Mínimo 8 caracteres';
                 return null;
               },
@@ -744,7 +604,8 @@ class _ChangePasswordCardState extends State<_ChangePasswordCard> {
               visible: _showConfirm,
               onToggle: () => setState(() => _showConfirm = !_showConfirm),
               validator: (v) {
-                if (v == null || v.isEmpty) return 'Confirma la nueva contraseña';
+                if (v == null || v.isEmpty)
+                  return 'Confirma la nueva contraseña';
                 if (v != _newCtrl.text) return 'Las contraseñas no coinciden';
                 return null;
               },
@@ -752,44 +613,34 @@ class _ChangePasswordCardState extends State<_ChangePasswordCard> {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              height: 48,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: isLoading
-                      ? null
-                      : const LinearGradient(
-                          colors: [D.royalBlue, D.cyan],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                  color: isLoading ? D.surfaceHigh : null,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: TextButton(
-                  onPressed: isLoading ? null : _submit,
-                  style: TextButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+              child: ElevatedButton(
+                onPressed: isLoading ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SaasPalette.brand600,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: SaasPalette.bgSubtle,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: D.skyBlue,
-                          ),
-                        )
-                      : const Text(
-                          'Cambiar contraseña',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                          ),
-                        ),
                 ),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: SaasPalette.brand600,
+                        ),
+                      )
+                    : const Text(
+                        'Cambiar contraseña',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -824,49 +675,59 @@ class _PasswordField extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            color: D.slate400,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.4,
+            color: SaasPalette.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
           obscureText: !visible,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
           validator: validator,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: D.slate600, fontSize: 13),
+            hintStyle: const TextStyle(
+              color: SaasPalette.textTertiary,
+              fontSize: 13,
+            ),
             filled: true,
-            fillColor: D.bg,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            fillColor: SaasPalette.bgApp,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: D.border),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: SaasPalette.border),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: D.border),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: SaasPalette.border),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: D.skyBlue),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(
+                color: SaasPalette.brand600,
+                width: 1.5,
+              ),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: D.rose),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: SaasPalette.danger),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: D.rose),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: SaasPalette.danger),
             ),
             suffixIcon: IconButton(
               onPressed: onToggle,
               icon: Icon(
-                visible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                color: D.slate400,
+                visible
+                    ? Icons.visibility_off_rounded
+                    : Icons.visibility_rounded,
+                color: SaasPalette.textTertiary,
                 size: 18,
               ),
             ),
@@ -877,63 +738,66 @@ class _PasswordField extends StatelessWidget {
   }
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+//  LOCAL HELPERS  (específicos de esta pantalla)
+// ─────────────────────────────────────────────────────────────────────────────
 
-Widget _sectionLabel(String text) {
-  return Row(
-    children: [
-      Container(
-        width: 3,
-        height: 13,
-        decoration: BoxDecoration(
-          color: D.skyBlue,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-      const SizedBox(width: 8),
-      Text(
-        text,
-        style: TextStyle(
-          color: D.slate400,
-          fontSize: 10,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 1.2,
-        ),
-      ),
-    ],
-  );
-}
-
-class _Orb extends StatelessWidget {
-  final Color color;
-  final double size;
-  const _Orb({required this.color, required this.size});
+/// Card contenedor estándar del diseño SaaS (blanco, borde sutil, redondeo 16)
+class _SaasCard extends StatelessWidget {
+  final Widget child;
+  const _SaasCard({required this.child});
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: RadialGradient(colors: [color, Colors.transparent]),
-    ),
-  );
-}
-
-class _DotGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.025)
-      ..strokeWidth = 1;
-    const spacing = 28.0;
-    for (double x = 0; x < size.width; x += spacing) {
-      for (double y = 0; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), 1.2, paint);
-      }
-    }
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
+    );
   }
+}
+
+/// Etiqueta de sección con barra izquierda de acento
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel({required this.text});
 
   @override
-  bool shouldRepaint(_) => false;
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 3,
+          height: 13,
+          decoration: BoxDecoration(
+            color: SaasPalette.brand600,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: const TextStyle(
+            color: SaasPalette.textTertiary,
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
+          ),
+        ),
+      ],
+    );
+  }
 }

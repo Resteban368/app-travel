@@ -1,99 +1,20 @@
 // lib/core/widgets/premium_form_widgets.dart
 //
-// Biblioteca de widgets reutilizables de estilo premium para formularios.
-// Importa este archivo en cualquier módulo de la app que necesite el diseño
-// glassmorphism unificado.
+// Biblioteca de widgets reutilizables de estilo SaaS claro.
+// Usa SaasPalette como fuente única de color.
 //
 // Uso:
 //   import 'package:agente_viajes/core/widgets/premium_form_widgets.dart';
 
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../theme/premium_palette.dart';
+import '../theme/saas_palette.dart';
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 1. FONDO DE PANTALLA CON EFECTO GLASSMORPHISM
+// 2. SLIVER APP BAR (encabezado colapsable)
 // ──────────────────────────────────────────────────────────────────────────────
 
-/// Wrapper de fondo premium con orbes ambientados y filtro de desenfoque.
-/// Úsalo como capa base dentro del [Stack] del body de cualquier [Scaffold].
-///
-/// Ejemplo:
-/// ```dart
-/// Scaffold(
-///   backgroundColor: D.bg,
-///   body: Stack(
-///     children: [
-///       const PremiumBackground(),
-///       // ... tu contenido ...
-///     ],
-///   ),
-/// )
-/// ```
-class PremiumBackground extends StatelessWidget {
-  const PremiumBackground({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Orbe superior izquierdo (royalBlue)
-        Positioned(
-          top: -100,
-          left: -100,
-          child: Container(
-            width: 300,
-            height: 300,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: D.royalBlue.withOpacity(0.15),
-            ),
-          ),
-        ),
-        // Orbe inferior derecho (skyBlue)
-        Positioned(
-          bottom: 100,
-          right: -50,
-          child: Container(
-            width: 250,
-            height: 250,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: D.skyBlue.withOpacity(0.1),
-            ),
-          ),
-        ),
-        // Desenfoque masivo que unifica los orbes
-        Positioned.fill(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-            child: const SizedBox(),
-          ),
-        ),
-        // Puntos de cuadrícula decorativos
-        Positioned.fill(child: CustomPaint(painter: DotGridPainter())),
-      ],
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 2. SLIVER APP BAR PREMIUM (encabezado colapsable)
-// ──────────────────────────────────────────────────────────────────────────────
-
-/// [SliverAppBar] premium con fondo transparente y título grande que se
-/// colapsa al hacer scroll. Úsalo como primer elemento de un [CustomScrollView].
-///
-/// Ejemplo:
-/// ```dart
-/// CustomScrollView(
-///   slivers: [
-///     PremiumSliverAppBar(title: 'Nueva Cotización'),
-///     SliverToBoxAdapter(child: /* tu formulario */),
-///   ],
-/// )
-/// ```
+/// [SliverAppBar] con degradado brand y título centrado que se colapsa al scrollear.
 class PremiumSliverAppBar extends StatelessWidget {
   final String title;
   final Widget? actions;
@@ -104,20 +25,37 @@ class PremiumSliverAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SliverAppBar(
       expandedHeight: 120,
-      backgroundColor: D.bg,
+      backgroundColor: SaasPalette.brand900,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
       pinned: true,
-      //flecga de atras
       leading: actions,
+      iconTheme: const IconThemeData(color: Colors.white),
       flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.symmetric(horizontal: 24),
-        title: Center(
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: -0.5,
+        titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        centerTitle: true,
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                fontSize: 15,
+                letterSpacing: -0.3,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [SaasPalette.brand600, SaasPalette.brand900],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
         ),
@@ -127,24 +65,10 @@ class PremiumSliverAppBar extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 3. TARJETA GLASSMORPHISM PARA SECCIONES DE FORMULARIO
+// 3. TARJETA DE SECCIÓN DE FORMULARIO
 // ──────────────────────────────────────────────────────────────────────────────
 
-/// Contenedor glassmorphism para agrupar campos relacionados visualmente.
-/// Siempre incluye un encabezado de sección ([PremiumSectionHeader]).
-///
-/// Ejemplo:
-/// ```dart
-/// PremiumSectionCard(
-///   title: 'DATOS PERSONALES',
-///   icon: Icons.person_rounded,
-///   children: [
-///     PremiumTextField(controller: nameCtrl, label: 'Nombre *', icon: Icons.badge_rounded),
-///     const SizedBox(height: 20),
-///     PremiumTextField(controller: emailCtrl, label: 'Email *', icon: Icons.email_rounded),
-///   ],
-/// )
-/// ```
+/// Contenedor limpio para agrupar campos relacionados.
 class PremiumSectionCard extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -161,26 +85,27 @@ class PremiumSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(32),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: padding ?? const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: D.surfaceHigh.withOpacity(0.4),
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+    return Container(
+      padding: padding ?? const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              PremiumSectionHeader(title: title, icon: icon),
-              const SizedBox(height: 24),
-              ...children,
-            ],
-          ),
-        ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          PremiumSectionHeader(title: title, icon: icon),
+          const SizedBox(height: 20),
+          ...children,
+        ],
       ),
     );
   }
@@ -190,8 +115,6 @@ class PremiumSectionCard extends StatelessWidget {
 // 4. ENCABEZADO DE SECCIÓN
 // ──────────────────────────────────────────────────────────────────────────────
 
-/// Encabezado visual con icono y texto en mayúsculas para identificar
-/// las secciones dentro de [PremiumSectionCard].
 class PremiumSectionHeader extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -209,19 +132,19 @@ class PremiumSectionHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: D.skyBlue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+            color: SaasPalette.brand50,
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: D.skyBlue, size: 20),
+          child: Icon(icon, color: SaasPalette.brand600, size: 18),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Text(
           title,
           style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1,
+            color: SaasPalette.textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.8,
           ),
         ),
       ],
@@ -230,20 +153,11 @@ class PremiumSectionHeader extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 5. CAMPO DE TEXTO PREMIUM
+// 5. CAMPO DE TEXTO
 // ──────────────────────────────────────────────────────────────────────────────
 
-/// Campo de texto estilizado con label, icono de prefijo y bordes de cristal.
-/// Incluye validación de "Requerido" automática si [label] contiene '*'.
-///
-/// Ejemplo:
-/// ```dart
-/// PremiumTextField(
-///   controller: _nameCtrl,
-///   label: 'Nombre Completo *',
-///   icon: Icons.person_rounded,
-/// )
-/// ```
+/// Campo de texto estilizado con label, icono y bordes claros.
+/// Incluye validación automática si [label] contiene '*'.
 class PremiumTextField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
@@ -281,7 +195,6 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
 
   @override
   Widget build(BuildContext context) {
-    // If multiline and no keyboard type specified, use multiline
     final kType =
         widget.keyboardType ??
         (widget.isNumeric
@@ -290,7 +203,6 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
                   ? TextInputType.multiline
                   : TextInputType.text));
 
-    // If multiline and no action specified, use newline
     final tAction =
         widget.textInputAction ??
         (widget.maxLines > 1 ? TextInputAction.newline : null);
@@ -301,13 +213,13 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
         Text(
           widget.label,
           style: const TextStyle(
-            color: D.slate400,
+            color: SaasPalette.textSecondary,
             fontSize: 12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         TextFormField(
           controller: widget.controller,
           readOnly: widget.readOnly,
@@ -319,16 +231,20 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
           inputFormatters: widget.isNumeric
               ? [FilteringTextInputFormatter.digitsOnly]
               : null,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
           decoration: InputDecoration(
-            prefixIcon: Icon(widget.icon, color: D.skyBlue, size: 20),
+            prefixIcon: Icon(
+              widget.icon,
+              color: SaasPalette.brand600,
+              size: 18,
+            ),
             suffixIcon: widget.isPassword
                 ? IconButton(
                     icon: Icon(
                       _obscureText
                           ? Icons.visibility_off_rounded
                           : Icons.visibility_rounded,
-                      color: D.slate400,
+                      color: SaasPalette.textTertiary,
                       size: 20,
                     ),
                     onPressed: () =>
@@ -336,26 +252,34 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
                   )
                 : null,
             filled: true,
-            fillColor: D.surfaceHigh.withOpacity(0.5),
+            fillColor: widget.readOnly
+                ? SaasPalette.bgSubtle
+                : SaasPalette.bgCanvas,
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.05)),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: SaasPalette.border),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: D.skyBlue, width: 1.5),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(
+                color: SaasPalette.brand600,
+                width: 1.5,
+              ),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: D.rose.withOpacity(0.5)),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: SaasPalette.danger),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: D.rose, width: 1.5),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(
+                color: SaasPalette.danger,
+                width: 1.5,
+              ),
             ),
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
+              horizontal: 14,
+              vertical: 12,
             ),
           ),
           validator:
@@ -373,18 +297,7 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
 // 6. BOTÓN DE ACCIÓN PRINCIPAL (CTA)
 // ──────────────────────────────────────────────────────────────────────────────
 
-/// Botón de acción principal con gradiente y sombra luminosa.
-/// Muestra un [CircularProgressIndicator] cuando [isLoading] es true.
-///
-/// Ejemplo:
-/// ```dart
-/// PremiumActionButton(
-///   label: 'GUARDAR',
-///   icon: Icons.save_rounded,
-///   isLoading: isSaving,
-///   onTap: () => _save(),
-/// )
-/// ```
+/// Botón principal con fondo sólido brand y sombra sutil.
 class PremiumActionButton extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -404,28 +317,26 @@ class PremiumActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: isLoading ? null : onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        height: 60,
+        duration: const Duration(milliseconds: 200),
+        height: 52,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [D.skyBlue, D.royalBlue],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
+          color: isLoading
+              ? SaasPalette.brand600.withValues(alpha: 0.7)
+              : SaasPalette.brand600,
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: D.royalBlue.withOpacity(0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              color: SaasPalette.brand600.withValues(alpha: 0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Center(
           child: isLoading
               ? const SizedBox(
-                  width: 24,
-                  height: 24,
+                  width: 22,
+                  height: 22,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     color: Colors.white,
@@ -434,15 +345,15 @@ class PremiumActionButton extends StatelessWidget {
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(icon, color: Colors.white, size: 22),
-                    const SizedBox(width: 12),
+                    Icon(icon, color: Colors.white, size: 20),
+                    const SizedBox(width: 10),
                     Text(
                       label,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 15,
-                        letterSpacing: 1,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        letterSpacing: 0.8,
                       ),
                     ),
                   ],
@@ -454,20 +365,9 @@ class PremiumActionButton extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 7. SWITCH DE ESTADO PREMIUM
+// 7. SWITCH DE ESTADO
 // ──────────────────────────────────────────────────────────────────────────────
 
-/// Switch con etiqueta estilizada para activar/desactivar estados del modelo.
-///
-/// Ejemplo:
-/// ```dart
-/// PremiumStatusSwitch(
-///   label: 'Activo',
-///   value: _isActive,
-///   onChanged: (v) => setState(() => _isActive = v),
-///   activeColor: D.emerald,
-/// )
-/// ```
 class PremiumStatusSwitch extends StatelessWidget {
   final String label;
   final bool value;
@@ -491,19 +391,18 @@ class PremiumStatusSwitch extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              color: D.slate400,
+              color: SaasPalette.textSecondary,
               fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Switch(
             value: value,
             activeThumbColor: activeColor,
-            activeTrackColor: activeColor.withOpacity(0.3),
-            inactiveThumbColor: D.slate400,
-            inactiveTrackColor: D.bg.withOpacity(0.5),
+            activeTrackColor: activeColor.withValues(alpha: 0.25),
+            inactiveThumbColor: SaasPalette.textTertiary,
+            inactiveTrackColor: SaasPalette.bgSubtle,
             onChanged: onChanged,
           ),
         ],
@@ -513,20 +412,9 @@ class PremiumStatusSwitch extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 8. CHIP PREMIUM PARA LISTAS DINÁMICAS
+// 8. CHIP PARA LISTAS DINÁMICAS
 // ──────────────────────────────────────────────────────────────────────────────
 
-/// Tag/chip con borde coloreado y opción de eliminación.
-/// Usado en listas de inclusiones, exclusiones, etiquetas, permisos, etc.
-///
-/// Ejemplo:
-/// ```dart
-/// PremiumChip(
-///   label: 'Desayuno incluido',
-///   color: D.emerald,
-///   onRemove: () => setState(() => list.remove(item)),
-/// )
-/// ```
 class PremiumChip extends StatelessWidget {
   final String label;
   final Color color;
@@ -542,11 +430,11 @@ class PremiumChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -558,15 +446,15 @@ class PremiumChip extends StatelessWidget {
               style: TextStyle(
                 color: color,
                 fontSize: 13,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
           if (onRemove != null) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             GestureDetector(
               onTap: onRemove,
-              child: Icon(Icons.close_rounded, color: color, size: 16),
+              child: Icon(Icons.close_rounded, color: color, size: 15),
             ),
           ],
         ],
@@ -579,7 +467,6 @@ class PremiumChip extends StatelessWidget {
 // 9. INDICADOR DE ESTADO VACÍO
 // ──────────────────────────────────────────────────────────────────────────────
 
-/// Widget para mostrar cuando una lista dinámica está vacía.
 class PremiumEmptyIndicator extends StatelessWidget {
   final String msg;
   final IconData? icon;
@@ -595,14 +482,14 @@ class PremiumEmptyIndicator extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, color: D.slate600, size: 32),
+              Icon(icon, color: SaasPalette.textTertiary, size: 32),
               const SizedBox(height: 12),
             ],
             Text(
               msg,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: D.slate600,
+                color: SaasPalette.textSecondary,
                 fontSize: 13,
                 fontStyle: FontStyle.italic,
               ),
@@ -618,13 +505,11 @@ class PremiumEmptyIndicator extends StatelessWidget {
 // 10. PAINTER DE CUADRÍCULA DE PUNTOS (decorativo)
 // ──────────────────────────────────────────────────────────────────────────────
 
-/// [CustomPainter] que dibuja una cuadrícula de puntos sutiles en el fondo.
-/// Úsalo dentro de un [CustomPaint] con [Positioned.fill].
 class DotGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = D.border.withOpacity(0.2);
-    const spacing = 32.0;
+    final paint = Paint()..color = SaasPalette.border.withValues(alpha: 0.4);
+    const spacing = 28.0;
     for (double i = 0; i < size.width; i += spacing) {
       for (double j = 0; j < size.height; j += spacing) {
         canvas.drawCircle(Offset(i, j), 0.8, paint);

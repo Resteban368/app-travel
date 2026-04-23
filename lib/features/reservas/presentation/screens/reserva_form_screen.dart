@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:js_interop';
+import 'package:web/web.dart' as webLib;
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/theme/premium_palette.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
 import '../../domain/entities/reserva.dart';
 import '../../domain/entities/integrante.dart';
 import '../../domain/entities/aerolinea.dart';
 import '../../domain/entities/vuelo_reserva.dart';
+import '../../domain/entities/hotel_reserva.dart';
 import '../../domain/repositories/reserva_repository.dart';
+import '../../../../features/hoteles/presentation/bloc/hotel_bloc.dart';
+import '../../../../features/hoteles/presentation/bloc/hotel_event.dart';
+import '../../../../features/hoteles/presentation/bloc/hotel_state.dart';
+import '../../../../features/hoteles/domain/entities/hotel.dart';
+import '../../../../config/app_router.dart';
 import '../../../../core/widgets/platform_network_image.dart';
 import '../bloc/reserva_bloc.dart';
 import '../bloc/reserva_event.dart';
@@ -19,11 +28,14 @@ import '../../../../features/service/presentation/bloc/service_bloc.dart';
 import '../../../../features/service/presentation/bloc/service_event.dart';
 import '../../../../features/service/presentation/bloc/service_state.dart';
 import '../../../../features/service/domain/entities/service.dart';
+import '../../../../features/service/domain/repositories/service_repository.dart';
 import '../../../../features/pagos_realizados/domain/entities/pago_realizado.dart';
 import '../../../../features/pagos_realizados/domain/repositories/pago_realizado_repository.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../pdf/reserva_pdf_generator.dart';
+import '../../../../core/widgets/dialog_loading_widget.dart';
 import '../../../../features/clientes/presentation/bloc/cliente_bloc.dart';
 import '../../../../features/clientes/presentation/bloc/cliente_event.dart';
 import '../../../../features/clientes/presentation/bloc/cliente_state.dart';
@@ -52,6 +64,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   // Pagos de la reserva (solo en edición)
   List<PagoRealizado> _pagos = [];
   bool _loadingPagos = false;
+  bool _generatingPdf = false;
 
   // Tour card expandida
   bool _tourCardExpanded = false;
@@ -71,6 +84,12 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   bool _loadingAerolineas = false;
   List<VueloReserva> _vuelos = [];
 
+  // Hotel reservas (solo para tipo vuelos)
+  List<HotelReserva> _hotelReservas = [];
+
+  // Utilidad (solo para tipo vuelos)
+  late final TextEditingController _utilidadCtrl;
+
   // Descuento por persona
   double _descuentoPorPersona = 0.0;
   late final TextEditingController _descuentoCtrl;
@@ -88,6 +107,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     super.initState();
 
     _notasCtrl = TextEditingController(text: widget.reserva?.notas ?? '');
+    _utilidadCtrl = TextEditingController(
+      text: widget.reserva?.utilidad != null
+          ? widget.reserva!.utilidad!.toStringAsFixed(0)
+          : '',
+    );
     _descuentoPorPersona = widget.reserva?.descuentoPorPersona ?? 0.0;
     _descuentoCtrl = TextEditingController(
       text: _descuentoPorPersona > 0
@@ -106,6 +130,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       _integrantes = List.from(widget.reserva!.integrantes);
       _servicios = List.from(widget.reserva!.serviciosIds);
       _vuelos = List.from(widget.reserva!.vuelos);
+      _hotelReservas = List.from(widget.reserva!.hoteles);
       if (widget.reserva!.tour != null) {
         _tourSearchCtrl.text = widget.reserva!.tour!.name;
       }
@@ -135,6 +160,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       context.read<ClienteBloc>().add(LoadClientes());
     }
 
+    final hotelState = context.read<HotelBloc>().state;
+    if (hotelState is HotelInitial || hotelState is HotelError) {
+      context.read<HotelBloc>().add(const LoadHoteles());
+    }
+
     // Si editamos y hay responsable asignado, cargarlo directamente por ID
     debugPrint(
       '🔍 [ReservaForm] isEditing=$_isEditing, idResponsable=${widget.reserva?.idResponsable}, _selectedClienteId=$_selectedClienteId, responsableEmbedded=${_selectedCliente?.nombre}',
@@ -157,6 +187,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     _notasCtrl.dispose();
     _tourSearchCtrl.dispose();
     _idReservaCtrl.dispose();
+    _utilidadCtrl.dispose();
     super.dispose();
   }
 
@@ -180,6 +211,147 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       // Silencioso UI
     } finally {
       setState(() => _loadingPagos = false);
+    }
+  }
+
+  Future<void> _generateAndShowPdf() async {
+    if (widget.reserva == null) return;
+    setState(() => _generatingPdf = true);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const DialogLoadingNetwork(titel: 'Generando PDF de Reserva'),
+    );
+
+    try {
+      final fullReserva = widget.reserva!.id != null
+          ? await sl<ReservaRepository>().getReservaById(widget.reserva!.id!)
+          : widget.reserva!;
+      final allServices = await sl<ServiceRepository>().getServices();
+      final bytes = await ReservaPdfGenerator.generate(
+        fullReserva,
+        servicios: allServices,
+      );
+      if (!mounted) return;
+      Navigator.pop(context); // Close dialog
+      final dateStr = DateFormat('dd-MM-yyyy').format(DateTime.now());
+      final filename =
+          'Reserva_${widget.reserva!.idReserva ?? widget.reserva!.id}_$dateStr.pdf';
+      final uint8Bytes = Uint8List.fromList(bytes);
+
+      void openInNewTab() {
+        final blob = webLib.Blob(
+          <JSAny>[uint8Bytes.buffer.toJS].toJS,
+          webLib.BlobPropertyBag(type: 'application/pdf'),
+        );
+        final url = webLib.URL.createObjectURL(blob);
+        webLib.window.open(url, '_blank', '');
+      }
+
+      void download() {
+        final blob = webLib.Blob(
+          <JSAny>[uint8Bytes.buffer.toJS].toJS,
+          webLib.BlobPropertyBag(type: 'application/pdf'),
+        );
+        final url = webLib.URL.createObjectURL(blob);
+        final anchor =
+            webLib.document.createElement('a') as webLib.HTMLAnchorElement;
+        anchor.href = url;
+        anchor.download = filename;
+        anchor.click();
+        webLib.URL.revokeObjectURL(url);
+      }
+
+      await showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          insetPadding: const EdgeInsets.all(32),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.picture_as_pdf_rounded,
+                  size: 48,
+                  color: Color(0xFF2563EB),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  filename,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A1A),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'El PDF fue generado exitosamente.',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: openInNewTab,
+                      icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                      label: const Text('Ver PDF'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF2563EB),
+                        side: const BorderSide(color: Color(0xFF2563EB)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: download,
+                      icon: const Icon(Icons.download_rounded, size: 16),
+                      label: const Text('Descargar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text(
+                    'Cerrar',
+                    style: TextStyle(color: Color(0xFF6B7280)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Close loading dialog
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error generando PDF: $e'),
+          backgroundColor: const Color(0xFFDC2626),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _generatingPdf = false);
     }
   }
 
@@ -228,8 +400,38 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     if (!_formKey.currentState!.validate()) return;
 
     if (_tipoReserva == 'tour' && _selectedTourId == null) {
-      _showMsg('Debe seleccionar un tour.', D.rose);
+      _showMsg('Debe seleccionar un tour.', SaasPalette.danger);
       return;
+    }
+
+    // Calcular valor total para reservas de tipo vuelos
+    double? calculatedVuelosTotal;
+    if (_tipoReserva == 'vuelos') {
+      final vuelosTotal = _vuelos.fold<double>(
+        0.0,
+        (sum, v) => sum + (v.precio ?? 0.0),
+      );
+      final hotelesTotal = _hotelReservas.fold<double>(
+        0.0,
+        (sum, h) => sum + (h.valor ?? 0.0),
+      );
+      double serviciosTotal = 0.0;
+      final serviceState = context.read<ServiceBloc>().state;
+      List<Service> allServices = [];
+      if (serviceState is ServicesLoaded) {
+        allServices = serviceState.services;
+      } else if (serviceState is ServiceSaved &&
+          serviceState.services != null) {
+        allServices = serviceState.services!;
+      }
+      for (final id in _servicios) {
+        final svc = allServices.cast<Service?>().firstWhere(
+          (s) => s?.id == id,
+          orElse: () => null,
+        );
+        if (svc?.cost != null) serviciosTotal += svc!.cost!;
+      }
+      calculatedVuelosTotal = vuelosTotal + hotelesTotal + serviciosTotal;
     }
 
     final reserva = Reserva(
@@ -240,9 +442,14 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       estado: _estado,
       notas: _notasCtrl.text.trim(),
       descuentoPorPersona: _descuentoPorPersona,
+      valorTotal: calculatedVuelosTotal,
       serviciosIds: _servicios.where((s) => s != 0).toList(),
       integrantes: _integrantes,
       vuelos: _vuelos,
+      hoteles: _tipoReserva == 'vuelos' ? _hotelReservas : const [],
+      utilidad: _tipoReserva == 'vuelos'
+          ? double.tryParse(_utilidadCtrl.text.trim())
+          : null,
       idResponsable: _selectedClienteId,
       fechaCreacion: _isEditing
           ? widget.reserva!.fechaCreacion
@@ -267,7 +474,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               content: Text(
                 _isEditing ? 'Reserva actualizada' : 'Reserva creada',
               ),
-              backgroundColor: D.emerald,
+              backgroundColor: SaasPalette.success,
             ),
           );
 
@@ -281,9 +488,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               child: Container(
                 padding: const EdgeInsets.all(28),
                 decoration: BoxDecoration(
-                  color: D.surface,
+                  color: SaasPalette.bgCanvas,
                   borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: D.rose.withValues(alpha: 0.4)),
+                  border: Border.all(
+                    color: SaasPalette.danger.withValues(alpha: 0.4),
+                  ),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -292,12 +501,12 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: D.rose.withValues(alpha: 0.12),
+                        color: SaasPalette.danger.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.error_rounded,
-                        color: D.rose,
+                        color: SaasPalette.danger,
                         size: 32,
                       ),
                     ),
@@ -314,14 +523,17 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     Text(
                       state.message,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: D.slate400, fontSize: 13),
+                      style: const TextStyle(
+                        color: SaasPalette.textSecondary,
+                        fontSize: 13,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
                       child: TextButton(
                         style: TextButton.styleFrom(
-                          backgroundColor: D.rose,
+                          backgroundColor: SaasPalette.danger,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -346,10 +558,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: D.bg,
+        backgroundColor: SaasPalette.bgApp,
         body: Stack(
           children: [
-            const PremiumBackground(),
             CustomScrollView(
               slivers: [
                 PremiumSliverAppBar(
@@ -357,7 +568,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   actions:
                       //flecha de atras
                       IconButton(
-                        icon: const Icon(Icons.arrow_back, color: D.white),
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
                         onPressed: () => Navigator.pop(context),
                       ),
                 ),
@@ -368,47 +579,52 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       vertical: 16,
                     ),
                     child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 900),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildResponsableSection(),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildResponsableSection(),
+                            const SizedBox(height: 24),
+                            _buildBasicInfoSection(),
+                            const SizedBox(height: 24),
+                            _buildVuelosSection(),
+                            const SizedBox(height: 24),
+                            if (_tipoReserva == 'vuelos') ...[
+                              _buildHotelReservaSection(),
                               const SizedBox(height: 24),
-                              _buildBasicInfoSection(),
-                              const SizedBox(height: 24),
-                              _buildVuelosSection(),
-                              const SizedBox(height: 24),
-                              _buildIntegrantesSection(),
-                              const SizedBox(height: 24),
-                              _buildServiciosSection(),
-                              const SizedBox(height: 24),
-                              _buildNotasSection(),
-                              const SizedBox(height: 24),
-                              if (_isEditing) ...[
-                                _buildPagosSection(),
-                                const SizedBox(height: 24),
-                              ],
-                              _buildResumenSection(),
-                              const SizedBox(height: 32),
-                              Builder(
-                                builder: (context) {
-                                  final authState = context
-                                      .read<AuthBloc>()
-                                      .state;
-                                  final canWrite =
-                                      authState is AuthAuthenticated &&
-                                      authState.user.canWrite('reservas');
-                                  if (!canWrite && _isEditing)
-                                    return const SizedBox.shrink();
-                                  return _buildSubmitButton();
-                                },
-                              ),
-                              const SizedBox(height: 100),
                             ],
-                          ),
+                            _buildIntegrantesSection(),
+                            const SizedBox(height: 24),
+                            _buildServiciosSection(),
+                            const SizedBox(height: 24),
+                            _buildNotasSection(),
+                            const SizedBox(height: 24),
+                            if (_isEditing) ...[
+                              _buildPagosSection(),
+                              const SizedBox(height: 24),
+                            ],
+                            _buildResumenSection(),
+                            if (_isEditing) ...[
+                              const SizedBox(height: 16),
+                              _buildPdfButton(),
+                            ],
+                            const SizedBox(height: 32),
+                            Builder(
+                              builder: (context) {
+                                final authState = context
+                                    .read<AuthBloc>()
+                                    .state;
+                                final canWrite =
+                                    authState is AuthAuthenticated &&
+                                    authState.user.canWrite('reservas');
+                                if (!canWrite && _isEditing)
+                                  return const SizedBox.shrink();
+                                return _buildSubmitButton();
+                              },
+                            ),
+                            const SizedBox(height: 100),
+                          ],
                         ),
                       ),
                     ),
@@ -454,7 +670,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         Text(
           'Tipo de Reserva *',
           style: TextStyle(
-            color: D.white,
+            color: SaasPalette.textPrimary,
             fontSize: 11,
             fontWeight: FontWeight.w900,
           ),
@@ -494,7 +710,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         Text(
           'Tour o Promoción *',
           style: TextStyle(
-            color: D.white,
+            color: SaasPalette.textPrimary,
             fontSize: 11,
             fontWeight: FontWeight.w900,
           ),
@@ -528,7 +744,6 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       inclusions: [],
                       exclusions: [],
                       itinerary: [],
-                      imageUrl: '',
                     ),
                   )
                 : null;
@@ -570,21 +785,23 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                             vertical: 14,
                           ),
                           decoration: BoxDecoration(
-                            color: D.bg.withValues(alpha: 0.3),
+                            color: SaasPalette.bgSubtle,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: field.hasError
-                                  ? D.rose
+                                  ? SaasPalette.danger
                                   : isTourFound
-                                  ? D.skyBlue
-                                  : D.border,
+                                  ? SaasPalette.brand600
+                                  : SaasPalette.border,
                             ),
                           ),
                           child: Row(
                             children: [
                               Icon(
                                 Icons.tour_rounded,
-                                color: isTourFound ? D.skyBlue : D.slate600,
+                                color: isTourFound
+                                    ? SaasPalette.brand600
+                                    : SaasPalette.textTertiary,
                                 size: 18,
                               ),
                               const SizedBox(width: 12),
@@ -595,8 +812,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                       : 'Seleccionar tour...',
                                   style: TextStyle(
                                     color: isTourFound
-                                        ? Colors.white
-                                        : D.slate400,
+                                        ? SaasPalette.textPrimary
+                                        : SaasPalette.textTertiary,
                                     fontSize: 14,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -606,9 +823,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                 const SizedBox(
                                   width: 16,
                                   height: 16,
-                                  child: CircularProgressIndicator(
+                                  child: const CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: D.skyBlue,
+                                    color: SaasPalette.brand600,
                                   ),
                                 )
                               else if (isTourFound)
@@ -619,14 +836,14 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                   }),
                                   child: const Icon(
                                     Icons.close_rounded,
-                                    color: D.slate400,
+                                    color: SaasPalette.textTertiary,
                                     size: 18,
                                   ),
                                 )
                               else
                                 const Icon(
                                   Icons.search_rounded,
-                                  color: D.slate600,
+                                  color: SaasPalette.textTertiary,
                                   size: 18,
                                 ),
                             ],
@@ -637,7 +854,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                         const SizedBox(height: 6),
                         Text(
                           field.errorText!,
-                          style: TextStyle(color: D.rose, fontSize: 12),
+                          style: const TextStyle(
+                            color: SaasPalette.danger,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ],
@@ -667,9 +887,16 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
 
     return Container(
       decoration: BoxDecoration(
-        color: D.bg.withValues(alpha: 0.4),
+        color: SaasPalette.bgCanvas,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: D.border),
+        border: Border.all(color: SaasPalette.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -681,42 +908,40 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Si no hay imagen, mostrar nombre y badges aquí
-                if (tour.imageUrl.isEmpty) ...[
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      if (tour.isPromotion)
-                        _TourBadge(
-                          label: 'PROMO',
-                          color: D.gold,
-                          icon: Icons.star_rounded,
-                        ),
-                      if (tour.precioPorPareja)
-                        _TourBadge(
-                          label: 'POR PAREJA',
-                          color: D.skyBlue,
-                          icon: Icons.people_rounded,
-                        ),
-                      if (!tour.isActive)
-                        _TourBadge(
-                          label: 'INACTIVO',
-                          color: D.rose,
-                          icon: Icons.block_rounded,
-                        ),
-                    ],
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    if (tour.isPromotion)
+                      _TourBadge(
+                        label: 'PROMO',
+                        color: SaasPalette.warning,
+                        icon: Icons.star_rounded,
+                      ),
+                    if (tour.precioPorPareja)
+                      _TourBadge(
+                        label: 'POR PAREJA',
+                        color: SaasPalette.brand600,
+                        icon: Icons.people_rounded,
+                      ),
+                    if (!tour.isActive)
+                      _TourBadge(
+                        label: 'INACTIVO',
+                        color: SaasPalette.danger,
+                        icon: Icons.block_rounded,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  tour.name,
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    tour.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                ),
+                const SizedBox(height: 16),
 
                 // ── Precio ──────────────────────────────────
                 Row(
@@ -725,19 +950,22 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     Text(
                       currencyFmt.format(tour.price),
                       style: const TextStyle(
-                        color: D.emerald,
+                        color: SaasPalette.success,
                         fontSize: 22,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     Text(
                       tour.precioPorPareja ? 'por pareja' : 'por persona',
-                      style: TextStyle(color: D.slate400, fontSize: 12),
+                      style: const TextStyle(
+                        color: SaasPalette.textTertiary,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Divider(color: D.border),
+                const Divider(color: SaasPalette.border),
                 const SizedBox(height: 12),
 
                 // ── Datos logísticos ─────────────────────────
@@ -783,7 +1011,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       Text(
                         _tourCardExpanded ? 'Ver menos' : 'Ver más detalles',
                         style: const TextStyle(
-                          color: D.skyBlue,
+                          color: SaasPalette.brand600,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -794,7 +1022,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                         duration: const Duration(milliseconds: 250),
                         child: const Icon(
                           Icons.keyboard_arrow_down_rounded,
-                          color: D.skyBlue,
+                          color: SaasPalette.brand600,
                           size: 20,
                         ),
                       ),
@@ -807,11 +1035,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   // ── Inclusiones ────────────────────────────
                   if (tour.inclusions.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    const Divider(color: D.border),
+                    const Divider(color: SaasPalette.border),
                     const SizedBox(height: 12),
                     _buildListSection(
                       title: 'INCLUYE',
-                      color: D.emerald,
+                      color: SaasPalette.success,
                       icon: Icons.check_circle_outline_rounded,
                       items: tour.inclusions,
                     ),
@@ -822,7 +1050,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     const SizedBox(height: 16),
                     _buildListSection(
                       title: 'NO INCLUYE',
-                      color: D.rose,
+                      color: SaasPalette.danger,
                       icon: Icons.cancel_outlined,
                       items: tour.exclusions,
                     ),
@@ -831,7 +1059,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   // ── Itinerario ─────────────────────────────
                   if (tour.itinerary.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    const Divider(color: D.border),
+                    const Divider(color: SaasPalette.border),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -839,7 +1067,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           width: 3,
                           height: 12,
                           decoration: BoxDecoration(
-                            color: D.skyBlue,
+                            color: SaasPalette.brand600,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -847,7 +1075,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                         Text(
                           'ITINERARIO',
                           style: TextStyle(
-                            color: D.slate400,
+                            color: SaasPalette.textTertiary,
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1,
@@ -866,14 +1094,16 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                               width: 28,
                               height: 28,
                               decoration: BoxDecoration(
-                                color: D.royalBlue.withValues(alpha: 0.15),
+                                color: SaasPalette.brand600.withValues(
+                                  alpha: 0.15,
+                                ),
                                 shape: BoxShape.circle,
                               ),
                               child: Center(
                                 child: Text(
                                   '${day.dayNumber}',
                                   style: const TextStyle(
-                                    color: D.skyBlue,
+                                    color: SaasPalette.brand600,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w900,
                                   ),
@@ -888,7 +1118,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                   Text(
                                     day.title,
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: SaasPalette.textPrimary,
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -898,7 +1128,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                     Text(
                                       day.description,
                                       style: TextStyle(
-                                        color: D.slate400,
+                                        color: SaasPalette.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -915,7 +1145,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   // ── PDF link ───────────────────────────────
                   if (tour.pdfLink.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    const Divider(color: D.border),
+                    const Divider(color: SaasPalette.border),
                     const SizedBox(height: 12),
                     GestureDetector(
                       onTap: () async {
@@ -928,17 +1158,17 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                         children: [
                           const Icon(
                             Icons.picture_as_pdf_rounded,
-                            color: D.rose,
+                            color: SaasPalette.danger,
                             size: 18,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Ver PDF del tour',
                             style: TextStyle(
-                              color: D.skyBlue,
+                              color: SaasPalette.brand600,
                               fontSize: 13,
                               decoration: TextDecoration.underline,
-                              decorationColor: D.skyBlue,
+                              decorationColor: SaasPalette.brand600,
                             ),
                           ),
                         ],
@@ -977,7 +1207,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             Text(
               title,
               style: TextStyle(
-                color: D.slate400,
+                color: SaasPalette.textTertiary,
                 fontSize: 10,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1,
@@ -997,7 +1227,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 Expanded(
                   child: Text(
                     item,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    style: const TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ],
@@ -1010,18 +1243,18 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
 
   InputDecoration _inputDecoration(IconData icon, String hint) {
     return InputDecoration(
-      prefixIcon: Icon(icon, color: D.white, size: 18),
+      prefixIcon: Icon(icon, color: SaasPalette.textPrimary, size: 18),
       hintText: hint,
-      hintStyle: const TextStyle(color: D.white, fontSize: 13),
+      hintStyle: const TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
       filled: true,
-      fillColor: D.bg.withOpacity(0.3),
+      fillColor: SaasPalette.bgSubtle,
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: D.border),
+        borderSide: const BorderSide(color: SaasPalette.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: D.skyBlue),
+        borderSide: const BorderSide(color: SaasPalette.brand600),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );
@@ -1034,7 +1267,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         Text(
           'Estado *',
           style: TextStyle(
-            color: D.white,
+            color: SaasPalette.textPrimary,
             fontSize: 11,
             fontWeight: FontWeight.w900,
           ),
@@ -1042,8 +1275,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: _estado,
-          dropdownColor: D.surface,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          dropdownColor: D.white,
+          style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
           decoration: _inputDecoration(
             Icons.label_outline_rounded,
             'Estado de la reserva',
@@ -1073,7 +1306,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               value: 'cancelado',
               child: Row(
                 children: const [
-                  Icon(Icons.circle, color: Colors.redAccent, size: 12),
+                  Icon(Icons.circle, color: SaasPalette.danger, size: 12),
                   SizedBox(width: 8),
                   Text('Cancelado'),
                 ],
@@ -1136,63 +1369,6 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               vuelosTotal += v.precio ?? 0.0;
             }
 
-            // ── Precio unitario ──────────────────────────────────────────────
-            // Al editar: derivar el precio-por-unidad del snapshot para no
-            // aplicar cambios futuros del tour a reservas ya acordadas.
-            // Al crear: usar el precio actual del tour.
-            // Usamos valorSinDescuento como base del snapshot para no mezclar
-            // el precio pactado con el descuento aplicado.
-            final snapshotTotal = _isEditing
-                ? (widget.reserva?.valorSinDescuento ??
-                      widget.reserva?.valorTotal ??
-                      0.0)
-                : null;
-            final useSnapshot = snapshotTotal != null && snapshotTotal > 0;
-
-            final precioPorPareja = tour?.precioPorPareja ?? false;
-            final currentPersonas = 1 + _integrantes.length;
-            final currentUnits = precioPorPareja
-                ? (currentPersonas / 2).ceil()
-                : currentPersonas;
-
-            final double efectiveUnitPrice;
-            final double tourSubtotalFinal;
-
-            if (useSnapshot) {
-              // Costo de los servicios ORIGINALES de la reserva (snapshot)
-              final originalIds = widget.reserva!.serviciosIds.toSet();
-              final originalSvcCost = allServices
-                  .where((s) => originalIds.contains(s.id))
-                  .fold<double>(0.0, (sum, s) => sum + (s.cost ?? 0));
-              final tourBaseSnapshot = snapshotTotal - originalSvcCost;
-
-              final originalPersonas = 1 + widget.reserva!.integrantes.length;
-              final originalUnits = precioPorPareja
-                  ? (originalPersonas / 2).ceil()
-                  : originalPersonas;
-
-              efectiveUnitPrice = originalUnits > 0
-                  ? tourBaseSnapshot / originalUnits
-                  : 0.0;
-              tourSubtotalFinal = efectiveUnitPrice * currentUnits;
-            } else {
-              efectiveUnitPrice = unitPrice;
-              tourSubtotalFinal = precioPorPareja
-                  ? unitPrice * currentUnits
-                  : unitPrice * currentPersonas;
-            }
-
-            final String tourUnitLabel;
-            if (precioPorPareja) {
-              tourUnitLabel =
-                  'Tour (${currencyFmt.format(efectiveUnitPrice)}/pareja'
-                  ' × $currentUnits pareja${currentUnits != 1 ? "s" : ""})';
-            } else {
-              tourUnitLabel =
-                  'Tour (${currencyFmt.format(efectiveUnitPrice)}/persona'
-                  ' × $currentPersonas persona${currentPersonas != 1 ? "s" : ""})';
-            }
-
             // ── Totales ──────────────────────────────────────────────────────
             double serviciosTotal = 0;
             for (final id in _servicios) {
@@ -1203,10 +1379,80 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               if (svc?.cost != null) serviciosTotal += svc!.cost!;
             }
 
-            final valorSinDescuento =
-                tourSubtotalFinal + serviciosTotal + vuelosTotal;
+            double hotelesTotal = 0;
+            for (final h in _hotelReservas) {
+              hotelesTotal += h.valor ?? 0.0;
+            }
 
-            final descuentoTotal = _descuentoPorPersona * currentUnits;
+            // Variables compartidas (solo relevantes para tour)
+            final bool precioPorPareja = tour?.precioPorPareja ?? false;
+            final int currentPersonas = 1 + _integrantes.length;
+            final int currentUnits = precioPorPareja
+                ? (currentPersonas / 2).ceil()
+                : currentPersonas;
+
+            // ── Para vuelos: suma directa sin multiplicadores ni snapshot ─────
+            final double valorSinDescuento;
+            final double descuentoTotal;
+            final double tourSubtotalFinal;
+            final String tourUnitLabel;
+
+            if (_tipoReserva == 'vuelos') {
+              valorSinDescuento = vuelosTotal + hotelesTotal + serviciosTotal;
+              descuentoTotal = 0;
+              tourSubtotalFinal = 0;
+              tourUnitLabel = '';
+            } else {
+              // ── Tour: precio por unidad con snapshot al editar ───────────
+              final snapshotTotal = _isEditing
+                  ? (widget.reserva?.valorSinDescuento ??
+                        widget.reserva?.valorTotal ??
+                        0.0)
+                  : null;
+              final useSnapshot = snapshotTotal != null && snapshotTotal > 0;
+
+              final double efectiveUnitPrice;
+              final double tourSub;
+
+              if (useSnapshot) {
+                final originalIds = widget.reserva!.serviciosIds.toSet();
+                final originalSvcCost = allServices
+                    .where((s) => originalIds.contains(s.id))
+                    .fold<double>(0.0, (sum, s) => sum + (s.cost ?? 0));
+                final tourBaseSnapshot = snapshotTotal - originalSvcCost;
+                final originalPersonas = 1 + widget.reserva!.integrantes.length;
+                final originalUnits = precioPorPareja
+                    ? (originalPersonas / 2).ceil()
+                    : originalPersonas;
+                efectiveUnitPrice = originalUnits > 0
+                    ? tourBaseSnapshot / originalUnits
+                    : 0.0;
+                tourSub = efectiveUnitPrice * currentUnits;
+              } else {
+                efectiveUnitPrice = unitPrice;
+                tourSub = precioPorPareja
+                    ? unitPrice * currentUnits
+                    : unitPrice * currentPersonas;
+              }
+
+              tourSubtotalFinal = tourSub;
+              descuentoTotal = _descuentoPorPersona * currentUnits;
+              valorSinDescuento =
+                  tourSubtotalFinal +
+                  serviciosTotal +
+                  vuelosTotal +
+                  hotelesTotal;
+
+              if (precioPorPareja) {
+                tourUnitLabel =
+                    'Tour (${currencyFmt.format(efectiveUnitPrice)}/pareja'
+                    ' × $currentUnits pareja${currentUnits != 1 ? "s" : ""})';
+              } else {
+                tourUnitLabel =
+                    'Tour (${currencyFmt.format(efectiveUnitPrice)}/persona'
+                    ' × $currentPersonas persona${currentPersonas != 1 ? "s" : ""})';
+              }
+            }
             final valorTotal = valorSinDescuento - descuentoTotal;
 
             final totalValidado = _pagos
@@ -1238,23 +1484,69 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: _buildResumenRow(
-                        '+ $nombre',
+                        nombre,
                         svc?.cost ?? 0,
                         currencyFmt,
                         isSubtitle: true,
+                        icon: Icons.room_service_rounded,
+                        iconColor: SaasPalette.success,
                       ),
                     );
                   }),
                 ],
-                // Vuelos
-                if (vuelosTotal > 0) ...[
+                // Hoteles — detalle por hotel reserva
+                if (_hotelReservas.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  _buildResumenRow(
-                    '+ Vuelos',
-                    vuelosTotal,
-                    currencyFmt,
-                    isSubtitle: true,
-                  ),
+                  ..._hotelReservas.map((h) {
+                    final nombre = h.hotel?.nombre ?? 'Hotel';
+                    final ciudad = h.hotel?.ciudad ?? '';
+                    final label = ciudad.isNotEmpty
+                        ? '$nombre ($ciudad)'
+                        : nombre;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _buildResumenRow(
+                        label,
+                        h.valor ?? 0,
+                        currencyFmt,
+                        isSubtitle: true,
+                        icon: Icons.hotel_rounded,
+                        iconColor: SaasPalette.brand600,
+                      ),
+                    );
+                  }),
+                ],
+                // Vuelos — detalle por vuelo
+                if (_vuelos.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  ..._vuelos.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final v = entry.value;
+                    final aerolinea = v.aerolinea?.nombre ?? 'Vuelo ${i + 1}';
+                    final ruta = v.origen.isNotEmpty && v.destino.isNotEmpty
+                        ? '${v.origen} → ${v.destino}'
+                        : '';
+                    final esVuelta = v.tipoVuelo == 'vuelta';
+                    final tipo = esVuelta ? 'Vuelta' : 'Ida';
+                    final label = ruta.isNotEmpty
+                        ? '$aerolinea · $ruta ($tipo)'
+                        : '$aerolinea ($tipo)';
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _buildResumenRow(
+                        label,
+                        v.precio ?? 0,
+                        currencyFmt,
+                        isSubtitle: true,
+                        icon: esVuelta
+                            ? Icons.flight_land_rounded
+                            : Icons.flight_takeoff_rounded,
+                        iconColor: esVuelta
+                            ? SaasPalette.warning
+                            : SaasPalette.brand600,
+                      ),
+                    );
+                  }),
                 ],
                 // Campo de descuento por persona
                 if (_tipoReserva == 'tour') ...[
@@ -1267,7 +1559,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                               ? '− Descuento por pareja'
                               : '− Descuento por persona',
                           style: const TextStyle(
-                            color: D.slate400,
+                            color: SaasPalette.textSecondary,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -1276,7 +1568,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       const SizedBox(width: 8),
                       Container(
                         decoration: BoxDecoration(
-                          color: D.bg,
+                          color: SaasPalette.bgSubtle,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         width: 130,
@@ -1287,51 +1579,51 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                             FilteringTextInputFormatter.digitsOnly,
                           ],
                           textAlign: TextAlign.right,
-                          style: const TextStyle(color: D.white, fontSize: 13),
+                          style: const TextStyle(
+                            color: SaasPalette.textPrimary,
+                            fontSize: 13,
+                          ),
                           decoration: const InputDecoration(
                             isDense: true,
                             prefixText: '\$ ',
                             prefixStyle: TextStyle(
-                              color: D.slate400,
+                              color: SaasPalette.textTertiary,
                               fontSize: 13,
                             ),
-                            hintText: '0',
-                            hintStyle: TextStyle(color: D.slate400),
-                            //color de fondo
-                            fillColor: D.border,
-
-                            border: OutlineInputBorder(),
+                            border: InputBorder.none,
                             contentPadding: EdgeInsets.symmetric(
                               horizontal: 8,
-                              vertical: 6,
+                              vertical: 8,
                             ),
                           ),
-
-                          onChanged: (val) {
+                          onChanged: (v) {
                             setState(() {
-                              _descuentoPorPersona =
-                                  double.tryParse(val.replaceAll(',', '')) ??
-                                  0.0;
+                              _descuentoPorPersona = double.tryParse(v) ?? 0.0;
                             });
                           },
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  const Divider(color: SaasPalette.border),
                   if (descuentoTotal > 0) ...[
                     const SizedBox(height: 4),
                     Align(
                       alignment: Alignment.centerRight,
                       child: Text(
                         '− ${currencyFmt.format(descuentoTotal)} total ($currentUnits ${precioPorPareja ? "pareja${currentUnits != 1 ? "s" : ""}" : "persona${currentUnits != 1 ? "s" : ""}"})',
-                        style: const TextStyle(color: D.rose, fontSize: 11),
+                        style: const TextStyle(
+                          color: SaasPalette.danger,
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                   ],
                 ],
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(color: D.border),
+                  child: Divider(color: SaasPalette.border),
                 ),
                 _buildResumenRow(
                   'TOTAL DE LA RESERVA',
@@ -1346,18 +1638,79 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     totalValidado,
                     currencyFmt,
                     isSubtitle: true,
-                    valueColor: D.rose,
+                    valueColor: SaasPalette.danger,
                   ),
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Divider(color: D.border),
+                    child: Divider(color: SaasPalette.border),
                   ),
                   _buildResumenRow(
                     'SALDO PENDIENTE',
                     saldoPendiente,
                     currencyFmt,
                     isTotal: true,
-                    valueColor: saldoPendiente <= 0 ? D.emerald : Colors.amber,
+                    valueColor: saldoPendiente <= 0
+                        ? SaasPalette.success
+                        : SaasPalette.warning,
+                  ),
+                ],
+                // Utilidad — solo para vuelos
+                if (_tipoReserva == 'vuelos') ...[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Divider(color: SaasPalette.border),
+                  ),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Utilidad',
+                          style: TextStyle(
+                            color: SaasPalette.textSecondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: SaasPalette.bgSubtle,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        width: 130,
+                        child: TextFormField(
+                          controller: _utilidadCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d*'),
+                            ),
+                          ],
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            color: SaasPalette.textPrimary,
+                            fontSize: 13,
+                          ),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            prefixText: '\$ ',
+                            prefixStyle: TextStyle(
+                              color: SaasPalette.textTertiary,
+                              fontSize: 13,
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 8,
+                            ),
+                          ),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ],
@@ -1375,17 +1728,25 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     bool isSubtitle = false,
     bool isTotal = false,
     Color? valueColor,
+    IconData? icon,
+    Color? iconColor,
   }) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        if (icon != null) ...[
+          Icon(icon, size: 14, color: iconColor ?? SaasPalette.textTertiary),
+          const SizedBox(width: 6),
+        ],
         Expanded(
           child: Text(
             label,
             style: TextStyle(
-              color: isTotal ? Colors.white : D.slate400,
+              color: isTotal
+                  ? SaasPalette.textPrimary
+                  : SaasPalette.textSecondary,
               fontSize: isTotal ? 15 : 13,
-              fontWeight: isTotal ? FontWeight.w900 : FontWeight.w500,
+              fontWeight: isTotal ? FontWeight.w800 : FontWeight.w500,
             ),
           ),
         ),
@@ -1393,37 +1754,88 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         Text(
           fmt.format(value),
           style: TextStyle(
-            color: valueColor ?? (isTotal ? D.emerald : D.slate400),
-            fontSize: isTotal ? 18 : 13,
-            fontWeight: isTotal ? FontWeight.w900 : FontWeight.w600,
+            color:
+                valueColor ??
+                (isTotal ? SaasPalette.success : SaasPalette.textSecondary),
+            fontSize: isTotal ? 16 : 13,
+            fontWeight: isTotal ? FontWeight.w800 : FontWeight.w600,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPagosSection() {
-    final currencyFmt = NumberFormat.currency(
-      locale: 'es_CO',
-      symbol: '\$',
-      decimalDigits: 0,
-    );
+  Widget _buildHotelReservaSection() {
+    return BlocBuilder<HotelBloc, HotelState>(
+      builder: (context, hotelState) {
+        final hoteles = hotelState is HotelLoaded
+            ? hotelState.hoteles
+            : <Hotel>[];
 
+        return PremiumSectionCard(
+          title: 'HOTEL RESERVA',
+          icon: Icons.hotel_rounded,
+          children: [
+            if (_hotelReservas.isEmpty)
+              const PremiumEmptyIndicator(
+                msg: 'No hay hoteles agregados a esta reserva.',
+                icon: Icons.hotel_rounded,
+              ),
+            ..._hotelReservas.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final hr = entry.value;
+              return _HotelReservaRow(
+                hotelReserva: hr,
+                hoteles: hoteles,
+                onChanged: (updated) {
+                  setState(() => _hotelReservas[idx] = updated);
+                },
+                onRemove: () {
+                  setState(() => _hotelReservas.removeAt(idx));
+                },
+              );
+            }),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _hotelReservas.add(
+                    const HotelReserva(
+                      numeroReserva: '',
+                      fechaCheckin: '',
+                      fechaCheckout: '',
+                    ),
+                  );
+                });
+              },
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Agregar Hotel'),
+              style: TextButton.styleFrom(
+                foregroundColor: SaasPalette.brand600,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPagosSection() {
     return PremiumSectionCard(
-      title: 'PAGOS REGISTRADOS',
+      title: 'PAGOS REALIZADOS',
       icon: Icons.payments_rounded,
       children: [
         if (_loadingPagos)
           const Center(
             child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: CircularProgressIndicator(color: D.skyBlue),
+              padding: EdgeInsets.all(24),
+              child: CircularProgressIndicator(color: SaasPalette.brand600),
             ),
           )
         else if (_pagos.isEmpty)
           const PremiumEmptyIndicator(
             msg: 'No hay pagos registrados para esta reserva.',
-            icon: Icons.pending_actions_rounded,
+            icon: Icons.receipt_long_rounded,
           )
         else
           ListView.separated(
@@ -1431,126 +1843,12 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _pagos.length,
             separatorBuilder: (_, __) =>
-                const Divider(color: D.border, height: 24),
-            itemBuilder: (_, index) {
-              final p = _pagos[index];
-              return Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: p.isValidated
-                          ? D.emerald.withValues(alpha: 0.15)
-                          : D.slate600.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      p.isValidated
-                          ? Icons.verified_rounded
-                          : Icons.pending_rounded,
-                      color: p.isValidated ? D.emerald : D.slate400,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          p.metodoPago.isNotEmpty
-                              ? p.metodoPago
-                              : 'Pago #${p.id}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          p.fechaDocumento.isNotEmpty
-                              ? p.fechaDocumento
-                              : 'Sin fecha',
-                          style: TextStyle(color: D.slate600, fontSize: 11),
-                        ),
-                        const SizedBox(height: 3),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: p.isValidated
-                                ? D.emerald.withValues(alpha: 0.15)
-                                : p.isRechazado
-                                ? D.rose.withValues(alpha: 0.15)
-                                : D.slate600.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            p.isValidated
-                                ? 'Validado'
-                                : p.isRechazado
-                                ? 'Rechazado'
-                                : 'Por validar',
-                            style: TextStyle(
-                              color: p.isValidated
-                                  ? D.emerald
-                                  : p.isRechazado
-                                  ? D.rose
-                                  : D.slate400,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    currencyFmt.format(p.monto),
-                    style: const TextStyle(
-                      color: D.emerald,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              );
+                const Divider(color: SaasPalette.border, height: 1),
+            itemBuilder: (context, index) {
+              final pago = _pagos[index];
+              return _PagoCard(pago: pago);
             },
           ),
-        if (_pagos.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(color: D.border),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Total validado',
-                style: TextStyle(
-                  color: D.slate400,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                currencyFmt.format(
-                  _pagos
-                      .where((p) => p.isValidated)
-                      .fold(0.0, (sum, p) => sum + p.monto),
-                ),
-                style: const TextStyle(
-                  color: D.skyBlue,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-        ],
       ],
     );
   }
@@ -1559,17 +1857,16 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: D.skyBlue, size: 14),
+        Icon(icon, color: SaasPalette.brand600, size: 14),
         const SizedBox(width: 8),
         Flexible(
           child: Text(
             text,
-            style: TextStyle(
-              color: D.slate400,
+            style: const TextStyle(
+              color: SaasPalette.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
-            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -1596,10 +1893,17 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   ),
                 );
               },
-              icon: const Icon(Icons.add_rounded, color: D.skyBlue, size: 18),
+              icon: const Icon(
+                Icons.add_rounded,
+                color: SaasPalette.brand600,
+                size: 18,
+              ),
               label: const Text(
                 'Agregar',
-                style: TextStyle(color: D.skyBlue, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: SaasPalette.brand600,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -1616,7 +1920,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             itemCount: _integrantes.length,
             separatorBuilder: (_, __) => const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
-              child: Divider(color: D.border, height: 1),
+              child: Divider(color: SaasPalette.border, height: 1),
             ),
             itemBuilder: (context, index) {
               return _IntegranteFormFields(
@@ -1647,10 +1951,17 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               onPressed: () {
                 setState(() => _servicios.add(0));
               },
-              icon: const Icon(Icons.add_rounded, color: D.skyBlue, size: 18),
+              icon: const Icon(
+                Icons.add_rounded,
+                color: SaasPalette.brand600,
+                size: 18,
+              ),
               label: const Text(
                 'Agregar',
-                style: TextStyle(color: D.skyBlue, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: SaasPalette.brand600,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -1682,25 +1993,28 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                             value: _servicios[index] == 0
                                 ? null
                                 : _servicios[index],
-                            dropdownColor: D.surfaceHigh,
+                            dropdownColor: SaasPalette.bgCanvas,
                             isExpanded: true,
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: SaasPalette.textPrimary,
                               fontSize: 14,
                             ),
                             hint: const Text(
                               'Seleccionar servicio',
-                              style: TextStyle(color: D.slate400, fontSize: 14),
+                              style: TextStyle(
+                                color: SaasPalette.textTertiary,
+                                fontSize: 14,
+                              ),
                             ),
                             decoration: InputDecoration(
                               prefixIcon: const Icon(
                                 Icons.room_service_outlined,
-                                color: D.skyBlue,
+                                color: SaasPalette.brand600,
                               ),
                               filled: true,
-                              fillColor: D.surfaceHigh.withOpacity(0.5),
+                              fillColor: SaasPalette.bgSubtle,
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide.none,
                               ),
                             ),
@@ -1726,7 +2040,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                         IconButton(
                           icon: const Icon(
                             Icons.delete_outline_rounded,
-                            color: D.rose,
+                            color: SaasPalette.danger,
                           ),
                           onPressed: () =>
                               setState(() => _servicios.removeAt(index)),
@@ -1754,7 +2068,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               _tipoReserva == 'vuelos'
                   ? 'Vuelos de la reserva'
                   : 'Vuelos del tour (opcional)',
-              style: TextStyle(color: D.slate400, fontSize: 12),
+              style: TextStyle(color: SaasPalette.textSecondary, fontSize: 12),
             ),
             TextButton.icon(
               onPressed: () {
@@ -1773,10 +2087,17 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   ),
                 );
               },
-              icon: const Icon(Icons.add_rounded, color: D.skyBlue, size: 18),
+              icon: const Icon(
+                Icons.add_rounded,
+                color: SaasPalette.brand600,
+                size: 18,
+              ),
               label: const Text(
                 'Agregar vuelo',
-                style: TextStyle(color: D.skyBlue, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: SaasPalette.brand600,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -1793,7 +2114,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             itemCount: _vuelos.length,
             separatorBuilder: (_, __) => const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
-              child: Divider(color: D.border, height: 1),
+              child: Divider(color: SaasPalette.border, height: 1),
             ),
             itemBuilder: (context, index) {
               return _VueloFormFields(
@@ -1822,6 +2143,53 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           maxLines: 4,
         ),
       ],
+    );
+  }
+
+  Widget _buildPdfButton() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF2563EB), width: 1),
+      ),
+      child: InkWell(
+        onTap: _generatingPdf ? null : _generateAndShowPdf,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (_generatingPdf)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF2563EB),
+                  ),
+                )
+              else
+                const Icon(
+                  Icons.picture_as_pdf_rounded,
+                  color: Color(0xFF2563EB),
+                  size: 20,
+                ),
+              const SizedBox(width: 10),
+              Text(
+                _generatingPdf ? 'Generando PDF...' : 'Generar PDF de la reserva',
+                style: const TextStyle(
+                  color: Color(0xFF2563EB),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1888,35 +2256,21 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
 
         if (displayCliente != null) {
           return Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: D.royalBlue.withValues(alpha: 0.08),
+              color: SaasPalette.bgCanvas,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: D.skyBlue.withValues(alpha: 0.4)),
+              border: Border.all(color: SaasPalette.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: D.royalBlue.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      displayCliente.nombre.isNotEmpty
-                          ? displayCliente.nombre[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        color: D.skyBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1924,25 +2278,18 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       Text(
                         displayCliente.nombre,
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 16,
-                          letterSpacing: 0.5,
+                          color: SaasPalette.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // Filas de información
-                      _buildInfoRow(
-                        Icons.email_outlined,
-                        displayCliente.correo,
-                      ),
-                      const SizedBox(height: 6),
                       Row(
                         children: [
                           Expanded(
                             child: _buildInfoRow(
-                              Icons.phone_outlined,
-                              displayCliente.telefono,
+                              Icons.email_outlined,
+                              displayCliente.correo,
                             ),
                           ),
                           if (displayCliente.fechaNacimiento != null)
@@ -1968,7 +2315,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 IconButton(
                   icon: const Icon(
                     Icons.swap_horiz_rounded,
-                    color: D.skyBlue,
+                    color: SaasPalette.brand600,
                     size: 20,
                   ),
                   onPressed: isLoading ? null : openPicker,
@@ -1984,9 +2331,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: D.royalBlue.withValues(alpha: 0.08),
+              color: SaasPalette.brand50,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: D.skyBlue.withValues(alpha: 0.4)),
+              border: Border.all(
+                color: SaasPalette.brand600.withValues(alpha: 0.2),
+              ),
             ),
             child: Row(
               children: [
@@ -1994,7 +2343,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: D.royalBlue.withValues(alpha: 0.2),
+                    color: SaasPalette.brand600.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
@@ -2003,16 +2352,19 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: D.skyBlue,
+                        color: SaasPalette.brand600,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
+                  child: const Text(
                     'Cargando responsable...',
-                    style: TextStyle(color: D.slate400, fontSize: 14),
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ],
@@ -2036,17 +2388,19 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     vertical: 14,
                   ),
                   decoration: BoxDecoration(
-                    color: D.bg.withValues(alpha: 0.3),
+                    color: SaasPalette.bgSubtle,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: field.hasError ? D.rose : D.border,
+                      color: field.hasError
+                          ? SaasPalette.danger
+                          : SaasPalette.border,
                     ),
                   ),
                   child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.person_search_rounded,
-                        color: D.slate600,
+                        color: SaasPalette.textTertiary,
                         size: 18,
                       ),
                       const SizedBox(width: 12),
@@ -2055,7 +2409,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           isLoading
                               ? 'Cargando clientes...'
                               : 'Seleccionar cliente *',
-                          style: TextStyle(color: D.slate400, fontSize: 14),
+                          style: const TextStyle(
+                            color: SaasPalette.textSecondary,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                       if (isLoading)
@@ -2064,13 +2421,13 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: D.skyBlue,
+                            color: SaasPalette.brand600,
                           ),
                         )
                       else
                         const Icon(
                           Icons.search_rounded,
-                          color: D.slate600,
+                          color: SaasPalette.textTertiary,
                           size: 18,
                         ),
                     ],
@@ -2081,7 +2438,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 const SizedBox(height: 6),
                 Text(
                   field.errorText!,
-                  style: TextStyle(color: D.rose, fontSize: 12),
+                  style: const TextStyle(
+                    color: SaasPalette.danger,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ],
@@ -2125,25 +2485,27 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
     _phoneCtrl = TextEditingController(text: widget.integrante.telefono);
     _documentoCtrl = TextEditingController(text: widget.integrante.documento);
     _dob = widget.integrante.fechaNacimiento;
-    _tipoDocumento = _normalizeTipoDocumento(widget.integrante.tipoDocumento);
+    _tipoDocumento = widget.integrante.tipoDocumento.isNotEmpty
+        ? widget.integrante.tipoDocumento
+        : 'CC';
   }
 
-  static String _normalizeTipoDocumento(String raw) {
-    switch (raw.toLowerCase().trim()) {
-      case 'cc':
-      case 'cedula':
-      case 'cédula':
-        return 'CC';
-      case 'ti':
-      case 'tarjeta identidad':
-      case 'tarjeta de identidad':
-        return 'TI';
-      case 'pasaporte':
-        return 'Pasaporte';
-      default:
-        return _tiposDocumento.contains(raw) ? raw : 'CC';
-    }
-  }
+  // static String _normalizeTipoDocumento(String raw) {
+  //   switch (raw.toLowerCase().trim()) {
+  //     case 'cc':
+  //     case 'cedula':
+  //     case 'cédula':
+  //       return 'CC';
+  //     case 'ti':
+  //     case 'tarjeta identidad':
+  //     case 'tarjeta de identidad':
+  //       return 'TI';
+  //     case 'pasaporte':
+  //       return 'Pasaporte';
+  //     default:
+  //       return _tiposDocumento.contains(raw) ? raw : 'CC';
+  //   }
+  // }
 
   @override
   void didUpdateWidget(_IntegranteFormFields oldWidget) {
@@ -2153,7 +2515,9 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
       _phoneCtrl.text = widget.integrante.telefono;
       _documentoCtrl.text = widget.integrante.documento;
       _dob = widget.integrante.fechaNacimiento;
-      _tipoDocumento = _normalizeTipoDocumento(widget.integrante.tipoDocumento);
+      _tipoDocumento = widget.integrante.tipoDocumento.isNotEmpty
+          ? widget.integrante.tipoDocumento
+          : 'CC';
     }
   }
 
@@ -2186,14 +2550,14 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
       lastDate: DateTime.now(),
       builder: (context, child) {
         return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: D.royalBlue,
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: SaasPalette.brand600,
               onPrimary: Colors.white,
-              surface: D.surface,
-              onSurface: Colors.white,
+              surface: SaasPalette.bgCanvas,
+              onSurface: SaasPalette.textPrimary,
             ),
-            dialogBackgroundColor: D.bg,
+            dialogBackgroundColor: SaasPalette.bgCanvas,
           ),
           child: child!,
         );
@@ -2214,12 +2578,16 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
           children: [
             Row(
               children: [
-                Icon(Icons.person_outline, color: Colors.amber, size: 18),
+                const Icon(
+                  Icons.person_outline,
+                  color: SaasPalette.warning,
+                  size: 18,
+                ),
                 const SizedBox(width: 8),
-                Text(
+                const Text(
                   'Acompañante',
                   style: TextStyle(
-                    color: Colors.amber,
+                    color: SaasPalette.warning,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -2248,7 +2616,7 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
                 const Text(
                   'TIPO DE DOCUMENTO',
                   style: TextStyle(
-                    color: D.slate400,
+                    color: SaasPalette.textTertiary,
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.8,
@@ -2272,19 +2640,21 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
                         ),
                         decoration: BoxDecoration(
                           color: selected
-                              ? D.royalBlue.withOpacity(0.15)
-                              : D.bg.withOpacity(0.3),
+                              ? SaasPalette.brand50
+                              : SaasPalette.bgSubtle,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: selected
-                                ? D.royalBlue.withOpacity(0.6)
-                                : D.border,
+                                ? SaasPalette.brand600.withValues(alpha: 0.6)
+                                : SaasPalette.border,
                           ),
                         ),
                         child: Text(
                           tipo,
                           style: TextStyle(
-                            color: selected ? D.royalBlue : D.slate400,
+                            color: selected
+                                ? SaasPalette.brand600
+                                : SaasPalette.textSecondary,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -2310,7 +2680,7 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
                 const Text(
                   'FECHA DE NACIMIENTO',
                   style: TextStyle(
-                    color: D.slate400,
+                    color: SaasPalette.textTertiary,
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.8,
@@ -2327,14 +2697,14 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
                     ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: D.border),
-                      color: D.bg.withOpacity(0.3),
+                      border: Border.all(color: SaasPalette.border),
+                      color: SaasPalette.bgSubtle,
                     ),
                     child: Row(
                       children: [
                         const Icon(
                           Icons.cake_rounded,
-                          color: D.skyBlue,
+                          color: SaasPalette.brand600,
                           size: 18,
                         ),
                         const SizedBox(width: 12),
@@ -2343,7 +2713,7 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
                               ? '${_dob!.day}/${_dob!.month}/${_dob!.year}'
                               : 'Seleccionar fecha (Opcional)',
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: SaasPalette.textPrimary,
                             fontSize: 13,
                           ),
                         ),
@@ -2362,7 +2732,7 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
             child: IconButton(
               icon: const Icon(
                 Icons.delete_outline_rounded,
-                color: D.rose,
+                color: SaasPalette.danger,
                 size: 22,
               ),
               onPressed: widget.onDelete,
@@ -2420,9 +2790,16 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
           return Container(
             constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
             decoration: BoxDecoration(
-              color: D.surface,
+              color: SaasPalette.bgCanvas,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: D.border),
+              border: Border.all(color: SaasPalette.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               children: [
@@ -2433,7 +2810,7 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                     children: [
                       const Icon(
                         Icons.person_search_rounded,
-                        color: D.skyBlue,
+                        color: SaasPalette.brand600,
                         size: 20,
                       ),
                       const SizedBox(width: 10),
@@ -2441,7 +2818,7 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                         child: Text(
                           'Seleccionar Cliente',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: SaasPalette.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -2450,7 +2827,7 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                       IconButton(
                         icon: const Icon(
                           Icons.person_add_rounded,
-                          color: D.skyBlue,
+                          color: SaasPalette.brand600,
                           size: 20,
                         ),
                         onPressed: () {
@@ -2466,7 +2843,7 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                       IconButton(
                         icon: const Icon(
                           Icons.close_rounded,
-                          color: D.slate400,
+                          color: SaasPalette.textTertiary,
                           size: 20,
                         ),
                         onPressed: () => Navigator.pop(context),
@@ -2480,26 +2857,34 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                   child: TextField(
                     controller: _searchCtrl,
                     autofocus: true,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    style: const TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 14,
+                    ),
                     onChanged: (v) =>
                         setState(() {}), // Forzar re-filtrado local
                     decoration: InputDecoration(
                       hintText: 'Buscar por nombre, correo o documento...',
-                      hintStyle: TextStyle(color: D.slate600, fontSize: 13),
+                      hintStyle: const TextStyle(
+                        color: SaasPalette.textTertiary,
+                        fontSize: 13,
+                      ),
                       prefixIcon: const Icon(
                         Icons.search_rounded,
-                        color: D.slate600,
+                        color: SaasPalette.brand600,
                         size: 18,
                       ),
                       filled: true,
-                      fillColor: D.bg.withValues(alpha: 0.5),
+                      fillColor: SaasPalette.bgSubtle,
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: D.border),
+                        borderSide: const BorderSide(color: SaasPalette.border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: D.skyBlue),
+                        borderSide: const BorderSide(
+                          color: SaasPalette.brand600,
+                        ),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -2515,7 +2900,10 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                       ? Center(
                           child: Text(
                             'Sin resultados',
-                            style: TextStyle(color: D.slate600, fontSize: 13),
+                            style: TextStyle(
+                              color: SaasPalette.textTertiary,
+                              fontSize: 13,
+                            ),
                           ),
                         )
                       : ListView.separated(
@@ -2541,7 +2929,7 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: Colors.white.withValues(
+                                      color: SaasPalette.textPrimary.withValues(
                                         alpha: 0.05,
                                       ),
                                     ),
@@ -2552,9 +2940,8 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                                         width: 36,
                                         height: 36,
                                         decoration: BoxDecoration(
-                                          color: D.royalBlue.withValues(
-                                            alpha: 0.1,
-                                          ),
+                                          color: SaasPalette.brand600
+                                              .withValues(alpha: 0.1),
                                           shape: BoxShape.circle,
                                         ),
                                         child: Center(
@@ -2563,7 +2950,7 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                                                 ? c.nombre[0].toUpperCase()
                                                 : '?',
                                             style: const TextStyle(
-                                              color: D.skyBlue,
+                                              color: SaasPalette.brand600,
                                               fontSize: 14,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -2579,7 +2966,7 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                                             Text(
                                               c.nombre,
                                               style: const TextStyle(
-                                                color: Colors.white,
+                                                color: SaasPalette.textPrimary,
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 14,
                                               ),
@@ -2587,7 +2974,8 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                                             Text(
                                               '${c.tipoDocumento} ${c.documento}',
                                               style: TextStyle(
-                                                color: D.slate400,
+                                                color:
+                                                    SaasPalette.textSecondary,
                                                 fontSize: 12,
                                               ),
                                             ),
@@ -2658,9 +3046,16 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
       child: Container(
         constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
         decoration: BoxDecoration(
-          color: D.surface,
+          color: SaasPalette.bgCanvas,
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: D.border),
+          border: Border.all(color: SaasPalette.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -2669,13 +3064,17 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
               padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
               child: Row(
                 children: [
-                  const Icon(Icons.tour_rounded, color: D.skyBlue, size: 20),
+                  const Icon(
+                    Icons.tour_rounded,
+                    color: SaasPalette.brand600,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
                       'Seleccionar Tour',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: SaasPalette.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -2684,7 +3083,7 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
                   IconButton(
                     icon: const Icon(
                       Icons.close_rounded,
-                      color: D.slate400,
+                      color: SaasPalette.textTertiary,
                       size: 20,
                     ),
                     onPressed: () => Navigator.pop(context),
@@ -2698,24 +3097,30 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
               child: TextField(
                 controller: _searchCtrl,
                 autofocus: true,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: const TextStyle(
+                  color: SaasPalette.textPrimary,
+                  fontSize: 14,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Buscar por nombre del tour...',
-                  hintStyle: TextStyle(color: D.slate600, fontSize: 13),
+                  hintStyle: const TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 13,
+                  ),
                   prefixIcon: const Icon(
                     Icons.search_rounded,
-                    color: D.slate600,
+                    color: SaasPalette.brand600,
                     size: 18,
                   ),
                   filled: true,
-                  fillColor: D.bg.withValues(alpha: 0.5),
+                  fillColor: SaasPalette.bgSubtle,
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: D.border),
+                    borderSide: const BorderSide(color: SaasPalette.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: D.skyBlue),
+                    borderSide: const BorderSide(color: SaasPalette.brand600),
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -2731,7 +3136,10 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
                   ? Center(
                       child: Text(
                         'Sin resultados',
-                        style: TextStyle(color: D.slate600, fontSize: 13),
+                        style: TextStyle(
+                          color: SaasPalette.textTertiary,
+                          fontSize: 13,
+                        ),
                       ),
                     )
                   : ListView.separated(
@@ -2757,14 +3165,16 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: D.border.withValues(alpha: 0.5),
+                                  color: SaasPalette.border.withValues(
+                                    alpha: 0.5,
+                                  ),
                                 ),
                               ),
                               child: Row(
                                 children: [
                                   const Icon(
                                     Icons.tour_rounded,
-                                    color: D.skyBlue,
+                                    color: SaasPalette.brand600,
                                     size: 16,
                                   ),
                                   const SizedBox(width: 12),
@@ -2772,7 +3182,7 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
                                     child: Text(
                                       t.name,
                                       style: const TextStyle(
-                                        color: Colors.white,
+                                        color: SaasPalette.textPrimary,
                                         fontSize: 13,
                                       ),
                                       overflow: TextOverflow.ellipsis,
@@ -2810,24 +3220,104 @@ class _TourBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 11),
-          const SizedBox(width: 4),
+          Icon(icon, color: color, size: 12),
+          const SizedBox(width: 5),
           Text(
             label,
             style: TextStyle(
               color: color,
               fontSize: 10,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w800,
               letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PagoCard extends StatelessWidget {
+  final PagoRealizado pago;
+
+  const _PagoCard({required this.pago});
+
+  @override
+  Widget build(BuildContext context) {
+    final currencyFmt = NumberFormat.currency(
+      locale: 'es_CO',
+      symbol: '\$',
+      decimalDigits: 0,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: SaasPalette.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: pago.isValidated
+                  ? SaasPalette.success.withValues(alpha: 0.1)
+                  : SaasPalette.textTertiary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              pago.isValidated ? Icons.verified_rounded : Icons.history_rounded,
+              color: pago.isValidated
+                  ? SaasPalette.success
+                  : SaasPalette.textTertiary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  pago.metodoPago.isNotEmpty
+                      ? pago.metodoPago
+                      : 'Pago #${pago.id}',
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  pago.fechaDocumento.isNotEmpty
+                      ? pago.fechaDocumento
+                      : 'Sin fecha',
+                  style: const TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            currencyFmt.format(pago.monto),
+            style: const TextStyle(
+              color: SaasPalette.success,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -2852,14 +3342,14 @@ class _TourInfoRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: D.slate600, size: 15),
+        Icon(icon, color: SaasPalette.textTertiary, size: 15),
         const SizedBox(width: 10),
         SizedBox(
           width: 110,
           child: Text(
             label,
-            style: TextStyle(
-              color: D.slate400,
+            style: const TextStyle(
+              color: SaasPalette.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -2868,7 +3358,11 @@ class _TourInfoRow extends StatelessWidget {
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+            style: const TextStyle(
+              color: SaasPalette.textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ],
@@ -2899,24 +3393,37 @@ class _TipoReservaChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
-          color: selected
-              ? D.royalBlue.withValues(alpha: 0.15)
-              : D.bg.withValues(alpha: 0.3),
+          color: selected ? SaasPalette.brand50 : SaasPalette.bgCanvas,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? D.royalBlue : D.border,
+            color: selected ? SaasPalette.brand600 : SaasPalette.border,
             width: selected ? 1.5 : 1,
           ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: SaasPalette.brand600.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: selected ? D.skyBlue : D.slate400, size: 18),
+            Icon(
+              icon,
+              color: selected ? SaasPalette.brand600 : SaasPalette.textTertiary,
+              size: 18,
+            ),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : D.slate400,
+                color: selected
+                    ? SaasPalette.brand600
+                    : SaasPalette.textSecondary,
                 fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                 fontSize: 14,
               ),
@@ -2960,8 +3467,10 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
   late TextEditingController _horaSalidaCtrl;
   late TextEditingController _horaLlegadaCtrl;
   late TextEditingController _precioCtrl;
+  late TextEditingController _reservaVueloCtrl;
   int? _aerolineaId;
   late String _clase;
+  late String _tipoVuelo;
 
   static const _clases = ['economy', 'premium_economy', 'business', 'first'];
   static const _clasesLabel = {
@@ -2983,8 +3492,10 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
     _horaSalidaCtrl = TextEditingController(text: v.horaSalida);
     _horaLlegadaCtrl = TextEditingController(text: v.horaLlegada);
     _precioCtrl = TextEditingController(text: v.precio?.toString() ?? '');
+    _reservaVueloCtrl = TextEditingController(text: v.reservaVuelo);
     _aerolineaId = v.aerolineaId ?? v.aerolinea?.id;
     _clase = v.clase.isNotEmpty ? v.clase : 'economy';
+    _tipoVuelo = v.tipoVuelo.isNotEmpty ? v.tipoVuelo : 'ida';
   }
 
   @override
@@ -2997,6 +3508,7 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
     _horaSalidaCtrl.dispose();
     _horaLlegadaCtrl.dispose();
     _precioCtrl.dispose();
+    _reservaVueloCtrl.dispose();
     super.dispose();
   }
 
@@ -3021,6 +3533,8 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
         horaLlegada: _horaLlegadaCtrl.text.trim(),
         clase: _clase,
         precio: double.tryParse(_precioCtrl.text.trim().replaceAll(',', '.')),
+        reservaVuelo: _reservaVueloCtrl.text.trim(),
+        tipoVuelo: _tipoVuelo,
       ),
     );
   }
@@ -3062,18 +3576,18 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
   }
 
   InputDecoration _dec(String hint, IconData icon) => InputDecoration(
-    prefixIcon: Icon(icon, color: D.slate400, size: 18),
+    prefixIcon: Icon(icon, color: SaasPalette.brand600, size: 18),
     hintText: hint,
-    hintStyle: TextStyle(color: D.slate600, fontSize: 13),
+    hintStyle: const TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
     filled: true,
-    fillColor: D.bg.withValues(alpha: 0.3),
+    fillColor: SaasPalette.bgSubtle,
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: D.border),
+      borderSide: const BorderSide(color: SaasPalette.border),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: D.skyBlue),
+      borderSide: const BorderSide(color: SaasPalette.brand600),
     ),
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
   );
@@ -3087,12 +3601,16 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
           children: [
             Row(
               children: [
-                const Icon(Icons.flight_rounded, color: D.skyBlue, size: 16),
+                const Icon(
+                  Icons.flight_rounded,
+                  color: SaasPalette.brand600,
+                  size: 16,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Vuelo ${widget.index + 1}',
                   style: const TextStyle(
-                    color: D.skyBlue,
+                    color: SaasPalette.brand600,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
@@ -3104,8 +3622,8 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
             // Aerolínea Selector
             Text(
               'Aerolínea *',
-              style: TextStyle(
-                color: D.slate400,
+              style: const TextStyle(
+                color: SaasPalette.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -3119,9 +3637,9 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: D.bg.withValues(alpha: 0.3),
+                  color: SaasPalette.bgSubtle,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: D.border),
+                  border: Border.all(color: SaasPalette.border),
                 ),
                 child: Row(
                   children: [
@@ -3140,7 +3658,7 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                           }
                           return const Icon(
                             Icons.business_rounded,
-                            color: D.skyBlue,
+                            color: SaasPalette.brand600,
                             size: 18,
                           );
                         },
@@ -3154,7 +3672,7 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                                   ?.nombre ??
                               'Seleccionar aerolínea',
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: SaasPalette.textPrimary,
                             fontSize: 14,
                           ),
                           overflow: TextOverflow.ellipsis,
@@ -3163,7 +3681,7 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                     ] else ...[
                       Icon(
                         Icons.business_rounded,
-                        color: D.slate400.withValues(alpha: 0.5),
+                        color: SaasPalette.textTertiary.withValues(alpha: 0.5),
                         size: 18,
                       ),
                       const SizedBox(width: 12),
@@ -3172,13 +3690,16 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                           widget.loadingAerolineas
                               ? 'Cargando aerolíneas...'
                               : 'Seleccionar aerolínea',
-                          style: TextStyle(color: D.slate600, fontSize: 14),
+                          style: const TextStyle(
+                            color: SaasPalette.textTertiary,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ],
                     const Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      color: D.slate400,
+                      color: SaasPalette.textTertiary,
                       size: 20,
                     ),
                   ],
@@ -3189,7 +3710,10 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
             // Número de vuelo
             TextField(
               controller: _numeroCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: const TextStyle(
+                color: SaasPalette.textPrimary,
+                fontSize: 14,
+              ),
               decoration: _dec(
                 'Número de vuelo (ej. LA1234)',
                 Icons.tag_rounded,
@@ -3203,7 +3727,10 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                 Expanded(
                   child: TextField(
                     controller: _origenCtrl,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    style: const TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 14,
+                    ),
                     decoration: _dec('Origen', Icons.flight_takeoff_rounded),
                     onChanged: (_) => _notify(),
                   ),
@@ -3211,14 +3738,17 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                 const SizedBox(width: 10),
                 const Icon(
                   Icons.arrow_forward_rounded,
-                  color: D.slate400,
+                  color: SaasPalette.textTertiary,
                   size: 18,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
                     controller: _destinoCtrl,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    style: const TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 14,
+                    ),
                     decoration: _dec('Destino', Icons.flight_land_rounded),
                     onChanged: (_) => _notify(),
                   ),
@@ -3236,7 +3766,7 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                       child: TextField(
                         controller: _fechaSalidaCtrl,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: Colors.black,
                           fontSize: 14,
                         ),
                         decoration: _dec(
@@ -3255,7 +3785,7 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                       child: TextField(
                         controller: _fechaLlegadaCtrl,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: Colors.black,
                           fontSize: 14,
                         ),
                         decoration: _dec(
@@ -3275,7 +3805,10 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                 Expanded(
                   child: TextField(
                     controller: _horaSalidaCtrl,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    style: const TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 14,
+                    ),
                     decoration: _dec(
                       'Hora salida (06:00)',
                       Icons.schedule_rounded,
@@ -3287,7 +3820,10 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                 Expanded(
                   child: TextField(
                     controller: _horaLlegadaCtrl,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    style: const TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 14,
+                    ),
                     decoration: _dec('Hora llegada', Icons.schedule_rounded),
                     onChanged: (_) => _notify(),
                   ),
@@ -3298,8 +3834,11 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
             // Clase
             DropdownButtonFormField<String>(
               initialValue: _clase,
-              dropdownColor: D.surfaceHigh,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              dropdownColor: SaasPalette.bgCanvas,
+              style: const TextStyle(
+                color: SaasPalette.textPrimary,
+                fontSize: 14,
+              ),
               decoration: _dec(
                 'Clase',
                 Icons.airline_seat_recline_extra_rounded,
@@ -3320,17 +3859,76 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
               },
             ),
             const SizedBox(height: 12),
+            // Tipo de vuelo (ida / vuelta)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Tipo de vuelo *',
+                  style: TextStyle(
+                    color: SaasPalette.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _TipoVueloChip(
+                      label: 'Ida',
+                      icon: Icons.flight_takeoff_rounded,
+                      selected: _tipoVuelo == 'ida',
+                      onTap: () {
+                        setState(() => _tipoVuelo = 'ida');
+                        _notify();
+                      },
+                    ),
+                    const SizedBox(width: 10),
+                    _TipoVueloChip(
+                      label: 'Vuelta',
+                      icon: Icons.flight_land_rounded,
+                      selected: _tipoVuelo == 'vuelta',
+                      onTap: () {
+                        setState(() => _tipoVuelo = 'vuelta');
+                        _notify();
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             // Precio del vuelo (solo si tipo reserva es vuelos o si se desea poner)
             TextField(
               controller: _precioCtrl,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: const TextStyle(
+                color: SaasPalette.textPrimary,
+                fontSize: 14,
+              ),
               decoration: _dec('Precio del vuelo ', Icons.attach_money_rounded),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
               ],
+              onChanged: (_) => _notify(),
+            ),
+            const SizedBox(height: 12),
+            // Reserva vuelo (obligatorio)
+            TextFormField(
+              controller: _reservaVueloCtrl,
+              style: const TextStyle(
+                color: SaasPalette.textPrimary,
+                fontSize: 14,
+              ),
+              decoration: _dec(
+                'Reserva vuelo (ej. ABC-2026-001)',
+                Icons.confirmation_number_rounded,
+              ),
+              validator: (v) => (v == null || v.trim().isEmpty)
+                  ? 'La reserva del vuelo es requerida'
+                  : null,
               onChanged: (_) => _notify(),
             ),
           ],
@@ -3341,7 +3939,7 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
           child: IconButton(
             icon: const Icon(
               Icons.delete_outline_rounded,
-              color: D.rose,
+              color: SaasPalette.danger,
               size: 22,
             ),
             onPressed: widget.onDelete,
@@ -3400,7 +3998,7 @@ class _AerolineaPickerDialogState extends State<_AerolineaPickerDialog> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
           child: Container(
-            color: D.surface.withValues(alpha: 0.95),
+            color: Colors.white.withValues(alpha: 0.95),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -3408,20 +4006,19 @@ class _AerolineaPickerDialogState extends State<_AerolineaPickerDialog> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.05),
-                      ),
-                    ),
+                    border: Border(bottom: BorderSide(color: D.bg)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.business_rounded, color: D.skyBlue),
+                      const Icon(
+                        Icons.business_rounded,
+                        color: SaasPalette.brand600,
+                      ),
                       const SizedBox(width: 12),
                       const Text(
                         'Seleccionar Aerolínea',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: D.bg,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -3443,17 +4040,23 @@ class _AerolineaPickerDialogState extends State<_AerolineaPickerDialog> {
                   padding: const EdgeInsets.all(16),
                   child: TextField(
                     controller: _searchCtrl,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    style: const TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 14,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Buscar por nombre o código IATA...',
-                      hintStyle: TextStyle(color: D.slate600, fontSize: 13),
+                      hintStyle: const TextStyle(
+                        color: SaasPalette.textTertiary,
+                        fontSize: 13,
+                      ),
                       prefixIcon: const Icon(
                         Icons.search_rounded,
-                        color: D.skyBlue,
+                        color: SaasPalette.brand600,
                         size: 20,
                       ),
                       filled: true,
-                      fillColor: D.bg.withValues(alpha: 0.3),
+                      fillColor: SaasPalette.bgSubtle,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -3511,15 +4114,16 @@ class _AerolineaPickerDialogState extends State<_AerolineaPickerDialog> {
                                             Text(
                                               a.nombre,
                                               style: const TextStyle(
-                                                color: Colors.white,
+                                                color: SaasPalette.textPrimary,
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 14,
                                               ),
                                             ),
                                             Text(
                                               a.pais ?? 'Internacional',
-                                              style: TextStyle(
-                                                color: D.slate400,
+                                              style: const TextStyle(
+                                                color:
+                                                    SaasPalette.textSecondary,
                                                 fontSize: 12,
                                               ),
                                             ),
@@ -3532,9 +4136,7 @@ class _AerolineaPickerDialogState extends State<_AerolineaPickerDialog> {
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: D.royalBlue.withValues(
-                                            alpha: 0.15,
-                                          ),
+                                          color: SaasPalette.brand50,
                                           borderRadius: BorderRadius.circular(
                                             6,
                                           ),
@@ -3542,7 +4144,7 @@ class _AerolineaPickerDialogState extends State<_AerolineaPickerDialog> {
                                         child: Text(
                                           a.codigoIata,
                                           style: const TextStyle(
-                                            color: D.skyBlue,
+                                            color: SaasPalette.brand600,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 12,
                                           ),
@@ -3613,19 +4215,689 @@ class _IataBadge extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: D.royalBlue.withValues(alpha: 0.15),
+        color: SaasPalette.brand50,
         borderRadius: BorderRadius.circular(4),
       ),
       alignment: Alignment.center,
       child: Text(
         iata,
         style: TextStyle(
-          color: D.royalBlue,
+          color: SaasPalette.brand600,
           fontSize: size * 0.38,
           fontWeight: FontWeight.w900,
           letterSpacing: -0.5,
         ),
         overflow: TextOverflow.clip,
+      ),
+    );
+  }
+}
+
+// ─── Tipo Vuelo Chip ─────────────────────────────────────────────────────────
+
+class _TipoVueloChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _TipoVueloChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? SaasPalette.brand600 : SaasPalette.bgSubtle,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? SaasPalette.brand600 : SaasPalette.border,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 15,
+              color: selected ? Colors.white : SaasPalette.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : SaasPalette.textSecondary,
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Hotel Reserva Row Widget ──────────────────────────────────────────────
+
+class _HotelReservaRow extends StatefulWidget {
+  final HotelReserva hotelReserva;
+  final List<Hotel> hoteles;
+  final ValueChanged<HotelReserva> onChanged;
+  final VoidCallback onRemove;
+
+  const _HotelReservaRow({
+    required this.hotelReserva,
+    required this.hoteles,
+    required this.onChanged,
+    required this.onRemove,
+  });
+
+  @override
+  State<_HotelReservaRow> createState() => _HotelReservaRowState();
+}
+
+class _HotelReservaRowState extends State<_HotelReservaRow> {
+  late final TextEditingController _numeroCtrl;
+  late final TextEditingController _checkinCtrl;
+  late final TextEditingController _checkoutCtrl;
+  late final TextEditingController _valorCtrl;
+  int? _selectedHotelId;
+
+  @override
+  void initState() {
+    super.initState();
+    _numeroCtrl = TextEditingController(
+      text: widget.hotelReserva.numeroReserva,
+    );
+    _checkinCtrl = TextEditingController(
+      text: widget.hotelReserva.fechaCheckin,
+    );
+    _checkoutCtrl = TextEditingController(
+      text: widget.hotelReserva.fechaCheckout,
+    );
+    _valorCtrl = TextEditingController(
+      text: widget.hotelReserva.valor != null
+          ? widget.hotelReserva.valor!.toStringAsFixed(0)
+          : '',
+    );
+    _selectedHotelId =
+        widget.hotelReserva.hotelId ?? widget.hotelReserva.hotel?.id;
+  }
+
+  @override
+  void dispose() {
+    _numeroCtrl.dispose();
+    _checkinCtrl.dispose();
+    _checkoutCtrl.dispose();
+    _valorCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _openHotelPicker(BuildContext ctx) async {
+    final result = await showDialog<Hotel>(
+      context: ctx,
+      builder: (_) => _HotelPickerDialog(hoteles: widget.hoteles),
+    );
+    if (result != null) {
+      setState(() => _selectedHotelId = result.id);
+      _notify();
+    }
+  }
+
+  void _notify() {
+    final hotel = widget.hoteles.cast<Hotel?>().firstWhere(
+      (h) => h?.id == _selectedHotelId,
+      orElse: () => null,
+    );
+    widget.onChanged(
+      HotelReserva(
+        id: widget.hotelReserva.id,
+        hotelId: _selectedHotelId,
+        hotel: hotel,
+        numeroReserva: _numeroCtrl.text.trim(),
+        fechaCheckin: _checkinCtrl.text.trim(),
+        fechaCheckout: _checkoutCtrl.text.trim(),
+        valor: double.tryParse(_valorCtrl.text.trim()),
+      ),
+    );
+  }
+
+  Future<void> _pickDate(TextEditingController ctrl) async {
+    final initial = DateTime.tryParse(ctrl.text) ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      ctrl.text = DateFormat('yyyy-MM-dd').format(picked);
+      _notify();
+    }
+  }
+
+  InputDecoration _dec(String hint, IconData icon) => InputDecoration(
+    prefixIcon: Icon(icon, color: SaasPalette.brand600, size: 18),
+    hintText: hint,
+    hintStyle: const TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
+    filled: true,
+    fillColor: SaasPalette.bgSubtle,
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: SaasPalette.border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: SaasPalette.brand600),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: SaasPalette.danger),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: SaasPalette.danger),
+    ),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+          decoration: BoxDecoration(
+            color: SaasPalette.bgCanvas,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: SaasPalette.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Encabezado
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: SaasPalette.brand600.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.hotel_rounded,
+                      color: SaasPalette.brand600,
+                      size: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Hotel Reserva',
+                    style: TextStyle(
+                      color: SaasPalette.brand600,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Selector de hotel
+              FormField<int>(
+                validator: (_) =>
+                    _selectedHotelId == null ? 'Seleccione un hotel' : null,
+                builder: (field) {
+                  final selectedHotel = widget.hoteles
+                      .cast<Hotel?>()
+                      .firstWhere(
+                        (h) => h?.id == _selectedHotelId,
+                        orElse: () => null,
+                      );
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () => _openHotelPicker(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: SaasPalette.bgSubtle,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: field.hasError
+                                  ? SaasPalette.danger
+                                  : SaasPalette.border,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.hotel_rounded,
+                                size: 18,
+                                color: selectedHotel != null
+                                    ? SaasPalette.brand600
+                                    : SaasPalette.brand600,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: selectedHotel != null
+                                    ? Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            selectedHotel.nombre,
+                                            style: const TextStyle(
+                                              color: SaasPalette.textPrimary,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          Text(
+                                            selectedHotel.ciudad,
+                                            style: const TextStyle(
+                                              color: SaasPalette.textSecondary,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : const Text(
+                                        'Seleccionar hotel',
+                                        style: TextStyle(
+                                          color: SaasPalette.textTertiary,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                              ),
+                              const Icon(
+                                Icons.search_rounded,
+                                size: 18,
+                                color: SaasPalette.brand600,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (field.hasError) ...[
+                        const SizedBox(height: 4),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 14),
+                          child: Text(
+                            field.errorText!,
+                            style: const TextStyle(
+                              color: SaasPalette.danger,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // Número de reserva
+              TextFormField(
+                controller: _numeroCtrl,
+                style: const TextStyle(
+                  color: SaasPalette.textPrimary,
+                  fontSize: 14,
+                ),
+                decoration: _dec(
+                  'Número de reserva (ej. HTL-2026-001)',
+                  Icons.confirmation_number_rounded,
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'El número es requerido'
+                    : null,
+                onChanged: (_) => _notify(),
+              ),
+              const SizedBox(height: 12),
+
+              // Valor
+              TextField(
+                controller: _valorCtrl,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                ],
+                style: const TextStyle(
+                  color: SaasPalette.textPrimary,
+                  fontSize: 14,
+                ),
+                decoration: _dec('Valor del hotel', Icons.attach_money_rounded),
+                onChanged: (_) => _notify(),
+              ),
+              const SizedBox(height: 12),
+
+              // Fechas check-in / check-out
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _pickDate(_checkinCtrl),
+                      child: AbsorbPointer(
+                        child: TextFormField(
+                          controller: _checkinCtrl,
+                          style: const TextStyle(
+                            color: SaasPalette.textPrimary,
+                            fontSize: 14,
+                          ),
+                          decoration: _dec(
+                            'Check-in',
+                            Icons.calendar_today_rounded,
+                          ),
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Requerido'
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _pickDate(_checkoutCtrl),
+                      child: AbsorbPointer(
+                        child: TextFormField(
+                          controller: _checkoutCtrl,
+                          style: const TextStyle(
+                            color: SaasPalette.textPrimary,
+                            fontSize: 14,
+                          ),
+                          decoration: _dec(
+                            'Check-out',
+                            Icons.calendar_today_rounded,
+                          ),
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Requerido'
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        // Botón eliminar — esquina superior derecha
+        Positioned(
+          top: 8,
+          right: 8,
+          child: IconButton(
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              color: SaasPalette.danger,
+              size: 20,
+            ),
+            onPressed: widget.onRemove,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Hotel Picker Dialog ──────────────────────────────────────────────────────
+
+class _HotelPickerDialog extends StatefulWidget {
+  final List<Hotel> hoteles;
+
+  const _HotelPickerDialog({required this.hoteles});
+
+  @override
+  State<_HotelPickerDialog> createState() => _HotelPickerDialogState();
+}
+
+class _HotelPickerDialogState extends State<_HotelPickerDialog> {
+  final _searchCtrl = TextEditingController();
+  List<Hotel> _filtered = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.hoteles.where((h) => h.isActive).toList();
+    _searchCtrl.addListener(_onSearch);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearch() {
+    final q = _searchCtrl.text.toLowerCase();
+    setState(() {
+      _filtered = widget.hoteles
+          .where((h) => h.isActive)
+          .where(
+            (h) =>
+                h.nombre.toLowerCase().contains(q) ||
+                h.ciudad.toLowerCase().contains(q),
+          )
+          .toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            color: Colors.white.withValues(alpha: 0.95),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: SaasPalette.border),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.hotel_rounded,
+                        color: SaasPalette.brand600,
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Seleccionar Hotel',
+                          style: TextStyle(
+                            color: SaasPalette.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          await Navigator.pushNamed(
+                            context,
+                            AppRouter.hotelCreate,
+                          );
+                        },
+                        icon: const Icon(Icons.add_rounded, size: 16),
+                        label: const Text('Nuevo'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: SaasPalette.brand600,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: SaasPalette.textSecondary,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Search bar
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextField(
+                    controller: _searchCtrl,
+                    autofocus: true,
+                    style: const TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 14,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por nombre o ciudad...',
+                      hintStyle: const TextStyle(
+                        color: SaasPalette.textTertiary,
+                        fontSize: 13,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        color: SaasPalette.brand600,
+                        size: 20,
+                      ),
+                      filled: true,
+                      fillColor: SaasPalette.bgSubtle,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // List
+                Flexible(
+                  child: _filtered.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(40),
+                          child: PremiumEmptyIndicator(
+                            msg: 'No se encontraron hoteles',
+                            icon: Icons.search_off_rounded,
+                          ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: _filtered.length,
+                          itemBuilder: (context, index) {
+                            final h = _filtered[index];
+                            return Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => Navigator.pop(context, h),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: SaasPalette.border,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color: SaasPalette.brand50,
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.hotel_rounded,
+                                          color: SaasPalette.brand600,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              h.nombre,
+                                              style: const TextStyle(
+                                                color: SaasPalette.textPrimary,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            Text(
+                                              h.ciudad,
+                                              style: const TextStyle(
+                                                color:
+                                                    SaasPalette.textSecondary,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const Icon(
+                                        Icons.chevron_right_rounded,
+                                        color: SaasPalette.textTertiary,
+                                        size: 18,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

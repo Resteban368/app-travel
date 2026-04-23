@@ -77,7 +77,6 @@ void main() {
                 ),
               )
               .toList(),
-          imageUrl: item['url_imagen'] ?? '',
           sedeId: item['sede_id']?.toString(),
           isPromotion: item['es_promocion'] ?? false,
           isActive: item['is_active'] ?? true,

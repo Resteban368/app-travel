@@ -40,7 +40,7 @@ class ApiInfoEmpresaRepository implements InfoEmpresaRepository {
       body: body,
     );
     if (response.statusCode != 201 && response.statusCode != 200) {
-      debugPrint('❌ [ApiInfoEmpresaRepository] Error: ${response.statusCode}');
+      debugPrint('❌ [ApiInfoEmpresaRepository] Error: ${response.statusCode} — ${response.body}');
       throw Exception('Failed to create info: ${response.statusCode}');
     }
   }
@@ -93,10 +93,10 @@ class ApiInfoEmpresaRepository implements InfoEmpresaRepository {
     return InfoEmpresa(
       id: id,
       nombre: json['nombre'] ?? '',
-      direccion: json['direccion'] ?? '',
+      direccion: json['direccion_sede_principal'] ?? json['direccion'] ?? '',
       mision: json['mision'] ?? '',
       vision: json['vision'] ?? '',
-      detalles: json['detalles'] ?? '',
+      detalles: json['detalles_empresa'] ?? json['detalles'] ?? '',
       horarioPresencial: json['horario_presencial'] ?? '',
       horarioVirtual: json['horario_virtual'] ?? '',
       redesSociales: (json['redes_sociales'] as List? ?? [])
@@ -105,24 +105,25 @@ class ApiInfoEmpresaRepository implements InfoEmpresaRepository {
       nombreGerente: json['nombre_gerente'] ?? '',
       telefono: json['telefono'] ?? '',
       correo: json['correo'] ?? '',
-      sitioWeb: json['sitio_web'] ?? '',
+      sitioWeb: json['pagina_web'] ?? json['sitio_web'] ?? '',
     );
   }
 
   Map<String, dynamic> _toJson(InfoEmpresa info) {
-    return {
+    final map = <String, dynamic>{
       'nombre': info.nombre,
-      'direccion': info.direccion,
+      'direccion_sede_principal': info.direccion,
       'mision': info.mision,
       'vision': info.vision,
-      'detalles': info.detalles,
+      'detalles_empresa': info.detalles,
       'horario_presencial': info.horarioPresencial,
       'horario_virtual': info.horarioVirtual,
       'redes_sociales': info.redesSociales.map((r) => r.toJson()).toList(),
       'nombre_gerente': info.nombreGerente,
       'telefono': info.telefono,
       'correo': info.correo,
-      'sitio_web': info.sitioWeb,
     };
+    if (info.sitioWeb.isNotEmpty) map['pagina_web'] = info.sitioWeb;
+    return map;
   }
 }

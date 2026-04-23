@@ -126,13 +126,14 @@ class ApiTourRepository implements TourRepository {
             ),
           )
           .toList(),
-      imageUrl: json['url_imagen'] ?? '',
       sedeId: json['sede_id']?.toString(),
       isPromotion: json['es_promocion'] ?? false,
       isActive: json['is_active'] ?? true,
       isDraft: json['es_borrador'] ?? false,
       precioPorPareja: json['precio_por_pareja'] ?? false,
-      cupos: json['cupos'] != null ? int.tryParse(json['cupos'].toString()) : null,
+      cupos: json['cupos'] != null
+          ? int.tryParse(json['cupos'].toString())
+          : null,
       cuposDisponibles: json['cupos_disponibles'] != null
           ? int.tryParse(json['cupos_disponibles'].toString())
           : null,
@@ -162,7 +163,6 @@ class ApiTourRepository implements TourRepository {
             },
           )
           .toList(),
-      'url_imagen': tour.imageUrl,
       'sede_id': tour.sedeId,
       'es_promocion': tour.isPromotion,
       'is_active': tour.isActive,

@@ -40,7 +40,6 @@ class Tour extends Equatable {
   final List<String> inclusions;
   final List<String> exclusions;
   final List<ItineraryDay> itinerary;
-  final String imageUrl;
   final String? sedeId;
   final bool isPromotion;
   final bool isActive;
@@ -64,7 +63,6 @@ class Tour extends Equatable {
     required this.inclusions,
     required this.exclusions,
     required this.itinerary,
-    required this.imageUrl,
     this.sedeId,
     this.isPromotion = false,
     this.isActive = true,
@@ -113,7 +111,6 @@ class Tour extends Equatable {
       inclusions: inclusions ?? this.inclusions,
       exclusions: exclusions ?? this.exclusions,
       itinerary: itinerary ?? this.itinerary,
-      imageUrl: imageUrl ?? this.imageUrl,
       sedeId: sedeId ?? this.sedeId,
       isPromotion: isPromotion ?? this.isPromotion,
       isActive: isActive ?? this.isActive,
@@ -140,7 +137,6 @@ class Tour extends Equatable {
     inclusions,
     exclusions,
     itinerary,
-    imageUrl,
     sedeId,
     isPromotion,
     isActive,

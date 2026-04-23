@@ -32,7 +32,13 @@
   <link rel="manifest" href="manifest.json">
 
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
-<meta property="og:image" content="https://banestecodes.com/agenteTravel/icons/Icon-512.png">
+  <meta property="og:image" content="https://banestecodes.com/agenteTravel/icons/Icon-512.png">
+
+  <!-- PDF.js for printing package on Flutter Web (compatible with printing ^5.13) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <script type="text/javascript">
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js";
+  </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
 

@@ -14,6 +14,8 @@ class VueloReserva extends Equatable {
   final String horaLlegada;
   final String clase;
   final double? precio;
+  final String reservaVuelo;
+  final String tipoVuelo; // 'ida' | 'vuelta'
 
   const VueloReserva({
     this.id,
@@ -28,6 +30,8 @@ class VueloReserva extends Equatable {
     required this.horaLlegada,
     required this.clase,
     this.precio,
+    this.reservaVuelo = '',
+    this.tipoVuelo = 'ida',
   });
 
   VueloReserva copyWith({
@@ -43,6 +47,8 @@ class VueloReserva extends Equatable {
     String? horaLlegada,
     String? clase,
     double? precio,
+    String? reservaVuelo,
+    String? tipoVuelo,
   }) {
     return VueloReserva(
       id: id ?? this.id,
@@ -57,6 +63,8 @@ class VueloReserva extends Equatable {
       horaLlegada: horaLlegada ?? this.horaLlegada,
       clase: clase ?? this.clase,
       precio: precio ?? this.precio,
+      reservaVuelo: reservaVuelo ?? this.reservaVuelo,
+      tipoVuelo: tipoVuelo ?? this.tipoVuelo,
     );
   }
 
@@ -74,5 +82,7 @@ class VueloReserva extends Equatable {
     horaLlegada,
     clase,
     precio,
+    reservaVuelo,
+    tipoVuelo,
   ];
 }

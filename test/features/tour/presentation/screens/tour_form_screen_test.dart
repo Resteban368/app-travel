@@ -49,7 +49,6 @@ void main() {
       departureTime: '08:00 AM',
       arrival: 'Test End',
       pdfLink: 'http://test.com/pdf',
-      imageUrl: 'http://test.com/img.jpg',
       inclusions: const ['Inclusion 1'],
       exclusions: const ['Exclusion 1'],
       itinerary: const [

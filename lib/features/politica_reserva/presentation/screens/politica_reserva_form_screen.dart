@@ -121,10 +121,8 @@ class _PoliticaReservaFormScreenState extends State<PoliticaReservaFormScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: D.bg,
         body: Stack(
           children: [
-            const PremiumBackground(),
             CustomScrollView(
               slivers: [
                 PremiumSliverAppBar(
@@ -150,111 +148,106 @@ class _PoliticaReservaFormScreenState extends State<PoliticaReservaFormScreen>
                           vertical: 16,
                         ),
                         child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 800),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Etiqueta de información
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 8,
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Etiqueta de información
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: D.skyBlue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: D.skyBlue.withOpacity(0.3),
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: D.skyBlue.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: D.skyBlue.withOpacity(0.3),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.policy_rounded,
+                                        color: D.skyBlue,
+                                        size: 16,
                                       ),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.policy_rounded,
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'GESTIÓN DE POLÍTICA',
+                                        style: TextStyle(
                                           color: D.skyBlue,
-                                          size: 16,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          'GESTIÓN DE POLÍTICA',
-                                          style: TextStyle(
-                                            color: D.skyBlue,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 24),
-
-                                  PremiumSectionCard(
-                                    title: 'DETALLES DE LA POLÍTICA',
-                                    icon: Icons.description_outlined,
-                                    children: [
-                                      PremiumTextField(
-                                        controller: _tituloCtrl,
-                                        label: 'Título Principal *',
-                                        icon: Icons.title_rounded,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _tipoCtrl,
-                                        label: 'Tipo de Política (Categoría) *',
-                                        icon: Icons.category_rounded,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _descripcionCtrl,
-                                        label: 'Descripción Detallada *',
-                                        icon: Icons.notes_rounded,
-                                        maxLines: 6,
-                                        readOnly: !canWrite,
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 24),
+                                ),
+                                const SizedBox(height: 24),
 
-                                  PremiumSectionCard(
-                                    title: 'ESTADO DE LA POLÍTICA',
-                                    icon: Icons.security_rounded,
-                                    children: [
-                                      _buildVisibilitySwitch(
-                                        canWrite: canWrite,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 48),
-
-                                  if (canWrite)
-                                    Builder(
-                                      builder: (ctx) =>
-                                          BlocBuilder<
-                                            PoliticaReservaBloc,
-                                            PoliticaReservaState
-                                          >(
-                                            builder: (context, state) {
-                                              return PremiumActionButton(
-                                                label: _isEditing
-                                                    ? 'ACTUALIZAR POLÍTICA'
-                                                    : 'GUARDAR POLÍTICA',
-                                                icon: Icons.save_rounded,
-                                                isLoading:
-                                                    state is PoliticaSaving,
-                                                onTap: () => _save(ctx),
-                                              );
-                                            },
-                                          ),
+                                PremiumSectionCard(
+                                  title: 'DETALLES DE LA POLÍTICA',
+                                  icon: Icons.description_outlined,
+                                  children: [
+                                    PremiumTextField(
+                                      controller: _tituloCtrl,
+                                      label: 'Título Principal *',
+                                      icon: Icons.title_rounded,
+                                      readOnly: !canWrite,
                                     ),
-                                  const SizedBox(height: 100),
-                                ],
-                              ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _tipoCtrl,
+                                      label: 'Tipo de Política (Categoría) *',
+                                      icon: Icons.category_rounded,
+                                      readOnly: !canWrite,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _descripcionCtrl,
+                                      label: 'Descripción Detallada *',
+                                      icon: Icons.notes_rounded,
+                                      maxLines: 6,
+                                      readOnly: !canWrite,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+
+                                PremiumSectionCard(
+                                  title: 'ESTADO DE LA POLÍTICA',
+                                  icon: Icons.security_rounded,
+                                  children: [
+                                    _buildVisibilitySwitch(canWrite: canWrite),
+                                  ],
+                                ),
+                                const SizedBox(height: 48),
+
+                                if (canWrite)
+                                  Builder(
+                                    builder: (ctx) =>
+                                        BlocBuilder<
+                                          PoliticaReservaBloc,
+                                          PoliticaReservaState
+                                        >(
+                                          builder: (context, state) {
+                                            return PremiumActionButton(
+                                              label: _isEditing
+                                                  ? 'ACTUALIZAR POLÍTICA'
+                                                  : 'GUARDAR POLÍTICA',
+                                              icon: Icons.save_rounded,
+                                              isLoading:
+                                                  state is PoliticaSaving,
+                                              onTap: () => _save(ctx),
+                                            );
+                                          },
+                                        ),
+                                  ),
+                                const SizedBox(height: 100),
+                              ],
                             ),
                           ),
                         ),
@@ -277,7 +270,7 @@ class _PoliticaReservaFormScreenState extends State<PoliticaReservaFormScreen>
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: Container(
           decoration: BoxDecoration(
-            color: D.surfaceHigh.withOpacity(0.3),
+            color: D.bg,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withOpacity(0.05)),
           ),

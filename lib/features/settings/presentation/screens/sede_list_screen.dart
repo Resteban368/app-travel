@@ -1,10 +1,9 @@
-import 'package:agente_viajes/core/widgets/SmallBtn_widget.dart';
+import 'package:agente_viajes/config/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'dart:math' as math;
-import '../../../../core/theme/premium_palette.dart';
+import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/layout/admin_shell.dart';
-import '../../../../config/app_router.dart';
+import '../../../../core/widgets/saas_ui_components.dart';
 import '../../domain/entities/sede.dart';
 import '../bloc/sede_bloc.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -16,300 +15,233 @@ class SedeListScreen extends StatefulWidget {
   State<SedeListScreen> createState() => _SedeListScreenState();
 }
 
-class _SedeListScreenState extends State<SedeListScreen>
-    with TickerProviderStateMixin {
-  late final AnimationController _bgCtrl;
-  late final AnimationController _entryCtrl;
-
-  late final Animation<double> _headerOpacity;
-  late final Animation<Offset> _headerSlide;
-  late final Animation<double> _contentOpacity;
-
+class _SedeListScreenState extends State<SedeListScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _bgCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 10),
-    )..repeat();
-
-    _entryCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-
-    _headerOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0, 0.4, curve: Curves.easeOut),
-      ),
-    );
-    _headerSlide =
-        Tween<Offset>(begin: const Offset(0, -0.05), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _entryCtrl,
-            curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
-          ),
-        );
-    _contentOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
-      ),
-    );
-
+    context.read<SedeBloc>().add(LoadSedes());
     _searchCtrl.addListener(() {
       setState(() => _searchQuery = _searchCtrl.text.toLowerCase());
     });
-
-    _entryCtrl.forward();
   }
 
   @override
   void dispose() {
-    _bgCtrl.dispose();
-    _entryCtrl.dispose();
     _searchCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final canWrite =
+        authState is AuthAuthenticated && authState.user.canWrite('sedes');
+
     return AdminShell(
       currentIndex: 2,
       child: Scaffold(
-        backgroundColor: D.bg,
-        body: Stack(
-          children: [
-            // Floating Background Orbs
-            AnimatedBuilder(
-              animation: _bgCtrl,
-              builder: (context, _) {
-                return Stack(
-                  children: [
-                    Positioned(
-                      top: -100 + math.sin(_bgCtrl.value * math.pi * 2) * 50,
-                      right: -50 + math.cos(_bgCtrl.value * math.pi * 2) * 30,
-                      child: _Orb(
-                        color: D.royalBlue.withOpacity(0.12),
-                        size: 400,
+        backgroundColor: SaasPalette.bgApp,
+        body: BlocBuilder<SedeBloc, SedeState>(
+          builder: (context, state) {
+            List<Sede> list = [];
+            if (state is SedesLoaded) {
+              list = state.sedes;
+            } else if (state is SedeSaving && state.sedes != null) {
+              list = state.sedes!;
+            } else if (state is SedeSaved && state.sedes != null) {
+              list = state.sedes!;
+            }
+
+            final filteredList = list.where((s) {
+              return s.nombreSede.toLowerCase().contains(_searchQuery) ||
+                  s.direccion.toLowerCase().contains(_searchQuery);
+            }).toList();
+
+            final isLoading = state is SedeLoading && list.isEmpty;
+
+            return RefreshIndicator(
+              onRefresh: () async => context.read<SedeBloc>().add(LoadSedes()),
+              color: SaasPalette.brand600,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  // ── Header ─────────────────────────────────────────────────
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                    sliver: SliverToBoxAdapter(
+                      child: _SedeHeader(canWrite: canWrite),
+                    ),
+                  ),
+
+                  // ── Search Bar ─────────────────────────────────────────────
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                    sliver: SliverToBoxAdapter(
+                      child: SaasSearchField(
+                        controller: _searchCtrl,
+                        hintText: 'Buscar por nombre o dirección...',
+                        onChanged: (v) =>
+                            setState(() => _searchQuery = v.toLowerCase()),
+                        onClear: () {
+                          _searchCtrl.clear();
+                          setState(() => _searchQuery = '');
+                        },
                       ),
                     ),
-                    Positioned(
-                      bottom: -50 + math.cos(_bgCtrl.value * math.pi * 2) * 40,
-                      left: -80 + math.sin(_bgCtrl.value * math.pi * 2) * 60,
-                      child: _Orb(color: D.indigo.withOpacity(0.08), size: 350),
-                    ),
-                  ],
-                );
-              },
-            ),
-            Positioned.fill(child: CustomPaint(painter: _DotGridPainter())),
+                  ),
 
-            BlocBuilder<SedeBloc, SedeState>(
-              builder: (context, state) {
-                final authState = context.watch<AuthBloc>().state;
-                final canWrite =
-                    authState is AuthAuthenticated &&
-                    authState.user.canWrite('sedes');
-
-                List<Sede>? sedes;
-                if (state is SedesLoaded)
-                  sedes = state.sedes;
-                else if (state is SedeSaving && state.sedes != null)
-                  sedes = state.sedes;
-                else if (state is SedeSaved && state.sedes != null)
-                  sedes = state.sedes;
-
-                final filtered = sedes
-                    ?.where(
-                      (s) =>
-                          s.nombreSede.toLowerCase().contains(_searchQuery) ||
-                          s.direccion.toLowerCase().contains(_searchQuery),
-                    )
-                    .toList();
-
-                return CustomScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  slivers: [
-                    // Header
+                  // ── Content ────────────────────────────────────────────────
+                  if (isLoading)
                     SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-                      sliver: SliverToBoxAdapter(
-                        child: FadeTransition(
-                          opacity: _headerOpacity,
-                          child: SlideTransition(
-                            position: _headerSlide,
-                            child: _buildHeader(context, canWrite),
-                          ),
+                      padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (_, __) => const SaasListSkeleton(),
+                          childCount: 4,
                         ),
                       ),
-                    ),
-                    _buildFilters(context),
-                    SliverFadeTransition(
-                      opacity: _contentOpacity,
-                      sliver: _buildSliverContent(
-                        context,
-                        state,
-                        filtered,
-                        canWrite,
+                    )
+                  else if (filteredList.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: SaasEmptyState(
+                        icon: _searchQuery.isNotEmpty
+                            ? Icons.search_off_rounded
+                            : Icons.storefront_outlined,
+                        title: _searchQuery.isNotEmpty
+                            ? 'Sin resultados'
+                            : 'Sin sedes',
+                        subtitle: _searchQuery.isNotEmpty
+                            ? 'No encontramos sedes que coincidan con "$_searchQuery".'
+                            : 'Aún no has registrado ninguna sede operativa.',
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final sede = filteredList[index];
+                          return _SedeCard(
+                            sede: sede,
+                            canWrite: canWrite,
+                            onEdit: () {
+                              print('sede: $sede');
+                              Navigator.pushNamed(
+                                context,
+                                AppRouter.sedeForm,
+                                arguments: sede,
+                              );
+                            },
+                            onDelete: () => _confirmDelete(sede),
+                            onToggleStatus: () => context.read<SedeBloc>().add(
+                              ToggleSedeActive(sede.id),
+                            ),
+                          );
+                        }, childCount: filteredList.length),
                       ),
                     ),
-                    const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, bool canWrite) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [D.royalBlue, D.cyan]),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.account_balance_wallet_rounded,
-                    color: Colors.white,
-                    size: 10,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'ADMINISTRACIÓN',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Sedes Mundiales',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.8,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Gestiona la ubicación y contacto de tus oficinas.',
-              style: TextStyle(color: D.slate400, fontSize: 13),
-            ),
-          ],
-        ),
-        if (canWrite)
-          _AddBtn(
-            onPressed: () async {
-              final result = await Navigator.pushNamed(
-                context,
-                AppRouter.sedeForm,
-              );
-              if (result == true && context.mounted) {
-                context.read<SedeBloc>().add(LoadSedes());
-              }
-            },
-          ),
-      ],
-    );
-  }
-
-  Widget _buildFilters(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: D.surface.withOpacity(0.6),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: D.border.withOpacity(0.5)),
-          ),
-          child: TextField(
-            controller: _searchCtrl,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Buscar por nombre o dirección...',
-              hintStyle: TextStyle(color: D.slate600, fontSize: 14),
-              prefixIcon: Icon(
-                Icons.search_rounded,
-                color: D.slate600,
-                size: 20,
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 15,
-              ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildSliverContent(
-    BuildContext context,
-    SedeState state,
-    List<Sede>? sedes,
-    bool canWrite,
-  ) {
-    if (state is SedeLoading && sedes == null) {
-      return SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (_, i) => _SkelCard(),
-          childCount: 3,
-        ),
-      );
-    }
-    if (sedes == null || sedes.isEmpty) {
-      return SliverFillRemaining(
-        child: _EmptyView(isSearch: _searchQuery.isNotEmpty),
-      );
-    }
-
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) =>
-              _SedeCard(sede: sedes[index], canWrite: canWrite, index: index),
-          childCount: sedes.length,
-        ),
+  void _confirmDelete(Sede sede) {
+    showDialog(
+      context: context,
+      builder: (ctx) => SaasConfirmDialog(
+        title: 'Eliminar Sede',
+        body:
+            '¿Estás seguro de que deseas eliminar la sede "${sede.nombreSede}"? Esta acción no se puede deshacer.',
+        onConfirm: () {
+          context.read<SedeBloc>().add(DeleteSede(sede.id));
+          Navigator.pop(ctx);
+        },
       ),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  HEADER
+// ─────────────────────────────────────────────────────────────────────────────
+class _SedeHeader extends StatelessWidget {
+  final bool canWrite;
+  const _SedeHeader({required this.canWrite});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SaasBreadcrumbs(items: ['Inicio', 'Configuración', 'Sedes']),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Gestión de Sedes',
+                    style: TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Administra las oficinas y puntos de atención de la agencia.',
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (canWrite)
+              SaasButton(
+                label: 'Nueva Sede',
+                icon: Icons.add_rounded,
+                onPressed: () {
+                  print('Nueva Sede');
+                  Navigator.pushNamed(context, AppRouter.sedeForm);
+                },
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SEDE CARD
+// ─────────────────────────────────────────────────────────────────────────────
 class _SedeCard extends StatefulWidget {
   final Sede sede;
   final bool canWrite;
-  final int index;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onToggleStatus;
+
   const _SedeCard({
     required this.sede,
     required this.canWrite,
-    required this.index,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onToggleStatus,
   });
 
   @override
@@ -317,336 +249,221 @@ class _SedeCard extends StatefulWidget {
 }
 
 class _SedeCardState extends State<_SedeCard> {
-  bool _isHovered = false;
-
-  void _confirmDelete(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => _PremiumConfirmDialog(
-        title: '¿Eliminar Sede?',
-        content:
-            'Esto eliminará definitivamente la sede "${widget.sede.nombreSede}" del sistema.',
-        onConfirm: () {
-          context.read<SedeBloc>().add(DeleteSede(widget.sede.id));
-          Navigator.pop(ctx);
-        },
-      ),
-    );
-  }
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
+    final s = widget.sede;
+
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: widget.sede.isActive ? D.surface : D.surface.withOpacity(0.4),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: _isHovered ? D.royalBlue.withOpacity(0.5) : D.border,
-            width: 1.5,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: SaasPalette.bgCanvas,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
+              width: _hovered ? 1.5 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(_hovered ? 0.08 : 0.03),
+                blurRadius: _hovered ? 16 : 8,
+                offset: Offset(0, _hovered ? 4 : 2),
+              ),
+            ],
           ),
-          boxShadow: _isHovered
-              ? [
-                  BoxShadow(
-                    color: D.royalBlue.withOpacity(0.15),
-                    blurRadius: 30,
-                    spreadRadius: -5,
-                  ),
-                ]
-              : null,
-        ),
-        child: InkWell(
-          onTap: widget.canWrite
-              ? () async {
-                  final result = await Navigator.pushNamed(
-                    context,
-                    AppRouter.sedeForm,
-                    arguments: widget.sede,
-                  );
-                  if (result == true && context.mounted) {
-                    context.read<SedeBloc>().add(LoadSedes());
-                  }
-                }
-              : null,
-          borderRadius: BorderRadius.circular(24),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: D.royalBlue.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(
-                        Icons.store_rounded,
-                        color: D.skyBlue,
-                        size: 24,
-                      ),
+          child: InkWell(
+            onTap: widget.canWrite ? widget.onEdit : null,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  // Icon
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: s.isActive
+                          ? SaasPalette.brand50
+                          : SaasPalette.bgSubtle,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.sede.nombreSede,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                    child: Icon(
+                      Icons.storefront_rounded,
+                      color: s.isActive
+                          ? SaasPalette.brand600
+                          : SaasPalette.textTertiary,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+
+                  // Info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                s.nombreSede,
+                                style: const TextStyle(
+                                  color: SaasPalette.textPrimary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          _buildStatusBadge(widget.sede.isActive),
-                        ],
-                      ),
+                            const SizedBox(width: 12),
+                            SaasStatusBadge(active: s.isActive),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.location_on_outlined,
+                              size: 14,
+                              color: SaasPalette.textTertiary,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                s.direccion,
+                                style: const TextStyle(
+                                  color: SaasPalette.textSecondary,
+                                  fontSize: 13,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.phone_outlined,
+                              size: 14,
+                              color: SaasPalette.textTertiary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              s.telefono,
+                              style: const TextStyle(
+                                color: SaasPalette.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Actions
+                  if (widget.canWrite) ...[
+                    const SizedBox(width: 16),
+                    _SedeActionMenu(
+                      onEdit: widget.onEdit,
+                      onDelete: widget.onDelete,
+                      onToggleStatus: widget.onToggleStatus,
+                      isActive: s.isActive,
                     ),
                   ],
-                ),
-                const SizedBox(height: 20),
-                _buildInfoRow(Icons.phone_rounded, widget.sede.telefono),
-                const SizedBox(height: 10),
-                _buildInfoRow(Icons.place_rounded, widget.sede.direccion),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
-
-  Widget _buildStatusBadge(bool active) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: (active ? D.emerald : D.gold).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: active ? D.emerald : D.gold,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            active ? 'ACTIVA' : 'OCULTA',
-            style: TextStyle(
-              color: active ? D.emerald : D.gold,
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, color: D.slate600, size: 16),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(text, style: TextStyle(color: D.slate400, fontSize: 13)),
-        ),
-      ],
-    );
-  }
 }
 
-class _AddBtn extends StatelessWidget {
-  final VoidCallback onPressed;
-  const _AddBtn({required this.onPressed});
+class _SedeActionMenu extends StatelessWidget {
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onToggleStatus;
+  final bool isActive;
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [D.royalBlue, D.indigo]),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: D.royalBlue.withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
-      ),
-    );
-  }
-}
-
-class _Orb extends StatelessWidget {
-  final Color color;
-  final double size;
-  const _Orb({required this.color, required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(colors: [color, Colors.transparent]),
-      ),
-    );
-  }
-}
-
-class _DotGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = D.border.withOpacity(0.3);
-    const spacing = 32.0;
-    for (double i = 0; i < size.width; i += spacing) {
-      for (double j = 0; j < size.height; j += spacing) {
-        canvas.drawCircle(Offset(i, j), 0.8, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
-}
-
-class _EmptyView extends StatelessWidget {
-  final bool isSearch;
-  const _EmptyView({this.isSearch = false});
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            isSearch ? Icons.search_off_rounded : Icons.store_rounded,
-            size: 80,
-            color: D.slate600,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            isSearch
-                ? 'No encontramos sedes con ese nombre'
-                : 'No hay sedes registradas',
-            style: TextStyle(
-              color: D.slate400,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SkelCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 140,
-      margin: const EdgeInsets.only(bottom: 16, left: 24, right: 24),
-      decoration: BoxDecoration(
-        color: D.surface.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(24),
-      ),
-    );
-  }
-}
-
-class _PremiumConfirmDialog extends StatelessWidget {
-  final String title, content;
-  final VoidCallback onConfirm;
-  const _PremiumConfirmDialog({
-    required this.title,
-    required this.content,
-    required this.onConfirm,
+  const _SedeActionMenu({
+    required this.onEdit,
+    required this.onDelete,
+    required this.onToggleStatus,
+    required this.isActive,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: D.surface,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: D.border),
+    return PopupMenuButton<String>(
+      icon: const Icon(
+        Icons.more_vert_rounded,
+        color: SaasPalette.textTertiary,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: SaasPalette.bgCanvas,
+      elevation: 4,
+      onSelected: (value) {
+        if (value == 'edit') onEdit();
+        if (value == 'delete') onDelete();
+        if (value == 'toggle') onToggleStatus();
+      },
+      itemBuilder: (context) => [
+        _buildMenuItem(
+          value: 'edit',
+          icon: Icons.edit_outlined,
+          label: 'Editar Sede',
+          color: SaasPalette.textPrimary,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: D.rose, size: 54),
-            const SizedBox(height: 20),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              content,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: D.slate400, fontSize: 14),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'Cancelar',
-                      style: TextStyle(color: D.slate400),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: onConfirm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: D.rose,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      'Confirmar',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+        _buildMenuItem(
+          value: 'toggle',
+          icon: isActive
+              ? Icons.visibility_off_outlined
+              : Icons.visibility_outlined,
+          label: isActive ? 'Desactivar Sede' : 'Activar Sede',
+          color: isActive ? SaasPalette.warning : SaasPalette.success,
         ),
+        const PopupMenuDivider(),
+        _buildMenuItem(
+          value: 'delete',
+          icon: Icons.delete_outline_rounded,
+          label: 'Eliminar Sede',
+          color: SaasPalette.danger,
+        ),
+      ],
+    );
+  }
+
+  PopupMenuItem<String> _buildMenuItem({
+    required String value,
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

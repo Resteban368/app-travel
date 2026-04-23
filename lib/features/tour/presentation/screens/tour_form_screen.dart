@@ -1,8 +1,7 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/theme/premium_palette.dart';
+import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
 import '../../../../config/app_router.dart';
@@ -30,7 +29,6 @@ class _TourFormScreenState extends State<TourFormScreen>
   late final TextEditingController _departureTimeCtrl;
   late final TextEditingController _arrivalCtrl;
   late final TextEditingController _pdfLinkCtrl;
-  late final TextEditingController _imageUrlCtrl;
   late final TextEditingController _idTourCtrl;
   late final TextEditingController _cuposCtrl;
 
@@ -63,7 +61,6 @@ class _TourFormScreenState extends State<TourFormScreen>
     _departureTimeCtrl = TextEditingController(text: t?.departureTime ?? '');
     _arrivalCtrl = TextEditingController(text: t?.arrival ?? '');
     _pdfLinkCtrl = TextEditingController(text: t?.pdfLink ?? '');
-    _imageUrlCtrl = TextEditingController(text: t?.imageUrl ?? '');
     _idTourCtrl = TextEditingController(text: t?.idTour.toString() ?? '');
     _cuposCtrl = TextEditingController(text: t?.cupos?.toString() ?? '');
     if (t != null) {
@@ -79,7 +76,7 @@ class _TourFormScreenState extends State<TourFormScreen>
 
     _entryCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 600),
     );
     _fade = Tween<double>(
       begin: 0,
@@ -98,7 +95,6 @@ class _TourFormScreenState extends State<TourFormScreen>
     _departureTimeCtrl.dispose();
     _arrivalCtrl.dispose();
     _pdfLinkCtrl.dispose();
-    _imageUrlCtrl.dispose();
     _idTourCtrl.dispose();
     _cuposCtrl.dispose();
     _inclusionCtrl.dispose();
@@ -130,11 +126,11 @@ class _TourFormScreenState extends State<TourFormScreen>
   void _saveTour(BuildContext context, {required bool publish}) {
     if (!_formKey.currentState!.validate()) return;
     if (_inclusions.isEmpty) {
-      _showMsg('Incluye al menos una inclusión', D.rose);
+      _showMsg('Incluye al menos una inclusión', SaasPalette.danger);
       return;
     }
     if (_dateRange == null) {
-      _showMsg('Selecciona el rango de fechas', D.rose);
+      _showMsg('Selecciona el rango de fechas', SaasPalette.danger);
       return;
     }
 
@@ -157,7 +153,6 @@ class _TourFormScreenState extends State<TourFormScreen>
       inclusions: _inclusions,
       exclusions: _exclusions,
       itinerary: _itinerary,
-      imageUrl: _imageUrlCtrl.text.trim(),
       sedeId: _selectedSedeId,
       isPromotion: _isPromotion,
       isActive: _isActive,
@@ -193,17 +188,15 @@ class _TourFormScreenState extends State<TourFormScreen>
     return BlocListener<TourBloc, TourState>(
       listener: (context, state) {
         if (state is TourSaved) {
-          _showMsg('Experiencia guardada exitosamente', D.emerald);
+          _showMsg('Experiencia guardada exitosamente', SaasPalette.success);
           Navigator.pop(context);
         } else if (state is TourError) {
-          _showMsg(state.message, D.rose);
+          _showMsg(state.message, SaasPalette.danger);
         }
       },
       child: Scaffold(
-        backgroundColor: D.bg,
         body: Stack(
           children: [
-            const PremiumBackground(),
             CustomScrollView(
               slivers: [
                 PremiumSliverAppBar(
@@ -213,7 +206,10 @@ class _TourFormScreenState extends State<TourFormScreen>
                             ? 'Configurar Experiencia'
                             : 'Nueva Aventura'),
                   actions: IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded, color: D.white),
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: Colors.white,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
@@ -226,177 +222,166 @@ class _TourFormScreenState extends State<TourFormScreen>
                         vertical: 16,
                       ),
                       child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 900),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                PremiumSectionCard(
-                                  title: 'GENERAL',
-                                  icon: Icons.dashboard_rounded,
-                                  children: [
-                                    PremiumTextField(
-                                      controller: _idTourCtrl,
-                                      label: 'Código de Operación *',
-                                      icon: Icons.vpn_key_rounded,
-                                      isNumeric: true,
-                                      readOnly: !canWrite,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    PremiumTextField(
-                                      controller: _nameCtrl,
-                                      label: 'Título de la Experiencia *',
-                                      icon: Icons.tour_rounded,
-                                      readOnly: !canWrite,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _buildSedeDropdown(canWrite: canWrite),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
-                                PremiumSectionCard(
-                                  title: 'DETALLES DE VIAJE',
-                                  icon: Icons.flight_takeoff_rounded,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: PremiumTextField(
-                                            controller: _priceCtrl,
-                                            label: 'Precio (COP) *',
-                                            icon: Icons.attach_money_rounded,
-                                            isNumeric: true,
-                                            readOnly: !canWrite,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 20),
-                                        Expanded(
-                                          child: _DateRangeSelector(
-                                            range: _dateRange,
-                                            onTap: canWrite
-                                                ? _pickDateRange
-                                                : () {},
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 20),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: PremiumTextField(
-                                            controller: _cuposCtrl,
-                                            label: 'Cupos totales',
-                                            icon: Icons.people_alt_rounded,
-                                            isNumeric: true,
-                                            readOnly: !canWrite,
-                                          ),
-                                        ),
-                                        if (_isEditing &&
-                                            widget.tour?.cupos != null) ...[
-                                          const SizedBox(width: 20),
-                                          Expanded(
-                                            child: _CuposDisponiblesInfo(
-                                              cuposDisponibles:
-                                                  widget.tour!.cuposDisponibles,
-                                              cuposTotales:
-                                                  widget.tour!.cupos!,
-                                            ),
-                                          ),
-                                        ] else
-                                          const Expanded(child: SizedBox()),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 20),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: PremiumTextField(
-                                            controller: _departurePointCtrl,
-                                            label: 'Lugar Salida *',
-                                            icon: Icons.place_rounded,
-                                            readOnly: !canWrite,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 20),
-                                        Expanded(
-                                          child: PremiumTextField(
-                                            controller: _departureTimeCtrl,
-                                            label: 'Hora Estimada *',
-                                            icon: Icons.access_time_rounded,
-                                            readOnly: !canWrite,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 20),
-                                    PremiumTextField(
-                                      controller: _arrivalCtrl,
-                                      label: 'Destino Final *',
-                                      icon: Icons.flag_rounded,
-                                      readOnly: !canWrite,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
-                                PremiumSectionCard(
-                                  title: 'CONTENIDO MULTIMEDIA',
-                                  icon: Icons.perm_media_rounded,
-                                  children: [
-                                    PremiumTextField(
-                                      controller: _imageUrlCtrl,
-                                      label: 'URL Portada',
-                                      icon: Icons.image_rounded,
-                                      readOnly: !canWrite,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    PremiumTextField(
-                                      controller: _pdfLinkCtrl,
-                                      label: 'Link Catálogo (Google Drive)',
-                                      icon: Icons.picture_as_pdf_rounded,
-                                      readOnly: !canWrite,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
-                                PremiumSectionCard(
-                                  title: 'LOGÍSTICA',
-                                  icon: Icons.inventory_2_rounded,
-                                  children: [
-                                    _buildDynamicList(
-                                      'Inclusiones',
-                                      _inclusionCtrl,
-                                      _inclusions,
-                                      Icons.check_circle_rounded,
-                                      D.emerald,
-                                      canWrite: canWrite,
-                                    ),
-                                    const SizedBox(height: 32),
-                                    _buildDynamicList(
-                                      'Exclusiones',
-                                      _exclusionCtrl,
-                                      _exclusions,
-                                      Icons.cancel_rounded,
-                                      D.rose,
-                                      canWrite: canWrite,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
-                                _buildItinerarySection(canWrite: canWrite),
-                                const SizedBox(height: 24),
-                                _buildStatusCard(canWrite: canWrite),
-                                if (_isEditing) ...[
-                                  const SizedBox(height: 24),
-                                  _buildPasajerosBtn(context),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              PremiumSectionCard(
+                                title: 'GENERAL',
+                                icon: Icons.dashboard_rounded,
+                                children: [
+                                  PremiumTextField(
+                                    controller: _idTourCtrl,
+                                    label: 'Código de Operación *',
+                                    icon: Icons.vpn_key_rounded,
+                                    isNumeric: true,
+                                    readOnly: !canWrite,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  PremiumTextField(
+                                    controller: _nameCtrl,
+                                    label: 'Título de la Experiencia *',
+                                    icon: Icons.tour_rounded,
+                                    readOnly: !canWrite,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  _buildSedeDropdown(canWrite: canWrite),
                                 ],
-                                const SizedBox(height: 48),
-                                if (canWrite) _buildBottomActions(),
-                                const SizedBox(height: 100),
+                              ),
+                              const SizedBox(height: 20),
+                              PremiumSectionCard(
+                                title: 'DETALLES DE VIAJE',
+                                icon: Icons.flight_takeoff_rounded,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: PremiumTextField(
+                                          controller: _priceCtrl,
+                                          label: 'Precio (COP) *',
+                                          icon: Icons.attach_money_rounded,
+                                          isNumeric: true,
+                                          readOnly: !canWrite,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: _DateRangeSelector(
+                                          range: _dateRange,
+                                          onTap: canWrite
+                                              ? _pickDateRange
+                                              : () {},
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: PremiumTextField(
+                                          controller: _cuposCtrl,
+                                          label: 'Cupos totales',
+                                          icon: Icons.people_alt_rounded,
+                                          isNumeric: true,
+                                          readOnly: !canWrite,
+                                        ),
+                                      ),
+                                      if (_isEditing &&
+                                          widget.tour?.cupos != null) ...[
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: _CuposDisponiblesInfo(
+                                            cuposDisponibles:
+                                                widget.tour!.cuposDisponibles,
+                                            cuposTotales: widget.tour!.cupos!,
+                                          ),
+                                        ),
+                                      ] else
+                                        const Expanded(child: SizedBox()),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: PremiumTextField(
+                                          controller: _departurePointCtrl,
+                                          label: 'Lugar Salida *',
+                                          icon: Icons.place_rounded,
+                                          readOnly: !canWrite,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: PremiumTextField(
+                                          controller: _departureTimeCtrl,
+                                          label: 'Hora Estimada *',
+                                          icon: Icons.access_time_rounded,
+                                          readOnly: !canWrite,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  PremiumTextField(
+                                    controller: _arrivalCtrl,
+                                    label: 'Destino Final *',
+                                    icon: Icons.flag_rounded,
+                                    readOnly: !canWrite,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              PremiumSectionCard(
+                                title: 'CONTENIDO MULTIMEDIA',
+                                icon: Icons.perm_media_rounded,
+                                children: [
+                                  PremiumTextField(
+                                    controller: _pdfLinkCtrl,
+                                    label: 'Link Catálogo (Google Drive)',
+                                    icon: Icons.picture_as_pdf_rounded,
+                                    readOnly: !canWrite,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              PremiumSectionCard(
+                                title: 'LOGÍSTICA',
+                                icon: Icons.inventory_2_rounded,
+                                children: [
+                                  _buildDynamicList(
+                                    'Inclusiones',
+                                    _inclusionCtrl,
+                                    _inclusions,
+                                    Icons.check_circle_rounded,
+                                    SaasPalette.success,
+                                    canWrite: canWrite,
+                                  ),
+                                  const SizedBox(height: 28),
+                                  _buildDynamicList(
+                                    'Exclusiones',
+                                    _exclusionCtrl,
+                                    _exclusions,
+                                    Icons.cancel_rounded,
+                                    SaasPalette.danger,
+                                    canWrite: canWrite,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              _buildItinerarySection(canWrite: canWrite),
+                              const SizedBox(height: 20),
+                              _buildStatusCard(canWrite: canWrite),
+                              if (_isEditing) ...[
+                                const SizedBox(height: 20),
+                                _buildPasajerosBtn(context),
                               ],
-                            ),
+                              const SizedBox(height: 40),
+                              if (canWrite) _buildBottomActions(),
+                              const SizedBox(height: 80),
+                            ],
                           ),
                         ),
                       ),
@@ -430,36 +415,36 @@ class _TourFormScreenState extends State<TourFormScreen>
               const Text(
                 'SEDE DE OPERACIÓN *',
                 style: TextStyle(
-                  color: D.slate400,
+                  color: SaasPalette.textSecondary,
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               if (!canWrite)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
+                    horizontal: 14,
+                    vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: D.surfaceHigh.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                    color: SaasPalette.bgSubtle,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: SaasPalette.border),
                   ),
                   child: Row(
                     children: [
                       const Icon(
                         Icons.business_rounded,
-                        color: D.skyBlue,
-                        size: 20,
+                        color: SaasPalette.brand600,
+                        size: 18,
                       ),
                       const SizedBox(width: 12),
                       Text(
                         state is SedeLoading ? 'Cargando...' : sedeLabel,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: SaasPalette.textPrimary,
                           fontSize: 14,
                         ),
                       ),
@@ -471,28 +456,33 @@ class _TourFormScreenState extends State<TourFormScreen>
                   value: sedes.any((s) => s.id == _selectedSedeId)
                       ? _selectedSedeId
                       : null,
-                  dropdownColor: D.surfaceHigh,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  dropdownColor: SaasPalette.bgCanvas,
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 14,
+                  ),
                   decoration: InputDecoration(
                     prefixIcon: const Icon(
                       Icons.business_rounded,
-                      color: D.skyBlue,
-                      size: 20,
+                      color: SaasPalette.brand600,
+                      size: 18,
                     ),
                     filled: true,
-                    fillColor: D.surfaceHigh.withOpacity(0.5),
+                    fillColor: SaasPalette.bgCanvas,
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(
-                        color: Colors.white.withOpacity(0.05),
-                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: SaasPalette.border),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(10),
                       borderSide: const BorderSide(
-                        color: D.skyBlue,
+                        color: SaasPalette.brand600,
                         width: 1.5,
                       ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
                     ),
                   ),
                   items: sedes
@@ -509,7 +499,10 @@ class _TourFormScreenState extends State<TourFormScreen>
                     state is SedeLoading
                         ? 'Cargando...'
                         : 'Selecciona una sede',
-                    style: const TextStyle(color: D.slate600, fontSize: 13),
+                    style: const TextStyle(
+                      color: SaasPalette.textTertiary,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
             ],
@@ -533,10 +526,10 @@ class _TourFormScreenState extends State<TourFormScreen>
         Text(
           title.toUpperCase(),
           style: const TextStyle(
-            color: D.slate400,
+            color: SaasPalette.textSecondary,
             fontSize: 12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
           ),
         ),
         const SizedBox(height: 12),
@@ -552,8 +545,9 @@ class _TourFormScreenState extends State<TourFormScreen>
               ),
               const SizedBox(width: 12),
               Padding(
-                padding: const EdgeInsets.only(top: 24),
+                padding: const EdgeInsets.only(top: 20),
                 child: _CircleAddButton(
+                  color: accent,
                   onTap: () {
                     if (ctrl.text.trim().isNotEmpty) {
                       setState(() => list.add(ctrl.text.trim()));
@@ -564,7 +558,7 @@ class _TourFormScreenState extends State<TourFormScreen>
               ),
             ],
           ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -587,99 +581,99 @@ class _TourFormScreenState extends State<TourFormScreen>
   }
 
   Widget _buildItinerarySection({required bool canWrite}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(32),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: D.surfaceHigh.withOpacity(0.4),
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  const Expanded(
-                    child: PremiumSectionHeader(
-                      title: 'ITINERARIO DETALLADO',
-                      icon: Icons.map_rounded,
-                    ),
-                  ),
-                  if (canWrite)
-                    _MiniAddButton(label: 'DÍA', onTap: _addItineraryDay),
-                ],
-              ),
-              const SizedBox(height: 24),
-              if (_itinerary.isEmpty)
-                const PremiumEmptyIndicator(
-                  msg: 'No has definido el recorrido paso a paso.',
-                  icon: Icons.route_rounded,
-                )
-              else
-                ..._itinerary.asMap().entries.map(
-                  (e) => _ItineraryDayCard(
-                    day: e.value,
-                    index: e.key,
-                    canWrite: canWrite,
-                    onRemove: () => _removeItineraryDay(e.key),
-                    onUpdate: (newDay) =>
-                        setState(() => _itinerary[e.key] = newDay),
-                  ),
+              const Expanded(
+                child: PremiumSectionHeader(
+                  title: 'ITINERARIO DETALLADO',
+                  icon: Icons.map_rounded,
                 ),
+              ),
+              if (canWrite)
+                _MiniAddButton(label: 'DÍA', onTap: _addItineraryDay),
             ],
           ),
-        ),
+          const SizedBox(height: 20),
+          if (_itinerary.isEmpty)
+            const PremiumEmptyIndicator(
+              msg: 'No has definido el recorrido paso a paso.',
+              icon: Icons.route_rounded,
+            )
+          else
+            ..._itinerary.asMap().entries.map(
+              (e) => _ItineraryDayCard(
+                day: e.value,
+                index: e.key,
+                canWrite: canWrite,
+                onRemove: () => _removeItineraryDay(e.key),
+                onUpdate: (newDay) =>
+                    setState(() => _itinerary[e.key] = newDay),
+              ),
+            ),
+        ],
       ),
     );
   }
 
   Widget _buildStatusCard({required bool canWrite}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: D.surfaceHigh.withOpacity(0.4),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          child: Row(
-            children: [
-              PremiumStatusSwitch(
-                label: 'Experiencia Destacada (Promo)',
-                value: _isPromotion,
-                onChanged: canWrite
-                    ? (v) => setState(() => _isPromotion = v)
-                    : null,
-                activeColor: D.gold,
-              ),
-              const SizedBox(width: 32),
-              PremiumStatusSwitch(
-                label: 'Habilitada al Público',
-                value: _isActive,
-                onChanged: canWrite
-                    ? (v) => setState(() => _isActive = v)
-                    : null,
-                activeColor: D.emerald,
-              ),
-              const SizedBox(width: 32),
-              PremiumStatusSwitch(
-                label: 'Precio por Pareja',
-                value: _precioPorPareja,
-                onChanged: canWrite
-                    ? (v) => setState(() => _precioPorPareja = v)
-                    : null,
-                activeColor: D.skyBlue,
-              ),
-            ],
+        ],
+      ),
+      child: Row(
+        children: [
+          PremiumStatusSwitch(
+            label: 'Experiencia Destacada (Promo)',
+            value: _isPromotion,
+            onChanged: canWrite
+                ? (v) => setState(() => _isPromotion = v)
+                : null,
+            activeColor: SaasPalette.warning,
           ),
-        ),
+          const SizedBox(width: 24),
+          PremiumStatusSwitch(
+            label: 'Habilitada al Público',
+            value: _isActive,
+            onChanged: canWrite ? (v) => setState(() => _isActive = v) : null,
+            activeColor: SaasPalette.success,
+          ),
+          const SizedBox(width: 24),
+          PremiumStatusSwitch(
+            label: 'Precio por Pareja',
+            value: _precioPorPareja,
+            onChanged: canWrite
+                ? (v) => setState(() => _precioPorPareja = v)
+                : null,
+            activeColor: SaasPalette.brand600,
+          ),
+        ],
       ),
     );
   }
@@ -705,21 +699,21 @@ class _TourFormScreenState extends State<TourFormScreen>
         AppRouter.tourDetalle,
         arguments: widget.tour,
       ),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [D.royalBlue, D.indigo],
+            colors: [SaasPalette.brand600, SaasPalette.brand900],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: D.royalBlue.withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              color: SaasPalette.brand600.withValues(alpha: 0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -729,12 +723,12 @@ class _TourFormScreenState extends State<TourFormScreen>
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
                 Icons.people_alt_rounded,
                 color: Colors.white,
-                size: 22,
+                size: 20,
               ),
             ),
             const SizedBox(width: 16),
@@ -746,14 +740,14 @@ class _TourFormScreenState extends State<TourFormScreen>
                     'Ver Pasajeros',
                     style: TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
                     ),
                   ),
                   Text(
                     'Integrantes y reservas con cupo',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: Colors.white.withValues(alpha: 0.75),
                       fontSize: 12,
                     ),
                   ),
@@ -763,7 +757,7 @@ class _TourFormScreenState extends State<TourFormScreen>
             const Icon(
               Icons.arrow_forward_ios_rounded,
               color: Colors.white,
-              size: 16,
+              size: 14,
             ),
           ],
         ),
@@ -776,80 +770,23 @@ class _TourFormScreenState extends State<TourFormScreen>
       context: context,
       firstDate: DateTime(2023),
       lastDate: DateTime(2030),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: D.skyBlue,
-              onPrimary: Colors.white,
-              secondary: D.royalBlue,
-              onSecondary: Colors.white,
-              surface: D.surfaceHigh,
-              onSurface: Colors.white,
-              outline: D.border,
-            ),
-            dialogBackgroundColor: D.surface,
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: D.skyBlue,
-                textStyle: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.8,
-                ),
-              ),
-            ),
-            inputDecorationTheme: InputDecorationTheme(
-              filled: true,
-              fillColor: D.surfaceHigh,
-              labelStyle: const TextStyle(color: D.slate400),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: D.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: D.skyBlue, width: 1.5),
-              ),
-            ),
-            datePickerTheme: DatePickerThemeData(
-              backgroundColor: D.surface,
-              headerBackgroundColor: D.royalBlue,
-              headerForegroundColor: Colors.white,
-              dayForegroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return Colors.white;
-                }
-                if (states.contains(WidgetState.disabled)) {
-                  return D.slate600;
-                }
-                return Colors.white;
-              }),
-              dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return D.royalBlue;
-                }
-                return Colors.transparent;
-              }),
-              rangePickerBackgroundColor: D.surface,
-              rangePickerHeaderBackgroundColor: D.royalBlue,
-              rangePickerHeaderForegroundColor: Colors.white,
-              rangeSelectionBackgroundColor: D.royalBlue.withOpacity(0.2),
-              todayForegroundColor: WidgetStateProperty.all(D.skyBlue),
-              todayBorder: const BorderSide(color: D.skyBlue, width: 1.5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-            ),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: SaasPalette.brand600,
+            onPrimary: Colors.white,
+            surface: SaasPalette.bgCanvas,
+            onSurface: SaasPalette.textPrimary,
           ),
-          child: child!,
-        );
-      },
+        ),
+        child: child!,
+      ),
     );
     if (range != null) setState(() => _dateRange = range);
   }
 }
 
-// ─── Widgets locales (específicos de este formulario) ─────────────────────────
+// ─── Widgets locales ──────────────────────────────────────────────────────────
 
 class _DateRangeSelector extends StatelessWidget {
   final DateTimeRange? range;
@@ -863,26 +800,30 @@ class _DateRangeSelector extends StatelessWidget {
       const Text(
         'TEMPORADA *',
         style: TextStyle(
-          color: D.slate400,
+          color: SaasPalette.textSecondary,
           fontSize: 12,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
         ),
       ),
-      const SizedBox(height: 8),
+      const SizedBox(height: 6),
       InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: D.surfaceHigh.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            color: SaasPalette.bgCanvas,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: SaasPalette.border),
           ),
           child: Row(
             children: [
-              const Icon(Icons.date_range_rounded, color: D.skyBlue, size: 20),
+              const Icon(
+                Icons.date_range_rounded,
+                color: SaasPalette.brand600,
+                size: 18,
+              ),
               const SizedBox(width: 12),
               Text(
                 range == null
@@ -890,7 +831,9 @@ class _DateRangeSelector extends StatelessWidget {
                     : '${DateFormat('dd/MM').format(range!.start)} '
                           '- ${DateFormat('dd/MM').format(range!.end)}',
                 style: TextStyle(
-                  color: range == null ? D.slate400 : Colors.white,
+                  color: range == null
+                      ? SaasPalette.textTertiary
+                      : SaasPalette.textPrimary,
                   fontSize: 14,
                 ),
               ),
@@ -919,32 +862,31 @@ class _ItineraryDayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 20),
-    padding: const EdgeInsets.all(24),
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: D.surfaceHigh.withOpacity(0.4),
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: Colors.white.withOpacity(0.05)),
+      color: SaasPalette.bgSubtle,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: SaasPalette.border),
     ),
     child: Column(
       children: [
         Row(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [D.skyBlue, D.royalBlue],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                color: SaasPalette.brand50,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: SaasPalette.brand600.withValues(alpha: 0.3),
                 ),
-                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 'DÍA ${index + 1}',
                 style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
+                  color: SaasPalette.brand600,
+                  fontWeight: FontWeight.w800,
                   fontSize: 11,
                   letterSpacing: 0.5,
                 ),
@@ -954,28 +896,28 @@ class _ItineraryDayCard extends StatelessWidget {
             if (canWrite)
               IconButton(
                 onPressed: onRemove,
-                icon: Icon(
+                icon: const Icon(
                   Icons.delete_outline_rounded,
-                  color: D.rose.withOpacity(0.8),
-                  size: 22,
+                  color: SaasPalette.danger,
+                  size: 20,
                 ),
               ),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         TextFormField(
           initialValue: day.title,
           readOnly: !canWrite,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
           decoration: _fieldDec('Título del día'),
           onChanged: canWrite ? (v) => onUpdate(day.copyWith(title: v)) : null,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         TextFormField(
           initialValue: day.description,
           readOnly: !canWrite,
           maxLines: 3,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
           decoration: _fieldDec('Detalles del recorrido'),
           onChanged: canWrite
               ? (v) => onUpdate(day.copyWith(description: v))
@@ -985,41 +927,41 @@ class _ItineraryDayCard extends StatelessWidget {
     ),
   );
 
-  InputDecoration _fieldDec(String label) => InputDecoration(
-    labelText: label,
-    labelStyle: const TextStyle(color: D.slate400, fontSize: 13),
+  InputDecoration _fieldDec(String label) => const InputDecoration(
+    labelStyle: TextStyle(color: SaasPalette.textSecondary, fontSize: 13),
     filled: true,
-    fillColor: D.surfaceHigh.withOpacity(0.5),
+    fillColor: SaasPalette.bgCanvas,
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: Colors.white.withOpacity(0.05)),
+      borderRadius: BorderRadius.all(Radius.circular(10)),
+      borderSide: BorderSide(color: SaasPalette.border),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: D.skyBlue, width: 1.5),
+      borderRadius: BorderRadius.all(Radius.circular(10)),
+      borderSide: BorderSide(color: SaasPalette.brand600, width: 1.5),
     ),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: Colors.white.withOpacity(0.05)),
+      borderRadius: BorderRadius.all(Radius.circular(10)),
+      borderSide: BorderSide(color: SaasPalette.border),
     ),
-  );
+  ).copyWith(labelText: label);
 }
 
 class _CircleAddButton extends StatelessWidget {
   final VoidCallback onTap;
-  const _CircleAddButton({required this.onTap});
+  final Color color;
+  const _CircleAddButton({required this.onTap, required this.color});
 
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: onTap,
-    borderRadius: BorderRadius.circular(12),
+    borderRadius: BorderRadius.circular(10),
     child: Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: D.royalBlue,
-        borderRadius: BorderRadius.circular(16),
+        color: color,
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: const Icon(Icons.add_rounded, color: Colors.white),
+      child: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
     ),
   );
 }
@@ -1032,10 +974,11 @@ class _MiniAddButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => TextButton.icon(
     onPressed: onTap,
-    icon: const Icon(Icons.add_rounded, size: 18),
+    style: TextButton.styleFrom(foregroundColor: SaasPalette.brand600),
+    icon: const Icon(Icons.add_rounded, size: 16),
     label: Text(
       'AGREGAR $label',
-      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
     ),
   );
 }
@@ -1054,10 +997,10 @@ class _CuposDisponiblesInfo extends StatelessWidget {
     final disponibles = cuposDisponibles ?? cuposTotales;
     final porcentaje = cuposTotales > 0 ? disponibles / cuposTotales : 1.0;
     final color = porcentaje > 0.4
-        ? D.emerald
+        ? SaasPalette.success
         : porcentaje > 0
-        ? D.gold
-        : D.rose;
+        ? SaasPalette.warning
+        : SaasPalette.danger;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1065,29 +1008,29 @@ class _CuposDisponiblesInfo extends StatelessWidget {
         const Text(
           'CUPOS DISPONIBLES',
           style: TextStyle(
-            color: D.slate400,
+            color: SaasPalette.textSecondary,
             fontSize: 12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: D.surfaceHigh.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.3)),
+            color: SaasPalette.bgCanvas,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color.withValues(alpha: 0.35)),
           ),
           child: Row(
             children: [
-              Icon(Icons.event_seat_rounded, color: color, size: 20),
-              const SizedBox(width: 12),
+              Icon(Icons.event_seat_rounded, color: color, size: 18),
+              const SizedBox(width: 10),
               Text(
                 '$disponibles / $cuposTotales',
                 style: TextStyle(
                   color: color,
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1097,9 +1040,9 @@ class _CuposDisponiblesInfo extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: porcentaje.clamp(0.0, 1.0),
-                    backgroundColor: D.surfaceHigh,
+                    backgroundColor: SaasPalette.bgSubtle,
                     color: color,
-                    minHeight: 6,
+                    minHeight: 5,
                   ),
                 ),
               ),

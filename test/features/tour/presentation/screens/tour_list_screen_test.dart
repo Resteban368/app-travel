@@ -23,8 +23,6 @@ class MockTourRepository extends Fake implements TourRepository {
         departureTime: '10 AM',
         arrival: 'Arrival 1',
         pdfLink: '',
-        imageUrl:
-            'https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800',
         inclusions: const [],
         exclusions: const [],
         itinerary: const [],

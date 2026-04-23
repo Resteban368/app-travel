@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:agente_viajes/core/theme/saas_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/payment_method.dart';
@@ -127,16 +128,16 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: D.bg,
         body: Stack(
           children: [
-            const PremiumBackground(),
             CustomScrollView(
               slivers: [
                 PremiumSliverAppBar(
                   title: _isEditing && !canWrite
-                      ? 'Ver Cuenta'
-                      : (_isEditing ? 'Editar Cuenta' : 'Nueva Cuenta'),
+                      ? 'Ver Método de Pago'
+                      : (_isEditing
+                            ? 'Editar Método de Pago'
+                            : 'Nuevo Método de Pago'),
                   actions: IconButton(
                     icon: const Icon(
                       Icons.arrow_back_rounded,
@@ -156,144 +157,138 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
                           vertical: 16,
                         ),
                         child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 800),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Etiqueta de seguridad reforzada
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 8,
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Etiqueta de seguridad reforzada
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: D.emerald.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: D.emerald.withOpacity(0.3),
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: D.emerald.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: D.emerald.withOpacity(0.3),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.security_rounded,
+                                        color: D.emerald,
+                                        size: 16,
                                       ),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.security_rounded,
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Información Financiera Segura',
+                                        style: TextStyle(
                                           color: D.emerald,
-                                          size: 16,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          'Información Financiera Segura',
-                                          style: TextStyle(
-                                            color: D.emerald,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+
+                                PremiumSectionCard(
+                                  title: 'DATOS DE LA CUENTA',
+                                  icon: Icons.account_balance_rounded,
+                                  children: [
+                                    PremiumTextField(
+                                      controller: _bankCtrl,
+                                      label: 'Nombre del Banco / Entidad *',
+                                      icon: Icons.account_balance_rounded,
+                                      readOnly: !canWrite,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: _buildDropdown(
+                                            value: _paymentType,
+                                            label: 'Tipo de Pago',
+                                            icon: Icons.payments_rounded,
+                                            items: _paymentTypes,
+                                            onChanged: canWrite
+                                                ? (v) => setState(
+                                                    () => _paymentType = v!,
+                                                  )
+                                                : null,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 20),
+                                        Expanded(
+                                          child: _buildDropdown(
+                                            value: _accountType,
+                                            label: 'Tipo de Cuenta',
+                                            icon: Icons.credit_card_rounded,
+                                            items: _accountTypes,
+                                            onChanged: canWrite
+                                                ? (v) => setState(
+                                                    () => _accountType = v!,
+                                                  )
+                                                : null,
                                           ),
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  const SizedBox(height: 24),
-
-                                  PremiumSectionCard(
-                                    title: 'DATOS DE LA CUENTA',
-                                    icon: Icons.account_balance_rounded,
-                                    children: [
-                                      PremiumTextField(
-                                        controller: _bankCtrl,
-                                        label: 'Nombre del Banco / Entidad *',
-                                        icon: Icons.account_balance_rounded,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: _buildDropdown(
-                                              value: _paymentType,
-                                              label: 'Tipo de Pago',
-                                              icon: Icons.payments_rounded,
-                                              items: _paymentTypes,
-                                              onChanged: canWrite
-                                                  ? (v) => setState(
-                                                      () => _paymentType = v!,
-                                                    )
-                                                  : null,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 20),
-                                          Expanded(
-                                            child: _buildDropdown(
-                                              value: _accountType,
-                                              label: 'Tipo de Cuenta',
-                                              icon: Icons.credit_card_rounded,
-                                              items: _accountTypes,
-                                              onChanged: canWrite
-                                                  ? (v) => setState(
-                                                      () => _accountType = v!,
-                                                    )
-                                                  : null,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _accountNumberCtrl,
-                                        label: 'Número de Cuenta o Teléfono *',
-                                        icon: Icons.numbers_rounded,
-                                        // isNumeric: true,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _accountHolderCtrl,
-                                        label: 'Titular de la Cuenta *',
-                                        icon: Icons.person_outline_rounded,
-                                        readOnly: !canWrite,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 24),
-
-                                  PremiumSectionCard(
-                                    title: 'VISIBILIDAD',
-                                    icon: Icons.toggle_on_rounded,
-                                    children: [
-                                      _buildVisibilitySwitch(
-                                        canWrite: canWrite,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 48),
-
-                                  if (canWrite)
-                                    Builder(
-                                      builder: (ctx) =>
-                                          BlocBuilder<
-                                            PaymentMethodBloc,
-                                            PaymentMethodState
-                                          >(
-                                            builder: (context, state) {
-                                              return PremiumActionButton(
-                                                label: _isEditing
-                                                    ? 'ACTUALIZAR MÉTODO'
-                                                    : 'GUARDAR MÉTODO',
-                                                icon: Icons.save_rounded,
-                                                isLoading:
-                                                    state
-                                                        is PaymentMethodSaving,
-                                                onTap: () => _save(ctx),
-                                              );
-                                            },
-                                          ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _accountNumberCtrl,
+                                      label: 'Número de Cuenta o Teléfono *',
+                                      icon: Icons.numbers_rounded,
+                                      // isNumeric: true,
+                                      readOnly: !canWrite,
                                     ),
-                                  const SizedBox(height: 100),
-                                ],
-                              ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _accountHolderCtrl,
+                                      label: 'Titular de la Cuenta *',
+                                      icon: Icons.person_outline_rounded,
+                                      readOnly: !canWrite,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+
+                                PremiumSectionCard(
+                                  title: 'VISIBILIDAD',
+                                  icon: Icons.toggle_on_rounded,
+                                  children: [
+                                    _buildVisibilitySwitch(canWrite: canWrite),
+                                  ],
+                                ),
+                                const SizedBox(height: 48),
+
+                                if (canWrite)
+                                  Builder(
+                                    builder: (ctx) =>
+                                        BlocBuilder<
+                                          PaymentMethodBloc,
+                                          PaymentMethodState
+                                        >(
+                                          builder: (context, state) {
+                                            return PremiumActionButton(
+                                              label: _isEditing
+                                                  ? 'ACTUALIZAR MÉTODO'
+                                                  : 'GUARDAR MÉTODO',
+                                              icon: Icons.save_rounded,
+                                              isLoading:
+                                                  state is PaymentMethodSaving,
+                                              onTap: () => _save(ctx),
+                                            );
+                                          },
+                                        ),
+                                  ),
+                                const SizedBox(height: 100),
+                              ],
                             ),
                           ),
                         ),
@@ -322,7 +317,6 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
         Text(
           label,
           style: const TextStyle(
-            color: D.slate400,
             fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.5,
@@ -333,7 +327,6 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: D.surfaceHigh.withOpacity(0.5),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.white.withOpacity(0.05)),
             ),
@@ -351,16 +344,16 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
         else
           DropdownButtonFormField<String>(
             value: items.contains(value) ? value : items.first,
-            dropdownColor: D.surfaceHigh,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            dropdownColor: Colors.white,
+            style: const TextStyle(color: Colors.black, fontSize: 14),
             decoration: InputDecoration(
-              prefixIcon: Icon(icon, color: D.skyBlue, size: 20),
+              prefixIcon: Icon(icon, color: SaasPalette.brand600, size: 20),
               filled: true,
-              fillColor: D.surfaceHigh.withOpacity(0.5),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(color: Colors.white.withOpacity(0.05)),
               ),
+              fillColor: Colors.white,
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: const BorderSide(color: D.skyBlue, width: 1.5),
@@ -386,7 +379,7 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: Container(
           decoration: BoxDecoration(
-            color: D.surfaceHigh.withOpacity(0.3),
+            color: D.bg,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withOpacity(0.05)),
           ),

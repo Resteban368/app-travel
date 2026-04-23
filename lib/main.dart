@@ -13,6 +13,7 @@ import 'package:agente_viajes/features/cotizaciones/presentation/bloc/cotizacion
 import 'package:agente_viajes/features/agentes/presentation/bloc/agente_bloc.dart';
 import 'package:agente_viajes/features/reservas/presentation/bloc/reserva_bloc.dart';
 import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_bloc.dart';
+import 'package:agente_viajes/features/hoteles/presentation/bloc/hotel_bloc.dart';
 import 'package:agente_viajes/features/uploads/presentation/bloc/upload_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -124,7 +125,11 @@ class _TravelToursAppState extends State<TravelToursApp> {
                 Text(
                   'Tu sesión ha expirado o no es válida. Por favor inicia sesión nuevamente para continuar.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: D.slate400, fontSize: 14, height: 1.5),
+                  style: TextStyle(
+                    color: D.slate400,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 32),
                 SizedBox(
@@ -133,8 +138,10 @@ class _TravelToursAppState extends State<TravelToursApp> {
                     onPressed: () {
                       _sessionDialogVisible = false;
                       ctx.read<AuthBloc>().add(const LogoutRequested());
-                      navigatorKey.currentState
-                          ?.pushNamedAndRemoveUntil(AppRouter.login, (_) => false);
+                      navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                        AppRouter.login,
+                        (_) => false,
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: D.rose,
@@ -146,7 +153,10 @@ class _TravelToursAppState extends State<TravelToursApp> {
                     ),
                     child: const Text(
                       'Aceptar — Iniciar Sesión',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                 ),
@@ -178,12 +188,13 @@ class _TravelToursAppState extends State<TravelToursApp> {
         BlocProvider<AgenteBloc>(create: (_) => sl<AgenteBloc>()),
         BlocProvider<ReservaBloc>(create: (_) => sl<ReservaBloc>()),
         BlocProvider<ClienteBloc>(create: (_) => sl<ClienteBloc>()),
+        BlocProvider<HotelBloc>(create: (_) => sl<HotelBloc>()),
         BlocProvider<AuthBloc>(create: (_) => sl<AuthBloc>()),
         BlocProvider<UploadBloc>(create: (_) => sl<UploadBloc>()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
-        title: 'Travel Tours Florencia - Admin',
+        title: 'Agente Viajes',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         locale: const Locale('es', 'CO'),
@@ -192,10 +203,7 @@ class _TravelToursAppState extends State<TravelToursApp> {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: const [
-          Locale('es', 'CO'),
-          Locale('en', 'US'),
-        ],
+        supportedLocales: const [Locale('es', 'CO'), Locale('en', 'US')],
         initialRoute: AppRouter.splash,
         onGenerateRoute: AppRouter.onGenerateRoute,
       ),

@@ -110,12 +110,8 @@ class _SedeFormScreenState extends State<SedeFormScreen>
           }
         },
         child: Scaffold(
-          backgroundColor: D.bg,
           body: Stack(
             children: [
-              // Fondo premium glassmorphism
-              const PremiumBackground(),
-
               // Contenido con encabezado colapsable
               CustomScrollView(
                 slivers: [
@@ -142,79 +138,76 @@ class _SedeFormScreenState extends State<SedeFormScreen>
                             vertical: 16,
                           ),
                           child: Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 800),
-                              child: Form(
-                                key: _formKey,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // ── Sección: Información General ──
-                                    PremiumSectionCard(
-                                      title: 'INFORMACIÓN GENERAL',
-                                      icon: Icons.store_rounded,
-                                      children: [
-                                        PremiumTextField(
-                                          controller: _nameCtrl,
-                                          label: 'Nombre de la Sede *',
-                                          icon: Icons.store_rounded,
-                                        ),
-                                        const SizedBox(height: 20),
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: PremiumTextField(
-                                                controller: _phoneCtrl,
-                                                label: 'Teléfono Contacto *',
-                                                icon: Icons.phone_rounded,
-                                                isNumeric: true,
-                                              ),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // ── Sección: Información General ──
+                                  PremiumSectionCard(
+                                    title: 'INFORMACIÓN GENERAL',
+                                    icon: Icons.store_rounded,
+                                    children: [
+                                      PremiumTextField(
+                                        controller: _nameCtrl,
+                                        label: 'Nombre de la Sede *',
+                                        icon: Icons.store_rounded,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: PremiumTextField(
+                                              controller: _phoneCtrl,
+                                              label: 'Teléfono Contacto *',
+                                              icon: Icons.phone_rounded,
+                                              isNumeric: true,
                                             ),
-                                            const SizedBox(width: 20),
-                                            Expanded(
-                                              child: PremiumTextField(
-                                                controller: _mapsLinkCtrl,
-                                                label: 'Google Maps Link',
-                                                icon: Icons.map_rounded,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 20),
-                                        PremiumTextField(
-                                          controller: _addressCtrl,
-                                          label: 'Dirección Exacta *',
-                                          icon: Icons.place_rounded,
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 24),
-
-                                    // ── Sección: Operatividad ──
-                                    PremiumSectionCard(
-                                      title: 'OPERATIVIDAD',
-                                      icon: Icons.toggle_on_rounded,
-                                      children: [_buildVisibilitySwitch()],
-                                    ),
-                                    const SizedBox(height: 48),
-
-                                    // ── Botón de guardado ──
-                                    Builder(
-                                      builder: (ctx) =>
-                                          BlocBuilder<SedeBloc, SedeState>(
-                                            builder: (context, state) {
-                                              return PremiumActionButton(
-                                                label: 'GUARDAR CAMBIOS',
-                                                icon: Icons.save_rounded,
-                                                isLoading: state is SedeSaving,
-                                                onTap: () => _save(ctx),
-                                              );
-                                            },
                                           ),
-                                    ),
-                                    const SizedBox(height: 100),
-                                  ],
-                                ),
+                                          const SizedBox(width: 20),
+                                          Expanded(
+                                            child: PremiumTextField(
+                                              controller: _mapsLinkCtrl,
+                                              label: 'Google Maps Link',
+                                              icon: Icons.map_rounded,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _addressCtrl,
+                                        label: 'Dirección Exacta *',
+                                        icon: Icons.place_rounded,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  // ── Sección: Operatividad ──
+                                  PremiumSectionCard(
+                                    title: 'OPERATIVIDAD',
+                                    icon: Icons.toggle_on_rounded,
+                                    children: [_buildVisibilitySwitch()],
+                                  ),
+                                  const SizedBox(height: 48),
+
+                                  // ── Botón de guardado ──
+                                  Builder(
+                                    builder: (ctx) =>
+                                        BlocBuilder<SedeBloc, SedeState>(
+                                          builder: (context, state) {
+                                            return PremiumActionButton(
+                                              label: 'GUARDAR CAMBIOS',
+                                              icon: Icons.save_rounded,
+                                              isLoading: state is SedeSaving,
+                                              onTap: () => _save(ctx),
+                                            );
+                                          },
+                                        ),
+                                  ),
+                                  const SizedBox(height: 100),
+                                ],
                               ),
                             ),
                           ),
@@ -238,7 +231,7 @@ class _SedeFormScreenState extends State<SedeFormScreen>
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: Container(
           decoration: BoxDecoration(
-            color: D.surfaceHigh.withOpacity(0.3),
+            color: D.bg,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withOpacity(0.05)),
           ),

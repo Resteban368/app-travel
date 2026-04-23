@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:agente_viajes/core/theme/saas_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/premium_palette.dart';
@@ -201,10 +202,8 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: D.bg,
         body: Stack(
           children: [
-            const PremiumBackground(),
             CustomScrollView(
               slivers: [
                 PremiumSliverAppBar(
@@ -228,14 +227,12 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                           vertical: 16,
                         ),
                         child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 800),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // ── Badge de Ruta ───────────────────────────
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // ── Badge de Ruta ───────────────────────────
                                   Row(
                                     children: [
                                       Container(
@@ -244,28 +241,25 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                                           vertical: 6,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: D.skyBlue.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
+                                          color: SaasPalette.brand600.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(20),
                                           border: Border.all(
-                                            color: D.skyBlue.withOpacity(0.2),
+                                            color: SaasPalette.brand600.withOpacity(0.2),
                                           ),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: const [
                                             Icon(
-                                              Icons
-                                                  .admin_panel_settings_rounded,
-                                              color: D.skyBlue,
+                                              Icons.admin_panel_settings_rounded,
+                                              color: SaasPalette.brand600,
                                               size: 14,
                                             ),
                                             SizedBox(width: 8),
                                             Text(
                                               'ADMINISTRACIÓN / AGENTES',
                                               style: TextStyle(
-                                                color: D.skyBlue,
+                                                color: SaasPalette.brand600,
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.w900,
                                                 letterSpacing: 1,
@@ -276,100 +270,96 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 24),
+                                const SizedBox(height: 24),
 
-                                  PremiumSectionCard(
-                                    title: 'DATOS PERSONALES',
-                                    icon: Icons.person_outline_rounded,
-                                    children: [
+                                PremiumSectionCard(
+                                  title: 'DATOS PERSONALES',
+                                  icon: Icons.person_outline_rounded,
+                                  children: [
+                                    PremiumTextField(
+                                      controller: _nombreCtrl,
+                                      label: 'Nombre Completo *',
+                                      icon: Icons.person_rounded,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _correoCtrl,
+                                      label: 'Correo Electrónico *',
+                                      icon: Icons.email_rounded,
+                                      keyboardType: TextInputType.emailAddress,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    if (!_isEditing) ...[
                                       PremiumTextField(
-                                        controller: _nombreCtrl,
-                                        label: 'Nombre Completo *',
-                                        icon: Icons.person_rounded,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _correoCtrl,
-                                        label: 'Correo Electrónico *',
-                                        icon: Icons.email_rounded,
-                                        keyboardType:
-                                            TextInputType.emailAddress,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      if (!_isEditing) ...[
-                                        PremiumTextField(
-                                          controller: _passwordCtrl,
-                                          label: 'Contraseña *',
-                                          icon: Icons.lock_rounded,
-                                          isPassword: true,
-                                          validator: (v) {
-                                            if (!_isEditing &&
-                                                (v == null || v.isEmpty)) {
-                                              return 'La contraseña es obligatoria';
-                                            }
-                                            return null;
-                                          },
-                                        ),
-                                        const SizedBox(height: 24),
-                                      ],
-                                      _buildActiveToggle(),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 24),
-
-                                  PremiumSectionCard(
-                                    title: 'PERMISOS DE ACCESO',
-                                    icon: Icons.security_rounded,
-                                    children: [
-                                      Text(
-                                        'Define a qué módulos podrá acceder y qué acciones podrá realizar.',
-                                        style: TextStyle(
-                                          color: D.slate400,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 20),
-                                      Row(
-                                        children: [
-                                          _LegendBadge(
-                                            icon: Icons.visibility_rounded,
-                                            label: 'Ver solo',
-                                            color: D.skyBlue,
-                                          ),
-                                          const SizedBox(width: 16),
-                                          _LegendBadge(
-                                            icon: Icons.edit_rounded,
-                                            label: 'Ver y Editar',
-                                            color: D.emerald,
-                                          ),
-                                        ],
+                                        controller: _passwordCtrl,
+                                        label: 'Contraseña *',
+                                        icon: Icons.lock_rounded,
+                                        isPassword: true,
+                                        validator: (v) {
+                                          if (!_isEditing &&
+                                              (v == null || v.isEmpty)) {
+                                            return 'La contraseña es obligatoria';
+                                          }
+                                          return null;
+                                        },
                                       ),
                                       const SizedBox(height: 24),
-                                      ..._modules.map(
-                                        (m) => _buildModuleRow(m),
-                                      ),
                                     ],
-                                  ),
-                                  const SizedBox(height: 48),
+                                    _buildActiveToggle(),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
 
-                                  Builder(
-                                    builder: (ctx) =>
-                                        BlocBuilder<AgenteBloc, AgenteState>(
-                                          builder: (context, state) {
-                                            return PremiumActionButton(
-                                              label: _isEditing
-                                                  ? 'ACTUALIZAR AGENTE'
-                                                  : 'GUARDAR AGENTE',
-                                              icon: Icons.save_rounded,
-                                              isLoading: state is AgenteSaving,
-                                              onTap: () => _save(ctx),
-                                            );
-                                          },
+                                PremiumSectionCard(
+                                  title: 'PERMISOS DE ACCESO',
+                                  icon: Icons.security_rounded,
+                                  children: [
+                                    Text(
+                                      'Define a qué módulos podrá acceder y qué acciones podrá realizar.',
+                                      style: TextStyle(
+                                        color: SaasPalette.textSecondary,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Row(
+                                      children: [
+                                        _LegendBadge(
+                                          icon: Icons.visibility_rounded,
+                                          label: 'Ver solo',
+                                          color: SaasPalette.brand600,
                                         ),
-                                  ),
-                                  const SizedBox(height: 100),
-                                ],
-                              ),
+                                        const SizedBox(width: 16),
+                                        _LegendBadge(
+                                          icon: Icons.edit_rounded,
+                                          label: 'Ver y Editar',
+                                          color: SaasPalette.success,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 24),
+                                    ..._modules.map((m) => _buildModuleRow(m)),
+                                  ],
+                                ),
+                                const SizedBox(height: 48),
+
+                                Builder(
+                                  builder: (ctx) =>
+                                      BlocBuilder<AgenteBloc, AgenteState>(
+                                        builder: (context, state) {
+                                          return PremiumActionButton(
+                                            label: _isEditing
+                                                ? 'ACTUALIZAR AGENTE'
+                                                : 'GUARDAR AGENTE',
+                                            icon: Icons.save_rounded,
+                                            isLoading: state is AgenteSaving,
+                                            onTap: () => _save(ctx),
+                                          );
+                                        },
+                                      ),
+                                ),
+                                const SizedBox(height: 100),
+                              ],
                             ),
                           ),
                         ),
@@ -388,52 +378,47 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
   Widget _buildActiveToggle() {
     return Container(
       decoration: BoxDecoration(
-        color: D.surfaceHigh.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.03)),
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Estado de Acceso',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _isActive ? 'Habilitado' : 'Bloqueado',
-                        style: TextStyle(
-                          color: _isActive ? D.emerald : D.rose,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Estado de Acceso',
+                    style: TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Switch(
-                  value: _isActive,
-                  activeColor: D.emerald,
-                  activeTrackColor: D.emerald.withOpacity(0.3),
-                  inactiveThumbColor: D.rose,
-                  inactiveTrackColor: D.rose.withOpacity(0.3),
-                  onChanged: (v) => setState(() => _isActive = v),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    _isActive ? 'Habilitado' : 'Bloqueado',
+                    style: TextStyle(
+                      color: _isActive ? SaasPalette.success : SaasPalette.danger,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+            Switch(
+              value: _isActive,
+              activeColor: SaasPalette.success,
+              activeTrackColor: SaasPalette.success.withOpacity(0.2),
+              inactiveThumbColor: SaasPalette.danger,
+              inactiveTrackColor: SaasPalette.danger.withOpacity(0.2),
+              onChanged: (v) => setState(() => _isActive = v),
+            ),
+          ],
         ),
       ),
     );
@@ -442,7 +427,16 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
   Widget _buildModuleRow(_Module module) {
     final enabled = _permisos.containsKey(module.key);
     final level = _permisos[module.key] ?? 'lectura';
-    final activeColor = level == 'completo' ? D.emerald : D.skyBlue;
+    final isCompleto = level == 'completo';
+    
+    // Colores dinámicos basados en el estado
+    final activeColor = isCompleto ? SaasPalette.success : SaasPalette.brand600;
+    final rowBg = enabled 
+        ? (isCompleto ? SaasPalette.success.withOpacity(0.05) : SaasPalette.brand50)
+        : SaasPalette.bgCanvas;
+    final rowBorder = enabled 
+        ? activeColor.withOpacity(0.15) 
+        : SaasPalette.border;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -450,16 +444,9 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: enabled
-              ? activeColor.withOpacity(0.05)
-              : D.surfaceHigh.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: enabled
-                ? activeColor.withOpacity(0.3)
-                : Colors.white.withOpacity(0.03),
-            width: 1,
-          ),
+          color: rowBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: rowBorder),
         ),
         child: Column(
           children: [
@@ -468,14 +455,14 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: (enabled ? activeColor : D.slate600).withOpacity(
-                      0.1,
-                    ),
+                    color: enabled 
+                        ? activeColor.withOpacity(0.1) 
+                        : SaasPalette.bgSubtle,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     module.icon,
-                    color: enabled ? activeColor : D.slate400,
+                    color: enabled ? activeColor : SaasPalette.textTertiary,
                     size: 20,
                   ),
                 ),
@@ -484,22 +471,23 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                   child: Text(
                     module.label,
                     style: TextStyle(
-                      color: enabled ? Colors.white : D.slate400,
+                      color: enabled ? SaasPalette.textPrimary : SaasPalette.textSecondary,
                       fontSize: 14,
-                      fontWeight: enabled ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: enabled ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),
                 Switch(
                   value: enabled,
                   activeColor: activeColor,
+                  activeTrackColor: activeColor.withOpacity(0.2),
                   onChanged: (v) => _toggleModule(module.key, v),
                 ),
               ],
             ),
             if (enabled) ...[
               const SizedBox(height: 12),
-              const Divider(color: Colors.white10),
+              Divider(color: activeColor.withOpacity(0.1)),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -508,7 +496,7 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                     label: 'Lectura',
                     icon: Icons.visibility_rounded,
                     active: level == 'lectura',
-                    color: D.skyBlue,
+                    color: SaasPalette.brand600,
                     onTap: () => _setLevel(module.key, 'lectura'),
                   ),
                   const SizedBox(width: 8),
@@ -516,7 +504,7 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                     label: 'Completo',
                     icon: Icons.edit_rounded,
                     active: level == 'completo',
-                    color: D.emerald,
+                    color: SaasPalette.success,
                     onTap: () => _setLevel(module.key, 'completo'),
                   ),
                 ],
@@ -551,25 +539,27 @@ class _LevelChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? color.withOpacity(0.15) : Colors.transparent,
+          color: active ? color.withOpacity(0.12) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: active
-                ? color.withOpacity(0.5)
-                : Colors.white.withOpacity(0.1),
+            color: active ? color.withOpacity(0.3) : SaasPalette.border,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: active ? color : D.slate400, size: 14),
+            Icon(
+              icon,
+              color: active ? color : SaasPalette.textTertiary,
+              size: 14,
+            ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: active ? color : D.slate400,
+                color: active ? color : SaasPalette.textTertiary,
                 fontSize: 12,
-                fontWeight: active ? FontWeight.bold : FontWeight.normal,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ],
@@ -598,10 +588,10 @@ class _LegendBadge extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           label,
-          style: TextStyle(
-            color: D.slate400,
+          style: const TextStyle(
+            color: SaasPalette.textSecondary,
             fontSize: 12,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],

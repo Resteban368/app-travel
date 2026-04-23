@@ -5,11 +5,15 @@ import '../../domain/entities/reserva.dart';
 import '../../domain/entities/integrante.dart';
 import '../../domain/entities/aerolinea.dart';
 import '../../domain/entities/vuelo_reserva.dart';
+import '../../domain/entities/hotel_reserva.dart';
+import 'package:agente_viajes/features/hoteles/domain/entities/hotel.dart';
 import '../../domain/repositories/reserva_repository.dart';
 import 'package:agente_viajes/features/tour/domain/entities/tour.dart';
 import 'package:agente_viajes/features/clientes/domain/entities/cliente.dart';
 import 'package:agente_viajes/core/constants/api_constants.dart';
 import 'package:agente_viajes/core/models/paged_result.dart';
+import 'package:agente_viajes/features/agentes/domain/entities/agente.dart';
+import 'package:agente_viajes/features/pagos_realizados/domain/entities/pago_realizado.dart';
 
 class ApiReservaRepository implements ReservaRepository {
   final http.Client client;
@@ -110,6 +114,15 @@ class ApiReservaRepository implements ReservaRepository {
       bodyMap['vuelos'] = _serializeVuelos(reserva.vuelos);
     }
 
+    if (reserva.tipoReserva == 'vuelos') {
+      if (reserva.utilidad != null) {
+        bodyMap['utilidad'] = reserva.utilidad;
+      }
+      if (reserva.hoteles.isNotEmpty) {
+        bodyMap['hoteles'] = _serializeHoteles(reserva.hoteles);
+      }
+    }
+
     final body = json.encode(bodyMap);
     debugPrint('📤 [ApiReservaRepository] Creating: $body');
     final response = await client.post(
@@ -147,6 +160,13 @@ class ApiReservaRepository implements ReservaRepository {
 
     if (reserva.vuelos.isNotEmpty) {
       bodyMap['vuelos'] = _serializeVuelos(reserva.vuelos);
+    }
+
+    if (reserva.tipoReserva == 'vuelos') {
+      if (reserva.utilidad != null) {
+        bodyMap['utilidad'] = reserva.utilidad;
+      }
+      bodyMap['hoteles'] = _serializeHoteles(reserva.hoteles);
     }
 
     final body = json.encode(bodyMap);
@@ -222,6 +242,8 @@ class ApiReservaRepository implements ReservaRepository {
             'hora_llegada': v.horaLlegada,
             'clase': v.clase,
             'precio': v.precio,
+            'reserva_vuelo': v.reservaVuelo,
+            'tipo_vuelo': v.tipoVuelo,
           },
         )
         .toList();
@@ -244,7 +266,7 @@ class ApiReservaRepository implements ReservaRepository {
               ? DateTime.tryParse(i['fecha_nacimiento'])
               : null,
           esResponsable: isRes,
-          tipoDocumento: i['tipo_documento'] ?? 'cedula',
+          tipoDocumento: i['tipo_documento'] ?? 'CC',
           documento: i['documento']?.toString() ?? '',
         );
       }).toList();
@@ -275,6 +297,14 @@ class ApiReservaRepository implements ReservaRepository {
           .toList();
     }
 
+    // Parse hoteles
+    List<HotelReserva> hoteles = [];
+    if (json['hoteles'] != null && json['hoteles'] is List) {
+      hoteles = (json['hoteles'] as List)
+          .map((h) => _parseHotelReserva(h as Map<String, dynamic>))
+          .toList();
+    }
+
     // Identify Tour ID
     String? tempIdTour;
     if (json['tour'] is Map && json['tour']['id'] != null) {
@@ -294,6 +324,18 @@ class ApiReservaRepository implements ReservaRepository {
       parsedResponsable = _parseCliente(responsableJson);
     }
 
+    // Parse agente
+    Agente? parsedAgente;
+    if (json['agente'] != null && json['agente'] is Map) {
+      final ag = json['agente'];
+      parsedAgente = Agente(
+        id: int.tryParse(ag['id']?.toString() ?? ''),
+        nombre: ag['nombre'] ?? '',
+        correo: ag['email'] ?? ag['correo'] ?? '',
+        isActive: ag['activo'] ?? true,
+      );
+    }
+
     debugPrint(
       '📦 [ApiReservaRepository] _fromJson id=${json['id']} id_responsable=$idResponsable responsable=${parsedResponsable?.nombre}',
     );
@@ -303,12 +345,23 @@ class ApiReservaRepository implements ReservaRepository {
       tipoReserva: json['tipo_reserva']?.toString() ?? 'tour',
       correo: json['correo'] ?? '',
       estado: json['estado'] ?? 'pendiente',
-      descuentoPorPersona: double.tryParse(json['descuento_por_persona']?.toString() ?? ''),
-      valorSinDescuento: double.tryParse(json['valor_sin_descuento']?.toString() ?? ''),
+      descuentoPorPersona: double.tryParse(
+        json['descuento_por_persona']?.toString() ?? '',
+      ),
+      valorSinDescuento: double.tryParse(
+        json['valor_sin_descuento']?.toString() ?? '',
+      ),
       valorTotal: double.tryParse(json['valor_total']?.toString() ?? ''),
       saldoPendiente: double.tryParse(
         json['saldo_pendiente']?.toString() ?? '',
       ),
+      pagosValidados: json['pagos_validados'] != null
+          ? (json['pagos_validados'] as List)
+              .map((p) => _parsePagoRealizado(p as Map<String, dynamic>))
+              .toList()
+          : null,
+      totalPersonas: int.tryParse(json['total_personas']?.toString() ?? ''),
+      valorPersonas: double.tryParse(json['valor_personas']?.toString() ?? ''),
       fechaCreacion: json['fecha_creacion'] != null
           ? DateTime.parse(json['fecha_creacion'])
           : DateTime.now(),
@@ -319,10 +372,13 @@ class ApiReservaRepository implements ReservaRepository {
       serviciosIds: serviciosIds,
       integrantes: integrantes,
       vuelos: vuelos,
+      hoteles: hoteles,
+      utilidad: double.tryParse(json['utilidad']?.toString() ?? ''),
       idResponsable: idResponsable,
       idTour: json['id_tour']?.toString() ?? tempIdTour,
       tour: json['tour'] != null ? _parseTour(json['tour']) : null,
       responsable: parsedResponsable,
+      agente: parsedAgente,
     );
   }
 
@@ -344,6 +400,8 @@ class ApiReservaRepository implements ReservaRepository {
       horaLlegada: json['hora_llegada']?.toString() ?? '',
       clase: json['clase']?.toString() ?? 'economy',
       precio: double.tryParse(json['precio']?.toString() ?? ''),
+      reservaVuelo: json['reserva_vuelo']?.toString() ?? '',
+      tipoVuelo: json['tipo_vuelo']?.toString() ?? 'ida',
     );
   }
 
@@ -358,28 +416,86 @@ class ApiReservaRepository implements ReservaRepository {
     );
   }
 
+  HotelReserva _parseHotelReserva(Map<String, dynamic> json) {
+    Hotel? hotel;
+    final hotelJson = json['hotel'];
+    if (hotelJson is Map<String, dynamic>) {
+      hotel = Hotel(
+        id: int.tryParse(hotelJson['id']?.toString() ?? ''),
+        nombre: hotelJson['nombre']?.toString() ?? '',
+        ciudad: hotelJson['ciudad']?.toString() ?? '',
+        telefono: hotelJson['telefono']?.toString() ?? '',
+        direccion: hotelJson['direccion']?.toString() ?? '',
+        isActive: hotelJson['is_active'] as bool? ?? true,
+      );
+    }
+    return HotelReserva(
+      id: int.tryParse(json['id']?.toString() ?? ''),
+      hotelId: int.tryParse(
+        (json['hotel_id'] ?? json['hotel']?['id'] ?? '').toString(),
+      ),
+      hotel: hotel,
+      numeroReserva: json['numero_reserva']?.toString() ?? '',
+      fechaCheckin: json['fecha_checkin']?.toString() ?? '',
+      fechaCheckout: json['fecha_checkout']?.toString() ?? '',
+      valor: double.tryParse(json['valor']?.toString() ?? ''),
+    );
+  }
+
+  List<Map<String, dynamic>> _serializeHoteles(List<HotelReserva> list) {
+    return list
+        .map(
+          (h) => {
+            'hotel_id': h.hotelId ?? h.hotel?.id,
+            'numero_reserva': h.numeroReserva,
+            'fecha_checkin': h.fechaCheckin,
+            'fecha_checkout': h.fechaCheckout,
+            if (h.valor != null) 'valor': h.valor,
+          },
+        )
+        .toList();
+  }
+
   Tour? _parseTour(Map<String, dynamic> jsonTour) {
     try {
       return Tour(
         id: jsonTour['id']?.toString() ?? '',
         idTour: int.tryParse(jsonTour['id']?.toString() ?? '0') ?? 0,
         name: jsonTour['nombre'] ?? jsonTour['name'] ?? '',
-        agency: jsonTour['agency'] ?? '',
+        agency: jsonTour['agencia'] ?? jsonTour['agency'] ?? '',
         startDate:
             DateTime.tryParse(jsonTour['fecha_inicio'] ?? '') ?? DateTime.now(),
         endDate:
             DateTime.tryParse(jsonTour['fecha_fin'] ?? '') ?? DateTime.now(),
         price: double.tryParse(jsonTour['precio']?.toString() ?? '0') ?? 0.0,
-        departurePoint: jsonTour['departurePoint'] ?? '',
-        departureTime: jsonTour['departureTime'] ?? '',
-        arrival: jsonTour['arrival'] ?? '',
-        pdfLink: jsonTour['pdfLink'] ?? '',
-        inclusions: [],
-        exclusions: [],
-        itinerary: [],
-        imageUrl: jsonTour['imageUrl'] ?? '',
+        departurePoint:
+            jsonTour['punto_partida'] ?? jsonTour['departurePoint'] ?? '',
+        departureTime:
+            jsonTour['hora_partida'] ?? jsonTour['departureTime'] ?? '',
+        arrival: jsonTour['llegada'] ?? jsonTour['arrival'] ?? '',
+        pdfLink: jsonTour['link_pdf'] ?? jsonTour['pdfLink'] ?? '',
+        inclusions: List<String>.from(jsonTour['inclusions'] ?? []),
+        exclusions: List<String>.from(jsonTour['exclusions'] ?? []),
+        itinerary: (jsonTour['itinerary'] as List? ?? [])
+            .map(
+              (i) => ItineraryDay(
+                dayNumber: (i['dia_numero'] as num?)?.toInt() ?? 0,
+                title: i['titulo']?.toString() ?? '',
+                description: i['descripcion']?.toString() ?? '',
+              ),
+            )
+            .toList(),
+        sedeId: jsonTour['sede_id']?.toString(),
+        isPromotion: jsonTour['es_promocion'] as bool? ?? false,
+        isActive: jsonTour['is_active'] as bool? ?? true,
+        isDraft: jsonTour['es_borrador'] as bool? ?? false,
+        precioPorPareja: jsonTour['precio_por_pareja'] as bool? ?? false,
+        cupos: int.tryParse(jsonTour['cupos']?.toString() ?? ''),
+        cuposDisponibles:
+            int.tryParse(jsonTour['cupos_disponibles']?.toString() ?? ''),
       );
     } catch (e) {
+      debugPrint('❌ [ApiReservaRepository] _parseTour error: $e');
       return null;
     }
   }
@@ -400,5 +516,26 @@ class ApiReservaRepository implements ReservaRepository {
     } catch (e) {
       return null;
     }
+  }
+
+  PagoRealizado _parsePagoRealizado(Map<String, dynamic> json) {
+    return PagoRealizado(
+      id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      chatId: json['chat_id']?.toString() ?? '',
+      tipoDocumento: json['tipo_documento']?.toString() ?? '',
+      monto: double.tryParse(json['monto']?.toString() ?? '0') ?? 0,
+      proveedorComercio: json['proveedor_comercio']?.toString() ?? '',
+      nit: json['nit']?.toString() ?? '',
+      metodoPago: json['metodo_pago']?.toString() ?? '',
+      referencia: json['referencia']?.toString() ?? '',
+      fechaDocumento: json['fecha_documento']?.toString() ?? '',
+      isValidated: json['is_validated'] as bool? ?? false,
+      isRechazado: json['is_rechazado'] as bool? ?? false,
+      motivoRechazo: json['motivo_rechazo']?.toString(),
+      urlImagen: json['url_imagen']?.toString() ?? '',
+      reservaId: int.tryParse(json['reserva_id']?.toString() ?? ''),
+      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
+      updatedAt: json['updatedAt'] != null ? DateTime.tryParse(json['updatedAt']) : null,
+    );
   }
 }

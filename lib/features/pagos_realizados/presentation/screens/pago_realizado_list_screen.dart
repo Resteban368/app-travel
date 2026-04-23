@@ -1,10 +1,10 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/theme/premium_palette.dart';
+import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/layout/admin_shell.dart';
 import '../../../../config/app_router.dart';
+import '../../../../core/widgets/saas_ui_components.dart';
 import '../../domain/entities/pago_realizado.dart';
 import '../bloc/pago_realizado_bloc.dart';
 
@@ -24,57 +24,14 @@ class _PagoRealizadoListBody extends StatefulWidget {
   State<_PagoRealizadoListBody> createState() => _PagoRealizadoListBodyState();
 }
 
-class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> with TickerProviderStateMixin {
+class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
   DateTimeRange? _selectedDateRange;
-  late final AnimationController _bgCtrl;
-  late final AnimationController _entryCtrl;
-
-  late final Animation<double> _headerOpacity;
-  late final Animation<Offset> _headerSlide;
-  late final Animation<double> _contentOpacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _bgCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 12))..repeat();
-
-    _entryCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-
-    _headerOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0, 0.4, curve: Curves.easeOut),
-      ),
-    );
-    _headerSlide = Tween<Offset>(
-      begin: const Offset(0, -0.05),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
-      ),
-    );
-    _contentOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
-      ),
-    );
-
-    _entryCtrl.forward();
-  }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _bgCtrl.dispose();
-    _entryCtrl.dispose();
     super.dispose();
   }
 
@@ -99,14 +56,14 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> with Tic
       lastDate: DateTime(now.year + 1),
       builder: (context, child) {
         return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: D.royalBlue,
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: SaasPalette.brand600,
               onPrimary: Colors.white,
-              surface: D.surfaceHigh,
-              onSurface: Colors.white,
+              surface: SaasPalette.bgCanvas,
+              onSurface: SaasPalette.textPrimary,
             ),
-            dialogBackgroundColor: D.bg,
+            dialogBackgroundColor: SaasPalette.bgCanvas,
           ),
           child: child!,
         );
@@ -130,72 +87,128 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> with Tic
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: D.bg,
-      body: Stack(
-        children: [
-          // Background Animations
-          AnimatedBuilder(
-            animation: _bgCtrl,
-            builder: (context, child) {
-              return Stack(
-                children: [
-                  Positioned(
-                    top: -150 + math.sin(_bgCtrl.value * math.pi * 2) * 60,
-                    right: -100 + math.cos(_bgCtrl.value * math.pi * 2) * 40,
-                    child: _Orb(color: D.royalBlue.withOpacity(0.1), size: 400),
-                  ),
-                  Positioned(
-                    bottom: -100 + math.cos(_bgCtrl.value * math.pi * 2) * 50,
-                    left: -120 + math.sin(_bgCtrl.value * math.pi * 2) * 80,
-                    child: _Orb(color: D.indigo.withOpacity(0.08), size: 350),
-                  ),
-                ],
-              );
-            },
-          ),
-          Positioned.fill(child: CustomPaint(painter: _DotGridPainter())),
+      backgroundColor: SaasPalette.bgApp,
+      body: BlocBuilder<PagoRealizadoBloc, PagoRealizadoState>(
+        builder: (context, state) {
+          List<PagoRealizado> pagos = [];
+          if (state is PagosRealizadosLoaded) {
+            pagos = state.pagos;
+          } else if (state is PagoRealizadoSaving && state.pagos != null) {
+            pagos = state.pagos!;
+          }
 
-          // Content
-          BlocBuilder<PagoRealizadoBloc, PagoRealizadoState>(
-            builder: (context, state) {
-              List<PagoRealizado>? pagos;
-              if (state is PagosRealizadosLoaded) pagos = state.pagos;
-              else if (state is PagoRealizadoSaving && state.pagos != null) pagos = state.pagos;
+          final query = _searchQuery.toLowerCase();
+          final filtered = pagos
+              .where(
+                (p) =>
+                    p.chatId.toLowerCase().contains(query) ||
+                    p.referencia.toLowerCase().contains(query) ||
+                    p.proveedorComercio.toLowerCase().contains(query),
+              )
+              .toList();
 
-              if (pagos != null && _searchQuery.isNotEmpty) {
-                final query = _searchQuery.toLowerCase();
-                pagos = pagos.where((p) => 
-                  p.chatId.toLowerCase().contains(query) || 
-                  p.referencia.toLowerCase().contains(query) ||
-                  p.proveedorComercio.toLowerCase().contains(query)
-                ).toList();
-              }
+          final isLoading = state is PagoRealizadoLoading && pagos.isEmpty;
 
-              return CustomScrollView(
-                slivers: [
-                  // Header
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-                    sliver: SliverToBoxAdapter(
-                      child: FadeTransition(
-                        opacity: _headerOpacity,
-                        child: SlideTransition(
-                          position: _headerSlide,
-                          child: _buildHeader(context),
-                        ),
+          // Group by chat_id
+          final Map<String, List<PagoRealizado>> grouped = {};
+          for (var p in filtered) {
+            grouped.putIfAbsent(p.chatId, () => []).add(p);
+          }
+          final chatIds = grouped.keys.toList();
+
+          return RefreshIndicator(
+            onRefresh: () async =>
+                context.read<PagoRealizadoBloc>().add(const LoadPagos(page: 1)),
+            color: SaasPalette.brand600,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                // ── Header ─────────────────────────────────────────────────
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: _PagoHeader(
+                      onAdd: () => Navigator.pushNamed(
+                        context,
+                        AppRouter.pagoRealizadoCreate,
                       ),
                     ),
                   ),
-                  _buildFiltersRow(context),
-                  SliverFadeTransition(
-                    opacity: _contentOpacity,
-                    sliver: SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
-                      sliver: _buildSliverContent(state, pagos),
+                ),
+
+                // ── Filters & Search ────────────────────────────────────────
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        SaasSearchField(
+                          controller: _searchController,
+                          hintText: 'Buscar por referencia, comercio o chat...',
+                          onChanged: (v) => setState(() => _searchQuery = v),
+                          onClear: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _DateFilterBar(
+                          range: _selectedDateRange,
+                          onFilter: _onFilterDates,
+                          onClear: _clearFilter,
+                        ),
+                      ],
                     ),
                   ),
-                  if (state is PagosRealizadosLoaded && state.totalPages > 1)
-                    SliverToBoxAdapter(
+                ),
+
+                // ── Content ────────────────────────────────────────────────
+                if (isLoading)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (_, __) => const SaasListSkeleton(),
+                        childCount: 4,
+                      ),
+                    ),
+                  )
+                else if (filtered.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: SaasEmptyState(
+                      icon: (query.isNotEmpty || _selectedDateRange != null)
+                          ? Icons.search_off_rounded
+                          : Icons.payments_rounded,
+                      title: (query.isNotEmpty || _selectedDateRange != null)
+                          ? 'Sin coincidencias'
+                          : 'Historial vacío',
+                      subtitle: (query.isNotEmpty || _selectedDateRange != null)
+                          ? 'No encontramos pagos con los criterios actuales.'
+                          : 'Los reportes de pagos registrados aparecerán aquí.',
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 24),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final chatId = chatIds[index];
+                        final chatPagos = grouped[chatId]!;
+                        return _ChatGroupCard(
+                          chatId: chatId,
+                          pagos: chatPagos,
+                          index: index,
+                        );
+                      }, childCount: chatIds.length),
+                    ),
+                  ),
+
+                // ── Pagination ─────────────────────────────────────────────
+                if (state is PagosRealizadosLoaded && state.totalPages > 1)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 40),
                       child: _PaginationBar(
                         page: state.page,
                         totalPages: state.totalPages,
@@ -203,442 +216,475 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> with Tic
                         onPageChanged: _goToPage,
                       ),
                     ),
-                  const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
-                ],
-              );
-            },
-          ),
-          
-          // Progress overlay for saving
-          BlocBuilder<PagoRealizadoBloc, PagoRealizadoState>(
-            builder: (context, state) {
-              if (state is PagoRealizadoSaving) {
-                return Positioned(
-                  top: 0, left: 0, right: 0,
-                  child: LinearProgressIndicator(
-                    backgroundColor: Colors.transparent,
-                    valueColor: AlwaysStoppedAnimation<Color>(D.skyBlue),
-                    minHeight: 3,
                   ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [D.royalBlue, D.cyan]),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.payments_rounded,
-                    color: Colors.white,
-                    size: 10,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'REPORTES DE PAGO',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Pagos Realizados',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -1,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Seguimiento de comprobantes y transferencias.',
-              style: TextStyle(color: D.slate400, fontSize: 13),
-            ),
-          ],
-        ),
-        _AddBtn(
-          onPressed: () =>
-              Navigator.pushNamed(context, AppRouter.pagoRealizadoCreate),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFiltersRow(BuildContext context) {
-    final dateFormat = DateFormat('dd/MM/yyyy');
-    return SliverToBoxAdapter(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: Container(
-              decoration: BoxDecoration(
-                color: D.surface.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: D.border.withOpacity(0.5)),
-              ),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (v) => setState(() => _searchQuery = v),
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Número de chat, referencia o comercio...',
-                  hintStyle: TextStyle(color: D.slate600),
-                  prefixIcon: Icon(Icons.search_rounded, color: D.slate400, size: 22),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: _onFilterDates,
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: D.surfaceHigh.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: _selectedDateRange != null ? D.skyBlue.withOpacity(0.3) : D.border),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.calendar_today_rounded, color: _selectedDateRange != null ? D.skyBlue : D.slate400, size: 18),
-                          const SizedBox(width: 12),
-                          Text(
-                            _selectedDateRange == null 
-                              ? 'Filtrar por rango de fechas' 
-                              : '${dateFormat.format(_selectedDateRange!.start)} - ${dateFormat.format(_selectedDateRange!.end)}',
-                            style: TextStyle(
-                              color: _selectedDateRange != null ? Colors.white : D.slate400,
-                              fontSize: 13,
-                              fontWeight: _selectedDateRange != null ? FontWeight.bold : FontWeight.normal
-                            ),
-                          ),
-                          if (_selectedDateRange != null) ...[
-                            const Spacer(),
-                            GestureDetector(
-                              onTap: _clearFilter,
-                              child: Icon(Icons.close_rounded, color: D.rose, size: 18),
-                            ),
-                          ]
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSliverContent(PagoRealizadoState state, List<PagoRealizado>? pagos) {
-    if (state is PagoRealizadoLoading && pagos == null) {
-      return SliverList(
-        delegate: SliverChildBuilderDelegate((_, i) => _SkelCard(), childCount: 3),
-      );
-    }
-
-    if (pagos == null || pagos.isEmpty) {
-      return SliverFillRemaining(
-        hasScrollBody: false,
-        child: _EmptyDisplay(isSearch: _searchQuery.isNotEmpty || _selectedDateRange != null),
-      );
-    }
-
-    // Group by chat_id
-    final Map<String, List<PagoRealizado>> grouped = {};
-    for (var p in pagos) {
-      grouped.putIfAbsent(p.chatId, () => []).add(p);
-    }
-    final chatIds = grouped.keys.toList();
-
-    return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          final chatId = chatIds[index];
-          final chatPagos = grouped[chatId]!;
-          return _ChatGroupCard(chatId: chatId, pagos: chatPagos, index: index);
+          );
         },
-        childCount: chatIds.length,
       ),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  HEADER
+// ─────────────────────────────────────────────────────────────────────────────
+class _PagoHeader extends StatelessWidget {
+  final VoidCallback onAdd;
+  const _PagoHeader({required this.onAdd});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SaasBreadcrumbs(items: ['Inicio', 'Finanzas', 'Pagos Recibidos']),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Pagos Realizados',
+                    style: TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Seguimiento y conciliación de comprobantes de pago.',
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SaasButton(
+              label: 'Registrar Pago',
+              icon: Icons.add_circle_outline_rounded,
+              onPressed: onAdd,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  DATE FILTER BAR
+// ─────────────────────────────────────────────────────────────────────────────
+class _DateFilterBar extends StatelessWidget {
+  final DateTimeRange? range;
+  final VoidCallback onFilter;
+  final VoidCallback onClear;
+
+  const _DateFilterBar({
+    this.range,
+    required this.onFilter,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final dateFormat = DateFormat('dd MMM yyyy');
+    return Container(
+      decoration: BoxDecoration(
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: range != null ? SaasPalette.brand600 : SaasPalette.border,
+          width: range != null ? 1.5 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: onFilter,
+              borderRadius: const BorderRadius.horizontal(
+                left: Radius.circular(12),
+                right: Radius.circular(0),
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_month_rounded,
+                      size: 18,
+                      color: range != null
+                          ? SaasPalette.brand600
+                          : SaasPalette.textTertiary,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        range == null
+                            ? 'Filtrar por rango de fechas'
+                            : '${dateFormat.format(range!.start)} - ${dateFormat.format(range!.end)}',
+                        style: TextStyle(
+                          color: range != null
+                              ? SaasPalette.textPrimary
+                              : SaasPalette.textSecondary,
+                          fontSize: 13,
+                          fontWeight: range != null
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (range != null) ...[
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Tooltip(
+                message: 'Limpiar fechas',
+                child: GestureDetector(
+                  onTap: onClear,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: SaasPalette.bgSubtle,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 16,
+                      color: SaasPalette.textTertiary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  CHAT GROUP CARD
+// ─────────────────────────────────────────────────────────────────────────────
 class _ChatGroupCard extends StatefulWidget {
   final String chatId;
   final List<PagoRealizado> pagos;
   final int index;
-  const _ChatGroupCard({required this.chatId, required this.pagos, required this.index});
+  const _ChatGroupCard({
+    required this.chatId,
+    required this.pagos,
+    required this.index,
+  });
 
   @override
   State<_ChatGroupCard> createState() => _ChatGroupCardState();
 }
 
 class _ChatGroupCardState extends State<_ChatGroupCard> {
+  bool _isExpanded = false;
+
   @override
   Widget build(BuildContext context) {
     final total = widget.pagos.fold<double>(0, (sum, p) => sum + p.monto);
-    final hasUnconfirmed = widget.pagos.any((p) => !p.isValidated);
-    final currencyFormat = NumberFormat.currency(locale: 'es_CO', symbol: '\$', decimalDigits: 0);
+    final hasUnconfirmed = widget.pagos.any(
+      (p) => !p.isValidated && !p.isRechazado,
+    );
+    final currencyFormat = NumberFormat.currency(
+      locale: 'es_CO',
+      symbol: '\$',
+      decimalDigits: 0,
+    );
 
-    return AnimatedPadding(
-      duration: Duration(milliseconds: 400 + (widget.index * 100)),
-      curve: Curves.easeOutCubic,
-      padding: const EdgeInsets.only(bottom: 20),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: D.surface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: hasUnconfirmed ? D.gold.withOpacity(0.3) : D.border),
+          color: SaasPalette.bgCanvas,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _isExpanded ? SaasPalette.brand600 : SaasPalette.border,
+            width: _isExpanded ? 1.5 : 1,
+          ),
           boxShadow: [
-            if (hasUnconfirmed) BoxShadow(color: D.gold.withOpacity(0.05), blurRadius: 20, spreadRadius: -5)
+            BoxShadow(
+              color: Colors.black.withOpacity(_isExpanded ? 0.08 : 0.03),
+              blurRadius: _isExpanded ? 16 : 8,
+              offset: Offset(0, _isExpanded ? 4 : 2),
+            ),
           ],
         ),
-        child: Theme(
-          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-          child: ExpansionTile(
-            onExpansionChanged: (v) {},
-            title: _buildHeader(total, currencyFormat, hasUnconfirmed),
-            children: [
-              const Divider(color: D.border, height: 1),
-              ...widget.pagos.map((p) => _PagoItem(pago: p)),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(double total, NumberFormat fmt, bool hasUnconfirmed) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Stack(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: D.royalBlue.withOpacity(0.1), shape: BoxShape.circle),
-                child: Icon(Icons.person_rounded, color: D.skyBlue, size: 22),
+        child: Column(
+          children: [
+            InkWell(
+              onTap: () => setState(() => _isExpanded = !_isExpanded),
+              borderRadius: BorderRadius.vertical(
+                top: const Radius.circular(16),
+                bottom: Radius.circular(_isExpanded ? 0 : 16),
               ),
-              if (hasUnconfirmed)
-                Positioned(
-                  right: 0, top: 0,
-                  child: Container(
-                    width: 10, height: 10,
-                    decoration: BoxDecoration(color: D.gold, shape: BoxShape.circle, border: Border.all(color: D.surface, width: 2)),
-                  ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Stack(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: const BoxDecoration(
+                            color: SaasPalette.brand50,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.person_rounded,
+                            color: SaasPalette.brand600,
+                            size: 22,
+                          ),
+                        ),
+                        if (hasUnconfirmed)
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: SaasPalette.warning,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: SaasPalette.bgCanvas,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Chat: ${widget.chatId}',
+                            style: const TextStyle(
+                              color: SaasPalette.textPrimary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            '${widget.pagos.length} pagos registrados',
+                            style: const TextStyle(
+                              color: SaasPalette.textTertiary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text(
+                          'TOTAL',
+                          style: TextStyle(
+                            color: SaasPalette.textTertiary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          currencyFormat.format(total),
+                          style: const TextStyle(
+                            color: SaasPalette.success,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 12),
+                    AnimatedRotation(
+                      turns: _isExpanded ? 0.5 : 0.0,
+                      duration: const Duration(milliseconds: 200),
+                      child: const Icon(
+                        Icons.expand_more_rounded,
+                        color: SaasPalette.textTertiary,
+                      ),
+                    ),
+                  ],
                 ),
-            ],
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Chat: ${widget.chatId}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 2),
-                Text('${widget.pagos.length} pagos registrados', style: TextStyle(color: D.slate400, fontSize: 12)),
-              ],
+              ),
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('TOTAL', style: TextStyle(color: D.slate600, fontSize: 10, fontWeight: FontWeight.w900)),
-              Text(fmt.format(total), style: TextStyle(color: D.emerald, fontWeight: FontWeight.w900, fontSize: 14)),
-            ],
-          ),
-        ],
+            AnimatedCrossFade(
+              firstChild: const SizedBox(width: double.infinity),
+              secondChild: Column(
+                children: [
+                  const Divider(height: 1, color: SaasPalette.border),
+                  ...widget.pagos.map((p) => _PagoItem(pago: p)),
+                  const SizedBox(height: 8),
+                ],
+              ),
+              crossFadeState: _isExpanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 200),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  PAGO ITEM
+// ─────────────────────────────────────────────────────────────────────────────
 class _PagoItem extends StatelessWidget {
   final PagoRealizado pago;
   const _PagoItem({required this.pago});
 
-  Color get _estadoColor {
-    if (pago.isRechazado) return D.rose;
-    if (pago.isValidated) return D.emerald;
-    return D.gold;
-  }
-
-  IconData get _estadoIcon {
-    if (pago.isRechazado) return Icons.cancel_rounded;
-    if (pago.isValidated) return Icons.check_circle_rounded;
-    return Icons.hourglass_empty_rounded;
-  }
-
-  String get _estadoLabel {
-    if (pago.isRechazado) return 'Rechazado';
-    if (pago.isValidated) return 'Validado';
-    return 'Por validar';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(locale: 'es_CO', symbol: '\$', decimalDigits: 0);
+    final currencyFormat = NumberFormat.currency(
+      locale: 'es_CO',
+      symbol: '\$',
+      decimalDigits: 0,
+    );
+
     return InkWell(
-      onTap: () => Navigator.pushNamed(context, AppRouter.pagoRealizadoEdit, arguments: pago),
+      onTap: () => Navigator.pushNamed(
+        context,
+        AppRouter.pagoRealizadoEdit,
+        arguments: pago,
+      ),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: D.border, width: 0.5))),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: const BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: SaasPalette.border, width: 0.5),
+          ),
+        ),
         child: Row(
           children: [
-            Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(
-                color: _estadoColor.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(_estadoIcon, color: _estadoColor, size: 20),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(pago.proveedorComercio, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
-                  Text('${pago.tipoDocumento} • ${pago.metodoPago}', style: TextStyle(color: D.slate400, fontSize: 11)),
-                  Text('Ref: ${pago.referencia}', style: TextStyle(color: D.slate600, fontSize: 10, fontStyle: FontStyle.italic)),
-                ],
-              ),
-            ),
             Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(currencyFormat.format(pago.monto), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                Text(pago.fechaDocumento, style: TextStyle(color: D.slate600, fontSize: 11)),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _estadoColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: _estadoColor.withOpacity(0.3)),
+                Text(
+                  pago.proveedorComercio,
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
                   ),
-                  child: Text(
-                    _estadoLabel,
-                    style: TextStyle(color: _estadoColor, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  '${pago.tipoDocumento} • ${pago.metodoPago}',
+                  style: const TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 11,
+                  ),
+                ),
+                Text(
+                  'Ref: ${pago.referencia}',
+                  style: const TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 10,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
               ],
             ),
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded, color: D.slate600, size: 18),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AddBtn extends StatelessWidget {
-  final VoidCallback onPressed;
-  const _AddBtn({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [D.royalBlue, D.indigo]),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: D.royalBlue.withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
+            const Spacer(),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  currencyFormat.format(pago.monto),
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  pago.fechaDocumento,
+                  style: const TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _StatusBadge(pago: pago),
+              ],
+            ),
+            const SizedBox(width: 12),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: SaasPalette.textTertiary,
+              size: 20,
             ),
           ],
         ),
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
       ),
     );
   }
 }
 
-class _Orb extends StatelessWidget {
-  final Color color;
-  final double size;
-  const _Orb({required this.color, required this.size});
+class _StatusBadge extends StatelessWidget {
+  final PagoRealizado pago;
+  const _StatusBadge({required this.pago});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size, height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [color, Colors.transparent])),
-    );
-  }
-}
+    String label = 'Por validar';
+    Color color = SaasPalette.warning;
 
-class _DotGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = D.border.withOpacity(0.3);
-    const spacing = 32.0;
-    for (double i = 0; i < size.width; i += spacing) {
-      for (double j = 0; j < size.height; j += spacing) {
-        canvas.drawCircle(Offset(i, j), 0.8, paint);
-      }
+    if (pago.isValidated) {
+      label = 'Validado';
+      color = SaasPalette.success;
+    } else if (pago.isRechazado) {
+      label = 'Rechazado';
+      color = SaasPalette.danger;
     }
-  }
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
-}
 
-class _SkelCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
     return Container(
-      height: 100, margin: const EdgeInsets.only(bottom: 16, left: 24, right: 24),
-      decoration: BoxDecoration(color: D.surface.withOpacity(0.5), borderRadius: BorderRadius.circular(24)),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  PAGINATION BAR
+// ─────────────────────────────────────────────────────────────────────────────
 class _PaginationBar extends StatelessWidget {
   final int page;
   final int totalPages;
@@ -655,42 +701,42 @@ class _PaginationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
-          color: D.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: D.border),
+          color: SaasPalette.bgCanvas,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: SaasPalette.border),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _PageBtn(
+            _PageArrow(
               icon: Icons.chevron_left_rounded,
               enabled: page > 1,
               onTap: () => onPageChanged(page - 1),
             ),
-            const SizedBox(width: 20),
             Column(
               children: [
                 Text(
                   'Página $page de $totalPages',
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                    color: SaasPalette.textPrimary,
+                    fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
                 ),
-                const SizedBox(height: 2),
                 Text(
-                  '$total resultados',
-                  style: const TextStyle(color: D.slate400, fontSize: 11),
+                  '$total registros en total',
+                  style: const TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(width: 20),
-            _PageBtn(
+            _PageArrow(
               icon: Icons.chevron_right_rounded,
               enabled: page < totalPages,
               onTap: () => onPageChanged(page + 1),
@@ -702,53 +748,30 @@ class _PaginationBar extends StatelessWidget {
   }
 }
 
-class _PageBtn extends StatelessWidget {
+class _PageArrow extends StatelessWidget {
   final IconData icon;
   final bool enabled;
   final VoidCallback onTap;
 
-  const _PageBtn({required this.icon, required this.enabled, required this.onTap});
+  const _PageArrow({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: enabled ? D.royalBlue.withValues(alpha: 0.15) : D.surfaceHigh,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: enabled ? D.royalBlue.withValues(alpha: 0.4) : D.border,
-          ),
-        ),
-        child: Icon(
-          icon,
-          color: enabled ? D.skyBlue : D.slate600,
-          size: 22,
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyDisplay extends StatelessWidget {
-  final bool isSearch;
-  const _EmptyDisplay({required this.isSearch});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(isSearch ? Icons.search_off_rounded : Icons.payments_rounded, size: 80, color: D.slate600),
-          const SizedBox(height: 24),
-          Text(isSearch ? 'No se encontraron pagos' : 'Historial de pagos vacío', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text(isSearch ? 'Intenta con otros criterios de búsqueda' : 'Los reportes de pagos aparecerán aquí', style: TextStyle(color: D.slate400, fontSize: 14)),
-        ],
+    return IconButton(
+      onPressed: enabled ? onTap : null,
+      icon: Icon(icon),
+      color: SaasPalette.brand600,
+      disabledColor: SaasPalette.textTertiary.withOpacity(0.3),
+      style: IconButton.styleFrom(
+        backgroundColor: enabled
+            ? SaasPalette.brand50
+            : SaasPalette.bgApp.withOpacity(0.5),
+        padding: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }

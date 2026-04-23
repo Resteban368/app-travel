@@ -1,16 +1,19 @@
-import 'package:agente_viajes/core/widgets/SmallBtn_widget.dart';
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/layout/admin_shell.dart';
 import '../../../../config/app_router.dart';
+import '../../../../core/theme/saas_palette.dart';
+import '../../../../core/widgets/saas_ui_components.dart';
 import '../../domain/entities/catalogue.dart';
 import '../bloc/catalogue_bloc.dart';
 import '../bloc/catalogue_event.dart';
 import '../bloc/catalogue_state.dart';
-import '../../../../core/theme/premium_palette.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  ROOT SCREEN
+// ─────────────────────────────────────────────────────────────────────────────
 class CatalogueListScreen extends StatelessWidget {
   const CatalogueListScreen({super.key});
 
@@ -20,6 +23,9 @@ class CatalogueListScreen extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  BODY
+// ─────────────────────────────────────────────────────────────────────────────
 class _CatalogueListBody extends StatefulWidget {
   const _CatalogueListBody();
 
@@ -27,76 +33,18 @@ class _CatalogueListBody extends StatefulWidget {
   State<_CatalogueListBody> createState() => _CatalogueListBodyState();
 }
 
-class _CatalogueListBodyState extends State<_CatalogueListBody>
-    with TickerProviderStateMixin {
+class _CatalogueListBodyState extends State<_CatalogueListBody> {
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
-
-  late final AnimationController _entryCtrl;
-  late final AnimationController _floatCtrl;
-  late final AnimationController _shimmerCtrl;
-
-  late final Animation<double> _headerOpacity;
-  late final Animation<Offset> _headerSlide;
-  late final Animation<double> _listOpacity;
-  late final Animation<double> _floatY;
-  late final Animation<double> _shimmer;
 
   @override
   void initState() {
     super.initState();
     context.read<CatalogueBloc>().add(LoadCatalogues());
-
-    _entryCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _floatCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 4000),
-    )..repeat(reverse: true);
-    _shimmerCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 5000),
-    )..repeat(reverse: true);
-
-    _headerOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0, 0.4, curve: Curves.easeOut),
-      ),
-    );
-    _headerSlide =
-        Tween<Offset>(begin: const Offset(0, -0.05), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _entryCtrl,
-            curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
-          ),
-        );
-    _listOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
-      ),
-    );
-
-    _floatY = Tween<double>(
-      begin: -8,
-      end: 8,
-    ).animate(CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut));
-    _shimmer = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _shimmerCtrl, curve: Curves.easeInOut));
-
-    _entryCtrl.forward();
   }
 
   @override
   void dispose() {
-    _entryCtrl.dispose();
-    _floatCtrl.dispose();
-    _shimmerCtrl.dispose();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -108,132 +56,111 @@ class _CatalogueListBodyState extends State<_CatalogueListBody>
         authState is AuthAuthenticated && authState.user.canWrite('catalogues');
 
     return Scaffold(
-      backgroundColor: D.bg,
-      body: Stack(
-        children: [
-          // Background animado
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: Listenable.merge([_floatCtrl, _shimmerCtrl]),
-              builder: (_, __) => _CatalogueBackground(
-                shimmer: _shimmer.value,
-                floatY: _floatY.value,
-              ),
-            ),
-          ),
+      backgroundColor: SaasPalette.bgApp,
+      body: BlocBuilder<CatalogueBloc, CatalogueState>(
+        builder: (context, state) {
+          List<Catalogue> list = [];
+          if (state is CatalogueLoaded) {
+            list = state.catalogues;
+          } else if (state is CatalogueSaving && state.catalogues != null) {
+            list = state.catalogues!;
+          } else if (state is CatalogueSaved && state.catalogues != null) {
+            list = state.catalogues!;
+          }
 
-          // Contenido
-          SafeArea(
-            child: BlocBuilder<CatalogueBloc, CatalogueState>(
-              builder: (context, state) {
-                List<Catalogue> list = [];
-                if (state is CatalogueLoaded)
-                  list = state.catalogues;
-                else if (state is CatalogueSaving && state.catalogues != null)
-                  list = state.catalogues!;
+          if (_searchQuery.isNotEmpty) {
+            final q = _searchQuery.toLowerCase();
+            list = list
+                .where((c) => c.nombreCatalogue.toLowerCase().contains(q))
+                .toList();
+          }
 
-                if (_searchQuery.isNotEmpty) {
-                  final q = _searchQuery.toLowerCase();
-                  list = list
-                      .where((c) => c.nombreCatalogue.toLowerCase().contains(q))
-                      .toList();
-                }
+          final isLoading = state is CatalogueLoading && list.isEmpty;
 
-                return RefreshIndicator(
-                  onRefresh: () async =>
-                      context.read<CatalogueBloc>().add(LoadCatalogues()),
-                  color: D.skyBlue,
-                  backgroundColor: D.surface,
-                  child: CustomScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      // Header
-                      SliverPadding(
-                        padding: const EdgeInsets.all(20),
-                        sliver: SliverToBoxAdapter(
-                          child: FadeTransition(
-                            opacity: _headerOpacity,
-                            child: SlideTransition(
-                              position: _headerSlide,
-                              child: _HeaderSection(canWrite: canWrite),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Buscador
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        sliver: SliverToBoxAdapter(
-                          child: FadeTransition(
-                            opacity: _headerOpacity,
-                            child: _PremiumSearch(
-                              controller: _searchCtrl,
-                              onChanged: (v) =>
-                                  setState(() => _searchQuery = v),
-                              onClear: () {
-                                _searchCtrl.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-                      // Lista
-                      if (state is CatalogueLoading && list.isEmpty)
-                        const SliverFillRemaining(
-                          child: Center(
-                            child: CircularProgressIndicator(color: D.skyBlue),
-                          ),
-                        )
-                      else if (list.isEmpty)
-                        const SliverFillRemaining(child: _EmptyState())
-                      else
-                        SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate((
-                              context,
-                              index,
-                            ) {
-                              final cat = list[index];
-                              return FadeTransition(
-                                opacity: _listOpacity,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: _CatalogueCard(
-                                    catalogue: cat,
-                                    canWrite: canWrite,
-                                    onEdit: () => Navigator.pushNamed(
-                                      context,
-                                      AppRouter.catalogueEdit,
-                                      arguments: cat,
-                                    ),
-                                    onDelete: () => _confirmDelete(cat),
-                                    onStatusChanged: (v) {
-                                      context.read<CatalogueBloc>().add(
-                                        UpdateCatalogue(
-                                          cat.copyWith(activo: v),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              );
-                            }, childCount: list.length),
-                          ),
-                        ),
-                      const SliverToBoxAdapter(child: SizedBox(height: 40)),
-                    ],
+          return RefreshIndicator(
+            onRefresh: () async =>
+                context.read<CatalogueBloc>().add(LoadCatalogues()),
+            color: SaasPalette.brand600,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                // ── Header ─────────────────────────────────────────────────
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: _CatalogueHeader(canWrite: canWrite),
                   ),
-                );
-              },
+                ),
+
+                // ── Search bar (shared SaasSearchField) ────────────────────
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: SaasSearchField(
+                      controller: _searchCtrl,
+                      hintText: 'Buscar catálogos por nombre…',
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                      onClear: () {
+                        _searchCtrl.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    ),
+                  ),
+                ),
+
+                // ── Content ────────────────────────────────────────────────
+                if (isLoading)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (_, __) => const SaasListSkeleton(),
+                        childCount: 5,
+                      ),
+                    ),
+                  )
+                else if (list.isEmpty)
+                  SliverFillRemaining(
+                    child: SaasEmptyState(
+                      icon: _searchQuery.isNotEmpty
+                          ? Icons.search_off_rounded
+                          : Icons.picture_as_pdf_outlined,
+                      title: _searchQuery.isNotEmpty
+                          ? 'Sin resultados'
+                          : 'Sin catálogos',
+                      subtitle: _searchQuery.isNotEmpty
+                          ? 'No encontramos catálogos con ese nombre.'
+                          : 'Empieza añadiendo tu primer catálogo.',
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final cat = list[index];
+                        return _CatalogueCard(
+                          catalogue: cat,
+                          canWrite: canWrite,
+                          onEdit: () => Navigator.pushNamed(
+                            context,
+                            AppRouter.catalogueEdit,
+                            arguments: cat,
+                          ),
+                          onDelete: () => _confirmDelete(cat),
+                          onStatusChanged: (v) {
+                            context.read<CatalogueBloc>().add(
+                              UpdateCatalogue(cat.copyWith(activo: v)),
+                            );
+                          },
+                        );
+                      }, childCount: list.length),
+                    ),
+                  ),
+              ],
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -241,10 +168,10 @@ class _CatalogueListBodyState extends State<_CatalogueListBody>
   void _confirmDelete(Catalogue cat) {
     showDialog(
       context: context,
-      builder: (ctx) => _PremiumConfirmDialog(
-        title: '¿Eliminar Catálogo?',
-        content:
-            'Esta acción no se puede deshacer. ¿Deseas eliminar "${cat.nombreCatalogue}"?',
+      builder: (ctx) => SaasConfirmDialog(
+        title: 'Eliminar catálogo',
+        body:
+            'Estás a punto de eliminar "${cat.nombreCatalogue}". Esta acción no se puede deshacer.',
         onConfirm: () {
           context.read<CatalogueBloc>().add(DeleteCatalogue(cat.idCatalogue));
           Navigator.pop(ctx);
@@ -254,234 +181,65 @@ class _CatalogueListBodyState extends State<_CatalogueListBody>
   }
 }
 
-// ─── COMPONENTES ─────────────────────────────────────────────────────────────
-
-class _CatalogueBackground extends StatelessWidget {
-  final double shimmer;
-  final double floatY;
-  const _CatalogueBackground({required this.shimmer, required this.floatY});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [D.bg, Color(0xFF091428), Color(0xFF050A14)],
-            ),
-          ),
-        ),
-        Positioned(
-          top: -40 + floatY,
-          left: -40,
-          child: _orb(280, D.royalBlue.withOpacity(0.12 + shimmer * 0.05)),
-        ),
-        Positioned(
-          bottom: 100 - floatY * 0.5,
-          right: -60,
-          child: _orb(320, D.cyan.withOpacity(0.08)),
-        ),
-        Positioned.fill(child: CustomPaint(painter: _DotGridPainter())),
-      ],
-    );
-  }
-
-  Widget _orb(double size, Color color) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: RadialGradient(colors: [color, Colors.transparent]),
-    ),
-  );
-}
-
-class _DotGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = const Color(0xFF1A2E45).withOpacity(0.5)
-      ..strokeCap = StrokeCap.round;
-    const step = 28.0;
-    for (double x = 0; x < size.width; x += step) {
-      for (double y = 0; y < size.height; y += step) {
-        canvas.drawCircle(Offset(x, y), 0.8, p);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _HeaderSection extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+//  HEADER  (usa SaasBreadcrumbs + SaasButton del sistema de diseño)
+// ─────────────────────────────────────────────────────────────────────────────
+class _CatalogueHeader extends StatelessWidget {
   final bool canWrite;
-  const _HeaderSection({required this.canWrite});
+  const _CatalogueHeader({required this.canWrite});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        const SaasBreadcrumbs(items: ['Inicio', 'Catálogos']),
+        const SizedBox(height: 16),
+        Row(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [D.royalBlue, D.indigo]),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.picture_as_pdf_rounded,
-                    color: Colors.white,
-                    size: 10,
-                  ),
-                  SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
                   Text(
-                    'BIBLIOTECA DIGITAL',
+                    'Catálogos',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.1,
+                      color: SaasPalette.textPrimary,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Gestiona tus guías y PDFs informativos para clientes.',
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 14,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            const Text(
-              'Catálogos',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.8,
+            if (canWrite) ...[
+              const SizedBox(width: 16),
+              SaasButton(
+                label: 'Nuevo',
+                icon: Icons.add_rounded,
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRouter.catalogueCreate),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Gestiona tus guías y PDFs informativos.',
-              style: TextStyle(color: D.slate400, fontSize: 13),
-            ),
+            ],
           ],
         ),
-        if (canWrite)
-          _AddBtn(
-            onTap: () =>
-                Navigator.pushNamed(context, AppRouter.catalogueCreate),
-          ),
       ],
     );
   }
 }
 
-class _AddBtn extends StatelessWidget {
-  final VoidCallback onTap;
-  const _AddBtn({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [D.royalBlue, D.cyan]),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: D.royalBlue.withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
-      ),
-    );
-  }
-}
-
-class _PremiumSearch extends StatefulWidget {
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  final VoidCallback onClear;
-  const _PremiumSearch({
-    required this.controller,
-    required this.onChanged,
-    required this.onClear,
-  });
-
-  @override
-  State<_PremiumSearch> createState() => _PremiumSearchState();
-}
-
-class _PremiumSearchState extends State<_PremiumSearch> {
-  bool _focused = false;
-  final _node = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    _node.addListener(() => setState(() => _focused = _node.hasFocus));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: D.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _focused ? D.skyBlue.withOpacity(0.5) : D.border,
-          width: _focused ? 1.5 : 1,
-        ),
-        boxShadow: _focused
-            ? [BoxShadow(color: D.skyBlue.withOpacity(0.08), blurRadius: 12)]
-            : [],
-      ),
-      child: TextField(
-        controller: widget.controller,
-        focusNode: _node,
-        onChanged: widget.onChanged,
-        style: const TextStyle(color: Colors.white, fontSize: 14),
-        decoration: InputDecoration(
-          hintText: 'Buscar catálogos...',
-          hintStyle: const TextStyle(color: D.slate600),
-          prefixIcon: Icon(
-            Icons.search_rounded,
-            color: _focused ? D.skyBlue : D.slate600,
-            size: 20,
-          ),
-          suffixIcon: widget.controller.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(
-                    Icons.close_rounded,
-                    color: D.slate400,
-                    size: 18,
-                  ),
-                  onPressed: widget.onClear,
-                )
-              : null,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 16),
-        ),
-      ),
-    );
-  }
-}
-
+// ─────────────────────────────────────────────────────────────────────────────
+//  CATALOGUE CARD  (específico de este módulo — no es reutilizable per-se)
+// ─────────────────────────────────────────────────────────────────────────────
 class _CatalogueCard extends StatefulWidget {
   final Catalogue catalogue;
   final bool canWrite;
@@ -502,105 +260,138 @@ class _CatalogueCard extends StatefulWidget {
 }
 
 class _CatalogueCardState extends State<_CatalogueCard> {
-  bool _hover = false;
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
     final cat = widget.catalogue;
+    final dateStr = DateFormat('dd MMM yyyy', 'es').format(cat.fechaCreacion);
+
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        onTap: widget.onEdit,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(12),
+          duration: const Duration(milliseconds: 180),
           decoration: BoxDecoration(
-            color: _hover ? D.surfaceHigh : D.surface,
-            borderRadius: BorderRadius.circular(20),
+            color: SaasPalette.bgCanvas,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _hover ? D.royalBlue.withOpacity(0.4) : D.border,
+              color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
             ),
-            boxShadow: _hover
-                ? [
-                    BoxShadow(
-                      color: D.royalBlue.withOpacity(0.1),
-                      blurRadius: 10,
-                    ),
-                  ]
-                : [],
-          ),
-          child: Row(
-            children: [
-              // Thumbnail / Icon
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: cat.activo
-                        ? [D.royalBlue, D.cyan]
-                        : [D.slate600, D.border],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.picture_as_pdf_rounded,
-                  color: Colors.white,
-                  size: 24,
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(_hovered ? 0.07 : 0.03),
+                blurRadius: _hovered ? 16 : 6,
+                offset: Offset(0, _hovered ? 6 : 2),
               ),
-              const SizedBox(width: 16),
-              // Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      cat.nombreCatalogue,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+            ],
+          ),
+          child: InkWell(
+            onTap: widget.canWrite ? widget.onEdit : null,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  // ── Icon ────────────────────────────────────────────────
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: cat.activo
+                          ? SaasPalette.brand600.withOpacity(0.1)
+                          : SaasPalette.bgSubtle,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
+                    child: Icon(
+                      Icons.picture_as_pdf_rounded,
+                      color: cat.activo
+                          ? SaasPalette.brand600
+                          : SaasPalette.textTertiary,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+
+                  // ── Info ────────────────────────────────────────────────
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.calendar_today_rounded,
-                          color: D.slate600,
-                          size: 11,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                cat.nombreCatalogue,
+                                style: const TextStyle(
+                                  color: SaasPalette.textPrimary,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // ✅ Shared SaasStatusBadge
+                            SaasStatusBadge(active: cat.activo),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          DateFormat('dd MMM yyyy').format(cat.fechaCreacion),
-                          style: TextStyle(color: D.slate600, fontSize: 11),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_today_rounded,
+                              size: 12,
+                              color: SaasPalette.textTertiary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              dateStr,
+                              style: const TextStyle(
+                                color: SaasPalette.textTertiary,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Icon(
+                              Icons.link_rounded,
+                              size: 12,
+                              color: SaasPalette.textTertiary,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                cat.urlArchivo,
+                                style: const TextStyle(
+                                  color: SaasPalette.brand600,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
+                  ),
+
+                  // ── Actions ─────────────────────────────────────────────
+                  if (widget.canWrite) ...[
+                    const SizedBox(width: 12),
+                    _ActionMenu(
+                      onEdit: widget.onEdit,
+                      onDelete: widget.onDelete,
+                      onToggleStatus: () => widget.onStatusChanged(!cat.activo),
+                      isActive: cat.activo,
+                    ),
                   ],
-                ),
+                ],
               ),
-              // Actions
-              if (widget.canWrite)
-                SmallBtn(
-                  icon: Icons.delete_outline_rounded,
-                  color: D.rose,
-                  onTap: widget.onDelete,
-                ),
-              // ] else
-              //   IconButton(
-              //     icon: const Icon(
-              //       Icons.visibility_outlined,
-              //       color: D.slate400,
-              //       size: 20,
-              //     ),
-              //     onPressed: widget.onDelete,
-              //   ),
-            ],
+            ),
           ),
         ),
       ),
@@ -608,101 +399,80 @@ class _CatalogueCardState extends State<_CatalogueCard> {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.picture_as_pdf_outlined,
-            size: 64,
-            color: D.slate600.withOpacity(0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No hay catálogos disponibles',
-            style: TextStyle(color: D.slate400, fontSize: 16),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ─────────────────────────────────────────────────────────────────────────────
+//  ACTION MENU  (específico: opciones Editar / Activar / Eliminar)
+// ─────────────────────────────────────────────────────────────────────────────
+class _ActionMenu extends StatelessWidget {
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onToggleStatus;
+  final bool isActive;
 
-class _PremiumConfirmDialog extends StatelessWidget {
-  final String title;
-  final String content;
-  final VoidCallback onConfirm;
-
-  const _PremiumConfirmDialog({
-    required this.title,
-    required this.content,
-    required this.onConfirm,
+  const _ActionMenu({
+    required this.onEdit,
+    required this.onDelete,
+    required this.onToggleStatus,
+    required this.isActive,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: D.surface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: D.border),
+    return PopupMenuButton<String>(
+      icon: const Icon(
+        Icons.more_vert_rounded,
+        color: SaasPalette.textTertiary,
+        size: 20,
+      ),
+      color: SaasPalette.bgCanvas,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: SaasPalette.border),
+      ),
+      elevation: 4,
+      itemBuilder: (_) => [
+        _item('edit', Icons.edit_rounded, 'Editar', SaasPalette.textPrimary),
+        _item(
+          'toggle',
+          isActive ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+          isActive ? 'Desactivar' : 'Activar',
+          isActive ? SaasPalette.warning : SaasPalette.success,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: D.gold, size: 48),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              content,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: D.slate400, fontSize: 14),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'Cancelar',
-                      style: TextStyle(color: D.slate400),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: onConfirm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: D.rose,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text('Eliminar'),
-                  ),
-                ),
-              ],
-            ),
-          ],
+        _item(
+          'delete',
+          Icons.delete_outline_rounded,
+          'Eliminar',
+          SaasPalette.danger,
         ),
+      ],
+      onSelected: (value) {
+        if (value == 'edit') onEdit();
+        if (value == 'toggle') onToggleStatus();
+        if (value == 'delete') onDelete();
+      },
+    );
+  }
+
+  PopupMenuItem<String> _item(
+    String value,
+    IconData icon,
+    String label,
+    Color color,
+  ) {
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

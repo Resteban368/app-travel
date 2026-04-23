@@ -1,10 +1,10 @@
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'dart:math' as math;
-import '../../../../core/theme/premium_palette.dart';
+import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/layout/admin_shell.dart';
 import '../../../../config/app_router.dart';
+import '../../../../core/widgets/saas_ui_components.dart';
 import '../../domain/entities/info_empresa.dart';
 import '../bloc/info_empresa_bloc.dart';
 import '../bloc/info_empresa_state.dart';
@@ -16,60 +16,12 @@ class InfoEmpresaListScreen extends StatefulWidget {
   State<InfoEmpresaListScreen> createState() => _InfoEmpresaListScreenState();
 }
 
-class _InfoEmpresaListScreenState extends State<InfoEmpresaListScreen>
-    with TickerProviderStateMixin {
-  late final AnimationController _bgCtrl;
-  late final AnimationController _entryCtrl;
-
-  late final Animation<double> _headerOpacity;
-  late final Animation<Offset> _headerSlide;
-  late final Animation<double> _contentOpacity;
-
+class _InfoEmpresaListScreenState extends State<InfoEmpresaListScreen> {
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
 
   @override
-  void initState() {
-    super.initState();
-    _bgCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 10),
-    )..repeat();
-
-    _entryCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-
-    _headerOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0, 0.4, curve: Curves.easeOut),
-      ),
-    );
-    _headerSlide = Tween<Offset>(
-      begin: const Offset(0, -0.05),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
-      ),
-    );
-    _contentOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _entryCtrl,
-        curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
-      ),
-    );
-
-    _entryCtrl.forward();
-  }
-
-  @override
   void dispose() {
-    _bgCtrl.dispose();
-    _entryCtrl.dispose();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -77,211 +29,196 @@ class _InfoEmpresaListScreenState extends State<InfoEmpresaListScreen>
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
-    final canWrite = authState is AuthAuthenticated && authState.user.canWrite('infoEmpresa');
+    final canWrite =
+        authState is AuthAuthenticated &&
+        authState.user.canWrite('infoEmpresa');
 
     return AdminShell(
       currentIndex: 8,
       child: Scaffold(
-        backgroundColor: D.bg,
-        body: Stack(
-          children: [
-            // Background Orbs
-            AnimatedBuilder(
-              animation: _bgCtrl,
-              builder: (context, _) => Stack(
-                children: [
-                  Positioned(
-                    top: -100 + math.sin(_bgCtrl.value * math.pi * 2) * 50,
-                    right: -50 + math.cos(_bgCtrl.value * math.pi * 2) * 40,
-                    child: _Orb(color: D.royalBlue.withOpacity(0.1), size: 450),
-                  ),
-                  Positioned(
-                    bottom: -50 + math.cos(_bgCtrl.value * math.pi * 2) * 30,
-                    left: -100 + math.sin(_bgCtrl.value * math.pi * 2) * 50,
-                    child: _Orb(color: D.indigo.withOpacity(0.08), size: 350),
-                  ),
-                ],
-              ),
-            ),
-            Positioned.fill(child: CustomPaint(painter: _DotGridPainter())),
+        backgroundColor: SaasPalette.bgApp,
+        body: BlocConsumer<InfoEmpresaBloc, InfoEmpresaState>(
+          listener: (context, state) {
+            if (state is InfoSynced) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Vectores sincronizados correctamente'),
+                  backgroundColor: SaasPalette.success,
+                ),
+              );
+            }
+            if (state is InfoError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: SaasPalette.danger,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            List<InfoEmpresa> infoList = [];
+            if (state is InfoLoaded)
+              infoList = state.infoList;
+            else if (state is InfoSaved)
+              infoList = state.infoList;
+            else if (state is InfoSynced)
+              infoList = state.infoList;
+            else if (state is InfoSyncing)
+              infoList = state.infoList;
+            else if (state is InfoSaving && state.infoList != null) {
+              infoList = state.infoList!;
+            }
 
-            BlocConsumer<InfoEmpresaBloc, InfoEmpresaState>(
-              listener: (context, state) {
-                if (state is InfoSynced) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Vectores sincronizados correctamente'), backgroundColor: D.emerald),
-                  );
-                }
-                if (state is InfoError) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(state.message), backgroundColor: D.rose),
-                  );
-                }
-              },
-              builder: (context, state) {
-                List<InfoEmpresa>? infoList;
-                if (state is InfoLoaded) infoList = state.infoList;
-                if (state is InfoSaved) infoList = state.infoList;
-                if (state is InfoSynced) infoList = state.infoList;
-                if (state is InfoSyncing) infoList = state.infoList;
-                if (state is InfoSaving && state.infoList != null) {
-                  infoList = state.infoList;
-                }
+            final filtered = infoList.where((i) {
+              return i.nombre.toLowerCase().contains(
+                _searchQuery.toLowerCase(),
+              );
+            }).toList();
 
-                return CustomScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  slivers: [
-                    // Header
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-                      sliver: SliverToBoxAdapter(
-                        child: FadeTransition(
-                          opacity: _headerOpacity,
-                          child: SlideTransition(
-                            position: _headerSlide,
-                            child: _buildHeader(
-                                context, infoList, canWrite, state),
-                          ),
-                        ),
+            final isLoading = state is InfoLoading && infoList.isEmpty;
+
+            return CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                // ── Header ─────────────────────────────────────────────────
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: _InfoHeader(
+                      infoList: infoList,
+                      canWrite: canWrite,
+                      isLoading: state is InfoLoading,
+                    ),
+                  ),
+                ),
+
+                // ── Content ────────────────────────────────────────────────
+                if (isLoading)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (_, __) => const SaasListSkeleton(),
+                        childCount: 1,
                       ),
                     ),
-                    _buildFilters(),
-                    SliverFadeTransition(
-                      opacity: _contentOpacity,
-                      sliver: _buildContent(context, state, infoList),
+                  )
+                else if (filtered.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: SaasEmptyState(
+                      icon: _searchQuery.isNotEmpty
+                          ? Icons.search_off_rounded
+                          : Icons.business_rounded,
+                      title: _searchQuery.isNotEmpty
+                          ? 'Sin coincidencias'
+                          : 'Sin información',
+                      subtitle: _searchQuery.isNotEmpty
+                          ? 'No encontramos información que coincida con "$_searchQuery".'
+                          : 'Aún no has registrado la información corporativa de tu agencia.',
                     ),
-                    const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, List<InfoEmpresa>? infoList,
-      bool canWrite, InfoEmpresaState state) {
-    final showBtn =
-        canWrite && (infoList == null || infoList.isEmpty) && state is! InfoLoading;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [D.royalBlue, D.cyan]),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.business_rounded,
-                    color: Colors.white,
-                    size: 10,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'PERFIL CORPORATIVO',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.1,
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final info = filtered[index];
+                        return _InfoCard(
+                          info: info,
+                          state: state,
+                          canWrite: canWrite,
+                        );
+                      }, childCount: filtered.length),
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Información de Empresa',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.8,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Datos corporativos y base de conocimiento RAG.',
-              style: TextStyle(color: D.slate400, fontSize: 13),
-            ),
-          ],
+              ],
+            );
+          },
         ),
-        if (showBtn)
-          _AddBtn(
-            onPressed: () =>
-                Navigator.pushNamed(context, AppRouter.infoEmpresaCreate),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildFilters() {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        child: Container(
-          decoration: BoxDecoration(
-              color: D.surface.withOpacity(0.6),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: D.border.withOpacity(0.5))),
-          child: TextField(
-            controller: _searchCtrl,
-            onChanged: (v) => setState(() => _searchQuery = v),
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Buscar información...',
-              hintStyle: TextStyle(color: D.slate600, fontSize: 14),
-              prefixIcon: Icon(Icons.search_rounded, color: D.slate600, size: 20),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContent(BuildContext context, InfoEmpresaState state, List<InfoEmpresa>? infoList) {
-    if (state is InfoLoading) {
-      return SliverList(delegate: SliverChildBuilderDelegate((_, i) => _SkelCard(), childCount: 2));
-    }
-
-    if (infoList == null || infoList.isEmpty) {
-      return const SliverFillRemaining(child: _EmptyState());
-    }
-
-    final filtered = infoList.where((i) => i.nombre.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
-
-    if (filtered.isEmpty) {
-      return const SliverFillRemaining(child: _EmptyState(isSearch: true));
-    }
-
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate((context, index) {
-          final info = filtered[index];
-          return _InfoCard(info: info, state: state);
-        }, childCount: filtered.length),
       ),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  HEADER
+// ─────────────────────────────────────────────────────────────────────────────
+class _InfoHeader extends StatelessWidget {
+  final List<InfoEmpresa> infoList;
+  final bool canWrite;
+  final bool isLoading;
+
+  const _InfoHeader({
+    required this.infoList,
+    required this.canWrite,
+    required this.isLoading,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final showBtn = canWrite && infoList.isEmpty && !isLoading;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SaasBreadcrumbs(items: ['Inicio', 'Configuración', 'Empresa']),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Información de Empresa',
+                    style: TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Administra la identidad corporativa y base documental de la agencia.',
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (showBtn)
+              SaasButton(
+                label: 'Configurar Empresa',
+                icon: Icons.settings_rounded,
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRouter.infoEmpresaCreate),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  INFO CARD
+// ─────────────────────────────────────────────────────────────────────────────
 class _InfoCard extends StatefulWidget {
   final InfoEmpresa info;
   final InfoEmpresaState state;
-  const _InfoCard({required this.info, required this.state});
+  final bool canWrite;
+
+  const _InfoCard({
+    required this.info,
+    required this.state,
+    required this.canWrite,
+  });
 
   @override
   State<_InfoCard> createState() => _InfoCardState();
@@ -298,61 +235,120 @@ class _InfoCardState extends State<_InfoCard> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: D.surface,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: _hovered ? D.royalBlue.withOpacity(0.5) : D.border, width: 1.5),
-          boxShadow: _hovered ? [BoxShadow(color: D.royalBlue.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))] : null,
-        ),
-        child: InkWell(
-          onTap: isBusy ? null : () => Navigator.pushNamed(context, AppRouter.infoEmpresaEdit, arguments: i),
-          borderRadius: BorderRadius.circular(22),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: D.royalBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
-                      child: const Icon(Icons.business_rounded, color: D.skyBlue, size: 24),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: SaasPalette.bgCanvas,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
+              width: _hovered ? 1.5 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(_hovered ? 0.08 : 0.03),
+                blurRadius: _hovered ? 16 : 8,
+                offset: Offset(0, _hovered ? 4 : 2),
+              ),
+            ],
+          ),
+          child: InkWell(
+            onTap: isBusy || !widget.canWrite
+                ? null
+                : () => Navigator.pushNamed(
+                    context,
+                    AppRouter.infoEmpresaEdit,
+                    arguments: i,
+                  ),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: SaasPalette.brand50,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(
+                          Icons.business_rounded,
+                          color: SaasPalette.brand600,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
                         child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(i.nombre,
-                            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                        Text('Gerente: ${i.nombreGerente}', style: TextStyle(color: D.slate400, fontSize: 13)),
-                      ],
-                    )),
-                    const Icon(Icons.chevron_right_rounded, color: D.slate600),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(i.detalles,
-                    maxLines: 3,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              i.nombre,
+                              style: const TextStyle(
+                                color: SaasPalette.textPrimary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              'Gerente: ${i.nombreGerente}',
+                              style: const TextStyle(
+                                color: SaasPalette.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (widget.canWrite && !isBusy)
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 14,
+                          color: SaasPalette.textTertiary,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    i.detalles,
+                    maxLines: 4,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: D.slate400, fontSize: 14, height: 1.5)),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    _InfoBadge(icon: Icons.alternate_email_rounded, label: i.correo),
-                    const SizedBox(width: 16),
-                    _InfoBadge(icon: Icons.phone_android_rounded, label: i.telefono),
+                    style: const TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 14,
+                      height: 1.6,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Wrap(
+                    spacing: 24,
+                    runSpacing: 12,
+                    children: [
+                      _ContactInfo(
+                        icon: Icons.alternate_email_rounded,
+                        label: i.correo,
+                      ),
+                      _ContactInfo(
+                        icon: Icons.phone_android_rounded,
+                        label: i.telefono,
+                      ),
+                    ],
+                  ),
+                  if (isBusy) ...[
+                    const SizedBox(height: 20),
+                    const LinearProgressIndicator(
+                      backgroundColor: SaasPalette.bgApp,
+                      valueColor: AlwaysStoppedAnimation(SaasPalette.brand600),
+                      minHeight: 2,
+                    ),
                   ],
-                ),
-                if (isBusy) ...[
-                  const SizedBox(height: 16),
-                  const LinearProgressIndicator(backgroundColor: D.border, valueColor: AlwaysStoppedAnimation(D.skyBlue)),
-                ]
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -361,94 +357,27 @@ class _InfoCardState extends State<_InfoCard> {
   }
 }
 
-class _InfoBadge extends StatelessWidget {
+class _ContactInfo extends StatelessWidget {
   final IconData icon;
   final String label;
-  const _InfoBadge({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: D.slate600, size: 14),
-          const SizedBox(width: 6),
-          Text(label, style: TextStyle(color: D.slate600, fontSize: 12, fontWeight: FontWeight.w500)),
-        ],
-      );
-}
-
-class _Orb extends StatelessWidget {
-  final Color color;
-  final double size;
-  const _Orb({required this.color, required this.size});
-  @override
-  Widget build(BuildContext context) => Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [color, Colors.transparent])));
-}
-
-class _DotGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = D.border.withOpacity(0.2);
-    const spacing = 32.0;
-    for (double i = 0; i < size.width; i += spacing) {
-      for (double j = 0; j < size.height; j += spacing) {
-        canvas.drawCircle(Offset(i, j), 0.8, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
-}
-
-class _AddBtn extends StatelessWidget {
-  final VoidCallback onPressed;
-  const _AddBtn({required this.onPressed});
+  const _ContactInfo({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [D.royalBlue, D.indigo]),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: D.royalBlue.withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: SaasPalette.textTertiary, size: 16),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            color: SaasPalette.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
         ),
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
-      ),
+      ],
     );
   }
-}
-
-class _SkelCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-      height: 180,
-      margin: const EdgeInsets.only(bottom: 16, left: 24, right: 24),
-      decoration: BoxDecoration(color: D.surface.withOpacity(0.5), borderRadius: BorderRadius.circular(22)));
-}
-
-class _EmptyState extends StatelessWidget {
-  final bool isSearch;
-  const _EmptyState({this.isSearch = false});
-  @override
-  Widget build(BuildContext context) => Center(
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(isSearch ? Icons.search_off_rounded : Icons.business_rounded, size: 64, color: D.slate800),
-        const SizedBox(height: 16),
-        Text(isSearch ? 'No se encontró información que coincida' : 'Sin información corporativa registrada',
-            style: TextStyle(color: D.slate600, fontSize: 16, fontWeight: FontWeight.bold))
-      ]));
 }

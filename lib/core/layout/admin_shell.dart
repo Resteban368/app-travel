@@ -21,10 +21,13 @@ import 'package:agente_viajes/features/cotizaciones/presentation/bloc/cotizacion
 import 'package:agente_viajes/features/cotizaciones/presentation/bloc/cotizacion_event.dart';
 import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_bloc.dart';
 import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_event.dart';
+import 'package:agente_viajes/features/hoteles/presentation/bloc/hotel_bloc.dart';
+import 'package:agente_viajes/features/hoteles/presentation/bloc/hotel_event.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../theme/app_colors.dart';
 import '../../config/app_router.dart';
+import '../theme/saas_palette.dart';
+import 'widgets/sidebar_nav_item.dart';
 
 /// Persistent sidebar shell for the admin panel.
 /// Wraps all authenticated screens with a NavigationRail (desktop)
@@ -44,7 +47,24 @@ class AdminShell extends StatefulWidget {
 }
 
 class _AdminShellState extends State<AdminShell> {
-  bool _isExpanded = true;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   static const _navItems = [
     _NavItem(
@@ -132,6 +152,12 @@ class _AdminShellState extends State<AdminShell> {
       permission: 'clientes',
     ),
     _NavItem(
+      icon: Icons.hotel_rounded,
+      label: 'Hoteles',
+      route: AppRouter.hoteles,
+      permission: 'hoteles',
+    ),
+    _NavItem(
       icon: Icons.account_circle_rounded,
       label: 'Mi Perfil',
       route: AppRouter.profile,
@@ -140,7 +166,8 @@ class _AdminShellState extends State<AdminShell> {
   ];
 
   void _onItemTapped(_NavItem item) {
-    final currentRoute = widget.currentIndex >= 0 && widget.currentIndex < _navItems.length
+    final currentRoute =
+        widget.currentIndex >= 0 && widget.currentIndex < _navItems.length
         ? _navItems[widget.currentIndex].route
         : '';
     if (item.route == currentRoute) return;
@@ -178,6 +205,8 @@ class _AdminShellState extends State<AdminShell> {
         context.read<CotizacionBloc>().add(LoadCotizaciones());
       case AppRouter.clientes:
         context.read<ClienteBloc>().add(LoadClientes());
+      case AppRouter.hoteles:
+        context.read<HotelBloc>().add(const LoadHoteles());
     }
 
     Navigator.pushReplacementNamed(context, item.route);
@@ -194,32 +223,44 @@ class _AdminShellState extends State<AdminShell> {
     final isDesktop = width >= 800;
 
     final authState = context.watch<AuthBloc>().state;
-
-    // Auto-collapse on medium screens (800–1000px)
-    if (isDesktop && width < 1000 && _isExpanded) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _isExpanded = false);
-      });
-    }
-
     final user = authState is AuthAuthenticated ? authState.user : null;
-    final currentRoute = widget.currentIndex >= 0 && widget.currentIndex < _navItems.length
+    final currentRoute =
+        widget.currentIndex >= 0 && widget.currentIndex < _navItems.length
         ? _navItems[widget.currentIndex].route
         : '';
-    final visibleItems = user == null
+
+    final baseVisibleItems = user == null
         ? <_NavItem>[]
-        : _navItems.where((item) => user.hasPermission(item.permission)).toList();
+        : _navItems
+              .where((item) => user.hasPermission(item.permission))
+              .toList();
+
+    // Filtra los items basado en el buscador
+    final visibleItems = _searchQuery.isEmpty
+        ? baseVisibleItems
+        : baseVisibleItems
+              .where(
+                (item) => item.label
+                    .toLowerCase()
+                    .replaceAll('\n', ' ')
+                    .contains(_searchQuery),
+              )
+              .toList();
 
     if (!isDesktop) {
       return Scaffold(
+        backgroundColor: SaasPalette.bgApp,
         appBar: AppBar(
-          backgroundColor: AppColors.cobalt,
-          foregroundColor: AppColors.white,
+          backgroundColor: SaasPalette.bgCanvas,
+          foregroundColor: SaasPalette.textPrimary,
+          elevation: 0,
+          shape: const Border(bottom: BorderSide(color: SaasPalette.border)),
           title: const Text(
             'Travel Tours Florencia',
             style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppColors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              color: SaasPalette.textPrimary,
             ),
           ),
           leading: Builder(
@@ -230,7 +271,10 @@ class _AdminShellState extends State<AdminShell> {
           ),
         ),
         drawer: _buildDrawer(
-          user?.username ?? 'Sin usuario',
+          user?.name ?? user?.username ?? 'Sin usuario',
+          user?.username != null
+              ? '${user!.username}@agente.com'
+              : 'admin@agente.com',
           visibleItems,
           currentRoute,
         ),
@@ -239,10 +283,14 @@ class _AdminShellState extends State<AdminShell> {
     }
 
     return Scaffold(
+      backgroundColor: SaasPalette.bgApp,
       body: Row(
         children: [
           _buildSidebar(
-            user?.username ?? 'Sin usuario',
+            user?.name ?? user?.username ?? 'Sin usuario',
+            user?.username != null
+                ? '${user!.username}@agente.com'
+                : 'admin@agente.com',
             visibleItems,
             currentRoute,
           ),
@@ -253,208 +301,81 @@ class _AdminShellState extends State<AdminShell> {
   }
 
   Widget _buildSidebar(
-    String userInfo,
+    String username,
+    String email,
     List<_NavItem> visibleItems,
     String currentRoute,
   ) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
-      width: _isExpanded ? 260 : 72,
+    return Container(
+      width: 280,
       decoration: const BoxDecoration(
-        color: AppColors.sidebarBg,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 12,
-            offset: Offset(2, 0),
-          ),
-        ],
+        color: SaasPalette.bgCanvas,
+        border: Border(right: BorderSide(color: SaasPalette.border)),
       ),
       child: Column(
         children: [
-          const SizedBox(height: 20),
-          // Logo / Header
-          AnimatedCrossFade(
-            firstChild: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.accent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.flight,
-                      color: AppColors.white,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Travel Tours\nFlorencia',
-                      style: TextStyle(
-                        color: AppColors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        height: 1.3,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            secondChild: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.accent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.flight_takeoff_rounded,
-                  color: AppColors.white,
-                  size: 22,
-                ),
-              ),
-            ),
-            crossFadeState: _isExpanded
-                ? CrossFadeState.showFirst
-                : CrossFadeState.showSecond,
-            duration: const Duration(milliseconds: 250),
-          ),
-          if (_isExpanded)
-            Text(
-              userInfo,
-              style: const TextStyle(
-                color: AppColors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          const SizedBox(height: 8),
-          const Divider(color: AppColors.navyLight, indent: 16, endIndent: 16),
-          const SizedBox(height: 8),
+          _buildHeader(email),
+          _buildSearchBar(),
+          _buildSectionLabel('WORKSPACE'),
           // Navigation items
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: visibleItems.length,
               itemBuilder: (context, index) {
                 final item = visibleItems[index];
-                return _SidebarItem(
+                return SidebarNavItem(
                   icon: item.icon,
                   label: item.label,
                   isActive: item.route == currentRoute,
-                  isExpanded: _isExpanded,
                   onTap: () => _onItemTapped(item),
                 );
               },
             ),
           ),
-          // Collapse / Expand button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: _SidebarItem(
-              icon: _isExpanded
-                  ? Icons.chevron_left_rounded
-                  : Icons.chevron_right_rounded,
-              label: 'Colapsar',
-              isActive: false,
-              isExpanded: _isExpanded,
-              onTap: () => setState(() => _isExpanded = !_isExpanded),
-            ),
-          ),
-          const Divider(color: AppColors.navyLight, indent: 16, endIndent: 16),
-          // Logout
-          Padding(
-            padding: const EdgeInsets.only(left: 8, right: 8, bottom: 20),
-            child: _SidebarItem(
-              icon: Icons.logout_rounded,
-              label: 'Cerrar Sesión',
-              isActive: false,
-              isExpanded: _isExpanded,
-              onTap: _onLogout,
-              isDestructive: true,
-            ),
-          ),
+          const Divider(color: SaasPalette.border, height: 1),
+          _buildFooter(username),
         ],
       ),
     );
   }
 
   Widget _buildDrawer(
-    String userInfo,
+    String username,
+    String email,
     List<_NavItem> visibleItems,
     String currentRoute,
   ) {
     return Drawer(
-      backgroundColor: AppColors.sidebarBg,
+      backgroundColor: SaasPalette.bgCanvas,
       child: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.accent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.flight_takeoff_rounded,
-                      color: AppColors.white,
-                      size: 22,
-                    ),
+            Row(
+              children: [
+                Expanded(child: _buildHeader(email)),
+                IconButton(
+                  icon: const Icon(
+                    Icons.close,
+                    color: SaasPalette.textSecondary,
                   ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Travel Tours Florencia',
-                    style: TextStyle(
-                      color: AppColors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
+                  onPressed: () => Navigator.pop(context),
+                  padding: const EdgeInsets.all(16),
+                ),
+              ],
             ),
-            Text(
-              userInfo,
-              style: const TextStyle(
-                color: AppColors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Divider(
-              color: AppColors.navyLight,
-              indent: 16,
-              endIndent: 16,
-            ),
-            const SizedBox(height: 8),
+            _buildSearchBar(),
+            _buildSectionLabel('WORKSPACE'),
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 itemCount: visibleItems.length,
                 itemBuilder: (context, index) {
                   final item = visibleItems[index];
-                  return _SidebarItem(
+                  return SidebarNavItem(
                     icon: item.icon,
                     label: item.label,
                     isActive: item.route == currentRoute,
-                    isExpanded: true,
                     onTap: () {
                       Navigator.pop(context);
                       _onItemTapped(item);
@@ -463,48 +384,219 @@ class _AdminShellState extends State<AdminShell> {
                 },
               ),
             ),
-            const Divider(
-              color: AppColors.navyLight,
-              indent: 16,
-              endIndent: 16,
-            ),
-            Padding(
-              padding: const EdgeInsets.only(left: 8, right: 8, bottom: 20),
-              child: _SidebarItem(
-                icon: Icons.logout_rounded,
-                label: 'Cerrar Sesión',
-                isActive: false,
-                isExpanded: true,
-                onTap: () {
-                  //dialogo de confirmacion
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Cerrar Sesión'),
-                      content: const Text(
-                        '¿Está seguro de que desea cerrar sesión?',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancelar'),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            _onLogout();
-                          },
-                          child: const Text('Cerrar Sesión'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                isDestructive: true,
-              ),
-            ),
+            const Divider(color: SaasPalette.border, height: 1),
+            _buildFooter(username, isMobile: true),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(String email) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: SaasPalette.brand600,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.flight, color: Colors.white, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Travel Tours Florencia',
+                  style: TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  email,
+                  style: const TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      child: Container(
+        height: 36,
+        decoration: BoxDecoration(
+          color: SaasPalette.bgApp,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: SaasPalette.border),
+        ),
+        child: Row(
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Icon(
+                Icons.search,
+                size: 16,
+                color: SaasPalette.textTertiary,
+              ),
+            ),
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                decoration: const InputDecoration(
+                  hintText: 'Buscar...',
+                  hintStyle: TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 13,
+                  ),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                style: const TextStyle(
+                  color: SaasPalette.textPrimary,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            // Container(
+            //   margin: const EdgeInsets.only(right: 6),
+            //   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            //   decoration: BoxDecoration(
+            //     color: SaasPalette.bgCanvas,
+            //     borderRadius: BorderRadius.circular(4),
+            //     border: Border.all(color: SaasPalette.border),
+            //   ),
+            //   child: const Text('⌘K', style: TextStyle(color: SaasPalette.textTertiary, fontSize: 10, fontWeight: FontWeight.bold)),
+            // ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: SaasPalette.textTertiary,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFooter(String username, {bool isMobile = false}) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: SaasPalette.brand600,
+            child: Text(
+              username.isNotEmpty ? username[0].toUpperCase() : 'A',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  username,
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Icon(
+              Icons.logout_rounded,
+              color: SaasPalette.textSecondary,
+              size: 20,
+            ),
+            onPressed: () {
+              _confirmLogout();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: SaasPalette.bgCanvas,
+        title: const Text(
+          'Cerrar Sesión',
+          style: TextStyle(color: SaasPalette.textPrimary),
+        ),
+        content: const Text(
+          '¿Está seguro de que desea cerrar sesión?',
+          style: TextStyle(color: SaasPalette.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: SaasPalette.textSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _onLogout();
+            },
+            child: const Text(
+              'Cerrar Sesión',
+              style: TextStyle(color: SaasPalette.danger),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -523,95 +615,4 @@ class _NavItem {
     required this.route,
     required this.permission,
   });
-}
-
-class _SidebarItem extends StatefulWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final bool isExpanded;
-  final VoidCallback onTap;
-  final bool isDestructive;
-
-  const _SidebarItem({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    required this.isExpanded,
-    required this.onTap,
-    this.isDestructive = false,
-  });
-
-  @override
-  State<_SidebarItem> createState() => _SidebarItemState();
-}
-
-class _SidebarItemState extends State<_SidebarItem> {
-  bool _isHovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color bgColor;
-    if (widget.isActive) {
-      bgColor = AppColors.sidebarActive;
-    } else if (_isHovered) {
-      bgColor = AppColors.sidebarHover;
-    } else {
-      bgColor = Colors.transparent;
-    }
-
-    final iconColor = widget.isDestructive
-        ? AppColors.error
-        : (widget.isActive ? AppColors.accent : AppColors.greyLight);
-    final textColor = widget.isDestructive
-        ? AppColors.error
-        : (widget.isActive ? AppColors.white : AppColors.greyLight);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _isHovered = true),
-        onExit: (_) => setState(() => _isHovered = false),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: widget.onTap,
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: widget.isExpanded ? 16 : 0,
-                vertical: 12,
-              ),
-              child: widget.isExpanded
-                  ? Row(
-                      children: [
-                        Icon(widget.icon, color: iconColor, size: 22),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text(
-                            widget.label,
-                            style: TextStyle(
-                              color: textColor,
-                              fontSize: 14,
-                              fontWeight: widget.isActive
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Center(
-                      child: Icon(widget.icon, color: iconColor, size: 22),
-                    ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

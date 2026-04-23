@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:typed_data';
-import 'dart:ui';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:agente_viajes/core/theme/saas_palette.dart';
 import 'package:agente_viajes/core/widgets/dialog_loading_widget.dart';
 import 'package:agente_viajes/core/widgets/premium_form_widgets.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -10,7 +12,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../../core/theme/premium_palette.dart';
+import 'package:agente_viajes/core/constants/api_constants.dart';
+import 'package:agente_viajes/core/di/injection_container.dart';
 import '../../../uploads/presentation/bloc/upload_bloc.dart';
 import '../../../uploads/presentation/bloc/upload_event.dart';
 import '../../../uploads/presentation/bloc/upload_state.dart';
@@ -59,10 +62,11 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   Uint8List? _pendingImageBytes;
   String? _pendingImageMimeType;
   String? _pendingImageOriginalName;
+  bool _isAnalyzing = false;
 
   int? _selectedReservaId;
 
-  static const _pagosFolderId = '1eKuJ_dBJkYUJrISlBxDm2d20L_Glxuz_';
+  static const _pagosFolderId = '1hTu072yWKHrxTA0g2p_M6qrkzxt2OqCM';
 
   late final AnimationController _entryCtrl;
   late final Animation<double> _fade;
@@ -200,9 +204,8 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     }
   }
 
-  // Número completo con indicativo (sin +), listo para WhatsApp API
-  String get _fullChatId =>
-      '${_countryCode.replaceAll('+', '')}${_chatIdCtrl.text.trim()}';
+  // Número completo con indicativo (+XX...), ej: +573142266528
+  String get _fullChatId => '$_countryCode${_chatIdCtrl.text.trim()}';
 
   // Intenta detectar el indicativo al cargar un chatId existente.
   // Retorna (countryCode, localNumber).
@@ -227,18 +230,18 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         const Text(
           'Chat - WhatsApp *',
           style: TextStyle(
-            color: D.slate400,
-            fontSize: 10,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.8,
+            color: SaasPalette.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
           ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: D.surfaceHigh.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+            color: SaasPalette.bgCanvas,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: SaasPalette.border),
           ),
           child: Row(
             children: [
@@ -246,11 +249,14 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: _countryCode,
-                  dropdownColor: D.surface,
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  dropdownColor: SaasPalette.bgCanvas,
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 13,
+                  ),
                   icon: const Icon(
                     Icons.arrow_drop_down_rounded,
-                    color: D.slate400,
+                    color: SaasPalette.textTertiary,
                     size: 18,
                   ),
                   onChanged: canWrite
@@ -265,7 +271,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                             child: Text(
                               '${cc.flag} ${cc.code}',
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: SaasPalette.textPrimary,
                                 fontSize: 13,
                               ),
                             ),
@@ -275,7 +281,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                       .toList(),
                 ),
               ),
-              Container(width: 1, height: 24, color: D.border),
+              Container(width: 1, height: 24, color: SaasPalette.border),
               // Campo numérico
               Expanded(
                 child: TextFormField(
@@ -283,10 +289,16 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                   readOnly: !canWrite,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 14,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Número sin indicativo',
-                    hintStyle: TextStyle(color: D.slate600, fontSize: 13),
+                    hintStyle: TextStyle(
+                      color: SaasPalette.textTertiary,
+                      fontSize: 13,
+                    ),
                     border: InputBorder.none,
                     filled: true,
                     fillColor: Colors.transparent,
@@ -313,12 +325,12 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
       builder: (context, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: D.royalBlue,
+        data: ThemeData.light().copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: SaasPalette.brand600,
             onPrimary: Colors.white,
-            surface: D.surface,
-            onSurface: Colors.white,
+            surface: SaasPalette.bgCanvas,
+            onSurface: SaasPalette.textPrimary,
           ),
         ),
         child: child!,
@@ -335,13 +347,17 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: D.surfaceHigh.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          color: SaasPalette.bgCanvas,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: SaasPalette.border),
         ),
         child: Row(
           children: [
-            const Icon(Icons.event_note_rounded, color: D.skyBlue, size: 20),
+            const Icon(
+              Icons.event_note_rounded,
+              color: SaasPalette.brand600,
+              size: 20,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -349,7 +365,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     ? DateFormat('dd/MM/yyyy').format(_fechaDocumento!)
                     : 'Fecha del Documento *',
                 style: TextStyle(
-                  color: _fechaDocumento != null ? Colors.white : D.slate400,
+                  color: _fechaDocumento != null
+                      ? SaasPalette.textPrimary
+                      : SaasPalette.textTertiary,
                   fontSize: 14,
                 ),
               ),
@@ -357,7 +375,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
             if (canWrite)
               const Icon(
                 Icons.calendar_today_rounded,
-                color: D.slate400,
+                color: SaasPalette.textTertiary,
                 size: 16,
               ),
           ],
@@ -421,21 +439,6 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         },
       ),
     ).then((_) => messageCtrl.dispose());
-  }
-
-  void _confirmDelete(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => _PremiumConfirmDialog(
-        title: '¿Eliminar Registro?',
-        content:
-            'Esta acción es irreversible y eliminará el historial del pago.',
-        onConfirm: () {
-          context.read<PagoRealizadoBloc>().add(DeletePago(widget.pago!.id));
-          Navigator.pop(ctx);
-        },
-      ),
-    );
   }
 
   @override
@@ -521,16 +524,17 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         ),
       ],
       child: Scaffold(
-        backgroundColor: D.bg,
         body: Stack(
           children: [
-            const PremiumBackground(),
             CustomScrollView(
               slivers: [
                 PremiumSliverAppBar(
                   title: _isEditing ? 'Detalle de Pago' : 'Nuevo Pago Manual',
                   actions: IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded, color: D.white),
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: Colors.white,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
@@ -545,117 +549,113 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                           vertical: 16,
                         ),
                         child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 800),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (_urlImagenCtrl.text.isNotEmpty)
-                                    _buildImagePreview(),
-                                  if (_urlImagenCtrl.text.isNotEmpty)
-                                    const SizedBox(height: 24),
-
-                                  PremiumSectionCard(
-                                    title: 'INFORMACIÓN DEL PAGO',
-                                    icon: Icons.receipt_long_rounded,
-                                    children: [
-                                      _buildReservaSelector(canWrite: canWrite),
-                                      const SizedBox(height: 20),
-                                      _buildPhoneField(canWrite: canWrite),
-                                      const SizedBox(height: 20),
-                                      _buildTypeDropdown(canWrite: canWrite),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _proveedorCtrl,
-                                        label: 'Comercio / Proveedor *',
-                                        icon: Icons.store_rounded,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _nitCtrl,
-                                        label: 'NIT / ID Fiscal (opcional)',
-                                        icon: Icons.badge_outlined,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _montoCtrl,
-                                        label: 'Monto Recibido *',
-                                        icon: Icons.attach_money_rounded,
-                                        isNumeric: true,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _metodoPagoCtrl,
-                                        label: 'Método de Pago *',
-                                        icon: Icons
-                                            .account_balance_wallet_outlined,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _referenciaCtrl,
-                                        label: 'No. Referencia *',
-                                        icon: Icons.tag_rounded,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      _buildFechaDocumentoPicker(
-                                        canWrite: canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _urlImagenCtrl,
-                                        label: 'URL del Comprobante',
-                                        icon: Icons.link_rounded,
-                                        readOnly: !canWrite,
-                                      ),
-                                      if (canWrite && kIsWeb) ...[
-                                        const SizedBox(height: 8),
-                                        _buildUploadBtn(),
-                                      ],
-                                    ],
-                                  ),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (_urlImagenCtrl.text.isNotEmpty)
+                                  _buildImagePreview(),
+                                if (_urlImagenCtrl.text.isNotEmpty)
                                   const SizedBox(height: 24),
 
-                                  PremiumSectionCard(
-                                    title: 'ESTADO DEL PAGO',
-                                    icon: Icons.verified_user_rounded,
-                                    children: [
-                                      if (_isEditing)
-                                        _buildEstadoSection(canWrite: canWrite)
-                                      else
-                                        _buildSwitch(canWrite: canWrite),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 48),
-
-                                  if (canWrite)
-                                    Builder(
-                                      builder: (ctx) =>
-                                          BlocBuilder<
-                                            PagoRealizadoBloc,
-                                            PagoRealizadoState
-                                          >(
-                                            builder: (context, state) {
-                                              return PremiumActionButton(
-                                                label: 'PROCESAR PAGO',
-                                                icon: Icons.verified_rounded,
-                                                isLoading:
-                                                    state
-                                                        is PagoRealizadoSaving,
-                                                onTap: () => _save(ctx),
-                                              );
-                                            },
-                                          ),
+                                PremiumSectionCard(
+                                  title: 'INFORMACIÓN DEL PAGO',
+                                  icon: Icons.receipt_long_rounded,
+                                  children: [
+                                    _buildReservaSelector(canWrite: canWrite),
+                                    const SizedBox(height: 20),
+                                    _buildPhoneField(canWrite: canWrite),
+                                    const SizedBox(height: 20),
+                                    _buildTypeDropdown(canWrite: canWrite),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _proveedorCtrl,
+                                      label: 'Comercio / Proveedor *',
+                                      icon: Icons.store_rounded,
+                                      readOnly: !canWrite,
                                     ),
-                                  const SizedBox(height: 100),
-                                ],
-                              ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _nitCtrl,
+                                      label: 'NIT / ID Fiscal (opcional)',
+                                      icon: Icons.badge_outlined,
+                                      readOnly: !canWrite,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _montoCtrl,
+                                      label: 'Monto Recibido *',
+                                      icon: Icons.attach_money_rounded,
+                                      isNumeric: true,
+                                      readOnly: !canWrite,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _metodoPagoCtrl,
+                                      label: 'Método de Pago *',
+                                      icon:
+                                          Icons.account_balance_wallet_outlined,
+                                      readOnly: !canWrite,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _referenciaCtrl,
+                                      label: 'No. Referencia *',
+                                      icon: Icons.tag_rounded,
+                                      readOnly: !canWrite,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    _buildFechaDocumentoPicker(
+                                      canWrite: canWrite,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _urlImagenCtrl,
+                                      label: 'URL del Comprobante',
+                                      icon: Icons.link_rounded,
+                                      readOnly: !canWrite,
+                                    ),
+                                    if (canWrite && kIsWeb) ...[
+                                      const SizedBox(height: 8),
+                                      _buildUploadBtn(),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+
+                                PremiumSectionCard(
+                                  title: 'ESTADO DEL PAGO',
+                                  icon: Icons.verified_user_rounded,
+                                  children: [
+                                    if (_isEditing)
+                                      _buildEstadoSection(canWrite: canWrite)
+                                    else
+                                      _buildSwitch(canWrite: canWrite),
+                                  ],
+                                ),
+                                const SizedBox(height: 48),
+
+                                if (canWrite)
+                                  Builder(
+                                    builder: (ctx) =>
+                                        BlocBuilder<
+                                          PagoRealizadoBloc,
+                                          PagoRealizadoState
+                                        >(
+                                          builder: (context, state) {
+                                            return PremiumActionButton(
+                                              label: 'PROCESAR PAGO',
+                                              icon: Icons.verified_rounded,
+                                              isLoading:
+                                                  state is PagoRealizadoSaving,
+                                              onTap: () => _save(ctx),
+                                            );
+                                          },
+                                        ),
+                                  ),
+                                const SizedBox(height: 100),
+                              ],
                             ),
                           ),
                         ),
@@ -675,9 +675,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     final directUrl = _getDirectImageUrl(_urlImagenCtrl.text);
     return Container(
       decoration: BoxDecoration(
-        color: D.surfaceHigh.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -686,22 +686,21 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [D.skyBlue.withOpacity(0.15), Colors.transparent],
-                stops: const [0, 0.8],
-              ),
-              border: Border(
-                bottom: BorderSide(color: Colors.white.withOpacity(0.05)),
-              ),
+              color: SaasPalette.brand50,
+              border: Border(bottom: BorderSide(color: SaasPalette.border)),
             ),
             child: Row(
               children: [
-                Icon(Icons.receipt_long_rounded, color: D.skyBlue, size: 20),
+                const Icon(
+                  Icons.receipt_long_rounded,
+                  color: SaasPalette.brand600,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 const Text(
                   'COMPROBANTE ADJUNTO',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: SaasPalette.textPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.2,
@@ -709,9 +708,12 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                 ),
                 const Spacer(),
                 if (!kIsWeb)
-                  Text(
+                  const Text(
                     'Toque para ampliar',
-                    style: TextStyle(color: D.slate400, fontSize: 11),
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 11,
+                    ),
                   ),
               ],
             ),
@@ -731,7 +733,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     : const Center(
                         child: Padding(
                           padding: EdgeInsets.all(40),
-                          child: CircularProgressIndicator(color: D.skyBlue),
+                          child: CircularProgressIndicator(
+                            color: SaasPalette.brand600,
+                          ),
                         ),
                       ),
               ),
@@ -746,17 +750,24 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       padding: const EdgeInsets.all(32),
       child: Column(
         children: [
-          Icon(Icons.image_rounded, size: 64, color: D.slate600),
+          const Icon(
+            Icons.image_rounded,
+            size: 64,
+            color: SaasPalette.textTertiary,
+          ),
           const SizedBox(height: 16),
           const Text(
             'Visualización en Web',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: SaasPalette.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
-          Text(
+          const Text(
             'Debido a políticas de seguridad, abre el enlace original.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: D.slate400, fontSize: 13),
+            style: TextStyle(color: SaasPalette.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 24),
           Row(
@@ -823,109 +834,180 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
 
         final hasSelection = _selectedReservaId != null;
 
+        Future<void> openPicker() async {
+          final result = await showDialog<Reserva>(
+            context: context,
+            builder: (_) => _ReservaPickerDialog(reservas: reservas),
+          );
+          if (result != null) {
+            final parsed = int.tryParse(result.id ?? '');
+            final responsable = result.responsable;
+            setState(() {
+              _selectedReservaId = parsed;
+              _reservaSearchCtrl.text =
+                  '${result.idReserva ?? 'Reserva #${result.id}'} - ${responsable?.nombre ?? result.correo}';
+              if (responsable != null && (responsable.telefono).isNotEmpty) {
+                final p = _parsePhone(responsable.telefono);
+                _countryCode = p.$1;
+                _chatIdCtrl.text = p.$2;
+              }
+            });
+          }
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 8),
-              child: Text(
-                'Reserva Vinculada *',
-                style: TextStyle(color: D.slate400, fontSize: 13),
+            const Text(
+              'RESERVA VINCULADA *',
+              style: TextStyle(
+                color: SaasPalette.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
               ),
             ),
-            InkWell(
-              onTap: (isLoading || !canWrite)
-                  ? null
-                  : () async {
-                      final result = await showDialog<Reserva>(
-                        context: context,
-                        builder: (_) =>
-                            _ReservaPickerDialog(reservas: reservas),
-                      );
-                      if (result != null) {
-                        final parsed = int.tryParse(result.id ?? '');
-                        final responsable = result.integrantes.isNotEmpty
-                            ? result.integrantes.firstWhere(
-                                (i) => i.esResponsable,
-                                orElse: () => result.integrantes.first,
-                              )
-                            : null;
-                        setState(() {
-                          _selectedReservaId = parsed;
-                          _reservaSearchCtrl.text =
-                              '${result.idReserva ?? 'Reserva #${result.id}'} - ${responsable?.nombre ?? result.correo}';
-                          if (_chatIdCtrl.text.isEmpty && responsable != null) {
-                            final parsed = _parsePhone(responsable.telefono);
-                            _countryCode = parsed.$1;
-                            _chatIdCtrl.text = parsed.$2;
-                          }
-                        });
-                      }
-                    },
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
+            const SizedBox(height: 8),
+
+            if (hasSelection)
+              // Selected state card
+              Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 18,
+                  horizontal: 14,
+                  vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: D.surfaceHigh.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(16),
+                  color: SaasPalette.brand50,
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: hasSelection ? D.skyBlue : D.border,
+                    color: SaasPalette.brand600.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.airplane_ticket_rounded,
-                      color: hasSelection ? D.skyBlue : D.slate400,
-                      size: 20,
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: SaasPalette.brand600.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.airplane_ticket_rounded,
+                        color: SaasPalette.brand600,
+                        size: 18,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        hasSelection
-                            ? _reservaSearchCtrl.text
-                            : 'Seleccionar reserva...',
-                        style: TextStyle(
-                          color: hasSelection ? Colors.white : D.slate400,
-                          fontSize: 14,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _reservaSearchCtrl.text,
+                            style: const TextStyle(
+                              color: SaasPalette.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const Text(
+                            'Reserva vinculada',
+                            style: TextStyle(
+                              color: SaasPalette.brand600,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    if (isLoading)
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: D.skyBlue,
+                    if (canWrite) ...[
+                      const SizedBox(width: 8),
+                      TextButton(
+                        onPressed: openPicker,
+                        style: TextButton.styleFrom(
+                          foregroundColor: SaasPalette.brand600,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                         ),
-                      )
-                    else if (hasSelection && canWrite)
-                      GestureDetector(
-                        onTap: () => setState(() {
+                        child: const Text(
+                          'Cambiar',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => setState(() {
                           _selectedReservaId = null;
                           _reservaSearchCtrl.clear();
                         }),
-                        child: const Icon(
+                        icon: const Icon(
                           Icons.close_rounded,
-                          color: D.slate400,
-                          size: 20,
+                          color: SaasPalette.textTertiary,
+                          size: 16,
                         ),
-                      )
-                    else
-                      const Icon(
-                        Icons.search_rounded,
-                        color: D.slate400,
-                        size: 20,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
+                    ],
                   ],
                 ),
+              )
+            else
+              // Empty state button
+              InkWell(
+                onTap: (isLoading || !canWrite) ? null : openPicker,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: SaasPalette.bgCanvas,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: SaasPalette.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.search_rounded,
+                        color: SaasPalette.textTertiary,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Buscar y seleccionar reserva...',
+                          style: TextStyle(
+                            color: SaasPalette.textTertiary,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      if (isLoading)
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: SaasPalette.brand600,
+                          ),
+                        )
+                      else
+                        const Icon(
+                          Icons.unfold_more_rounded,
+                          color: SaasPalette.textTertiary,
+                          size: 18,
+                        ),
+                    ],
+                  ),
+                ),
               ),
-            ),
           ],
         );
       },
@@ -938,28 +1020,40 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            'Tipo Documento *',
-            style: TextStyle(color: D.slate400, fontSize: 13),
+        const Text(
+          'TIPO DOCUMENTO *',
+          style: TextStyle(
+            color: SaasPalette.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
           ),
         ),
+        const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _tipoDocumento,
-          dropdownColor: D.surfaceHigh,
+          dropdownColor: SaasPalette.bgCanvas,
           isExpanded: true,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
           decoration: InputDecoration(
             filled: true,
-            fillColor: D.surfaceHigh.withOpacity(0.5),
+            fillColor: SaasPalette.bgCanvas,
+            prefixIcon: const Icon(
+              Icons.description_rounded,
+              color: SaasPalette.brand600,
+              size: 18,
+            ),
+            hintStyle: const TextStyle(color: SaasPalette.textTertiary),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: D.border),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: SaasPalette.border),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: D.skyBlue),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(
+                color: SaasPalette.brand600,
+                width: 1.5,
+              ),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -990,9 +1084,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   }
 
   Color _getEstadoColor(PagoRealizado? pago) {
-    if (pago == null) return D.slate400;
-    if (pago.isValidated) return D.emerald;
-    if (pago.isRechazado) return D.rose;
+    if (pago == null) return SaasPalette.textSecondary;
+    if (pago.isValidated) return SaasPalette.success;
+    if (pago.isRechazado) return SaasPalette.danger;
     return const Color(0xFFF59E0B);
   }
 
@@ -1000,7 +1094,6 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     final pago = widget.pago;
     final estadoLabel = _getEstadoLabel(pago);
     final estadoColor = _getEstadoColor(pago);
-    final isPendiente = pago != null && !pago.isValidated && !pago.isRechazado;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1044,19 +1137,28 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: D.rose.withValues(alpha: 0.08),
+              color: SaasPalette.danger.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: D.rose.withValues(alpha: 0.2)),
+              border: Border.all(
+                color: SaasPalette.danger.withValues(alpha: 0.2),
+              ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline_rounded, color: D.rose, size: 16),
+                const Icon(
+                  Icons.info_outline_rounded,
+                  color: SaasPalette.danger,
+                  size: 16,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     pago!.motivoRechazo!,
-                    style: TextStyle(color: D.slate400, fontSize: 13),
+                    style: const TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ],
@@ -1076,7 +1178,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     icon: const Icon(Icons.check_circle_rounded, size: 18),
                     label: const Text('Validar'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: D.emerald,
+                      backgroundColor: SaasPalette.success,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -1094,7 +1196,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     icon: const Icon(Icons.cancel_rounded, size: 18),
                     label: const Text('Rechazar'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: D.rose,
+                      backgroundColor: SaasPalette.danger,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -1154,9 +1256,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         child: Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: D.surfaceHigh,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: D.border),
+            color: SaasPalette.bgCanvas,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: SaasPalette.border),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1165,30 +1267,43 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               const Text(
                 'Motivo de Rechazo',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: SaasPalette.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
+              const Text(
                 'Indica el motivo por el que se rechaza este pago.',
-                style: TextStyle(color: D.slate400, fontSize: 13),
+                style: TextStyle(
+                  color: SaasPalette.textSecondary,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 20),
               TextFormField(
                 controller: motivoCtrl,
                 maxLines: 3,
                 autofocus: true,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: const TextStyle(
+                  color: SaasPalette.textPrimary,
+                  fontSize: 14,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Ej: Comprobante ilegible, monto incorrecto...',
-                  hintStyle: TextStyle(color: D.slate600, fontSize: 13),
+                  hintStyle: const TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 13,
+                  ),
                   filled: true,
-                  fillColor: D.surface,
+                  fillColor: SaasPalette.bgSubtle,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: SaasPalette.brand600),
                   ),
                 ),
               ),
@@ -1201,7 +1316,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                       child: const Text(
                         'Cancelar',
                         style: TextStyle(
-                          color: D.slate400,
+                          color: SaasPalette.textSecondary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1222,7 +1337,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: D.rose,
+                        backgroundColor: SaasPalette.danger,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -1247,39 +1362,31 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   }
 
   Widget _buildSwitch({required bool canWrite}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          decoration: BoxDecoration(
-            color: D.surfaceHigh.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
-          ),
-          child: SwitchListTile(
-            title: const Text(
-              'Validar Pago',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            subtitle: Text(
-              'Confirma el recibo y envía comprobante por WhatsApp',
-              style: TextStyle(color: D.slate400, fontSize: 12),
-            ),
-            value: _isValidated,
-            activeColor: D.emerald,
-            activeTrackColor: D.emerald.withOpacity(0.3),
-            inactiveThumbColor: D.slate400,
-            inactiveTrackColor: D.bg.withOpacity(0.5),
-            onChanged: canWrite
-                ? (v) => setState(() => _isValidated = v)
-                : null,
+    return Container(
+      decoration: BoxDecoration(
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SaasPalette.border),
+      ),
+      child: SwitchListTile(
+        title: const Text(
+          'Validar Pago',
+          style: TextStyle(
+            color: SaasPalette.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
           ),
         ),
+        subtitle: const Text(
+          'Confirma el recibo y envía comprobante por WhatsApp',
+          style: TextStyle(color: SaasPalette.textTertiary, fontSize: 12),
+        ),
+        value: _isValidated,
+        activeThumbColor: SaasPalette.success,
+        activeTrackColor: SaasPalette.success.withValues(alpha: 0.25),
+        inactiveThumbColor: SaasPalette.textTertiary,
+        inactiveTrackColor: SaasPalette.bgSubtle,
+        onChanged: canWrite ? (v) => setState(() => _isValidated = v) : null,
       ),
     );
   }
@@ -1352,6 +1459,71 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     );
   }
 
+  Future<void> _analyzeDocument(Uint8List bytes, String mimeType) async {
+    setState(() => _isAnalyzing = true);
+    try {
+      final base64Image = base64Encode(bytes);
+      final client = sl<http.Client>();
+      final response = await client.post(
+        Uri.parse('${ApiConstants.kBaseUrl}/v1/analisis-ia/analizar-documento'),
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Accept': 'application/json',
+        },
+        body: json.encode({
+          'imagen_base64': base64Image,
+          'mime_type': mimeType,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        const docTypes = ['Factura', 'Recibo', 'Transferencia', 'Ticket', 'Otro'];
+        setState(() {
+          if (data['monto'] != null) {
+            _montoCtrl.text = data['monto'].toString();
+          }
+          if (data['tipo_documento'] != null) {
+            final tipo = data['tipo_documento'].toString();
+            _tipoDocumento = docTypes.contains(tipo) ? tipo : 'Otro';
+          }
+          if (data['proveedor_comercio'] != null) {
+            _proveedorCtrl.text = data['proveedor_comercio'].toString();
+          }
+          if (data['nit'] != null) {
+            _nitCtrl.text = data['nit'].toString();
+          }
+          if (data['metodo_pago'] != null) {
+            _metodoPagoCtrl.text = data['metodo_pago'].toString();
+          }
+          if (data['referencia'] != null) {
+            _referenciaCtrl.text = data['referencia'].toString();
+          }
+          if (data['fecha_documento'] != null) {
+            final fecha = DateTime.tryParse(data['fecha_documento'].toString());
+            if (fecha != null) {
+              _fechaDocumento = fecha;
+            }
+          }
+        });
+        _showToast('✅ Datos extraídos automáticamente');
+      } else {
+        String msg = 'No se pudieron extraer los datos del comprobante';
+        try {
+          final decoded = json.decode(response.body);
+          if (decoded is Map && decoded['message'] != null) {
+            msg = decoded['message'].toString();
+          }
+        } catch (_) {}
+        _showToast(msg, isError: true);
+      }
+    } catch (_) {
+      _showToast('Error al analizar el documento', isError: true);
+    } finally {
+      if (mounted) setState(() => _isAnalyzing = false);
+    }
+  }
+
   Future<void> _pickFile() async {
     if (!kIsWeb) return;
     final input = html.FileUploadInputElement()
@@ -1385,27 +1557,67 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       // Limpia URL manual si se selecciona un archivo
       _urlImagenCtrl.clear();
     });
+
+    // Analizar automáticamente con IA
+    _analyzeDocument(bytes, mimeType);
   }
 
   Widget _buildUploadBtn() {
     final hasFile = _pendingImageBytes != null;
+
+    if (_isAnalyzing) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: SaasPalette.brand50,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: SaasPalette.brand600.withValues(alpha: 0.3)),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: SaasPalette.brand600,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text(
+              'Analizando comprobante con IA...',
+              style: TextStyle(
+                color: SaasPalette.brand600,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (hasFile) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: D.emerald.withValues(alpha: 0.08),
+          color: SaasPalette.success.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: D.emerald.withValues(alpha: 0.3)),
+          border: Border.all(color: SaasPalette.success.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: D.emerald, size: 18),
+            const Icon(
+              Icons.check_circle_rounded,
+              color: SaasPalette.success,
+              size: 18,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 _pendingImageOriginalName ?? 'Imagen seleccionada',
                 style: const TextStyle(
-                  color: D.emerald,
+                  color: SaasPalette.success,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1420,7 +1632,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               }),
               child: const Icon(
                 Icons.close_rounded,
-                color: D.slate400,
+                color: SaasPalette.textTertiary,
                 size: 18,
               ),
             ),
@@ -1436,8 +1648,8 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         icon: const Icon(Icons.upload_file_rounded, size: 18),
         label: const Text('Seleccionar imagen / comprobante'),
         style: OutlinedButton.styleFrom(
-          foregroundColor: D.skyBlue,
-          side: const BorderSide(color: D.skyBlue),
+          foregroundColor: SaasPalette.brand600,
+          side: const BorderSide(color: SaasPalette.brand600),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -1451,7 +1663,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: isError ? D.rose : D.emerald,
+        backgroundColor: isError ? SaasPalette.danger : SaasPalette.success,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -1509,6 +1721,16 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
     super.dispose();
   }
 
+  Color _estadoColor(String estado) {
+    final e = estado.toLowerCase();
+    if (e.contains('al dia') || e.contains('al día')) {
+      return SaasPalette.success;
+    }
+    if (e.contains('pendiente')) return SaasPalette.warning;
+    if (e.contains('cancelado')) return SaasPalette.danger;
+    return SaasPalette.textTertiary;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -1517,84 +1739,139 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
       child: Container(
         constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
         decoration: BoxDecoration(
-          color: D.surfaceHigh,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: D.border),
+          color: SaasPalette.bgCanvas,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: SaasPalette.border),
         ),
         child: Column(
           children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
+            // Gradient header
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [SaasPalette.brand600, SaasPalette.brand900],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
               child: Row(
                 children: [
                   const Icon(
                     Icons.airplane_ticket_rounded,
-                    color: D.skyBlue,
+                    color: Colors.white,
                     size: 20,
                   ),
                   const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text(
-                      'Seleccionar Reserva',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Seleccionar Reserva',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          '${widget.reservas.length} reservas disponibles',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   IconButton(
                     icon: const Icon(
                       Icons.close_rounded,
-                      color: D.slate400,
+                      color: Colors.white70,
                       size: 20,
                     ),
                     onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ],
               ),
             ),
             // Search field
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
               child: TextField(
                 controller: _searchCtrl,
                 autofocus: true,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: const TextStyle(
+                  color: SaasPalette.textPrimary,
+                  fontSize: 14,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Buscar por ID, correo o responsable...',
-                  hintStyle: TextStyle(color: D.slate400, fontSize: 13),
+                  hintStyle: const TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 13,
+                  ),
                   prefixIcon: const Icon(
                     Icons.search_rounded,
-                    color: D.slate400,
+                    color: SaasPalette.textTertiary,
                     size: 18,
                   ),
                   filled: true,
-                  fillColor: D.surface.withOpacity(0.5),
+                  fillColor: SaasPalette.bgSubtle,
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: D.border),
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: SaasPalette.border),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: D.skyBlue),
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: SaasPalette.brand600),
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: 16,
+                    vertical: 12,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            // Results count
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${_filtered.length} resultado${_filtered.length != 1 ? 's' : ''}',
+                  style: const TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ),
             // List
             Expanded(
               child: _filtered.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Sin resultados',
-                        style: TextStyle(color: D.slate600, fontSize: 13),
+                  ? const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.search_off_rounded,
+                            color: SaasPalette.textTertiary,
+                            size: 40,
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Sin resultados',
+                            style: TextStyle(
+                              color: SaasPalette.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ),
                     )
                   : ListView.separated(
@@ -1604,61 +1881,52 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                       ),
                       itemCount: _filtered.length,
                       separatorBuilder: (context, i) =>
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 6),
                       itemBuilder: (_, index) {
                         final r = _filtered[index];
-                        final responsable = r.integrantes.isNotEmpty
-                            ? r.integrantes
-                                  .firstWhere(
-                                    (i) => i.esResponsable,
-                                    orElse: () => r.integrantes.first,
-                                  )
-                                  .nombre
-                            : r.correo;
+                        final responsable = r.responsable?.nombre;
                         final label = r.idReserva ?? 'Reserva #${r.id}';
                         return Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(10),
                             onTap: () => Navigator.pop(context, r),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 16,
+                                horizontal: 14,
+                                vertical: 12,
                               ),
                               decoration: BoxDecoration(
-                                color: D.surface.withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.05),
-                                ),
+                                color: SaasPalette.bgSubtle,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: SaasPalette.border),
                               ),
                               child: Row(
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
+                                      horizontal: 10,
+                                      vertical: 5,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: D.skyBlue.withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(8),
+                                      color: SaasPalette.brand50,
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
                                       label,
                                       style: const TextStyle(
-                                        color: D.skyBlue,
+                                        color: SaasPalette.brand600,
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 16),
+                                  const SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
-                                      responsable,
+                                      responsable ?? 'Sin responsable',
                                       style: const TextStyle(
-                                        color: Colors.white,
+                                        color: SaasPalette.textPrimary,
                                         fontSize: 13,
                                       ),
                                       overflow: TextOverflow.ellipsis,
@@ -1667,8 +1935,9 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                                   Text(
                                     r.estado,
                                     style: TextStyle(
-                                      color: D.slate400,
+                                      color: _estadoColor(r.estado),
                                       fontSize: 11,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
@@ -1679,7 +1948,7 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                       },
                     ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
           ],
         ),
       ),
@@ -1742,9 +2011,9 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
       child: Container(
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: D.surfaceHigh,
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: D.border),
+          color: SaasPalette.bgCanvas,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: SaasPalette.border),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1752,7 +2021,7 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: D.emerald.withOpacity(0.1),
+                color: SaasPalette.success.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Image.asset(
@@ -1765,16 +2034,16 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
             const Text(
               'Confirmación de Pago',
               style: TextStyle(
-                color: Colors.white,
+                color: SaasPalette.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Notificaremos al cliente sobre su validación por WhatsApp.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: D.slate400, fontSize: 14),
+              style: TextStyle(color: SaasPalette.textSecondary, fontSize: 14),
             ),
             const SizedBox(height: 24),
             TextFormField(
@@ -1782,16 +2051,23 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
               maxLines: 4,
               minLines: 2,
               onChanged: (_) => setState(() {}),
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: const TextStyle(
+                color: SaasPalette.textPrimary,
+                fontSize: 14,
+              ),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: D.surface,
+                fillColor: SaasPalette.bgSubtle,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
                 ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: SaasPalette.brand600),
+                ),
                 hintText: 'Escribe el mensaje...',
-                hintStyle: TextStyle(color: D.slate600),
+                hintStyle: const TextStyle(color: SaasPalette.textTertiary),
               ),
             ),
             const SizedBox(height: 24),
@@ -1805,7 +2081,7 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
                     child: const Text(
                       'Cancelar',
                       style: TextStyle(
-                        color: D.slate400,
+                        color: SaasPalette.textSecondary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1817,7 +2093,7 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
                     onPressed: () => widget.onConfirm(widget.messageCtrl.text),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: D.emerald,
+                      backgroundColor: SaasPalette.success,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -1845,7 +2121,7 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
       decoration: BoxDecoration(
         color: const Color(0xff152d24),
         borderRadius: BorderRadius.circular(16).copyWith(topRight: Radius.zero),
-        border: Border.all(color: D.emerald.withOpacity(0.2)),
+        border: Border.all(color: SaasPalette.success.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1862,12 +2138,16 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
               Text(
                 'Ahora',
                 style: TextStyle(
-                  color: D.emerald.withOpacity(0.8),
+                  color: SaasPalette.success.withValues(alpha: 0.8),
                   fontSize: 10,
                 ),
               ),
               const SizedBox(width: 4),
-              Icon(Icons.done_all_rounded, color: D.skyBlue, size: 14),
+              const Icon(
+                Icons.done_all_rounded,
+                color: SaasPalette.brand600,
+                size: 14,
+              ),
             ],
           ),
         ],
@@ -1892,8 +2172,8 @@ class _ActionBtn extends StatelessWidget {
       icon: Icon(icon, size: 16),
       label: Text(label, style: const TextStyle(fontSize: 12)),
       style: OutlinedButton.styleFrom(
-        foregroundColor: D.skyBlue,
-        side: const BorderSide(color: D.skyBlue),
+        foregroundColor: SaasPalette.brand600,
+        side: const BorderSide(color: SaasPalette.brand600),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
@@ -1905,99 +2185,17 @@ class _ImageError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 200,
-      color: D.surfaceHigh.withOpacity(0.5),
-      child: Column(
+      color: SaasPalette.bgSubtle,
+      child: const Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.broken_image_rounded, color: D.rose, size: 48),
-          const SizedBox(height: 12),
+          Icon(Icons.broken_image_rounded, color: SaasPalette.danger, size: 48),
+          SizedBox(height: 12),
           Text(
             'Error al cargar comprobante',
-            style: TextStyle(color: D.slate400, fontSize: 12),
+            style: TextStyle(color: SaasPalette.textSecondary, fontSize: 12),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PremiumConfirmDialog extends StatelessWidget {
-  final String title, content;
-  final VoidCallback onConfirm;
-  const _PremiumConfirmDialog({
-    required this.title,
-    required this.content,
-    required this.onConfirm,
-  });
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: D.surfaceHigh,
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: D.border),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: D.rose, size: 64),
-            const SizedBox(height: 24),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              content,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: D.slate400, fontSize: 14),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'Cancelar',
-                      style: TextStyle(
-                        color: D.slate400,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: onConfirm,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: D.rose,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: const Text(
-                      'Confirmar',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:agente_viajes/core/theme/saas_palette.dart';
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -126,10 +127,8 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: D.bg,
         body: Stack(
           children: [
-            const PremiumBackground(),
             CustomScrollView(
               slivers: [
                 PremiumSliverAppBar(
@@ -155,115 +154,106 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
                           vertical: 16,
                         ),
                         child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 800),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Etiqueta de información
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 8,
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Etiqueta de información
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: D.skyBlue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: D.skyBlue.withOpacity(0.3),
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: D.skyBlue.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: D.skyBlue.withOpacity(0.3),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.label_important_rounded,
+                                        color: D.skyBlue,
+                                        size: 16,
                                       ),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.label_important_rounded,
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'DEFINICIÓN DE SERVICIO',
+                                        style: TextStyle(
                                           color: D.skyBlue,
-                                          size: 16,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          'DEFINICIÓN DE SERVICIO',
-                                          style: TextStyle(
-                                            color: D.skyBlue,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 24),
-
-                                  PremiumSectionCard(
-                                    title: 'INFORMACIÓN BÁSICA',
-                                    icon: Icons.room_service_rounded,
-                                    children: [
-                                      PremiumTextField(
-                                        controller: _nameCtrl,
-                                        label: 'Nombre del Servicio *',
-                                        icon: Icons
-                                            .label_important_outline_rounded,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      _buildSedeDropdown(canWrite: canWrite),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _costCtrl,
-                                        label: 'Costo Monetario',
-                                        icon: Icons.attach_money_rounded,
-                                        isNumeric: true,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _descriptionCtrl,
-                                        label: 'Descripción Detallada *',
-                                        icon: Icons.description_outlined,
-                                        maxLines: 3,
-                                        readOnly: !canWrite,
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 24),
+                                ),
+                                const SizedBox(height: 24),
 
-                                  PremiumSectionCard(
-                                    title: 'ESTADO Y VISIBILIDAD',
-                                    icon: Icons.visibility_rounded,
-                                    children: [
-                                      _buildVisibilitySwitch(
-                                        canWrite: canWrite,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 48),
-
-                                  if (canWrite)
-                                    Builder(
-                                      builder: (ctx) =>
-                                          BlocBuilder<
-                                            ServiceBloc,
-                                            ServiceState
-                                          >(
-                                            builder: (context, state) {
-                                              return PremiumActionButton(
-                                                label: _isEditing
-                                                    ? 'ACTUALIZAR SERVICIO'
-                                                    : 'GUARDAR SERVICIO',
-                                                icon: Icons.save_rounded,
-                                                isLoading:
-                                                    state is ServiceSaving,
-                                                onTap: () => _save(ctx),
-                                              );
-                                            },
-                                          ),
+                                PremiumSectionCard(
+                                  title: 'INFORMACIÓN BÁSICA',
+                                  icon: Icons.room_service_rounded,
+                                  children: [
+                                    PremiumTextField(
+                                      controller: _nameCtrl,
+                                      label: 'Nombre del Servicio *',
+                                      icon:
+                                          Icons.label_important_outline_rounded,
+                                      readOnly: !canWrite,
                                     ),
-                                  const SizedBox(height: 100),
-                                ],
-                              ),
+                                    const SizedBox(height: 20),
+                                    _buildSedeDropdown(canWrite: canWrite),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _costCtrl,
+                                      label: 'Costo Monetario',
+                                      icon: Icons.attach_money_rounded,
+                                      isNumeric: true,
+                                      readOnly: !canWrite,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _descriptionCtrl,
+                                      label: 'Descripción Detallada *',
+                                      icon: Icons.description_outlined,
+                                      maxLines: 3,
+                                      readOnly: !canWrite,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+
+                                PremiumSectionCard(
+                                  title: 'ESTADO Y VISIBILIDAD',
+                                  icon: Icons.visibility_rounded,
+                                  children: [
+                                    _buildVisibilitySwitch(canWrite: canWrite),
+                                  ],
+                                ),
+                                const SizedBox(height: 48),
+
+                                if (canWrite)
+                                  Builder(
+                                    builder: (ctx) =>
+                                        BlocBuilder<ServiceBloc, ServiceState>(
+                                          builder: (context, state) {
+                                            return PremiumActionButton(
+                                              label: _isEditing
+                                                  ? 'ACTUALIZAR SERVICIO'
+                                                  : 'GUARDAR SERVICIO',
+                                              icon: Icons.save_rounded,
+                                              isLoading: state is ServiceSaving,
+                                              onTap: () => _save(ctx),
+                                            );
+                                          },
+                                        ),
+                                  ),
+                                const SizedBox(height: 100),
+                              ],
                             ),
                           ),
                         ),
@@ -335,7 +325,11 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.store_rounded, color: D.skyBlue, size: 20),
+                    const Icon(
+                      Icons.store_rounded,
+                      color: SaasPalette.brand600,
+                      size: 20,
+                    ),
                     const SizedBox(width: 12),
                     Text(
                       sedes.any((s) => int.tryParse(s.id) == _selectedSedeId)
@@ -355,20 +349,20 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
                 value: sedes.any((s) => int.tryParse(s.id) == _selectedSedeId)
                     ? _selectedSedeId
                     : null,
-                dropdownColor: D.surfaceHigh,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                dropdownColor: D.white,
+                style: const TextStyle(color: Colors.black, fontSize: 14),
                 decoration: InputDecoration(
                   prefixIcon: const Icon(
                     Icons.store_rounded,
-                    color: D.skyBlue,
+                    color: SaasPalette.brand600,
                     size: 20,
                   ),
                   filled: true,
-                  fillColor: D.surfaceHigh.withOpacity(0.5),
+                  fillColor: D.white,
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide(
-                      color: Colors.white.withOpacity(0.05),
+                      color: Colors.black.withOpacity(0.08),
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
@@ -404,7 +398,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: Container(
           decoration: BoxDecoration(
-            color: D.surfaceHigh.withOpacity(0.3),
+            color: D.bg,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withOpacity(0.05)),
           ),
