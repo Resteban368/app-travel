@@ -17,10 +17,7 @@ class ApiWhatsAppRepository implements WhatsAppRepository {
       final response = await client.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'to': to,
-          'body': body,
-        }),
+        body: json.encode({'to': to, 'body': body}),
       );
 
       if (response.statusCode != 200 && response.statusCode != 201) {

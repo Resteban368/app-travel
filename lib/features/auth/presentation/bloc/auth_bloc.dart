@@ -98,10 +98,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<ChangePasswordRequested>(_onChangePasswordRequested);
   }
 
-  Future<void> _onAppStarted(
-    AppStarted event,
-    Emitter<AuthState> emit,
-  ) async {
+  Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
       final user = await _authRepository.restoreSession();
@@ -161,7 +158,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     emit(ChangePasswordLoading(user));
     try {
-      await _authRepository.changePassword(event.currentPassword, event.newPassword);
+      await _authRepository.changePassword(
+        event.currentPassword,
+        event.newPassword,
+      );
       await _authRepository.logout();
       emit(AuthInitial());
     } catch (e) {
@@ -172,7 +172,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         await _authRepository.logout();
         emit(AuthInitial());
       } else {
-        emit(ChangePasswordFailed(user, 'Error al cambiar la contraseña. Inténtalo de nuevo.'));
+        emit(
+          ChangePasswordFailed(
+            user,
+            'Error al cambiar la contraseña. Inténtalo de nuevo.',
+          ),
+        );
       }
     }
   }

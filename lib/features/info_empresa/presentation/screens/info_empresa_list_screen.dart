@@ -2,7 +2,6 @@ import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/saas_palette.dart';
-import '../../../../core/layout/admin_shell.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../domain/entities/info_empresa.dart';
@@ -18,7 +17,7 @@ class InfoEmpresaListScreen extends StatefulWidget {
 
 class _InfoEmpresaListScreenState extends State<InfoEmpresaListScreen> {
   final _searchCtrl = TextEditingController();
-  String _searchQuery = '';
+  final String _searchQuery = '';
 
   @override
   void dispose() {
@@ -33,110 +32,105 @@ class _InfoEmpresaListScreenState extends State<InfoEmpresaListScreen> {
         authState is AuthAuthenticated &&
         authState.user.canWrite('infoEmpresa');
 
-    return AdminShell(
-      currentIndex: 8,
-      child: Scaffold(
-        backgroundColor: SaasPalette.bgApp,
-        body: BlocConsumer<InfoEmpresaBloc, InfoEmpresaState>(
-          listener: (context, state) {
-            if (state is InfoSynced) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Vectores sincronizados correctamente'),
-                  backgroundColor: SaasPalette.success,
-                ),
-              );
-            }
-            if (state is InfoError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: SaasPalette.danger,
-                ),
-              );
-            }
-          },
-          builder: (context, state) {
-            List<InfoEmpresa> infoList = [];
-            if (state is InfoLoaded)
-              infoList = state.infoList;
-            else if (state is InfoSaved)
-              infoList = state.infoList;
-            else if (state is InfoSynced)
-              infoList = state.infoList;
-            else if (state is InfoSyncing)
-              infoList = state.infoList;
-            else if (state is InfoSaving && state.infoList != null) {
-              infoList = state.infoList!;
-            }
-
-            final filtered = infoList.where((i) {
-              return i.nombre.toLowerCase().contains(
-                _searchQuery.toLowerCase(),
-              );
-            }).toList();
-
-            final isLoading = state is InfoLoading && infoList.isEmpty;
-
-            return CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                // ── Header ─────────────────────────────────────────────────
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
-                  sliver: SliverToBoxAdapter(
-                    child: _InfoHeader(
-                      infoList: infoList,
-                      canWrite: canWrite,
-                      isLoading: state is InfoLoading,
-                    ),
-                  ),
-                ),
-
-                // ── Content ────────────────────────────────────────────────
-                if (isLoading)
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (_, __) => const SaasListSkeleton(),
-                        childCount: 1,
-                      ),
-                    ),
-                  )
-                else if (filtered.isEmpty)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: SaasEmptyState(
-                      icon: _searchQuery.isNotEmpty
-                          ? Icons.search_off_rounded
-                          : Icons.business_rounded,
-                      title: _searchQuery.isNotEmpty
-                          ? 'Sin coincidencias'
-                          : 'Sin información',
-                      subtitle: _searchQuery.isNotEmpty
-                          ? 'No encontramos información que coincida con "$_searchQuery".'
-                          : 'Aún no has registrado la información corporativa de tu agencia.',
-                    ),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        final info = filtered[index];
-                        return _InfoCard(
-                          info: info,
-                          state: state,
-                          canWrite: canWrite,
-                        );
-                      }, childCount: filtered.length),
-                    ),
-                  ),
-              ],
+    return Scaffold(
+      backgroundColor: SaasPalette.bgApp,
+      body: BlocConsumer<InfoEmpresaBloc, InfoEmpresaState>(
+        listener: (context, state) {
+          if (state is InfoSynced) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Vectores sincronizados correctamente'),
+                backgroundColor: SaasPalette.success,
+              ),
             );
-          },
-        ),
+          }
+          if (state is InfoError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: SaasPalette.danger,
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          List<InfoEmpresa> infoList = [];
+          if (state is InfoLoaded) {
+            infoList = state.infoList;
+          } else if (state is InfoSaved)
+            infoList = state.infoList;
+          else if (state is InfoSynced)
+            infoList = state.infoList;
+          else if (state is InfoSyncing)
+            infoList = state.infoList;
+          else if (state is InfoSaving && state.infoList != null) {
+            infoList = state.infoList!;
+          }
+
+          final filtered = infoList.where((i) {
+            return i.nombre.toLowerCase().contains(_searchQuery.toLowerCase());
+          }).toList();
+
+          final isLoading = state is InfoLoading && infoList.isEmpty;
+
+          return CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              // ── Header ─────────────────────────────────────────────────
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                sliver: SliverToBoxAdapter(
+                  child: _InfoHeader(
+                    infoList: infoList,
+                    canWrite: canWrite,
+                    isLoading: state is InfoLoading,
+                  ),
+                ),
+              ),
+
+              // ── Content ────────────────────────────────────────────────
+              if (isLoading)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (_, __) => const SaasListSkeleton(),
+                      childCount: 1,
+                    ),
+                  ),
+                )
+              else if (filtered.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: SaasEmptyState(
+                    icon: _searchQuery.isNotEmpty
+                        ? Icons.search_off_rounded
+                        : Icons.business_rounded,
+                    title: _searchQuery.isNotEmpty
+                        ? 'Sin coincidencias'
+                        : 'Sin información',
+                    subtitle: _searchQuery.isNotEmpty
+                        ? 'No encontramos información que coincida con "$_searchQuery".'
+                        : 'Aún no has registrado la información corporativa de tu agencia.',
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final info = filtered[index];
+                      return _InfoCard(
+                        info: info,
+                        state: state,
+                        canWrite: canWrite,
+                      );
+                    }, childCount: filtered.length),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

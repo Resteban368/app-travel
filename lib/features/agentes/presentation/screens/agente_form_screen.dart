@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:agente_viajes/core/theme/saas_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -233,43 +232,46 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 // ── Badge de Ruta ───────────────────────────
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: SaasPalette.brand600.withOpacity(
+                                          0.1,
                                         ),
-                                        decoration: BoxDecoration(
-                                          color: SaasPalette.brand600.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(
-                                            color: SaasPalette.brand600.withOpacity(0.2),
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: const [
-                                            Icon(
-                                              Icons.admin_panel_settings_rounded,
-                                              color: SaasPalette.brand600,
-                                              size: 14,
-                                            ),
-                                            SizedBox(width: 8),
-                                            Text(
-                                              'ADMINISTRACIÓN / AGENTES',
-                                              style: TextStyle(
-                                                color: SaasPalette.brand600,
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w900,
-                                                letterSpacing: 1,
-                                              ),
-                                            ),
-                                          ],
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: SaasPalette.brand600
+                                              .withOpacity(0.2),
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: const [
+                                          Icon(
+                                            Icons.admin_panel_settings_rounded,
+                                            color: SaasPalette.brand600,
+                                            size: 14,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'ADMINISTRACIÓN / AGENTES',
+                                            style: TextStyle(
+                                              color: SaasPalette.brand600,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 1,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                                 const SizedBox(height: 24),
 
                                 PremiumSectionCard(
@@ -402,7 +404,9 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                   Text(
                     _isActive ? 'Habilitado' : 'Bloqueado',
                     style: TextStyle(
-                      color: _isActive ? SaasPalette.success : SaasPalette.danger,
+                      color: _isActive
+                          ? SaasPalette.success
+                          : SaasPalette.danger,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -412,7 +416,7 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
             ),
             Switch(
               value: _isActive,
-              activeColor: SaasPalette.success,
+              activeThumbColor: SaasPalette.success,
               activeTrackColor: SaasPalette.success.withOpacity(0.2),
               inactiveThumbColor: SaasPalette.danger,
               inactiveTrackColor: SaasPalette.danger.withOpacity(0.2),
@@ -428,14 +432,16 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
     final enabled = _permisos.containsKey(module.key);
     final level = _permisos[module.key] ?? 'lectura';
     final isCompleto = level == 'completo';
-    
+
     // Colores dinámicos basados en el estado
     final activeColor = isCompleto ? SaasPalette.success : SaasPalette.brand600;
-    final rowBg = enabled 
-        ? (isCompleto ? SaasPalette.success.withOpacity(0.05) : SaasPalette.brand50)
+    final rowBg = enabled
+        ? (isCompleto
+              ? SaasPalette.success.withOpacity(0.05)
+              : SaasPalette.brand50)
         : SaasPalette.bgCanvas;
-    final rowBorder = enabled 
-        ? activeColor.withOpacity(0.15) 
+    final rowBorder = enabled
+        ? activeColor.withOpacity(0.15)
         : SaasPalette.border;
 
     return Padding(
@@ -455,8 +461,8 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: enabled 
-                        ? activeColor.withOpacity(0.1) 
+                    color: enabled
+                        ? activeColor.withOpacity(0.1)
                         : SaasPalette.bgSubtle,
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -471,7 +477,9 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                   child: Text(
                     module.label,
                     style: TextStyle(
-                      color: enabled ? SaasPalette.textPrimary : SaasPalette.textSecondary,
+                      color: enabled
+                          ? SaasPalette.textPrimary
+                          : SaasPalette.textSecondary,
                       fontSize: 14,
                       fontWeight: enabled ? FontWeight.w700 : FontWeight.w500,
                     ),
@@ -479,7 +487,7 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                 ),
                 Switch(
                   value: enabled,
-                  activeColor: activeColor,
+                  activeThumbColor: activeColor,
                   activeTrackColor: activeColor.withOpacity(0.2),
                   onChanged: (v) => _toggleModule(module.key, v),
                 ),

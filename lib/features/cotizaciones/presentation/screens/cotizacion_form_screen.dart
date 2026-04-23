@@ -46,8 +46,9 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
       _numeroPasajerosCtrl.text = c.numeroPasajeros.toString();
       _estado = c.estado;
       if (c.fechaSalida != null) _fechaSalida = DateTime.parse(c.fechaSalida!);
-      if (c.fechaRegreso != null)
+      if (c.fechaRegreso != null) {
         _fechaRegreso = DateTime.parse(c.fechaRegreso!);
+      }
     }
   }
 
@@ -77,8 +78,7 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
             onPrimary: Colors.white,
             surface: SaasPalette.bgCanvas,
             onSurface: SaasPalette.textPrimary,
-          ),
-          dialogBackgroundColor: SaasPalette.bgCanvas,
+          ), dialogTheme: DialogThemeData(backgroundColor: SaasPalette.bgCanvas),
         ),
         child: child!,
       ),

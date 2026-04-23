@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/saas_palette.dart';
-import '../../../../core/layout/admin_shell.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../domain/entities/service.dart';
@@ -16,7 +15,7 @@ class ServiceListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AdminShell(currentIndex: 6, child: _ServiceListBody());
+    return const Scaffold(body: _ServiceListBody());
   }
 }
 
@@ -65,7 +64,8 @@ class _ServiceListBodyState extends State<_ServiceListBody> {
           final isLoading = state is ServiceLoading && list.isEmpty;
 
           return RefreshIndicator(
-            onRefresh: () async => context.read<ServiceBloc>().add(LoadServices()),
+            onRefresh: () async =>
+                context.read<ServiceBloc>().add(LoadServices()),
             color: SaasPalette.brand600,
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -124,17 +124,14 @@ class _ServiceListBodyState extends State<_ServiceListBody> {
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
                     sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final service = filtered[index];
-                          return _ServiceCard(
-                            service: service,
-                            canWrite: canWrite,
-                            onDelete: () => _confirmDelete(service),
-                          );
-                        },
-                        childCount: filtered.length,
-                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final service = filtered[index];
+                        return _ServiceCard(
+                          service: service,
+                          canWrite: canWrite,
+                          onDelete: () => _confirmDelete(service),
+                        );
+                      }, childCount: filtered.length),
                     ),
                   ),
               ],
@@ -392,7 +389,11 @@ class _ServiceActionMenu extends StatelessWidget {
           value: 'edit',
           child: Row(
             children: const [
-              Icon(Icons.edit_outlined, size: 18, color: SaasPalette.textPrimary),
+              Icon(
+                Icons.edit_outlined,
+                size: 18,
+                color: SaasPalette.textPrimary,
+              ),
               SizedBox(width: 12),
               Text('Editar servicio', style: TextStyle(fontSize: 13)),
             ],
@@ -403,9 +404,16 @@ class _ServiceActionMenu extends StatelessWidget {
           value: 'delete',
           child: Row(
             children: const [
-              Icon(Icons.delete_outline_rounded, size: 18, color: SaasPalette.danger),
+              Icon(
+                Icons.delete_outline_rounded,
+                size: 18,
+                color: SaasPalette.danger,
+              ),
               SizedBox(width: 12),
-              Text('Eliminar', style: TextStyle(color: SaasPalette.danger, fontSize: 13)),
+              Text(
+                'Eliminar',
+                style: TextStyle(color: SaasPalette.danger, fontSize: 13),
+              ),
             ],
           ),
         ),

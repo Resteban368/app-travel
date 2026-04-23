@@ -2,7 +2,6 @@ import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/saas_palette.dart';
-import '../../../../core/layout/admin_shell.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../domain/entities/politica_reserva.dart';
@@ -30,112 +29,107 @@ class _PoliticaReservaListScreenState extends State<PoliticaReservaListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AdminShell(
-      currentIndex: 7,
-      child: Scaffold(
-        backgroundColor: SaasPalette.bgApp,
-        body: BlocBuilder<PoliticaReservaBloc, PoliticaReservaState>(
-          builder: (context, state) {
-            final authState = context.watch<AuthBloc>().state;
-            final canWrite =
-                authState is AuthAuthenticated &&
-                authState.user.canWrite('politicasReserva');
+    return Scaffold(
+      backgroundColor: SaasPalette.bgApp,
+      body: BlocBuilder<PoliticaReservaBloc, PoliticaReservaState>(
+        builder: (context, state) {
+          final authState = context.watch<AuthBloc>().state;
+          final canWrite =
+              authState is AuthAuthenticated &&
+              authState.user.canWrite('politicasReserva');
 
-            List<PoliticaReserva> politicas = [];
-            if (state is PoliticaLoaded) {
-              politicas = state.politicas;
-            } else if (state is PoliticaSaving && state.politicas != null) {
-              politicas = state.politicas!;
-            } else if (state is PoliticaSaved) {
-              politicas = state.politicas;
-            }
+          List<PoliticaReserva> politicas = [];
+          if (state is PoliticaLoaded) {
+            politicas = state.politicas;
+          } else if (state is PoliticaSaving && state.politicas != null) {
+            politicas = state.politicas!;
+          } else if (state is PoliticaSaved) {
+            politicas = state.politicas;
+          }
 
-            final filtered = politicas.where((p) {
-              final query = _searchQuery.toLowerCase();
-              return p.titulo.toLowerCase().contains(query) ||
-                  p.descripcion.toLowerCase().contains(query);
-            }).toList();
+          final filtered = politicas.where((p) {
+            final query = _searchQuery.toLowerCase();
+            return p.titulo.toLowerCase().contains(query) ||
+                p.descripcion.toLowerCase().contains(query);
+          }).toList();
 
-            final isLoading = state is PoliticaLoading && politicas.isEmpty;
+          final isLoading = state is PoliticaLoading && politicas.isEmpty;
 
-            return RefreshIndicator(
-              onRefresh: () async => context.read<PoliticaReservaBloc>().add(LoadPoliticas()),
-              color: SaasPalette.brand600,
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  // ── Header ─────────────────────────────────────────────────
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
-                    sliver: SliverToBoxAdapter(
-                      child: _PoliticaHeader(canWrite: canWrite),
+          return RefreshIndicator(
+            onRefresh: () async =>
+                context.read<PoliticaReservaBloc>().add(LoadPoliticas()),
+            color: SaasPalette.brand600,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                // ── Header ─────────────────────────────────────────────────
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: _PoliticaHeader(canWrite: canWrite),
+                  ),
+                ),
+
+                // ── Search Field ──────────────────────────────────────────
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: SaasSearchField(
+                      controller: _searchCtrl,
+                      hintText: 'Buscar políticas por título o contenido...',
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                      onClear: () {
+                        _searchCtrl.clear();
+                        setState(() => _searchQuery = '');
+                      },
                     ),
                   ),
+                ),
 
-                  // ── Search Field ──────────────────────────────────────────
+                // ── Content ────────────────────────────────────────────────
+                if (isLoading)
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
-                    sliver: SliverToBoxAdapter(
-                      child: SaasSearchField(
-                        controller: _searchCtrl,
-                        hintText: 'Buscar políticas por título o contenido...',
-                        onChanged: (v) => setState(() => _searchQuery = v),
-                        onClear: () {
-                          _searchCtrl.clear();
-                          setState(() => _searchQuery = '');
-                        },
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (_, __) => const SaasListSkeleton(),
+                        childCount: 4,
                       ),
+                    ),
+                  )
+                else if (filtered.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: SaasEmptyState(
+                      icon: _searchQuery.isNotEmpty
+                          ? Icons.search_off_rounded
+                          : Icons.policy_outlined,
+                      title: _searchQuery.isNotEmpty
+                          ? 'Sin resultados'
+                          : 'Sin políticas',
+                      subtitle: _searchQuery.isNotEmpty
+                          ? 'No encontramos políticas que coincidan con "$_searchQuery".'
+                          : 'Aún no has definido las políticas de reserva de la agencia.',
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final politica = filtered[index];
+                        return _PoliticaCard(
+                          politica: politica,
+                          canWrite: canWrite,
+                          onDelete: () => _confirmDelete(politica),
+                        );
+                      }, childCount: filtered.length),
                     ),
                   ),
-
-                  // ── Content ────────────────────────────────────────────────
-                  if (isLoading)
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (_, __) => const SaasListSkeleton(),
-                          childCount: 4,
-                        ),
-                      ),
-                    )
-                  else if (filtered.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: SaasEmptyState(
-                        icon: _searchQuery.isNotEmpty
-                            ? Icons.search_off_rounded
-                            : Icons.policy_outlined,
-                        title: _searchQuery.isNotEmpty
-                            ? 'Sin resultados'
-                            : 'Sin políticas',
-                        subtitle: _searchQuery.isNotEmpty
-                            ? 'No encontramos políticas que coincidan con "$_searchQuery".'
-                            : 'Aún no has definido las políticas de reserva de la agencia.',
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final politica = filtered[index];
-                            return _PoliticaCard(
-                              politica: politica,
-                              canWrite: canWrite,
-                              onDelete: () => _confirmDelete(politica),
-                            );
-                          },
-                          childCount: filtered.length,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
-        ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -200,8 +194,10 @@ class _PoliticaHeader extends StatelessWidget {
               SaasButton(
                 label: 'Nueva Política',
                 icon: Icons.add_rounded,
-                onPressed: () =>
-                    Navigator.pushNamed(context, AppRouter.politicaReservaCreate),
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  AppRouter.politicaReservaCreate,
+                ),
               ),
           ],
         ),
@@ -386,7 +382,11 @@ class _PoliticaActionMenu extends StatelessWidget {
           value: 'edit',
           child: Row(
             children: const [
-              Icon(Icons.edit_outlined, size: 18, color: SaasPalette.textPrimary),
+              Icon(
+                Icons.edit_outlined,
+                size: 18,
+                color: SaasPalette.textPrimary,
+              ),
               SizedBox(width: 12),
               Text('Editar política', style: TextStyle(fontSize: 13)),
             ],
@@ -397,9 +397,16 @@ class _PoliticaActionMenu extends StatelessWidget {
           value: 'delete',
           child: Row(
             children: const [
-              Icon(Icons.delete_outline_rounded, size: 18, color: SaasPalette.danger),
+              Icon(
+                Icons.delete_outline_rounded,
+                size: 18,
+                color: SaasPalette.danger,
+              ),
               SizedBox(width: 12),
-              Text('Eliminar', style: TextStyle(color: SaasPalette.danger, fontSize: 13)),
+              Text(
+                'Eliminar',
+                style: TextStyle(color: SaasPalette.danger, fontSize: 13),
+              ),
             ],
           ),
         ),

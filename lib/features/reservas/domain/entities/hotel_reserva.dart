@@ -6,7 +6,7 @@ class HotelReserva extends Equatable {
   final int? hotelId;
   final Hotel? hotel;
   final String numeroReserva;
-  final String fechaCheckin;  // 'yyyy-MM-dd'
+  final String fechaCheckin; // 'yyyy-MM-dd'
   final String fechaCheckout; // 'yyyy-MM-dd'
   final double? valor;
 
@@ -21,6 +21,13 @@ class HotelReserva extends Equatable {
   });
 
   @override
-  List<Object?> get props =>
-      [id, hotelId, hotel, numeroReserva, fechaCheckin, fechaCheckout, valor];
+  List<Object?> get props => [
+    id,
+    hotelId,
+    hotel,
+    numeroReserva,
+    fechaCheckin,
+    fechaCheckout,
+    valor,
+  ];
 }

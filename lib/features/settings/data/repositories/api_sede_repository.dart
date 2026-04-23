@@ -87,8 +87,7 @@ class ApiSedeRepository implements SedeRepository {
 
   /// Maps API JSON to Sede entity.
   Sede _fromJson(Map<String, dynamic> json) {
-    final idValue =
-        json['id_sede'] ?? json['idSede'] ?? json['id'] ?? '0';
+    final idValue = json['id_sede'] ?? json['idSede'] ?? json['id'] ?? '0';
     return Sede(
       id: idValue.toString(),
       nombreSede: json['nombre_sede'] ?? '',

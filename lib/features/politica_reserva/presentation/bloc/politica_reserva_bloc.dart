@@ -36,10 +36,10 @@ class PoliticaReservaBloc
     final List<PoliticaReserva> currentPoliticas = state is PoliticaLoaded
         ? (state as PoliticaLoaded).politicas
         : state is PoliticaSaving
-            ? ((state as PoliticaSaving).politicas ?? <PoliticaReserva>[])
-            : state is PoliticaSaved
-                ? (state as PoliticaSaved).politicas
-                : <PoliticaReserva>[];
+        ? ((state as PoliticaSaving).politicas ?? <PoliticaReserva>[])
+        : state is PoliticaSaved
+        ? (state as PoliticaSaved).politicas
+        : <PoliticaReserva>[];
 
     emit(PoliticaSaving(politicas: currentPoliticas));
     try {
@@ -58,10 +58,10 @@ class PoliticaReservaBloc
     final List<PoliticaReserva> currentPoliticas = state is PoliticaLoaded
         ? (state as PoliticaLoaded).politicas
         : state is PoliticaSaving
-            ? ((state as PoliticaSaving).politicas ?? <PoliticaReserva>[])
-            : state is PoliticaSaved
-                ? (state as PoliticaSaved).politicas
-                : <PoliticaReserva>[];
+        ? ((state as PoliticaSaving).politicas ?? <PoliticaReserva>[])
+        : state is PoliticaSaved
+        ? (state as PoliticaSaved).politicas
+        : <PoliticaReserva>[];
 
     emit(PoliticaSaving(politicas: currentPoliticas));
     try {
@@ -80,10 +80,10 @@ class PoliticaReservaBloc
     final List<PoliticaReserva> currentPoliticas = state is PoliticaLoaded
         ? (state as PoliticaLoaded).politicas
         : state is PoliticaSaving
-            ? ((state as PoliticaSaving).politicas ?? <PoliticaReserva>[])
-            : state is PoliticaSaved
-                ? (state as PoliticaSaved).politicas
-                : <PoliticaReserva>[];
+        ? ((state as PoliticaSaving).politicas ?? <PoliticaReserva>[])
+        : state is PoliticaSaved
+        ? (state as PoliticaSaved).politicas
+        : <PoliticaReserva>[];
 
     emit(PoliticaSaving(politicas: currentPoliticas));
     try {
@@ -102,10 +102,10 @@ class PoliticaReservaBloc
     final List<PoliticaReserva> currentPoliticas = state is PoliticaLoaded
         ? (state as PoliticaLoaded).politicas
         : state is PoliticaSaving
-            ? ((state as PoliticaSaving).politicas ?? <PoliticaReserva>[])
-            : state is PoliticaSaved
-                ? (state as PoliticaSaved).politicas
-                : <PoliticaReserva>[];
+        ? ((state as PoliticaSaving).politicas ?? <PoliticaReserva>[])
+        : state is PoliticaSaved
+        ? (state as PoliticaSaved).politicas
+        : <PoliticaReserva>[];
 
     emit(PoliticaSaving(politicas: currentPoliticas));
     try {

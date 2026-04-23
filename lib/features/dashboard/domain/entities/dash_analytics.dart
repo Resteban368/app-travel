@@ -82,16 +82,17 @@ class AnalyticsCotizacion {
     required this.createdAt,
   });
 
-  factory AnalyticsCotizacion.fromJson(Map<String, dynamic> j) => AnalyticsCotizacion(
-    id: j['id'] as int,
-    nombreCompleto: j['nombre_completo'] as String? ?? '',
-    detallesPlan: j['detalles_plan'] as String? ?? '',
-    numeroPasajeros: (j['numero_pasajeros'] as num?)?.toInt() ?? 1,
-    origenDestino: j['origen_destino'] as String?,
-    estado: j['estado'] as String? ?? '',
-    isRead: j['is_read'] as bool? ?? false,
-    createdAt: DateTime.parse(j['created_at'] as String),
-  );
+  factory AnalyticsCotizacion.fromJson(Map<String, dynamic> j) =>
+      AnalyticsCotizacion(
+        id: j['id'] as int,
+        nombreCompleto: j['nombre_completo'] as String? ?? '',
+        detallesPlan: j['detalles_plan'] as String? ?? '',
+        numeroPasajeros: (j['numero_pasajeros'] as num?)?.toInt() ?? 1,
+        origenDestino: j['origen_destino'] as String?,
+        estado: j['estado'] as String? ?? '',
+        isRead: j['is_read'] as bool? ?? false,
+        createdAt: DateTime.parse(j['created_at'] as String),
+      );
 }
 
 class VueloReservaItem {

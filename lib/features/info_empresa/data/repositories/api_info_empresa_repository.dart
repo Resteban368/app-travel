@@ -13,9 +13,9 @@ class ApiInfoEmpresaRepository implements InfoEmpresaRepository {
   static String get _baseUrl => '${ApiConstants.kBaseUrl}/v1/info-empresa';
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json; charset=UTF-8',
-        'Accept': 'application/json',
-      };
+    'Content-Type': 'application/json; charset=UTF-8',
+    'Accept': 'application/json',
+  };
 
   @override
   Future<List<InfoEmpresa>> getInfo() async {
@@ -40,7 +40,9 @@ class ApiInfoEmpresaRepository implements InfoEmpresaRepository {
       body: body,
     );
     if (response.statusCode != 201 && response.statusCode != 200) {
-      debugPrint('❌ [ApiInfoEmpresaRepository] Error: ${response.statusCode} — ${response.body}');
+      debugPrint(
+        '❌ [ApiInfoEmpresaRepository] Error: ${response.statusCode} — ${response.body}',
+      );
       throw Exception('Failed to create info: ${response.statusCode}');
     }
   }
@@ -73,19 +75,24 @@ class ApiInfoEmpresaRepository implements InfoEmpresaRepository {
 
   @override
   Future<void> syncVectors() async {
-    debugPrint('🚀 [ApiInfoEmpresaRepository] POST sync-vectors to $_baseUrl/sync-vectors');
+    debugPrint(
+      '🚀 [ApiInfoEmpresaRepository] POST sync-vectors to $_baseUrl/sync-vectors',
+    );
     final response = await client.post(
       Uri.parse('$_baseUrl/sync-vectors'),
       headers: _headers,
     );
     if (response.statusCode != 200 && response.statusCode != 201) {
-      debugPrint('❌ [ApiInfoEmpresaRepository] Sync Error: ${response.statusCode}');
+      debugPrint(
+        '❌ [ApiInfoEmpresaRepository] Sync Error: ${response.statusCode}',
+      );
       throw Exception('Failed to sync vectors: ${response.statusCode}');
     }
   }
 
   InfoEmpresa _fromJson(Map<String, dynamic> json) {
-    final int id = int.tryParse(
+    final int id =
+        int.tryParse(
           (json['id_info_empresa'] ?? json['id'] ?? '0').toString(),
         ) ??
         0;

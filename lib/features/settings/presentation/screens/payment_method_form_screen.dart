@@ -343,7 +343,7 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
           )
         else
           DropdownButtonFormField<String>(
-            value: items.contains(value) ? value : items.first,
+            initialValue: items.contains(value) ? value : items.first,
             dropdownColor: Colors.white,
             style: const TextStyle(color: Colors.black, fontSize: 14),
             decoration: InputDecoration(
@@ -397,7 +397,7 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
               style: const TextStyle(color: D.slate400, fontSize: 12),
             ),
             value: _isActive,
-            activeColor: D.emerald,
+            activeThumbColor: D.emerald,
             activeTrackColor: D.emerald.withOpacity(0.3),
             inactiveThumbColor: D.slate400,
             inactiveTrackColor: D.bg.withOpacity(0.5),

@@ -13,9 +13,9 @@ class ApiHotelRepository implements HotelRepository {
   static String get _baseUrl => '${ApiConstants.kBaseUrl}/v1/hoteles';
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json; charset=UTF-8',
-        'Accept': 'application/json',
-      };
+    'Content-Type': 'application/json; charset=UTF-8',
+    'Accept': 'application/json',
+  };
 
   @override
   Future<List<Hotel>> getHoteles() async {
@@ -23,10 +23,16 @@ class ApiHotelRepository implements HotelRepository {
     final response = await client.get(Uri.parse(_baseUrl), headers: _headers);
     if (response.statusCode == 200) {
       final decoded = json.decode(response.body);
-      final List<dynamic> data = decoded is Map ? (decoded['data'] ?? []) : decoded;
-      return data.map((item) => _fromJson(item as Map<String, dynamic>)).toList();
+      final List<dynamic> data = decoded is Map
+          ? (decoded['data'] ?? [])
+          : decoded;
+      return data
+          .map((item) => _fromJson(item as Map<String, dynamic>))
+          .toList();
     }
-    debugPrint('❌ [ApiHotelRepository] Error: ${response.statusCode} — ${response.body}');
+    debugPrint(
+      '❌ [ApiHotelRepository] Error: ${response.statusCode} — ${response.body}',
+    );
     throw Exception('Error al cargar hoteles: ${response.statusCode}');
   }
 
@@ -40,7 +46,9 @@ class ApiHotelRepository implements HotelRepository {
       body: body,
     );
     if (response.statusCode != 201 && response.statusCode != 200) {
-      debugPrint('❌ [ApiHotelRepository] Error: ${response.statusCode} — ${response.body}');
+      debugPrint(
+        '❌ [ApiHotelRepository] Error: ${response.statusCode} — ${response.body}',
+      );
       throw Exception('Error al crear hotel: ${response.statusCode}');
     }
   }
@@ -55,7 +63,9 @@ class ApiHotelRepository implements HotelRepository {
       body: body,
     );
     if (response.statusCode != 200) {
-      debugPrint('❌ [ApiHotelRepository] Error: ${response.statusCode} — ${response.body}');
+      debugPrint(
+        '❌ [ApiHotelRepository] Error: ${response.statusCode} — ${response.body}',
+      );
       throw Exception('Error al actualizar hotel: ${response.statusCode}');
     }
   }
@@ -67,7 +77,9 @@ class ApiHotelRepository implements HotelRepository {
       headers: _headers,
     );
     if (response.statusCode != 200 && response.statusCode != 204) {
-      debugPrint('❌ [ApiHotelRepository] Delete error: ${response.statusCode} — ${response.body}');
+      debugPrint(
+        '❌ [ApiHotelRepository] Delete error: ${response.statusCode} — ${response.body}',
+      );
       throw Exception('Error al eliminar hotel: ${response.statusCode}');
     }
   }

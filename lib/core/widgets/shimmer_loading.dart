@@ -16,8 +16,9 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1500))
-      ..repeat();
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
   }
 
   @override
@@ -44,7 +45,8 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
               begin: const Alignment(-1.0, -0.3),
               end: const Alignment(1.0, 0.3),
               transform: _SlidingGradientTransform(
-                  slidePercent: _controller.value),
+                slidePercent: _controller.value,
+              ),
             ).createShader(bounds);
           },
           child: child,
@@ -62,6 +64,10 @@ class _SlidingGradientTransform extends GradientTransform {
 
   @override
   Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
-    return Matrix4.translationValues(bounds.width * (slidePercent * 2 - 1), 0.0, 0.0);
+    return Matrix4.translationValues(
+      bounds.width * (slidePercent * 2 - 1),
+      0.0,
+      0.0,
+    );
   }
 }

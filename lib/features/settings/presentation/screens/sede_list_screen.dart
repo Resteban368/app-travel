@@ -2,7 +2,6 @@ import 'package:agente_viajes/config/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/saas_palette.dart';
-import '../../../../core/layout/admin_shell.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../domain/entities/sede.dart';
 import '../bloc/sede_bloc.dart';
@@ -40,115 +39,112 @@ class _SedeListScreenState extends State<SedeListScreen> {
     final canWrite =
         authState is AuthAuthenticated && authState.user.canWrite('sedes');
 
-    return AdminShell(
-      currentIndex: 2,
-      child: Scaffold(
-        backgroundColor: SaasPalette.bgApp,
-        body: BlocBuilder<SedeBloc, SedeState>(
-          builder: (context, state) {
-            List<Sede> list = [];
-            if (state is SedesLoaded) {
-              list = state.sedes;
-            } else if (state is SedeSaving && state.sedes != null) {
-              list = state.sedes!;
-            } else if (state is SedeSaved && state.sedes != null) {
-              list = state.sedes!;
-            }
+    return Scaffold(
+      backgroundColor: SaasPalette.bgApp,
+      body: BlocBuilder<SedeBloc, SedeState>(
+        builder: (context, state) {
+          List<Sede> list = [];
+          if (state is SedesLoaded) {
+            list = state.sedes;
+          } else if (state is SedeSaving && state.sedes != null) {
+            list = state.sedes!;
+          } else if (state is SedeSaved && state.sedes != null) {
+            list = state.sedes!;
+          }
 
-            final filteredList = list.where((s) {
-              return s.nombreSede.toLowerCase().contains(_searchQuery) ||
-                  s.direccion.toLowerCase().contains(_searchQuery);
-            }).toList();
+          final filteredList = list.where((s) {
+            return s.nombreSede.toLowerCase().contains(_searchQuery) ||
+                s.direccion.toLowerCase().contains(_searchQuery);
+          }).toList();
 
-            final isLoading = state is SedeLoading && list.isEmpty;
+          final isLoading = state is SedeLoading && list.isEmpty;
 
-            return RefreshIndicator(
-              onRefresh: () async => context.read<SedeBloc>().add(LoadSedes()),
-              color: SaasPalette.brand600,
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  // ── Header ─────────────────────────────────────────────────
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
-                    sliver: SliverToBoxAdapter(
-                      child: _SedeHeader(canWrite: canWrite),
+          return RefreshIndicator(
+            onRefresh: () async => context.read<SedeBloc>().add(LoadSedes()),
+            color: SaasPalette.brand600,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                // ── Header ─────────────────────────────────────────────────
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: _SedeHeader(canWrite: canWrite),
+                  ),
+                ),
+
+                // ── Search Bar ─────────────────────────────────────────────
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: SaasSearchField(
+                      controller: _searchCtrl,
+                      hintText: 'Buscar por nombre o dirección...',
+                      onChanged: (v) =>
+                          setState(() => _searchQuery = v.toLowerCase()),
+                      onClear: () {
+                        _searchCtrl.clear();
+                        setState(() => _searchQuery = '');
+                      },
                     ),
                   ),
+                ),
 
-                  // ── Search Bar ─────────────────────────────────────────────
+                // ── Content ────────────────────────────────────────────────
+                if (isLoading)
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
-                    sliver: SliverToBoxAdapter(
-                      child: SaasSearchField(
-                        controller: _searchCtrl,
-                        hintText: 'Buscar por nombre o dirección...',
-                        onChanged: (v) =>
-                            setState(() => _searchQuery = v.toLowerCase()),
-                        onClear: () {
-                          _searchCtrl.clear();
-                          setState(() => _searchQuery = '');
-                        },
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (_, __) => const SaasListSkeleton(),
+                        childCount: 4,
                       ),
+                    ),
+                  )
+                else if (filteredList.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: SaasEmptyState(
+                      icon: _searchQuery.isNotEmpty
+                          ? Icons.search_off_rounded
+                          : Icons.storefront_outlined,
+                      title: _searchQuery.isNotEmpty
+                          ? 'Sin resultados'
+                          : 'Sin sedes',
+                      subtitle: _searchQuery.isNotEmpty
+                          ? 'No encontramos sedes que coincidan con "$_searchQuery".'
+                          : 'Aún no has registrado ninguna sede operativa.',
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final sede = filteredList[index];
+                        return _SedeCard(
+                          sede: sede,
+                          canWrite: canWrite,
+                          onEdit: () {
+                            print('sede: $sede');
+                            Navigator.pushNamed(
+                              context,
+                              AppRouter.sedeForm,
+                              arguments: sede,
+                            );
+                          },
+                          onDelete: () => _confirmDelete(sede),
+                          onToggleStatus: () => context.read<SedeBloc>().add(
+                            ToggleSedeActive(sede.id),
+                          ),
+                        );
+                      }, childCount: filteredList.length),
                     ),
                   ),
-
-                  // ── Content ────────────────────────────────────────────────
-                  if (isLoading)
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (_, __) => const SaasListSkeleton(),
-                          childCount: 4,
-                        ),
-                      ),
-                    )
-                  else if (filteredList.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: SaasEmptyState(
-                        icon: _searchQuery.isNotEmpty
-                            ? Icons.search_off_rounded
-                            : Icons.storefront_outlined,
-                        title: _searchQuery.isNotEmpty
-                            ? 'Sin resultados'
-                            : 'Sin sedes',
-                        subtitle: _searchQuery.isNotEmpty
-                            ? 'No encontramos sedes que coincidan con "$_searchQuery".'
-                            : 'Aún no has registrado ninguna sede operativa.',
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          final sede = filteredList[index];
-                          return _SedeCard(
-                            sede: sede,
-                            canWrite: canWrite,
-                            onEdit: () {
-                              print('sede: $sede');
-                              Navigator.pushNamed(
-                                context,
-                                AppRouter.sedeForm,
-                                arguments: sede,
-                              );
-                            },
-                            onDelete: () => _confirmDelete(sede),
-                            onToggleStatus: () => context.read<SedeBloc>().add(
-                              ToggleSedeActive(sede.id),
-                            ),
-                          );
-                        }, childCount: filteredList.length),
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
-        ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

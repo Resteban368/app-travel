@@ -59,6 +59,11 @@ import '../../features/clientes/presentation/bloc/cliente_bloc.dart';
 import '../../features/hoteles/data/repositories/api_hotel_repository.dart';
 import '../../features/hoteles/domain/repositories/hotel_repository.dart';
 import '../../features/hoteles/presentation/bloc/hotel_bloc.dart';
+import '../../features/clientes/presentation/bloc/historial/cliente_historial_bloc.dart';
+import '../../features/auditoria/data/repositories/api_auditoria_repository.dart';
+import '../../features/auditoria/domain/repositories/auditoria_repository.dart';
+import '../../features/auditoria/presentation/bloc/sesiones_bloc.dart';
+import '../../features/auditoria/presentation/bloc/auditoria_general_bloc.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -71,30 +76,63 @@ void initDependencies() {
   // ─── Network ──────────────────────────────────────────
   sl.registerLazySingleton(() => const FlutterSecureStorage());
   sl.registerLazySingleton(() => SessionExpiredNotifier());
-  sl.registerLazySingleton<http.Client>(() => AuthClient(http.Client(), sl(), sl()));
+  sl.registerLazySingleton<http.Client>(
+    () => AuthClient(http.Client(), sl(), sl()),
+  );
 
   // ─── Repositories ─────────────────────────────────────
-  sl.registerLazySingleton<AuthRepository>(() => ApiAuthRepository(storage: sl()));
-  sl.registerLazySingleton<TourRepository>(() => ApiTourRepository(client: sl()));
-  sl.registerLazySingleton<SedeRepository>(() => ApiSedeRepository(client: sl()));
+  sl.registerLazySingleton<AuthRepository>(
+    () => ApiAuthRepository(storage: sl()),
+  );
+  sl.registerLazySingleton<TourRepository>(
+    () => ApiTourRepository(client: sl()),
+  );
+  sl.registerLazySingleton<SedeRepository>(
+    () => ApiSedeRepository(client: sl()),
+  );
   sl.registerLazySingleton<PaymentMethodRepository>(
     () => ApiPaymentMethodRepository(client: sl()),
   );
-  sl.registerLazySingleton<CatalogueRepository>(() => ApiCatalogueRepository(client: sl()));
+  sl.registerLazySingleton<CatalogueRepository>(
+    () => ApiCatalogueRepository(client: sl()),
+  );
   sl.registerLazySingleton<FaqRepository>(() => ApiFaqRepository(client: sl()));
-  sl.registerLazySingleton<ServiceRepository>(() => ApiServiceRepository(client: sl()));
+  sl.registerLazySingleton<ServiceRepository>(
+    () => ApiServiceRepository(client: sl()),
+  );
   sl.registerLazySingleton<PoliticaReservaRepository>(
     () => ApiPoliticaReservaRepository(client: sl()),
   );
-  sl.registerLazySingleton<InfoEmpresaRepository>(() => ApiInfoEmpresaRepository(client: sl()));
-  sl.registerLazySingleton<PagoRealizadoRepository>(() => ApiPagoRealizadoRepository(client: sl()));
-  sl.registerLazySingleton<WhatsAppRepository>(() => ApiWhatsAppRepository(client: sl()));
-  sl.registerLazySingleton<CotizacionRepository>(() => ApiCotizacionRepository(client: sl()));
-  sl.registerLazySingleton<AgenteRepository>(() => ApiAgenteRepository(client: sl()));
-  sl.registerLazySingleton<ReservaRepository>(() => ApiReservaRepository(client: sl()));
-  sl.registerLazySingleton<ClienteRepository>(() => ApiClienteRepository(client: sl()));
-  sl.registerLazySingleton<HotelRepository>(() => ApiHotelRepository(client: sl()));
-  sl.registerLazySingleton<UploadRepository>(() => ApiUploadRepository(client: sl()));
+  sl.registerLazySingleton<InfoEmpresaRepository>(
+    () => ApiInfoEmpresaRepository(client: sl()),
+  );
+  sl.registerLazySingleton<PagoRealizadoRepository>(
+    () => ApiPagoRealizadoRepository(client: sl()),
+  );
+  sl.registerLazySingleton<WhatsAppRepository>(
+    () => ApiWhatsAppRepository(client: sl()),
+  );
+  sl.registerLazySingleton<CotizacionRepository>(
+    () => ApiCotizacionRepository(client: sl()),
+  );
+  sl.registerLazySingleton<AgenteRepository>(
+    () => ApiAgenteRepository(client: sl()),
+  );
+  sl.registerLazySingleton<ReservaRepository>(
+    () => ApiReservaRepository(client: sl()),
+  );
+  sl.registerLazySingleton<ClienteRepository>(
+    () => ApiClienteRepository(client: sl()),
+  );
+  sl.registerLazySingleton<HotelRepository>(
+    () => ApiHotelRepository(client: sl()),
+  );
+  sl.registerLazySingleton<UploadRepository>(
+    () => ApiUploadRepository(client: sl()),
+  );
+  sl.registerLazySingleton<AuditoriaRepository>(
+    () => ApiAuditoriaRepository(client: sl()),
+  );
 
   // ─── Use Cases ────────────────────────────────────────
   sl.registerLazySingleton(() => SendWhatsAppMessage(sl()));
@@ -107,9 +145,7 @@ void initDependencies() {
   sl.registerLazySingleton(() => CatalogueBloc(catalogueRepository: sl()));
   sl.registerLazySingleton(() => FaqBloc(faqRepository: sl()));
   sl.registerLazySingleton(() => ServiceBloc(serviceRepository: sl()));
-  sl.registerLazySingleton(
-    () => PoliticaReservaBloc(repository: sl()),
-  );
+  sl.registerLazySingleton(() => PoliticaReservaBloc(repository: sl()));
   sl.registerFactory(() => InfoEmpresaBloc(repository: sl()));
   sl.registerLazySingleton(() => PagoRealizadoBloc(repository: sl()));
   sl.registerFactory(() => WhatsAppBloc(sendWhatsAppMessage: sl()));
@@ -119,4 +155,7 @@ void initDependencies() {
   sl.registerFactory(() => ClienteBloc(repository: sl()));
   sl.registerLazySingleton(() => HotelBloc(repository: sl()));
   sl.registerFactory(() => UploadBloc(repository: sl()));
+  sl.registerFactory(() => ClienteHistorialBloc(repository: sl()));
+  sl.registerFactory(() => SesionesBloc(repository: sl()));
+  sl.registerFactory(() => AuditoriaGeneralBloc(repository: sl()));
 }

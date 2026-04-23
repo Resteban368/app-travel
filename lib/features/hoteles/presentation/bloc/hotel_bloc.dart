@@ -26,7 +26,9 @@ class HotelBloc extends Bloc<HotelEvent, HotelState> {
   }
 
   Future<void> _onCreate(CreateHotel event, Emitter<HotelState> emit) async {
-    final current = state is HotelLoaded ? (state as HotelLoaded).hoteles : null;
+    final current = state is HotelLoaded
+        ? (state as HotelLoaded).hoteles
+        : null;
     emit(HotelSaving(current));
     try {
       await repository.createHotel(event.hotel);

@@ -33,8 +33,9 @@ class ServiceBloc extends Bloc<ServiceEvent, ServiceState> {
     CreateService event,
     Emitter<ServiceState> emit,
   ) async {
-    final currentServices =
-        state is ServicesLoaded ? (state as ServicesLoaded).services : null;
+    final currentServices = state is ServicesLoaded
+        ? (state as ServicesLoaded).services
+        : null;
     emit(ServiceSaving(currentServices));
     try {
       await _serviceRepository.createService(event.service);
@@ -49,8 +50,9 @@ class ServiceBloc extends Bloc<ServiceEvent, ServiceState> {
     UpdateService event,
     Emitter<ServiceState> emit,
   ) async {
-    final currentServices =
-        state is ServicesLoaded ? (state as ServicesLoaded).services : null;
+    final currentServices = state is ServicesLoaded
+        ? (state as ServicesLoaded).services
+        : null;
     emit(ServiceSaving(currentServices));
     try {
       await _serviceRepository.updateService(event.service);
@@ -65,8 +67,9 @@ class ServiceBloc extends Bloc<ServiceEvent, ServiceState> {
     DeleteService event,
     Emitter<ServiceState> emit,
   ) async {
-    final currentServices =
-        state is ServicesLoaded ? (state as ServicesLoaded).services : null;
+    final currentServices = state is ServicesLoaded
+        ? (state as ServicesLoaded).services
+        : null;
     emit(ServiceSaving(currentServices));
     try {
       await _serviceRepository.deleteService(event.id);

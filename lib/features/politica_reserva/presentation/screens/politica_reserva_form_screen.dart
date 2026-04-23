@@ -288,7 +288,7 @@ class _PoliticaReservaFormScreenState extends State<PoliticaReservaFormScreen>
               style: const TextStyle(color: D.slate400, fontSize: 12),
             ),
             value: _activo,
-            activeColor: D.emerald,
+            activeThumbColor: D.emerald,
             activeTrackColor: D.emerald.withOpacity(0.3),
             inactiveThumbColor: D.slate400,
             inactiveTrackColor: D.bg.withOpacity(0.5),

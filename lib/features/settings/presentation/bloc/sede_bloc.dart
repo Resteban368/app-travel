@@ -110,7 +110,9 @@ class SedeBloc extends Bloc<SedeEvent, SedeState> {
 
   Future<void> _onCreateSede(CreateSede event, Emitter<SedeState> emit) async {
     final currentState = state;
-    final currentSedes = currentState is SedesLoaded ? currentState.sedes : null;
+    final currentSedes = currentState is SedesLoaded
+        ? currentState.sedes
+        : null;
     emit(SedeSaving(sedes: currentSedes));
     try {
       await _sedeRepository.createSede(event.sede);
@@ -124,7 +126,9 @@ class SedeBloc extends Bloc<SedeEvent, SedeState> {
 
   Future<void> _onUpdateSede(UpdateSede event, Emitter<SedeState> emit) async {
     final currentState = state;
-    final currentSedes = currentState is SedesLoaded ? currentState.sedes : null;
+    final currentSedes = currentState is SedesLoaded
+        ? currentState.sedes
+        : null;
     emit(SedeSaving(sedes: currentSedes));
     try {
       await _sedeRepository.updateSede(event.sede);
@@ -138,7 +142,9 @@ class SedeBloc extends Bloc<SedeEvent, SedeState> {
 
   Future<void> _onDeleteSede(DeleteSede event, Emitter<SedeState> emit) async {
     final currentState = state;
-    final currentSedes = currentState is SedesLoaded ? currentState.sedes : null;
+    final currentSedes = currentState is SedesLoaded
+        ? currentState.sedes
+        : null;
     emit(SedeSaving(sedes: currentSedes));
     try {
       await _sedeRepository.deleteSede(event.id);
@@ -155,7 +161,9 @@ class SedeBloc extends Bloc<SedeEvent, SedeState> {
     Emitter<SedeState> emit,
   ) async {
     final currentState = state;
-    if (currentState is SedesLoaded || currentState is SedeSaving || currentState is SedeSaved) {
+    if (currentState is SedesLoaded ||
+        currentState is SedeSaving ||
+        currentState is SedeSaved) {
       List<Sede>? currentSedes;
       if (currentState is SedesLoaded) currentSedes = currentState.sedes;
       if (currentState is SedeSaving) currentSedes = currentState.sedes;

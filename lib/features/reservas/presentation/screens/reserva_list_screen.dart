@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:web/web.dart' as webLib;
 import '../../../../core/theme/saas_palette.dart';
-import '../../../../core/layout/admin_shell.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../../../core/di/injection_container.dart';
@@ -120,86 +119,83 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AdminShell(
-      currentIndex: 11, // Reservas
-      child: Scaffold(
-        backgroundColor: SaasPalette.bgApp,
-        body: BlocConsumer<ReservaBloc, ReservaState>(
-          listener: (context, state) {
-            if (state is ReservaError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: SaasPalette.danger,
-                ),
-              );
-            }
-          },
-          builder: (context, state) {
-            final authState = context.watch<AuthBloc>().state;
-            final canWrite =
-                authState is AuthAuthenticated &&
-                authState.user.canWrite('reservas');
-
-            List<Reserva>? reservas;
-            if (state is ReservaLoaded) {
-              reservas = state.reservas;
-            } else if (state is ReservaSaving && state.reservas != null) {
-              reservas = state.reservas;
-            } else if (state is ReservaActionSuccess) {
-              reservas = state.reservas;
-            }
-
-            return CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                // ── Header ─────────────────────────────────────────────────
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
-                  sliver: SliverToBoxAdapter(
-                    child: _ReservaHeader(canWrite: canWrite),
-                  ),
-                ),
-
-                // ── Filters & Search ───────────────────────────────────────
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
-                  sliver: SliverToBoxAdapter(
-                    child: _ReservaFilters(
-                      searchCtrl: _searchCtrl,
-                      onSearchChanged: (v) => setState(() => _searchQuery = v),
-                      onPickDates: () => _pickDateRange(context),
-                      onClearDates: _clearDates,
-                      startDate: _startDate,
-                      endDate: _endDate,
-                      selectedStatus: _selectedStatus,
-                      onStatusChanged: _onStatusChanged,
-                    ),
-                  ),
-                ),
-
-                // ── Content ────────────────────────────────────────────────
-                _buildContent(context, state, reservas, canWrite),
-
-                // ── Pagination ─────────────────────────────────────────────
-                if (state is ReservaLoaded && state.totalPages > 1)
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
-                    sliver: SliverToBoxAdapter(
-                      child: _SaasPaginationBar(
-                        page: state.page,
-                        totalPages: state.totalPages,
-                        total: state.total,
-                        onPageChanged: _goToPage,
-                      ),
-                    ),
-                  )
-                else
-                  const SliverPadding(padding: EdgeInsets.only(bottom: 60)),
-              ],
+    return Scaffold(
+      backgroundColor: SaasPalette.bgApp,
+      body: BlocConsumer<ReservaBloc, ReservaState>(
+        listener: (context, state) {
+          if (state is ReservaError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: SaasPalette.danger,
+              ),
             );
-          },
-        ),
+          }
+        },
+        builder: (context, state) {
+          final authState = context.watch<AuthBloc>().state;
+          final canWrite =
+              authState is AuthAuthenticated &&
+              authState.user.canWrite('reservas');
+
+          List<Reserva>? reservas;
+          if (state is ReservaLoaded) {
+            reservas = state.reservas;
+          } else if (state is ReservaSaving && state.reservas != null) {
+            reservas = state.reservas;
+          } else if (state is ReservaActionSuccess) {
+            reservas = state.reservas;
+          }
+
+          return CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              // ── Header ─────────────────────────────────────────────────
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                sliver: SliverToBoxAdapter(
+                  child: _ReservaHeader(canWrite: canWrite),
+                ),
+              ),
+
+              // ── Filters & Search ───────────────────────────────────────
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                sliver: SliverToBoxAdapter(
+                  child: _ReservaFilters(
+                    searchCtrl: _searchCtrl,
+                    onSearchChanged: (v) => setState(() => _searchQuery = v),
+                    onPickDates: () => _pickDateRange(context),
+                    onClearDates: _clearDates,
+                    startDate: _startDate,
+                    endDate: _endDate,
+                    selectedStatus: _selectedStatus,
+                    onStatusChanged: _onStatusChanged,
+                  ),
+                ),
+              ),
+
+              // ── Content ────────────────────────────────────────────────
+              _buildContent(context, state, reservas, canWrite),
+
+              // ── Pagination ─────────────────────────────────────────────
+              if (state is ReservaLoaded && state.totalPages > 1)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
+                  sliver: SliverToBoxAdapter(
+                    child: _SaasPaginationBar(
+                      page: state.page,
+                      totalPages: state.totalPages,
+                      total: state.total,
+                      onPageChanged: _goToPage,
+                    ),
+                  ),
+                )
+              else
+                const SliverPadding(padding: EdgeInsets.only(bottom: 60)),
+            ],
+          );
+        },
       ),
     );
   }
@@ -250,7 +246,7 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
       // Search filter
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
-        
+
         // 1. Tour Name
         final tourName = (r.tour?.name ?? '').toLowerCase();
         // 2. Reservation ID
@@ -258,14 +254,16 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
         // 3. Responsible Info
         final responsable = r.responsable;
         final respNombre = (responsable?.nombre ?? '').toLowerCase();
-        final respDoc = (responsable?.documento?.toString() ?? '').toLowerCase();
+        final respDoc = (responsable?.documento?.toString() ?? '')
+            .toLowerCase();
         final respTel = (responsable?.telefono ?? '').toLowerCase();
         // 4. Agent Info
         final agenteNombre = (r.agente?.nombre ?? '').toLowerCase();
         // 5. Correo
         final correo = r.correo.toLowerCase();
 
-        final matches = tourName.contains(query) ||
+        final matches =
+            tourName.contains(query) ||
             idReserva.contains(query) ||
             respNombre.contains(query) ||
             respDoc.contains(query) ||
@@ -578,8 +576,7 @@ class _StatusChip extends StatelessWidget {
                 label,
                 style: TextStyle(
                   color: isSelected ? activeColor : SaasPalette.textSecondary,
-                  fontWeight:
-                      isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   fontSize: 12,
                 ),
               ),
@@ -612,7 +609,8 @@ class _ReservaCardState extends State<_ReservaCard> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const DialogLoadingNetwork(titel: 'Generando PDF de Reserva'),
+      builder: (_) =>
+          const DialogLoadingNetwork(titel: 'Generando PDF de Reserva'),
     );
 
     try {
@@ -853,7 +851,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                         Text(
                           'ID #${r.idReserva}',
                           style: const TextStyle(
-        color: SaasPalette.textTertiary,
+                            color: SaasPalette.textTertiary,
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),

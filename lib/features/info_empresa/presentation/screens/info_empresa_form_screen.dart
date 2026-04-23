@@ -131,9 +131,17 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
     _SocialPlatform('Instagram', Icons.camera_alt_rounded, Color(0xFFE1306C)),
     _SocialPlatform('Facebook', Icons.facebook_rounded, Color(0xFF1877F2)),
     _SocialPlatform('TikTok', Icons.music_note_rounded, Color(0xFF010101)),
-    _SocialPlatform('YouTube', Icons.play_circle_fill_rounded, Color(0xFFFF0000)),
+    _SocialPlatform(
+      'YouTube',
+      Icons.play_circle_fill_rounded,
+      Color(0xFFFF0000),
+    ),
     _SocialPlatform('LinkedIn', Icons.work_rounded, Color(0xFF0A66C2)),
-    _SocialPlatform('Twitter / X', Icons.alternate_email_rounded, Color(0xFF1DA1F2)),
+    _SocialPlatform(
+      'Twitter / X',
+      Icons.alternate_email_rounded,
+      Color(0xFF1DA1F2),
+    ),
     _SocialPlatform('WhatsApp', Icons.chat_rounded, Color(0xFF25D366)),
     _SocialPlatform('Telegram', Icons.send_rounded, Color(0xFF2CA5E0)),
     _SocialPlatform('Otro', Icons.link_rounded, SaasPalette.brand600),
@@ -161,16 +169,20 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
 
           void tryAdd() {
             if (lCtrl.text.trim().isEmpty) {
-              setDialogState(() => urlError = 'Ingresa el enlace de la red social');
+              setDialogState(
+                () => urlError = 'Ingresa el enlace de la red social',
+              );
               return;
             }
             if (nCtrl.text.trim().isEmpty) {
               setDialogState(() => urlError = 'Selecciona o escribe el nombre');
               return;
             }
-            setState(() => _redesSociales.add(
-              RedSocial(nombre: nCtrl.text.trim(), link: lCtrl.text.trim()),
-            ));
+            setState(
+              () => _redesSociales.add(
+                RedSocial(nombre: nCtrl.text.trim(), link: lCtrl.text.trim()),
+              ),
+            );
             Navigator.pop(ctx);
           }
 
@@ -404,8 +416,8 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                               child: ElevatedButton.icon(
                                 onPressed: tryAdd,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: selected?.color ??
-                                      SaasPalette.brand600,
+                                  backgroundColor:
+                                      selected?.color ?? SaasPalette.brand600,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 12,
@@ -502,7 +514,9 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                                     color: SaasPalette.brand50,
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: SaasPalette.brand600.withValues(alpha: 0.3),
+                                      color: SaasPalette.brand600.withValues(
+                                        alpha: 0.3,
+                                      ),
                                     ),
                                   ),
                                   child: const Row(

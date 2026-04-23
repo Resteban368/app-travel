@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
-import '../../../../core/layout/admin_shell.dart';
 import '../../../../config/app_router.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/domain/entities/user.dart';
@@ -12,7 +11,7 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AdminShell(currentIndex: -1, child: _ProfileBody());
+    return const Scaffold(body: _ProfileBody());
   }
 }
 
@@ -51,7 +50,9 @@ class _ProfileBodyState extends State<_ProfileBody> {
       listenWhen: (previous, current) {
         if (current is AuthInitial) return true;
         if (current is ChangePasswordFailed) return true;
-        if (current is AuthAuthenticated && previous is ChangePasswordLoading) return true;
+        if (current is AuthAuthenticated && previous is ChangePasswordLoading) {
+          return true;
+        }
         return false;
       },
       listener: (context, state) {
@@ -590,8 +591,9 @@ class _ChangePasswordCardState extends State<_ChangePasswordCard> {
               visible: _showNew,
               onToggle: () => setState(() => _showNew = !_showNew),
               validator: (v) {
-                if (v == null || v.isEmpty)
+                if (v == null || v.isEmpty) {
                   return 'Ingresa la nueva contraseña';
+                }
                 if (v.length < 8) return 'Mínimo 8 caracteres';
                 return null;
               },
@@ -604,8 +606,9 @@ class _ChangePasswordCardState extends State<_ChangePasswordCard> {
               visible: _showConfirm,
               onToggle: () => setState(() => _showConfirm = !_showConfirm),
               validator: (v) {
-                if (v == null || v.isEmpty)
+                if (v == null || v.isEmpty) {
                   return 'Confirma la nueva contraseña';
+                }
                 if (v != _newCtrl.text) return 'Las contraseñas no coinciden';
                 return null;
               },

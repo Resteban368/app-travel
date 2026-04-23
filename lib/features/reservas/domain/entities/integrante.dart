@@ -36,5 +36,12 @@ class Integrante extends Equatable {
   }
 
   @override
-  List<Object?> get props => [nombre, telefono, fechaNacimiento, esResponsable, tipoDocumento, documento];
+  List<Object?> get props => [
+    nombre,
+    telefono,
+    fechaNacimiento,
+    esResponsable,
+    tipoDocumento,
+    documento,
+  ];
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/saas_palette.dart';
-import '../../../../core/layout/admin_shell.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../domain/entities/pago_realizado.dart';
@@ -13,7 +12,7 @@ class PagoRealizadoListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AdminShell(currentIndex: 9, child: _PagoRealizadoListBody());
+    return const Scaffold(body: _PagoRealizadoListBody());
   }
 }
 
@@ -62,8 +61,7 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
               onPrimary: Colors.white,
               surface: SaasPalette.bgCanvas,
               onSurface: SaasPalette.textPrimary,
-            ),
-            dialogBackgroundColor: SaasPalette.bgCanvas,
+            ), dialogTheme: DialogThemeData(backgroundColor: SaasPalette.bgCanvas),
           ),
           child: child!,
         );
@@ -315,8 +313,10 @@ class _DateFilterBar extends StatelessWidget {
                 right: Radius.circular(0),
               ),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     Icon(

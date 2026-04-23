@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../core/di/injection_container.dart';
 
+import '../core/layout/admin_shell_wrapper.dart';
 import '../features/auth/presentation/screens/login_screen.dart';
 import '../features/auth/presentation/screens/splash_screen.dart';
 import '../features/dashboard/presentation/screens/dashboard_screen.dart';
@@ -43,11 +46,18 @@ import '../features/reservas/presentation/screens/reserva_form_screen.dart';
 import '../features/reservas/domain/entities/reserva.dart';
 import '../features/clientes/presentation/screens/cliente_list_screen.dart';
 import '../features/clientes/presentation/screens/cliente_form_screen.dart';
+import '../features/clientes/presentation/screens/cliente_historial_screen.dart';
+import '../features/clientes/presentation/bloc/historial/cliente_historial_bloc.dart';
 import '../features/clientes/domain/entities/cliente.dart';
 import '../features/hoteles/presentation/screens/hotel_list_screen.dart';
 import '../features/hoteles/presentation/screens/hotel_form_screen.dart';
 import '../features/hoteles/domain/entities/hotel.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
+import '../features/auditoria/presentation/screens/auditoria_screen.dart';
+import '../features/auditoria/presentation/bloc/sesiones_bloc.dart';
+import '../features/auditoria/presentation/bloc/sesiones_event.dart';
+import '../features/auditoria/presentation/bloc/auditoria_general_bloc.dart';
+import '../features/auditoria/presentation/bloc/auditoria_general_event.dart';
 
 /// Centralised route configuration.
 class AppRouter {
@@ -92,21 +102,83 @@ class AppRouter {
   static const String clientes = '/clientes';
   static const String clienteCreate = '/clientes/create';
   static const String clienteEdit = '/clientes/edit';
+  static const String clienteHistorial = '/clientes/historial';
   static const String hoteles = '/hoteles';
   static const String hotelCreate = '/hoteles/create';
   static const String hotelEdit = '/hoteles/edit';
   static const String profile = '/profile';
+  static const String admin = '/admin';
+  static const String auditoria = '/auditoria';
+
+  static final ValueNotifier<String> currentRouteNotifier =
+      ValueNotifier<String>('/');
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
+    currentRouteNotifier.value = settings.name ?? '';
+
     switch (settings.name) {
       case splash:
         return _fadeRoute(const SplashScreen(), settings);
       case login:
         return _fadeRoute(const LoginScreen(), settings);
+      default:
+        // Cualquier otra ruta se abre dentro del AdminShellWrapper
+        return _fadeRoute(AdminShellWrapper(initialRoute: settings.name), settings);
+    }
+  }
+
+  static Route<dynamic> onGenerateNestedRoute(RouteSettings settings) {
+    switch (settings.name) {
       case dashboard:
         return _fadeRoute(const DashboardScreen(), settings);
       case tours:
         return _fadeRoute(const TourListScreen(), settings);
+      case sedes:
+        return _fadeRoute(const SedeListScreen(), settings);
+      case paymentMethods:
+        return _fadeRoute(const PaymentMethodListScreen(), settings);
+      case catalogues:
+        return _fadeRoute(const CatalogueListScreen(), settings);
+      case faqs:
+        return _fadeRoute(const FaqListScreen(), settings);
+      case services:
+        return _fadeRoute(const ServiceListScreen(), settings);
+      case politicasReserva:
+        return _fadeRoute(const PoliticaReservaListScreen(), settings);
+      case infoEmpresa:
+        return _fadeRoute(const InfoEmpresaListScreen(), settings);
+      case pagosRealizados:
+        return _fadeRoute(const PagoRealizadoListScreen(), settings);
+      case cotizaciones:
+        return _fadeRoute(const CotizacionesListScreen(), settings);
+      case agentes:
+        return _fadeRoute(const AgenteListScreen(), settings);
+      case reservas:
+        return _fadeRoute(const ReservaListScreen(), settings);
+      case clientes:
+        return _fadeRoute(const ClienteListScreen(), settings);
+      case hoteles:
+        return _fadeRoute(const HotelListScreen(), settings);
+      case profile:
+        return _fadeRoute(const ProfileScreen(), settings);
+      case auditoria:
+        return _fadeRoute(
+          MultiBlocProvider(
+            providers: [
+              BlocProvider(
+                create: (_) => sl<SesionesBloc>()..add(const LoadSesiones()),
+              ),
+              BlocProvider(
+                create: (_) =>
+                    sl<AuditoriaGeneralBloc>()..add(const LoadAuditoriaGeneral()),
+              ),
+            ],
+            child: const AuditoriaScreen(),
+          ),
+          settings,
+        );
+
+      // -- Formularios y Detalles --
       case tourCreate:
         return _fadeRoute(const TourFormScreen(), settings);
       case tourEdit:
@@ -115,105 +187,77 @@ class AppRouter {
       case tourDetalle:
         final tour = settings.arguments as Tour;
         return _fadeRoute(TourDetalleScreen(tour: tour), settings);
-      case sedes:
-        return _fadeRoute(const SedeListScreen(), settings);
       case sedeForm:
         final sede = settings.arguments as Sede?;
         return _fadeRoute(SedeFormScreen(sede: sede), settings);
-      case paymentMethods:
-        return _fadeRoute(const PaymentMethodListScreen(), settings);
       case paymentMethodForm:
-        final method = settings.arguments as PaymentMethod?;
-        return _fadeRoute(
-          PaymentMethodFormScreen(paymentMethod: method),
-          settings,
-        );
-      case catalogues:
-        return _fadeRoute(const CatalogueListScreen(), settings);
+        final pm = settings.arguments as PaymentMethod?;
+        return _fadeRoute(PaymentMethodFormScreen(paymentMethod: pm), settings);
       case catalogueCreate:
         return _fadeRoute(const CatalogueFormScreen(), settings);
       case catalogueEdit:
-        final catalogue = settings.arguments as Catalogue;
-        return _fadeRoute(CatalogueFormScreen(catalogue: catalogue), settings);
-      case faqs:
-        return _fadeRoute(const FaqListScreen(), settings);
+        final cat = settings.arguments as Catalogue;
+        return _fadeRoute(CatalogueFormScreen(catalogue: cat), settings);
       case faqCreate:
         return _fadeRoute(const FaqFormScreen(), settings);
       case faqEdit:
         final faq = settings.arguments as Faq;
         return _fadeRoute(FaqFormScreen(faq: faq), settings);
-      case services:
-        return _fadeRoute(const ServiceListScreen(), settings);
       case serviceCreate:
         return _fadeRoute(const ServiceFormScreen(), settings);
       case serviceEdit:
         final service = settings.arguments as Service;
         return _fadeRoute(ServiceFormScreen(service: service), settings);
-      case politicasReserva:
-        return _fadeRoute(const PoliticaReservaListScreen(), settings);
       case politicaReservaCreate:
         return _fadeRoute(const PoliticaReservaFormScreen(), settings);
       case politicaReservaEdit:
         final politica = settings.arguments as PoliticaReserva;
-        return _fadeRoute(
-          PoliticaReservaFormScreen(politica: politica),
-          settings,
-        );
-      case infoEmpresa:
-        return _fadeRoute(const InfoEmpresaListScreen(), settings);
+        return _fadeRoute(PoliticaReservaFormScreen(politica: politica), settings);
       case infoEmpresaCreate:
         return _fadeRoute(const InfoEmpresaFormScreen(), settings);
       case infoEmpresaEdit:
         final info = settings.arguments as InfoEmpresa;
         return _fadeRoute(InfoEmpresaFormScreen(info: info), settings);
-      case pagosRealizados:
-        return _fadeRoute(const PagoRealizadoListScreen(), settings);
       case pagoRealizadoCreate:
         return _fadeRoute(const PagoRealizadoFormScreen(), settings);
       case pagoRealizadoEdit:
         final pago = settings.arguments as PagoRealizado;
         return _fadeRoute(PagoRealizadoFormScreen(pago: pago), settings);
-      case cotizaciones:
-        return _fadeRoute(const CotizacionesListScreen(), settings);
       case cotizacionCreate:
         final cotizacion = settings.arguments as Cotizacion?;
-        return _fadeRoute(
-          CotizacionFormScreen(cotizacion: cotizacion),
-          settings,
-        );
-
-      case agentes:
-        return _fadeRoute(const AgenteListScreen(), settings);
+        return _fadeRoute(CotizacionFormScreen(cotizacion: cotizacion), settings);
       case agenteCreate:
         return _fadeRoute(const AgenteFormScreen(), settings);
       case agenteEdit:
         final agente = settings.arguments as Agente;
         return _fadeRoute(AgenteFormScreen(agente: agente), settings);
-      case reservas:
-        return _fadeRoute(const ReservaListScreen(), settings);
       case reservaCreate:
         return _fadeRoute(const ReservaFormScreen(), settings);
       case reservaEdit:
         final reserva = settings.arguments as Reserva;
         return _fadeRoute(ReservaFormScreen(reserva: reserva), settings);
-      case clientes:
-        return _fadeRoute(const ClienteListScreen(), settings);
       case clienteCreate:
         return _fadeRoute(const ClienteFormScreen(), settings);
       case clienteEdit:
         final cliente = settings.arguments as Cliente;
         return _fadeRoute(ClienteFormScreen(cliente: cliente), settings);
-      case hoteles:
-        return _fadeRoute(const HotelListScreen(), settings);
       case hotelCreate:
         return _fadeRoute(const HotelFormScreen(), settings);
       case hotelEdit:
         final hotel = settings.arguments as Hotel;
         return _fadeRoute(HotelFormScreen(hotel: hotel), settings);
-      case profile:
-        return _fadeRoute(const ProfileScreen(), settings);
+      case clienteHistorial:
+        final cliente = settings.arguments as Cliente;
+        return _fadeRoute(
+          BlocProvider(
+            create: (context) => sl<ClienteHistorialBloc>(),
+            child: ClienteHistorialScreen(cliente: cliente),
+          ),
+          settings,
+        );
+
       default:
-        return _fadeRoute(const LoginScreen(), settings);
+        return _fadeRoute(const DashboardScreen(), settings);
     }
   }
 
@@ -222,22 +266,27 @@ class AppRouter {
       settings: settings,
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final curve = CurvedAnimation(
+        final fadeIn = CurvedAnimation(
           parent: animation,
           curve: Curves.easeOutCubic,
         );
+        final fadeOut = CurvedAnimation(
+          parent: secondaryAnimation,
+          curve: Curves.easeInCubic,
+        );
         return FadeTransition(
-          opacity: curve,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.02),
-              end: Offset.zero,
-            ).animate(curve),
-            child: child,
+          opacity: Tween<double>(begin: 0.0, end: 1.0).animate(fadeIn),
+          child: FadeTransition(
+            opacity: Tween<double>(begin: 1.0, end: 0.92).animate(fadeOut),
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.97, end: 1.0).animate(fadeIn),
+              child: child,
+            ),
           ),
         );
       },
-      transitionDuration: const Duration(milliseconds: 200),
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
     );
   }
 }

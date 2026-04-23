@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/saas_palette.dart';
-import '../../../../core/layout/admin_shell.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -56,86 +55,75 @@ class _TourListScreenState extends State<TourListScreen> {
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width >= 800;
 
-    return AdminShell(
-      currentIndex: 1,
-      child: Scaffold(
-        backgroundColor: SaasPalette.bgApp,
-        body: BlocBuilder<TourBloc, TourState>(
-          builder: (context, state) {
-            final authState = context.watch<AuthBloc>().state;
-            final canWrite =
-                authState is AuthAuthenticated &&
-                authState.user.hasPermission('tours');
+    return Scaffold(
+      backgroundColor: SaasPalette.bgApp,
+      body: BlocBuilder<TourBloc, TourState>(
+        builder: (context, state) {
+          final authState = context.watch<AuthBloc>().state;
+          final canWrite =
+              authState is AuthAuthenticated &&
+              authState.user.hasPermission('tours');
 
-            List<Tour>? tours;
-            if (state is ToursLoaded) {
-              tours = state.filteredTours;
-            } else if (state is TourSaving && state.tours != null) {
-              tours = state.tours;
-            } else if (state is TourSaved && state.tours != null) {
-              tours = state.tours;
+          List<Tour>? tours;
+          if (state is ToursLoaded) {
+            tours = state.filteredTours;
+          } else if (state is TourSaving && state.tours != null) {
+            tours = state.tours;
+          } else if (state is TourSaved && state.tours != null) {
+            tours = state.tours;
+          }
+
+          if (tours != null) {
+            if (_searchQuery.isNotEmpty) {
+              final query = _searchQuery.toLowerCase();
+              tours = tours
+                  .where((t) => t.name.toLowerCase().contains(query))
+                  .toList();
             }
-
-            if (tours != null) {
-              if (_searchQuery.isNotEmpty) {
-                final query = _searchQuery.toLowerCase();
-                tours = tours
-                    .where((t) => t.name.toLowerCase().contains(query))
-                    .toList();
-              }
-              if (_activeTab == 'Tours') {
-                tours = tours.where((t) => !t.isPromotion).toList();
-              } else if (_activeTab == 'Promos') {
-                tours = tours.where((t) => t.isPromotion).toList();
-              }
+            if (_activeTab == 'Tours') {
+              tours = tours.where((t) => !t.isPromotion).toList();
+            } else if (_activeTab == 'Promos') {
+              tours = tours.where((t) => t.isPromotion).toList();
             }
+          }
 
-            return CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  isDesktop ? 32 : 16,
+                  32,
+                  isDesktop ? 32 : 16,
+                  0,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: _buildModernHeader(context, canWrite, width),
+                ),
+              ),
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  isDesktop ? 32 : 16,
+                  24,
+                  isDesktop ? 32 : 16,
+                  16,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: _buildSearchAndFilterTabs(width),
+                ),
+              ),
+              if (_filtersVisible)
                 SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                    isDesktop ? 32 : 16,
-                    32,
-                    isDesktop ? 32 : 16,
-                    0,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isDesktop ? 32 : 16,
                   ),
-                  sliver: SliverToBoxAdapter(
-                    child: _buildModernHeader(context, canWrite, width),
-                  ),
+                  sliver: SliverToBoxAdapter(child: _buildFilterPanel(context)),
                 ),
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                    isDesktop ? 32 : 16,
-                    24,
-                    isDesktop ? 32 : 16,
-                    16,
-                  ),
-                  sliver: SliverToBoxAdapter(
-                    child: _buildSearchAndFilterTabs(width),
-                  ),
-                ),
-                if (_filtersVisible)
-                  SliverPadding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isDesktop ? 32 : 16,
-                    ),
-                    sliver: SliverToBoxAdapter(
-                      child: _buildFilterPanel(context),
-                    ),
-                  ),
-                _buildListGridContent(
-                  context,
-                  state,
-                  tours,
-                  canWrite,
-                  isDesktop,
-                ),
-                const SliverPadding(padding: EdgeInsets.only(bottom: 60)),
-              ],
-            );
-          },
-        ),
+              _buildListGridContent(context, state, tours, canWrite, isDesktop),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 60)),
+            ],
+          );
+        },
       ),
     );
   }
@@ -474,10 +462,10 @@ class _TourRowState extends State<_TourRow> {
     final tour = widget.tour;
     final isPromo = tour.isPromotion;
 
-    final Color typeColor =
-        isPromo ? SaasPalette.warning.withValues(alpha: 0.12) : SaasPalette.brand50;
-    final Color typeText =
-        isPromo ? SaasPalette.warning : SaasPalette.brand600;
+    final Color typeColor = isPromo
+        ? SaasPalette.warning.withValues(alpha: 0.12)
+        : SaasPalette.brand50;
+    final Color typeText = isPromo ? SaasPalette.warning : SaasPalette.brand600;
 
     final ocupados = (tour.cupos ?? 0) - (tour.cuposDisponibles ?? 0);
     final total = tour.cupos ?? 1;
@@ -521,9 +509,7 @@ class _TourRowState extends State<_TourRow> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    isPromo
-                        ? Icons.local_offer_rounded
-                        : Icons.map_outlined,
+                    isPromo ? Icons.local_offer_rounded : Icons.map_outlined,
                     color: typeText,
                     size: 22,
                   ),
@@ -552,7 +538,9 @@ class _TourRowState extends State<_TourRow> {
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 2),
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: typeColor,
                               borderRadius: BorderRadius.circular(5),
@@ -569,7 +557,9 @@ class _TourRowState extends State<_TourRow> {
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: SaasPalette.bgSubtle,
                               borderRadius: BorderRadius.circular(4),
@@ -694,7 +684,6 @@ class _TourRowState extends State<_TourRow> {
     );
   }
 }
-
 
 class _SkelCard extends StatelessWidget {
   @override

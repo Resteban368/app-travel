@@ -16,7 +16,7 @@ class AuthClient extends http.BaseClient {
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     final token = await _storage.read(key: 'access_token');
-    
+
     if (token != null) {
       request.headers['Authorization'] = 'Bearer $token';
     }
@@ -24,17 +24,21 @@ class AuthClient extends http.BaseClient {
     // Clonamos el request porque si falla (401), consumimos el stream y necesitamos enviarlo de nuevo.
     StreamedRequestProxy? requestClone;
     if (request is http.Request) {
-      requestClone = StreamedRequestProxy(http.Request(request.method, request.url)
-        ..headers.addAll(request.headers)
-        ..bodyBytes = request.bodyBytes
-        ..encoding = request.encoding
-        ..followRedirects = request.followRedirects
-        ..maxRedirects = request.maxRedirects
-        ..persistentConnection = request.persistentConnection);
+      requestClone = StreamedRequestProxy(
+        http.Request(request.method, request.url)
+          ..headers.addAll(request.headers)
+          ..bodyBytes = request.bodyBytes
+          ..encoding = request.encoding
+          ..followRedirects = request.followRedirects
+          ..maxRedirects = request.maxRedirects
+          ..persistentConnection = request.persistentConnection,
+      );
     } // Si es Multipart u otros se manejarían de forma similar, aquí usamos requests estándar mayormente.
-    
+
     // Tratamos de enviar el clon o el original si no lo clonamos
-    http.StreamedResponse response = await _inner.send(requestClone?.createClone() ?? request);
+    http.StreamedResponse response = await _inner.send(
+      requestClone?.createClone() ?? request,
+    );
 
     // Verificamos error 401
     if (response.statusCode == 401) {
@@ -48,7 +52,8 @@ class AuthClient extends http.BaseClient {
           body: jsonEncode({'refresh_token': refreshToken}),
         );
 
-        if (refreshResponse.statusCode == 200 || refreshResponse.statusCode == 201) {
+        if (refreshResponse.statusCode == 200 ||
+            refreshResponse.statusCode == 201) {
           final refreshData = jsonDecode(refreshResponse.body);
           final newAccessToken = refreshData['access_token'];
           final newRefreshToken = refreshData['refresh_token'];
@@ -87,7 +92,7 @@ class AuthClient extends http.BaseClient {
 class StreamedRequestProxy {
   final http.Request original;
   StreamedRequestProxy(this.original);
-  
+
   http.Request createClone() {
     final copy = http.Request(original.method, original.url);
     copy.headers.addAll(original.headers);

@@ -453,7 +453,7 @@ class _TourFormScreenState extends State<TourFormScreen>
                 )
               else
                 DropdownButtonFormField<String>(
-                  value: sedes.any((s) => s.id == _selectedSedeId)
+                  initialValue: sedes.any((s) => s.id == _selectedSedeId)
                       ? _selectedSedeId
                       : null,
                   dropdownColor: SaasPalette.bgCanvas,

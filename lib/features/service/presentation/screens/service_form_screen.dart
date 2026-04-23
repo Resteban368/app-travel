@@ -346,7 +346,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
               )
             else
               DropdownButtonFormField<int>(
-                value: sedes.any((s) => int.tryParse(s.id) == _selectedSedeId)
+                initialValue: sedes.any((s) => int.tryParse(s.id) == _selectedSedeId)
                     ? _selectedSedeId
                     : null,
                 dropdownColor: D.white,
@@ -416,7 +416,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
               style: const TextStyle(color: D.slate400, fontSize: 12),
             ),
             value: _isActive,
-            activeColor: D.emerald,
+            activeThumbColor: D.emerald,
             activeTrackColor: D.emerald.withOpacity(0.3),
             inactiveThumbColor: D.slate400,
             inactiveTrackColor: D.bg.withOpacity(0.5),

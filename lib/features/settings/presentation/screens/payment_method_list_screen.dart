@@ -1,7 +1,6 @@
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/layout/admin_shell.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/theme/saas_palette.dart';
@@ -16,7 +15,7 @@ class PaymentMethodListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => sl<PaymentMethodBloc>()..add(LoadPaymentMethods()),
-      child: const AdminShell(currentIndex: 3, child: _PaymentMethodListBody()),
+      child: const Scaffold(body: _PaymentMethodListBody()),
     );
   }
 }
@@ -31,27 +30,34 @@ class _PaymentMethodListBody extends StatefulWidget {
 class _PaymentMethodListBodyState extends State<_PaymentMethodListBody> {
   IconData _bankIcon(String name) {
     final lower = name.toLowerCase();
-    if (lower.contains('nequi') || lower.contains('daviplata')) return Icons.phone_android_rounded;
+    if (lower.contains('nequi') || lower.contains('daviplata')) {
+      return Icons.phone_android_rounded;
+    }
     return Icons.account_balance_rounded;
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
-    final canWrite = authState is AuthAuthenticated && authState.user.canWrite('paymentMethods');
+    final canWrite =
+        authState is AuthAuthenticated &&
+        authState.user.canWrite('paymentMethods');
 
     return Scaffold(
       backgroundColor: SaasPalette.bgApp,
       body: BlocBuilder<PaymentMethodBloc, PaymentMethodState>(
         builder: (context, state) {
           List<PaymentMethod> list = [];
-          if (state is PaymentMethodsLoaded) list = state.methods;
-          else if (state is PaymentMethodSaving && state.methods != null) list = state.methods!;
+          if (state is PaymentMethodsLoaded) {
+            list = state.methods;
+          } else if (state is PaymentMethodSaving && state.methods != null)
+            list = state.methods!;
 
           final isLoading = state is PaymentMethodLoading && list.isEmpty;
 
           return RefreshIndicator(
-            onRefresh: () async => context.read<PaymentMethodBloc>().add(LoadPaymentMethods()),
+            onRefresh: () async =>
+                context.read<PaymentMethodBloc>().add(LoadPaymentMethods()),
             color: SaasPalette.brand600,
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -69,12 +75,13 @@ class _PaymentMethodListBodyState extends State<_PaymentMethodListBody> {
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
                     sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 450,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 16,
-                        mainAxisExtent: 180,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 450,
+                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 16,
+                            mainAxisExtent: 180,
+                          ),
                       delegate: SliverChildBuilderDelegate(
                         (_, __) => const SaasListSkeleton(),
                         childCount: 4,
@@ -87,38 +94,45 @@ class _PaymentMethodListBodyState extends State<_PaymentMethodListBody> {
                     child: const SaasEmptyState(
                       icon: Icons.account_balance_wallet_outlined,
                       title: 'Sin métodos de pago',
-                      subtitle: 'Comienza agregando un banco o cuenta Nequi para recibir pagos.',
+                      subtitle:
+                          'Comienza agregando un banco o cuenta Nequi para recibir pagos.',
                     ),
                   )
                 else
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
                     sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 450,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 16,
-                        mainAxisExtent: 185,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final method = list[index];
-                          return _PaymentMethodCard(
-                            method: method,
-                            canWrite: canWrite,
-                            icon: _bankIcon(method.name),
-                            onEdit: () async {
-                              final result = await Navigator.pushNamed(context, AppRouter.paymentMethodForm, arguments: method);
-                              if (result == true && context.mounted) {
-                                context.read<PaymentMethodBloc>().add(LoadPaymentMethods());
-                              }
-                            },
-                            onDelete: () => _confirmDelete(context, method),
-                            onToggle: () => context.read<PaymentMethodBloc>().add(TogglePaymentMethodActive(method.id)),
-                          );
-                        },
-                        childCount: list.length,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 450,
+                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 16,
+                            mainAxisExtent: 185,
+                          ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final method = list[index];
+                        return _PaymentMethodCard(
+                          method: method,
+                          canWrite: canWrite,
+                          icon: _bankIcon(method.name),
+                          onEdit: () async {
+                            final result = await Navigator.pushNamed(
+                              context,
+                              AppRouter.paymentMethodForm,
+                              arguments: method,
+                            );
+                            if (result == true && context.mounted) {
+                              context.read<PaymentMethodBloc>().add(
+                                LoadPaymentMethods(),
+                              );
+                            }
+                          },
+                          onDelete: () => _confirmDelete(context, method),
+                          onToggle: () => context.read<PaymentMethodBloc>().add(
+                            TogglePaymentMethodActive(method.id),
+                          ),
+                        );
+                      }, childCount: list.length),
                     ),
                   ),
               ],
@@ -190,7 +204,10 @@ class _PaymentHeader extends StatelessWidget {
                 label: 'Nuevo Método',
                 icon: Icons.add_rounded,
                 onPressed: () async {
-                  final result = await Navigator.pushNamed(context, AppRouter.paymentMethodForm);
+                  final result = await Navigator.pushNamed(
+                    context,
+                    AppRouter.paymentMethodForm,
+                  );
                   if (result == true && context.mounted) {
                     context.read<PaymentMethodBloc>().add(LoadPaymentMethods());
                   }
@@ -269,12 +286,16 @@ class _PaymentMethodCardState extends State<_PaymentMethodCard> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: isActive ? SaasPalette.brand50 : SaasPalette.bgSubtle,
+                        color: isActive
+                            ? SaasPalette.brand50
+                            : SaasPalette.bgSubtle,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         widget.icon,
-                        color: isActive ? SaasPalette.brand600 : SaasPalette.textTertiary,
+                        color: isActive
+                            ? SaasPalette.brand600
+                            : SaasPalette.textTertiary,
                         size: 24,
                       ),
                     ),
@@ -286,7 +307,11 @@ class _PaymentMethodCardState extends State<_PaymentMethodCard> {
                         onToggle: widget.onToggle,
                       )
                     else
-                      const Icon(Icons.visibility_outlined, color: SaasPalette.textTertiary, size: 20),
+                      const Icon(
+                        Icons.visibility_outlined,
+                        color: SaasPalette.textTertiary,
+                        size: 20,
+                      ),
                   ],
                 ),
                 const Spacer(),
@@ -358,7 +383,10 @@ class _CardActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert_rounded, color: SaasPalette.textTertiary),
+      icon: const Icon(
+        Icons.more_vert_rounded,
+        color: SaasPalette.textTertiary,
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       color: SaasPalette.bgCanvas,
       elevation: 4,
@@ -372,9 +400,16 @@ class _CardActions extends StatelessWidget {
           value: 'edit',
           child: Row(
             children: const [
-              Icon(Icons.edit_outlined, size: 18, color: SaasPalette.textPrimary),
+              Icon(
+                Icons.edit_outlined,
+                size: 18,
+                color: SaasPalette.textPrimary,
+              ),
               SizedBox(width: 12),
-              Text('Editar cuenta', style: TextStyle(color: SaasPalette.textPrimary, fontSize: 13)),
+              Text(
+                'Editar cuenta',
+                style: TextStyle(color: SaasPalette.textPrimary, fontSize: 13),
+              ),
             ],
           ),
         ),
@@ -383,7 +418,9 @@ class _CardActions extends StatelessWidget {
           child: Row(
             children: [
               Icon(
-                isActive ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                isActive
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
                 size: 18,
                 color: isActive ? SaasPalette.warning : SaasPalette.success,
               ),
@@ -403,9 +440,16 @@ class _CardActions extends StatelessWidget {
           value: 'delete',
           child: Row(
             children: const [
-              Icon(Icons.delete_outline_rounded, size: 18, color: SaasPalette.danger),
+              Icon(
+                Icons.delete_outline_rounded,
+                size: 18,
+                color: SaasPalette.danger,
+              ),
               SizedBox(width: 12),
-              Text('Eliminar', style: TextStyle(color: SaasPalette.danger, fontSize: 13)),
+              Text(
+                'Eliminar',
+                style: TextStyle(color: SaasPalette.danger, fontSize: 13),
+              ),
             ],
           ),
         ),

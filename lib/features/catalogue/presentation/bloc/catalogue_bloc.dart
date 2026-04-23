@@ -33,8 +33,9 @@ class CatalogueBloc extends Bloc<CatalogueEvent, CatalogueState> {
     CreateCatalogue event,
     Emitter<CatalogueState> emit,
   ) async {
-    final currentList =
-        state is CatalogueLoaded ? (state as CatalogueLoaded).catalogues : null;
+    final currentList = state is CatalogueLoaded
+        ? (state as CatalogueLoaded).catalogues
+        : null;
     emit(CatalogueSaving(currentList));
     try {
       await catalogueRepository.createCatalogue(event.catalogue);
@@ -58,8 +59,9 @@ class CatalogueBloc extends Bloc<CatalogueEvent, CatalogueState> {
       try {
         await catalogueRepository.updateCatalogue(event.catalogue);
         // Local update instead of re-fetching
-        final index =
-            currentList.indexWhere((c) => c.idCatalogue == event.catalogue.idCatalogue);
+        final index = currentList.indexWhere(
+          (c) => c.idCatalogue == event.catalogue.idCatalogue,
+        );
         if (index != -1) {
           currentList[index] = event.catalogue;
         }

@@ -107,53 +107,62 @@ class VuelosPorAgenteCard extends StatelessWidget {
             ),
           ),
         ),
-        ...grupos.map((g) => AnalyticsExpansionCard(
-          icon: Icons.person_outline_rounded,
-          color: SaasPalette.brand600,
-          title: g.agenteNombre,
-          count: g.totalReservas,
-          emptyText: 'Sin reservas asignadas',
-          children: g.reservas.map((r) => Container(
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: SaasPalette.bgApp,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: SaasPalette.border),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Reserva: ${r.idReserva}',
-                        style: const TextStyle(
-                          color: SaasPalette.textPrimary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+        ...grupos.map(
+          (g) => AnalyticsExpansionCard(
+            icon: Icons.person_outline_rounded,
+            color: SaasPalette.brand600,
+            title: g.agenteNombre,
+            count: g.totalReservas,
+            emptyText: 'Sin reservas asignadas',
+            children: g.reservas
+                .map(
+                  (r) => Container(
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: SaasPalette.bgApp,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: SaasPalette.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Reserva: ${r.idReserva}',
+                                style: const TextStyle(
+                                  color: SaasPalette.textPrimary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                r.correo,
+                                style: const TextStyle(
+                                  color: SaasPalette.textSecondary,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      Text(
-                        r.correo,
-                        style: const TextStyle(color: SaasPalette.textSecondary, fontSize: 11),
-                      ),
-                    ],
+                        Text(
+                          currFmt.format(r.valorTotal),
+                          style: const TextStyle(
+                            color: SaasPalette.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Text(
-                  currFmt.format(r.valorTotal),
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          )).toList(),
-        )),
+                )
+                .toList(),
+          ),
+        ),
       ],
     );
   }

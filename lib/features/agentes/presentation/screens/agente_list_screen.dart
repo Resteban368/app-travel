@@ -2,7 +2,6 @@ import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/saas_palette.dart';
-import '../../../../core/layout/admin_shell.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../domain/entities/agente.dart';
@@ -35,122 +34,117 @@ class _AgenteListScreenState extends State<AgenteListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AdminShell(
-      currentIndex: 10,
-      child: Scaffold(
-        backgroundColor: SaasPalette.bgApp,
-        body: BlocConsumer<AgenteBloc, AgenteState>(
-          listener: (context, state) {
-            if (state is AgenteError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: SaasPalette.danger,
-                ),
-              );
-            }
-          },
-          builder: (context, state) {
-            final authState = context.watch<AuthBloc>().state;
-            final canWrite =
-                authState is AuthAuthenticated &&
-                authState.user.canWrite('agentes');
-
-            List<Agente> agentes = [];
-            if (state is AgenteLoaded) {
-              agentes = state.agentes;
-            } else if (state is AgenteSaving && state.agentes != null) {
-              agentes = state.agentes!;
-            } else if (state is AgenteActionSuccess) {
-              agentes = state.agentes!;
-            }
-
-            final filtered = agentes.where((a) {
-              final query = _searchQuery.toLowerCase();
-              return a.nombre.toLowerCase().contains(query) ||
-                  a.correo.toLowerCase().contains(query);
-            }).toList();
-
-            final isLoading = state is AgenteLoading && agentes.isEmpty;
-
-            return RefreshIndicator(
-              onRefresh: () async => context.read<AgenteBloc>().add(LoadAgentes()),
-              color: SaasPalette.brand600,
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  // ── Header ─────────────────────────────────────────────────
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
-                    sliver: SliverToBoxAdapter(
-                      child: _AgenteHeader(canWrite: canWrite),
-                    ),
-                  ),
-
-                  // ── Search Field ──────────────────────────────────────────
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
-                    sliver: SliverToBoxAdapter(
-                      child: SaasSearchField(
-                        controller: _searchCtrl,
-                        hintText: 'Buscar agentes por nombre o correo...',
-                        onChanged: (v) => setState(() => _searchQuery = v),
-                        onClear: () {
-                          _searchCtrl.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      ),
-                    ),
-                  ),
-
-                  // ── Content ────────────────────────────────────────────────
-                  if (isLoading)
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (_, __) => const SaasListSkeleton(),
-                          childCount: 4,
-                        ),
-                      ),
-                    )
-                  else if (filtered.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: SaasEmptyState(
-                        icon: _searchQuery.isNotEmpty
-                            ? Icons.search_off_rounded
-                            : Icons.people_outline_rounded,
-                        title: _searchQuery.isNotEmpty
-                            ? 'Sin resultados'
-                            : 'No hay agentes',
-                        subtitle: _searchQuery.isNotEmpty
-                            ? 'No encontramos agentes que coincidan con "$_searchQuery".'
-                            : 'Aún no has registrado agentes en el sistema.',
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final agente = filtered[index];
-                            return _AgenteCard(
-                              agente: agente,
-                              canWrite: canWrite,
-                              onDelete: () => _confirmDelete(agente),
-                            );
-                          },
-                          childCount: filtered.length,
-                        ),
-                      ),
-                    ),
-                ],
+    return Scaffold(
+      backgroundColor: SaasPalette.bgApp,
+      body: BlocConsumer<AgenteBloc, AgenteState>(
+        listener: (context, state) {
+          if (state is AgenteError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: SaasPalette.danger,
               ),
             );
-          },
-        ),
+          }
+        },
+        builder: (context, state) {
+          final authState = context.watch<AuthBloc>().state;
+          final canWrite =
+              authState is AuthAuthenticated &&
+              authState.user.canWrite('agentes');
+
+          List<Agente> agentes = [];
+          if (state is AgenteLoaded) {
+            agentes = state.agentes;
+          } else if (state is AgenteSaving && state.agentes != null) {
+            agentes = state.agentes!;
+          } else if (state is AgenteActionSuccess) {
+            agentes = state.agentes;
+          }
+
+          final filtered = agentes.where((a) {
+            final query = _searchQuery.toLowerCase();
+            return a.nombre.toLowerCase().contains(query) ||
+                a.correo.toLowerCase().contains(query);
+          }).toList();
+
+          final isLoading = state is AgenteLoading && agentes.isEmpty;
+
+          return RefreshIndicator(
+            onRefresh: () async =>
+                context.read<AgenteBloc>().add(LoadAgentes()),
+            color: SaasPalette.brand600,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                // ── Header ─────────────────────────────────────────────────
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: _AgenteHeader(canWrite: canWrite),
+                  ),
+                ),
+
+                // ── Search Field ──────────────────────────────────────────
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: SaasSearchField(
+                      controller: _searchCtrl,
+                      hintText: 'Buscar agentes por nombre o correo...',
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                      onClear: () {
+                        _searchCtrl.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    ),
+                  ),
+                ),
+
+                // ── Content ────────────────────────────────────────────────
+                if (isLoading)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (_, __) => const SaasListSkeleton(),
+                        childCount: 4,
+                      ),
+                    ),
+                  )
+                else if (filtered.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: SaasEmptyState(
+                      icon: _searchQuery.isNotEmpty
+                          ? Icons.search_off_rounded
+                          : Icons.people_outline_rounded,
+                      title: _searchQuery.isNotEmpty
+                          ? 'Sin resultados'
+                          : 'No hay agentes',
+                      subtitle: _searchQuery.isNotEmpty
+                          ? 'No encontramos agentes que coincidan con "$_searchQuery".'
+                          : 'Aún no has registrado agentes en el sistema.',
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final agente = filtered[index];
+                        return _AgenteCard(
+                          agente: agente,
+                          canWrite: canWrite,
+                          onDelete: () => _confirmDelete(agente),
+                        );
+                      }, childCount: filtered.length),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -160,7 +154,8 @@ class _AgenteListScreenState extends State<AgenteListScreen> {
       context: context,
       builder: (ctx) => SaasConfirmDialog(
         title: '¿Eliminar Agente?',
-        body: 'Esta acción borrará a "${agente.nombre}" permanentemente del sistema.',
+        body:
+            'Esta acción borrará a "${agente.nombre}" permanentemente del sistema.',
         onConfirm: () {
           context.read<AgenteBloc>().add(DeleteAgente(agente.id!));
           Navigator.pop(ctx);
@@ -215,7 +210,8 @@ class _AgenteHeader extends StatelessWidget {
               SaasButton(
                 label: 'Nuevo Agente',
                 icon: Icons.person_add_alt_1_rounded,
-                onPressed: () => Navigator.pushNamed(context, AppRouter.agenteCreate),
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRouter.agenteCreate),
               ),
           ],
         ),
@@ -274,10 +270,10 @@ class _AgenteCardState extends State<_AgenteCard> {
           child: InkWell(
             onTap: widget.canWrite
                 ? () => Navigator.pushNamed(
-                      context,
-                      AppRouter.agenteEdit,
-                      arguments: a,
-                    )
+                    context,
+                    AppRouter.agenteEdit,
+                    arguments: a,
+                  )
                 : null,
             borderRadius: BorderRadius.circular(16),
             child: Padding(
@@ -367,7 +363,11 @@ class _AgenteActionMenu extends StatelessWidget {
           value: 'edit',
           child: Row(
             children: const [
-              Icon(Icons.edit_outlined, size: 18, color: SaasPalette.textPrimary),
+              Icon(
+                Icons.edit_outlined,
+                size: 18,
+                color: SaasPalette.textPrimary,
+              ),
               SizedBox(width: 12),
               Text('Editar agente', style: TextStyle(fontSize: 13)),
             ],
@@ -378,9 +378,16 @@ class _AgenteActionMenu extends StatelessWidget {
           value: 'delete',
           child: Row(
             children: const [
-              Icon(Icons.delete_outline_rounded, size: 18, color: SaasPalette.danger),
+              Icon(
+                Icons.delete_outline_rounded,
+                size: 18,
+                color: SaasPalette.danger,
+              ),
               SizedBox(width: 12),
-              Text('Eliminar', style: TextStyle(color: SaasPalette.danger, fontSize: 13)),
+              Text(
+                'Eliminar',
+                style: TextStyle(color: SaasPalette.danger, fontSize: 13),
+              ),
             ],
           ),
         ),

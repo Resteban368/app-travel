@@ -25,13 +25,15 @@ class CotizacionBloc extends Bloc<CotizacionEvent, CotizacionState> {
         page: event.page,
         limit: event.limit,
       );
-      emit(CotizacionLoaded(
-        result.data,
-        page: result.page,
-        totalPages: result.totalPages,
-        total: result.total,
-        limit: result.limit,
-      ));
+      emit(
+        CotizacionLoaded(
+          result.data,
+          page: result.page,
+          totalPages: result.totalPages,
+          total: result.total,
+          limit: result.limit,
+        ),
+      );
     } catch (e) {
       emit(CotizacionError(e.toString()));
     }
@@ -54,23 +56,27 @@ class CotizacionBloc extends Bloc<CotizacionEvent, CotizacionState> {
           return cotizacion;
         }).toList();
 
-        emit(CotizacionLoaded(
-          updatedCotizaciones,
-          page: currentState.page,
-          totalPages: currentState.totalPages,
-          total: currentState.total,
-          limit: currentState.limit,
-        ));
+        emit(
+          CotizacionLoaded(
+            updatedCotizaciones,
+            page: currentState.page,
+            totalPages: currentState.totalPages,
+            total: currentState.total,
+            limit: currentState.limit,
+          ),
+        );
       } catch (e) {
         emit(CotizacionError(e.toString()));
         // Optionally, emit the loaded state again so UI can recover
-        emit(CotizacionLoaded(
-          currentState.cotizaciones,
-          page: currentState.page,
-          totalPages: currentState.totalPages,
-          total: currentState.total,
-          limit: currentState.limit,
-        ));
+        emit(
+          CotizacionLoaded(
+            currentState.cotizaciones,
+            page: currentState.page,
+            totalPages: currentState.totalPages,
+            total: currentState.total,
+            limit: currentState.limit,
+          ),
+        );
       }
     }
   }
@@ -85,13 +91,15 @@ class CotizacionBloc extends Bloc<CotizacionEvent, CotizacionState> {
       emit(CotizacionSaved());
       // Recargar la lista después de crear
       final result = await repository.getCotizaciones(page: 1, limit: 20);
-      emit(CotizacionLoaded(
-        result.data,
-        page: result.page,
-        totalPages: result.totalPages,
-        total: result.total,
-        limit: result.limit,
-      ));
+      emit(
+        CotizacionLoaded(
+          result.data,
+          page: result.page,
+          totalPages: result.totalPages,
+          total: result.total,
+          limit: result.limit,
+        ),
+      );
     } catch (e) {
       emit(CotizacionError(e.toString()));
     }
@@ -113,22 +121,26 @@ class CotizacionBloc extends Bloc<CotizacionEvent, CotizacionState> {
           return cotizacion;
         }).toList();
 
-        emit(CotizacionLoaded(
-          updatedCotizaciones,
-          page: currentState.page,
-          totalPages: currentState.totalPages,
-          total: currentState.total,
-          limit: currentState.limit,
-        ));
+        emit(
+          CotizacionLoaded(
+            updatedCotizaciones,
+            page: currentState.page,
+            totalPages: currentState.totalPages,
+            total: currentState.total,
+            limit: currentState.limit,
+          ),
+        );
       } catch (e) {
         emit(CotizacionError(e.toString()));
-        emit(CotizacionLoaded(
-          currentState.cotizaciones,
-          page: currentState.page,
-          totalPages: currentState.totalPages,
-          total: currentState.total,
-          limit: currentState.limit,
-        ));
+        emit(
+          CotizacionLoaded(
+            currentState.cotizaciones,
+            page: currentState.page,
+            totalPages: currentState.totalPages,
+            total: currentState.total,
+            limit: currentState.limit,
+          ),
+        );
       }
     }
   }
@@ -159,13 +171,15 @@ class CotizacionBloc extends Bloc<CotizacionEvent, CotizacionState> {
         final updatedList = currentState.cotizaciones
             .where((c) => c.id != event.id)
             .toList();
-        emit(CotizacionLoaded(
-          updatedList,
-          page: currentState.page,
-          totalPages: currentState.totalPages,
-          total: currentState.total - 1,
-          limit: currentState.limit,
-        ));
+        emit(
+          CotizacionLoaded(
+            updatedList,
+            page: currentState.page,
+            totalPages: currentState.totalPages,
+            total: currentState.total - 1,
+            limit: currentState.limit,
+          ),
+        );
       } else {
         add(const LoadCotizaciones(page: 1, limit: 20));
       }

@@ -1,11 +1,18 @@
+import 'dart:js_interop';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:web/web.dart' as webLib;
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/widgets/dialog_loading_widget.dart';
 import '../../domain/entities/tour.dart' hide ItineraryDay;
 import '../../domain/entities/tour_detalle.dart';
 import '../../domain/repositories/tour_repository.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
+import '../../../reservas/domain/repositories/reserva_repository.dart';
+import '../../../reservas/presentation/pdf/reserva_pdf_generator.dart';
+import '../../../service/domain/repositories/service_repository.dart';
 
 class TourDetalleScreen extends StatefulWidget {
   final Tour tour;
@@ -50,17 +57,19 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
     });
     try {
       final d = await sl<TourRepository>().getTourDetalle(widget.tour.id);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _detalle = d;
           _loading = false;
         });
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _loadError = e;
           _loading = false;
         });
+      }
     }
   }
 
@@ -324,6 +333,163 @@ class _ReservaCard extends StatefulWidget {
 
 class _ReservaCardState extends State<_ReservaCard> {
   bool _expanded = false;
+  bool _generatingPdf = false;
+
+  Future<void> _generateAndShowPdf() async {
+    setState(() => _generatingPdf = true);
+    final rootNav = Navigator.of(context, rootNavigator: true);
+    showDialog(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      builder: (_) =>
+          const DialogLoadingNetwork(titel: 'Generando PDF de Reserva'),
+    );
+    try {
+      final fullReserva = await sl<ReservaRepository>().getReservaById(
+        widget.reserva.id.toString(),
+      );
+      final allServices = await sl<ServiceRepository>().getServices();
+      final bytes = await ReservaPdfGenerator.generate(
+        fullReserva,
+        servicios: allServices,
+      );
+      if (!mounted) return;
+      rootNav.pop();
+      await _showPdfPreviewDialog(bytes);
+    } catch (e) {
+      if (mounted) rootNav.pop();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error generando PDF: $e'),
+          backgroundColor: SaasPalette.danger,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _generatingPdf = false);
+    }
+  }
+
+  Future<void> _showPdfPreviewDialog(List<int> bytes) async {
+    final dateStr = DateFormat('dd-MM-yyyy').format(DateTime.now());
+    final filename = 'Reserva_${widget.reserva.idReserva}_$dateStr.pdf';
+    final uint8Bytes = Uint8List.fromList(bytes);
+
+    void openInNewTab() {
+      final blob = webLib.Blob(
+        <JSAny>[uint8Bytes.buffer.toJS].toJS,
+        webLib.BlobPropertyBag(type: 'application/pdf'),
+      );
+      final url = webLib.URL.createObjectURL(blob);
+      webLib.window.open(url, '_blank', '');
+    }
+
+    void download() {
+      final blob = webLib.Blob(
+        <JSAny>[uint8Bytes.buffer.toJS].toJS,
+        webLib.BlobPropertyBag(type: 'application/pdf'),
+      );
+      final url = webLib.URL.createObjectURL(blob);
+      final anchor =
+          webLib.document.createElement('a') as webLib.HTMLAnchorElement;
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      webLib.URL.revokeObjectURL(url);
+    }
+
+    await showDialog(
+      context: context,
+      useRootNavigator: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: SaasPalette.bgCanvas,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: const BoxDecoration(
+                  color: SaasPalette.brand50,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.picture_as_pdf_rounded,
+                  color: SaasPalette.brand600,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'PDF Listo',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: SaasPalette.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                filename,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: SaasPalette.textTertiary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                      label: const Text('Ver PDF'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: SaasPalette.brand600,
+                        side: const BorderSide(color: SaasPalette.brand600),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: openInNewTab,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.download_rounded, size: 18),
+                      label: const Text('Descargar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: SaasPalette.brand600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: download,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'Cerrar',
+                  style: TextStyle(color: SaasPalette.textTertiary),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Color get _estadoColor {
     switch (widget.reserva.estado.toLowerCase()) {
@@ -413,6 +579,28 @@ class _ReservaCardState extends State<_ReservaCard> {
                       ],
                     ),
                   ),
+                  InkWell(
+                    onTap: _generatingPdf ? null : _generateAndShowPdf,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: _generatingPdf
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: SaasPalette.brand600,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.picture_as_pdf_rounded,
+                              color: SaasPalette.brand600,
+                              size: 20,
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   Icon(
                     _expanded
                         ? Icons.keyboard_arrow_up_rounded

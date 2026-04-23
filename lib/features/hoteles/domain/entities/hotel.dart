@@ -40,5 +40,13 @@ class Hotel extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, nombre, ciudad, telefono, direccion, isActive, createdAt];
+  List<Object?> get props => [
+    id,
+    nombre,
+    ciudad,
+    telefono,
+    direccion,
+    isActive,
+    createdAt,
+  ];
 }

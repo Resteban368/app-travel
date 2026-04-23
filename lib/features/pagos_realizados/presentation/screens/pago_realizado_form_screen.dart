@@ -193,14 +193,16 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
+      useRootNavigator: true,
       builder: (_) => DialogLoadingNetwork(titel: message),
     );
   }
 
   void _closeLoadingDialog() {
-    if (_showingLoadingDialog) {
+    if (_showingLoadingDialog && mounted) {
       _showingLoadingDialog = false;
-      Navigator.of(context).pop();
+      // Usamos el rootNavigator para asegurar que cerramos el diálogo y no la pantalla
+      Navigator.of(context, rootNavigator: true).pop();
     }
   }
 
@@ -513,9 +515,12 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                 _wasWhatsappSent ? 'Validado y Notificado' : 'Pago procesado',
               );
               _wasWhatsappSent = false;
-              Navigator.pop(context);
+              // Esperamos un frame para que el diálogo se cierre completamente antes de cerrar la pantalla
+              Future.delayed(Duration.zero, () {
+                if (mounted) Navigator.pop(context);
+              });
             } else if (state is PagosRealizadosLoaded && _isEditing) {
-              // Actualización de estado (validar/rechazar) exitosa — solo cerramos
+              _closeLoadingDialog();
             } else if (state is PagoRealizadoError) {
               _closeLoadingDialog();
               _showToast(state.message, isError: true);
@@ -1478,7 +1483,13 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = json.decode(response.body) as Map<String, dynamic>;
-        const docTypes = ['Factura', 'Recibo', 'Transferencia', 'Ticket', 'Otro'];
+        const docTypes = [
+          'Factura',
+          'Recibo',
+          'Transferencia',
+          'Ticket',
+          'Otro',
+        ];
         setState(() {
           if (data['monto'] != null) {
             _montoCtrl.text = data['monto'].toString();
@@ -1571,7 +1582,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         decoration: BoxDecoration(
           color: SaasPalette.brand50,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: SaasPalette.brand600.withValues(alpha: 0.3)),
+          border: Border.all(
+            color: SaasPalette.brand600.withValues(alpha: 0.3),
+          ),
         ),
         child: const Row(
           children: [

@@ -41,20 +41,31 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
 
   Future<AnalyticsData> _loadAnalytics(String periodo) async {
     final client = sl<http.Client>();
-    final uri = Uri.parse('${ApiConstants.kBaseUrl}/v1/analytics?periodo=$periodo');
-    final response = await client.get(uri, headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    });
+    final uri = Uri.parse(
+      '${ApiConstants.kBaseUrl}/v1/analytics?periodo=$periodo',
+    );
+    final response = await client.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    );
     if (response.statusCode == 200) {
-      return AnalyticsData.fromJson(json.decode(response.body) as Map<String, dynamic>);
+      return AnalyticsData.fromJson(
+        json.decode(response.body) as Map<String, dynamic>,
+      );
     }
     throw Exception('Error al cargar analítica: ${response.statusCode}');
   }
 
   @override
   Widget build(BuildContext context) {
-    final currFmt = NumberFormat.currency(locale: 'es_CO', symbol: '\$', decimalDigits: 0);
+    final currFmt = NumberFormat.currency(
+      locale: 'es_CO',
+      symbol: '\$',
+      decimalDigits: 0,
+    );
     final dateFmt = DateFormat('dd MMM · HH:mm', 'es');
 
     return Column(
@@ -69,7 +80,11 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                 color: SaasPalette.brand600.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.bar_chart_rounded, color: SaasPalette.brand600, size: 20),
+              child: const Icon(
+                Icons.bar_chart_rounded,
+                color: SaasPalette.brand600,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             const Text(
@@ -100,20 +115,35 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                     },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
-                        color: selected ? SaasPalette.bgCanvas : Colors.transparent,
+                        color: selected
+                            ? SaasPalette.bgCanvas
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(9),
-                        boxShadow: selected 
-                          ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]
-                          : null,
+                        boxShadow: selected
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
                       ),
                       child: Text(
                         p.$2,
                         style: TextStyle(
-                          color: selected ? SaasPalette.textPrimary : SaasPalette.textTertiary,
+                          color: selected
+                              ? SaasPalette.textPrimary
+                              : SaasPalette.textTertiary,
                           fontSize: 12,
-                          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                          fontWeight: selected
+                              ? FontWeight.w600
+                              : FontWeight.w500,
                         ),
                       ),
                     ),
@@ -158,16 +188,26 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                 ),
                 child: Column(
                   children: [
-                    const Icon(Icons.error_outline_rounded, color: SaasPalette.danger, size: 24),
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      color: SaasPalette.danger,
+                      size: 24,
+                    ),
                     const SizedBox(height: 12),
                     const Text(
                       'No se pudieron cargar los datos analíticos.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: SaasPalette.textSecondary, fontSize: 14),
+                      style: TextStyle(
+                        color: SaasPalette.textSecondary,
+                        fontSize: 14,
+                      ),
                     ),
                     TextButton(
                       onPressed: _fetch,
-                      child: const Text('Reintentar', style: TextStyle(color: SaasPalette.brand600)),
+                      child: const Text(
+                        'Reintentar',
+                        style: TextStyle(color: SaasPalette.brand600),
+                      ),
                     ),
                   ],
                 ),
@@ -219,11 +259,15 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                   title: 'Pagos validados',
                   count: data.pagosTotal,
                   emptyText: 'Sin pagos validados en este período',
-                  children: data.pagos.map((p) => PagoTile(
-                    pago: p,
-                    currFmt: currFmt,
-                    dateFmt: dateFmt,
-                  )).toList(),
+                  children: data.pagos
+                      .map(
+                        (p) => PagoTile(
+                          pago: p,
+                          currFmt: currFmt,
+                          dateFmt: dateFmt,
+                        ),
+                      )
+                      .toList(),
                 ),
 
                 // ── Reservas de tour ───────────────────────────────────────
@@ -233,11 +277,15 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                   title: 'Reservas de tour',
                   count: data.reservasTourTotal,
                   emptyText: 'Sin reservas de tour en este período',
-                  children: data.reservasTour.map((r) => ReservaTourTile(
-                    reserva: r,
-                    currFmt: currFmt,
-                    dateFmt: dateFmt,
-                  )).toList(),
+                  children: data.reservasTour
+                      .map(
+                        (r) => ReservaTourTile(
+                          reserva: r,
+                          currFmt: currFmt,
+                          dateFmt: dateFmt,
+                        ),
+                      )
+                      .toList(),
                 ),
 
                 // ── Cotizaciones ───────────────────────────────────────────
@@ -247,10 +295,9 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                   title: 'Cotizaciones recibidas',
                   count: data.cotizacionesTotal,
                   emptyText: 'Sin cotizaciones en este período',
-                  children: data.cotizaciones.map((c) => CotizacionTile(
-                    cot: c,
-                    dateFmt: dateFmt,
-                  )).toList(),
+                  children: data.cotizaciones
+                      .map((c) => CotizacionTile(cot: c, dateFmt: dateFmt))
+                      .toList(),
                 ),
 
                 // ── Vuelos por agente ──────────────────────────────────────

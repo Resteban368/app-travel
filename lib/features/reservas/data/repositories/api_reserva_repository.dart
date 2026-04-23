@@ -357,8 +357,8 @@ class ApiReservaRepository implements ReservaRepository {
       ),
       pagosValidados: json['pagos_validados'] != null
           ? (json['pagos_validados'] as List)
-              .map((p) => _parsePagoRealizado(p as Map<String, dynamic>))
-              .toList()
+                .map((p) => _parsePagoRealizado(p as Map<String, dynamic>))
+                .toList()
           : null,
       totalPersonas: int.tryParse(json['total_personas']?.toString() ?? ''),
       valorPersonas: double.tryParse(json['valor_personas']?.toString() ?? ''),
@@ -491,8 +491,9 @@ class ApiReservaRepository implements ReservaRepository {
         isDraft: jsonTour['es_borrador'] as bool? ?? false,
         precioPorPareja: jsonTour['precio_por_pareja'] as bool? ?? false,
         cupos: int.tryParse(jsonTour['cupos']?.toString() ?? ''),
-        cuposDisponibles:
-            int.tryParse(jsonTour['cupos_disponibles']?.toString() ?? ''),
+        cuposDisponibles: int.tryParse(
+          jsonTour['cupos_disponibles']?.toString() ?? '',
+        ),
       );
     } catch (e) {
       debugPrint('❌ [ApiReservaRepository] _parseTour error: $e');
@@ -534,8 +535,12 @@ class ApiReservaRepository implements ReservaRepository {
       motivoRechazo: json['motivo_rechazo']?.toString(),
       urlImagen: json['url_imagen']?.toString() ?? '',
       reservaId: int.tryParse(json['reserva_id']?.toString() ?? ''),
-      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
-      updatedAt: json['updatedAt'] != null ? DateTime.tryParse(json['updatedAt']) : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'])
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'])
+          : null,
     );
   }
 }

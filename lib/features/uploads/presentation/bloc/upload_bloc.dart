@@ -11,7 +11,10 @@ class UploadBloc extends Bloc<UploadEvent, UploadState> {
     on<ResetUpload>((_, emit) => emit(const UploadInitial()));
   }
 
-  Future<void> _onUploadFile(UploadFile event, Emitter<UploadState> emit) async {
+  Future<void> _onUploadFile(
+    UploadFile event,
+    Emitter<UploadState> emit,
+  ) async {
     emit(const UploadLoading());
     try {
       final result = await repository.uploadFile(

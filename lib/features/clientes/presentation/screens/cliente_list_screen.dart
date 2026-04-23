@@ -2,9 +2,7 @@ import 'package:agente_viajes/core/theme/saas_palette.dart';
 import 'package:agente_viajes/core/widgets/saas_ui_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'dart:math' as math;
 import '../../../../core/theme/premium_palette.dart';
-import '../../../../core/layout/admin_shell.dart';
 import '../../../../config/app_router.dart';
 import '../../domain/entities/cliente.dart';
 import '../bloc/cliente_bloc.dart';
@@ -78,89 +76,86 @@ class _ClienteListScreenState extends State<ClienteListScreen>
 
   @override
   Widget build(BuildContext context) {
-    return AdminShell(
-      currentIndex: 13,
-      child: Scaffold(
-        body: Stack(
-          children: [
-            BlocConsumer<ClienteBloc, ClienteState>(
-              listener: (context, state) {
-                if (state is ClienteError) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(state.message),
-                      backgroundColor: D.rose,
-                    ),
-                  );
-                } else if (state is ClienteActionSuccess) {
-                  context.read<ClienteBloc>().add(LoadClientes());
-                }
-              },
-              builder: (context, state) {
-                final authState = context.watch<AuthBloc>().state;
-                final canWrite =
-                    authState is AuthAuthenticated &&
-                    authState.user.canWrite('clientes');
-
-                List<Cliente>? clientes;
-                if (state is ClienteLoaded) {
-                  clientes = state.clientes;
-                } else if (state is ClienteSaving && state.clientes != null) {
-                  clientes = state.clientes;
-                } else if (state is ClienteActionSuccess) {
-                  clientes = state.clientes;
-                }
-
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
-                      child: FadeTransition(
-                        opacity: _headerOpacity,
-                        child: SlideTransition(
-                          position: _headerSlide,
-                          child: _buildHeader(context, canWrite),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(32, 24, 32, 10),
-                      child: SaasSearchField(
-                        controller: _searchCtrl,
-                        hintText: 'Buscar clientes',
-                        onChanged: (v) => setState(() => _searchQuery = v),
-                        onClear: () {
-                          _searchCtrl.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: CustomScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        slivers: [
-                          SliverFadeTransition(
-                            opacity: _contentOpacity,
-                            sliver: _buildContent(
-                              context,
-                              state,
-                              clientes,
-                              canWrite,
-                            ),
-                          ),
-                          const SliverPadding(
-                            padding: EdgeInsets.only(bottom: 100),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+    return Scaffold(
+      body: Stack(
+        children: [
+          BlocConsumer<ClienteBloc, ClienteState>(
+            listener: (context, state) {
+              if (state is ClienteError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.message),
+                    backgroundColor: D.rose,
+                  ),
                 );
-              },
-            ),
-          ],
-        ),
+              } else if (state is ClienteActionSuccess) {
+                context.read<ClienteBloc>().add(LoadClientes());
+              }
+            },
+            builder: (context, state) {
+              final authState = context.watch<AuthBloc>().state;
+              final canWrite =
+                  authState is AuthAuthenticated &&
+                  authState.user.canWrite('clientes');
+
+              List<Cliente>? clientes;
+              if (state is ClienteLoaded) {
+                clientes = state.clientes;
+              } else if (state is ClienteSaving && state.clientes != null) {
+                clientes = state.clientes;
+              } else if (state is ClienteActionSuccess) {
+                clientes = state.clientes;
+              }
+
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                    child: FadeTransition(
+                      opacity: _headerOpacity,
+                      child: SlideTransition(
+                        position: _headerSlide,
+                        child: _buildHeader(context, canWrite),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 10),
+                    child: SaasSearchField(
+                      controller: _searchCtrl,
+                      hintText: 'Buscar clientes',
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                      onClear: () {
+                        _searchCtrl.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: CustomScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      slivers: [
+                        SliverFadeTransition(
+                          opacity: _contentOpacity,
+                          sliver: _buildContent(
+                            context,
+                            state,
+                            clientes,
+                            canWrite,
+                          ),
+                        ),
+                        const SliverPadding(
+                          padding: EdgeInsets.only(bottom: 100),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -398,6 +393,14 @@ class _ClienteCardState extends State<_ClienteCard> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        IconButton(
+          icon: const Icon(Icons.history_rounded, color: SaasPalette.brand600, size: 20),
+          onPressed: () => Navigator.pushNamed(
+            context,
+            AppRouter.clienteHistorial,
+            arguments: widget.cliente,
+          ),
+        ),
         IconButton(
           icon: const Icon(Icons.edit_outlined, color: D.skyBlue, size: 20),
           onPressed: () => Navigator.pushNamed(

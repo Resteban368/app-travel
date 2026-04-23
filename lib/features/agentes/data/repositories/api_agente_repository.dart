@@ -14,20 +14,20 @@ class ApiAgenteRepository implements AgenteRepository {
 
   // Mapa estático: clave del módulo → id en la BD
   static const Map<String, int> _moduloIds = {
-    'dashboard':       14,
-    'tours':           15,
-    'sedes':           13,
-    'paymentMethods':  16,
-    'catalogues':      17,
-    'faqs':            18,
-    'services':        19,
-    'politicasReserva':20,
-    'infoEmpresa':     21,
+    'dashboard': 14,
+    'tours': 15,
+    'sedes': 13,
+    'paymentMethods': 16,
+    'catalogues': 17,
+    'faqs': 18,
+    'services': 19,
+    'politicasReserva': 20,
+    'infoEmpresa': 21,
     'pagosRealizados': 22,
-    'agentes':         23,
-    'reservas':        24,
-    'cotizacion':      12,
-    'clientes':        25,
+    'agentes': 23,
+    'reservas': 24,
+    'cotizacion': 12,
+    'clientes': 25,
   };
 
   /// Convierte Map<moduloKey, nivel> → lista de objetos que espera el API
@@ -39,9 +39,9 @@ class ApiAgenteRepository implements AgenteRepository {
   }
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json; charset=UTF-8',
-        'Accept': 'application/json',
-      };
+    'Content-Type': 'application/json; charset=UTF-8',
+    'Accept': 'application/json',
+  };
 
   @override
   Future<List<Agente>> getAgentes() async {
@@ -56,11 +56,16 @@ class ApiAgenteRepository implements AgenteRepository {
 
   @override
   Future<Agente> getAgenteById(int id) async {
-    final response = await client.get(Uri.parse('$_baseUrl/$id'), headers: _headers);
+    final response = await client.get(
+      Uri.parse('$_baseUrl/$id'),
+      headers: _headers,
+    );
     if (response.statusCode == 200) {
       return _fromJson(json.decode(response.body));
     }
-    throw Exception('Error al cargar detalle del agente: ${response.statusCode}');
+    throw Exception(
+      'Error al cargar detalle del agente: ${response.statusCode}',
+    );
   }
 
   @override

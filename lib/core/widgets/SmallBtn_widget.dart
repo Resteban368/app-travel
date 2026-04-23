@@ -4,7 +4,7 @@ class SmallBtn extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
-  const SmallBtn({
+  const SmallBtn({super.key, 
     required this.icon,
     required this.color,
     required this.onTap,

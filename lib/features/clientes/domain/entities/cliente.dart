@@ -39,10 +39,10 @@ class Cliente extends Equatable {
       correo: correo ?? this.correo,
       telefono: telefono ?? this.telefono,
       tipoDocumento: tipoDocumento ?? this.tipoDocumento,
-      documento: documento ?? this.documento,
+      documento: documento ?? documento,
       fechaNacimiento: fechaNacimiento ?? this.fechaNacimiento,
-      estado: estado ?? this.estado,
-      deletedAt: deletedAt ?? this.deletedAt,
+      estado: estado ?? estado,
+      deletedAt: deletedAt ?? deletedAt,
     );
   }
 

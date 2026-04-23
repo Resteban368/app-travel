@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../config/app_router.dart';
-import '../../../../core/layout/admin_shell.dart';
 import '../../../../core/permissions/permission_helper.dart';
 import '../../domain/entities/cotizacion.dart';
 import '../bloc/cotizacion_bloc.dart';
@@ -16,7 +15,7 @@ class CotizacionesListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AdminShell(currentIndex: 12, child: _CotizacionesBody());
+    return const Scaffold(body: _CotizacionesBody());
   }
 }
 

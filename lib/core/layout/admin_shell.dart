@@ -34,12 +34,14 @@ import 'widgets/sidebar_nav_item.dart';
 /// or Drawer (mobile).
 class AdminShell extends StatefulWidget {
   final Widget child;
-  final int currentIndex;
+  final String currentRoute;
+  final ValueChanged<String> onItemTapped;
 
   const AdminShell({
     super.key,
     required this.child,
-    required this.currentIndex,
+    required this.currentRoute,
+    required this.onItemTapped,
   });
 
   @override
@@ -158,6 +160,12 @@ class _AdminShellState extends State<AdminShell> {
       permission: 'hoteles',
     ),
     _NavItem(
+      icon: Icons.manage_search_rounded,
+      label: 'Auditoría',
+      route: AppRouter.auditoria,
+      permission: 'auditoria',
+    ),
+    _NavItem(
       icon: Icons.account_circle_rounded,
       label: 'Mi Perfil',
       route: AppRouter.profile,
@@ -166,17 +174,7 @@ class _AdminShellState extends State<AdminShell> {
   ];
 
   void _onItemTapped(_NavItem item) {
-    final currentRoute =
-        widget.currentIndex >= 0 && widget.currentIndex < _navItems.length
-        ? _navItems[widget.currentIndex].route
-        : '';
-    if (item.route == currentRoute) return;
-
-    // Profile uses push (not replacement) to keep back navigation
-    if (item.route == AppRouter.profile) {
-      Navigator.pushNamed(context, AppRouter.profile);
-      return;
-    }
+    if (item.route == widget.currentRoute) return;
 
     switch (item.route) {
       case AppRouter.tours:
@@ -209,7 +207,12 @@ class _AdminShellState extends State<AdminShell> {
         context.read<HotelBloc>().add(const LoadHoteles());
     }
 
-    Navigator.pushReplacementNamed(context, item.route);
+    widget.onItemTapped(item.route);
+
+    final isDesktop = MediaQuery.of(context).size.width >= 800;
+    if (!isDesktop) {
+      Navigator.pop(context); // Close drawer on mobile
+    }
   }
 
   void _onLogout() {
@@ -224,10 +227,7 @@ class _AdminShellState extends State<AdminShell> {
 
     final authState = context.watch<AuthBloc>().state;
     final user = authState is AuthAuthenticated ? authState.user : null;
-    final currentRoute =
-        widget.currentIndex >= 0 && widget.currentIndex < _navItems.length
-        ? _navItems[widget.currentIndex].route
-        : '';
+    final currentRoute = widget.currentRoute;
 
     final baseVisibleItems = user == null
         ? <_NavItem>[]

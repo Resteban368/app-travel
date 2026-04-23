@@ -11,7 +11,7 @@ class ApiAuthRepository implements AuthRepository {
   static String get _baseUrl => '${ApiConstants.kBaseUrl}/v1/auth';
 
   ApiAuthRepository({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   @override
   Future<User> login(String username, String password) async {
@@ -19,10 +19,7 @@ class ApiAuthRepository implements AuthRepository {
       final response = await http.post(
         Uri.parse('$_baseUrl/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': username,
-          'password': password,
-        }),
+        body: jsonEncode({'email': username, 'password': password}),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -68,7 +65,9 @@ class ApiAuthRepository implements AuthRepository {
       if (e is Exception && e.toString().contains('Credenciales')) {
         rethrow;
       }
-      throw Exception('Error al iniciar sesión. Verifique su conexión y credenciales.');
+      throw Exception(
+        'Error al iniciar sesión. Verifique su conexión y credenciales.',
+      );
     }
   }
 
@@ -79,8 +78,7 @@ class ApiAuthRepository implements AuthRepository {
     if (token == null || userJson == null) return null;
 
     final userData = jsonDecode(userJson);
-    final permisosRaw =
-        (userData['permisos'] as Map<String, dynamic>?) ?? {};
+    final permisosRaw = (userData['permisos'] as Map<String, dynamic>?) ?? {};
     final permisos = permisosRaw.map((k, v) => MapEntry(k, v.toString()));
     return User(
       id: userData['id_usuario']?.toString() ?? '0',
@@ -105,8 +103,7 @@ class ApiAuthRepository implements AuthRepository {
       final userData = jsonDecode(response.body);
       await _storage.write(key: 'user_data', value: jsonEncode(userData));
 
-      final permisosRaw =
-          (userData['permisos'] as Map<String, dynamic>?) ?? {};
+      final permisosRaw = (userData['permisos'] as Map<String, dynamic>?) ?? {};
       final permisos = permisosRaw.map((k, v) => MapEntry(k, v.toString()));
 
       return User(
@@ -121,7 +118,10 @@ class ApiAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> changePassword(String currentPassword, String newPassword) async {
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
     final token = await _storage.read(key: 'access_token');
     if (token == null) throw Exception('token_expired');
 
@@ -146,7 +146,7 @@ class ApiAuthRepository implements AuthRepository {
   @override
   Future<void> logout() async {
     final accessToken = await _storage.read(key: 'access_token');
-    
+
     if (accessToken != null) {
       try {
         await http.post(
@@ -162,5 +162,4 @@ class ApiAuthRepository implements AuthRepository {
     await _storage.delete(key: 'refresh_token');
     await _storage.delete(key: 'user_data');
   }
-
 }

@@ -59,7 +59,9 @@ class ReservaPdfGenerator {
     } else {
       try {
         // Usamos rootBundle para todas las plataformas, es más seguro y evita problemas de CORS en Web
-        final data = await rootBundle.load('assets/logo-empresa/logo-empresa.jpeg');
+        final data = await rootBundle.load(
+          'assets/logo-empresa/logo-empresa.jpeg',
+        );
         _cachedLogo = pw.MemoryImage(data.buffer.asUint8List());
         logoImage = _cachedLogo;
         debugPrint('[PDF] Logo cargado desde assets con éxito');

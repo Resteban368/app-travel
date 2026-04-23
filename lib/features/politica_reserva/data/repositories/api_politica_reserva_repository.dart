@@ -13,9 +13,9 @@ class ApiPoliticaReservaRepository implements PoliticaReservaRepository {
   static String get _baseUrl => '${ApiConstants.kBaseUrl}/v1/politicas-reserva';
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json; charset=UTF-8',
-        'Accept': 'application/json',
-      };
+    'Content-Type': 'application/json; charset=UTF-8',
+    'Accept': 'application/json',
+  };
 
   @override
   Future<List<PoliticaReserva>> getPoliticas() async {
@@ -26,7 +26,9 @@ class ApiPoliticaReservaRepository implements PoliticaReservaRepository {
       final List<dynamic> data = json.decode(response.body);
       return data.map((item) => _fromJson(item)).toList();
     }
-    debugPrint('❌ [ApiPoliticaReservaRepository] Error: ${response.statusCode} - ${response.body}');
+    debugPrint(
+      '❌ [ApiPoliticaReservaRepository] Error: ${response.statusCode} - ${response.body}',
+    );
     throw Exception('Failed to load policies: ${response.statusCode}');
   }
 
@@ -40,7 +42,9 @@ class ApiPoliticaReservaRepository implements PoliticaReservaRepository {
       body: body,
     );
     if (response.statusCode != 201 && response.statusCode != 200) {
-      debugPrint('❌ [ApiPoliticaReservaRepository] Error: ${response.statusCode} - ${response.body}');
+      debugPrint(
+        '❌ [ApiPoliticaReservaRepository] Error: ${response.statusCode} - ${response.body}',
+      );
       throw Exception('Failed to create policy: ${response.statusCode}');
     }
   }
@@ -71,7 +75,8 @@ class ApiPoliticaReservaRepository implements PoliticaReservaRepository {
 
   PoliticaReserva _fromJson(Map<String, dynamic> json) {
     // Attempt to find the ID in common field names used in this project
-    final int id = int.tryParse(
+    final int id =
+        int.tryParse(
           (json['id_politica_reserva'] ??
                   json['id_politica'] ??
                   json['id'] ??

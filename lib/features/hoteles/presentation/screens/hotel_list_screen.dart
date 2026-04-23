@@ -2,7 +2,6 @@ import 'package:agente_viajes/core/theme/saas_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../config/app_router.dart';
-import '../../../../core/layout/admin_shell.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/hotel.dart';
@@ -15,7 +14,7 @@ class HotelListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AdminShell(currentIndex: 14, child: _HotelListBody());
+    return const Scaffold(body: _HotelListBody());
   }
 }
 
@@ -58,8 +57,12 @@ class _HotelListBodyState extends State<_HotelListBody> {
       builder: (context, state) {
         List<Hotel> hoteles = [];
         if (state is HotelLoaded) hoteles = state.hoteles;
-        if (state is HotelSaving && state.hoteles != null) hoteles = state.hoteles!;
-        if (state is HotelSaved && state.hoteles != null) hoteles = state.hoteles!;
+        if (state is HotelSaving && state.hoteles != null) {
+          hoteles = state.hoteles!;
+        }
+        if (state is HotelSaved && state.hoteles != null) {
+          hoteles = state.hoteles!;
+        }
 
         final filtered = _search.isEmpty
             ? hoteles
@@ -115,7 +118,9 @@ class _HotelListBodyState extends State<_HotelListBody> {
                         Icon(
                           Icons.hotel_rounded,
                           size: 56,
-                          color: SaasPalette.textTertiary.withValues(alpha: 0.4),
+                          color: SaasPalette.textTertiary.withValues(
+                            alpha: 0.4,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -197,7 +202,10 @@ class _HotelHeader extends StatelessWidget {
               const SizedBox(height: 4),
               const Text(
                 'Gestión de hoteles disponibles',
-                style: TextStyle(color: SaasPalette.textSecondary, fontSize: 13),
+                style: TextStyle(
+                  color: SaasPalette.textSecondary,
+                  fontSize: 13,
+                ),
               ),
             ],
           ),
@@ -246,7 +254,9 @@ class _HotelCardState extends State<_HotelCard> {
         title: const Text(
           '¿Eliminar hotel?',
           style: TextStyle(
-              color: SaasPalette.textPrimary, fontWeight: FontWeight.bold),
+            color: SaasPalette.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: Text(
           'Se eliminará "${widget.hotel.nombre}" permanentemente.',
@@ -255,8 +265,10 @@ class _HotelCardState extends State<_HotelCard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar',
-                style: TextStyle(color: SaasPalette.textSecondary)),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: SaasPalette.textSecondary),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -267,7 +279,8 @@ class _HotelCardState extends State<_HotelCard> {
               backgroundColor: SaasPalette.danger,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: const Text('Eliminar'),
           ),
@@ -334,36 +347,51 @@ class _HotelCardState extends State<_HotelCard> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.location_city_rounded,
-                            size: 12, color: SaasPalette.textTertiary),
+                        const Icon(
+                          Icons.location_city_rounded,
+                          size: 12,
+                          color: SaasPalette.textTertiary,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           hotel.ciudad,
                           style: const TextStyle(
-                              color: SaasPalette.textSecondary, fontSize: 12),
+                            color: SaasPalette.textSecondary,
+                            fontSize: 12,
+                          ),
                         ),
                         const SizedBox(width: 12),
-                        const Icon(Icons.phone_rounded,
-                            size: 12, color: SaasPalette.textTertiary),
+                        const Icon(
+                          Icons.phone_rounded,
+                          size: 12,
+                          color: SaasPalette.textTertiary,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           hotel.telefono,
                           style: const TextStyle(
-                              color: SaasPalette.textSecondary, fontSize: 12),
+                            color: SaasPalette.textSecondary,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        const Icon(Icons.location_on_rounded,
-                            size: 12, color: SaasPalette.textTertiary),
+                        const Icon(
+                          Icons.location_on_rounded,
+                          size: 12,
+                          color: SaasPalette.textTertiary,
+                        ),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             hotel.direccion,
                             style: const TextStyle(
-                                color: SaasPalette.textTertiary, fontSize: 11),
+                              color: SaasPalette.textTertiary,
+                              fontSize: 11,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -377,11 +405,15 @@ class _HotelCardState extends State<_HotelCard> {
               if (widget.canWrite) ...[
                 const SizedBox(width: 8),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded,
-                      color: SaasPalette.textTertiary, size: 18),
+                  icon: const Icon(
+                    Icons.more_vert_rounded,
+                    color: SaasPalette.textTertiary,
+                    size: 18,
+                  ),
                   color: SaasPalette.bgCanvas,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   onSelected: (value) {
                     if (value == 'edit') {
                       Navigator.pushNamed(
@@ -398,12 +430,16 @@ class _HotelCardState extends State<_HotelCard> {
                       value: 'edit',
                       child: Row(
                         children: [
-                          Icon(Icons.edit_rounded,
-                              size: 16, color: SaasPalette.brand600),
+                          Icon(
+                            Icons.edit_rounded,
+                            size: 16,
+                            color: SaasPalette.brand600,
+                          ),
                           SizedBox(width: 8),
-                          Text('Editar',
-                              style:
-                                  TextStyle(color: SaasPalette.textPrimary)),
+                          Text(
+                            'Editar',
+                            style: TextStyle(color: SaasPalette.textPrimary),
+                          ),
                         ],
                       ),
                     ),
@@ -411,11 +447,16 @@ class _HotelCardState extends State<_HotelCard> {
                       value: 'delete',
                       child: Row(
                         children: [
-                          Icon(Icons.delete_outline_rounded,
-                              size: 16, color: SaasPalette.danger),
+                          Icon(
+                            Icons.delete_outline_rounded,
+                            size: 16,
+                            color: SaasPalette.danger,
+                          ),
                           SizedBox(width: 8),
-                          Text('Eliminar',
-                              style: TextStyle(color: SaasPalette.danger)),
+                          Text(
+                            'Eliminar',
+                            style: TextStyle(color: SaasPalette.danger),
+                          ),
                         ],
                       ),
                     ),

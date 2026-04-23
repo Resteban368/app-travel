@@ -29,7 +29,10 @@ class MockAuthRepository implements AuthRepository {
   Future<User?> fetchMe() async => null;
 
   @override
-  Future<void> changePassword(String currentPassword, String newPassword) async {
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
     await Future.delayed(const Duration(milliseconds: 500));
   }
 }

@@ -41,7 +41,7 @@ import '../../../../features/clientes/presentation/bloc/cliente_event.dart';
 import '../../../../features/clientes/presentation/bloc/cliente_state.dart';
 import '../../../../features/clientes/domain/entities/cliente.dart';
 import '../../../../features/clientes/domain/repositories/cliente_repository.dart';
-import '../../../../features/clientes/presentation/screens/cliente_form_screen.dart';
+
 import 'dart:ui';
 
 class ReservaFormScreen extends StatefulWidget {
@@ -220,7 +220,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const DialogLoadingNetwork(titel: 'Generando PDF de Reserva'),
+      builder: (_) =>
+          const DialogLoadingNetwork(titel: 'Generando PDF de Reserva'),
     );
 
     try {
@@ -618,8 +619,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                 final canWrite =
                                     authState is AuthAuthenticated &&
                                     authState.user.canWrite('reservas');
-                                if (!canWrite && _isEditing)
+                                if (!canWrite && _isEditing) {
                                   return const SizedBox.shrink();
+                                }
                                 return _buildSubmitButton();
                               },
                             ),
@@ -823,7 +825,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                 const SizedBox(
                                   width: 16,
                                   height: 16,
-                                  child: const CircularProgressIndicator(
+                                  child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     color: SaasPalette.brand600,
                                   ),
@@ -1274,7 +1276,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: _estado,
+          initialValue: _estado,
           dropdownColor: D.white,
           style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
           decoration: _inputDecoration(
@@ -1990,7 +1992,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            value: _servicios[index] == 0
+                            initialValue: _servicios[index] == 0
                                 ? null
                                 : _servicios[index],
                             dropdownColor: SaasPalette.bgCanvas,
@@ -2179,7 +2181,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 ),
               const SizedBox(width: 10),
               Text(
-                _generatingPdf ? 'Generando PDF...' : 'Generar PDF de la reserva',
+                _generatingPdf
+                    ? 'Generando PDF...'
+                    : 'Generar PDF de la reserva',
                 style: const TextStyle(
                   color: Color(0xFF2563EB),
                   fontSize: 14,
@@ -2556,8 +2560,7 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
               onPrimary: Colors.white,
               surface: SaasPalette.bgCanvas,
               onSurface: SaasPalette.textPrimary,
-            ),
-            dialogBackgroundColor: SaasPalette.bgCanvas,
+            ), dialogTheme: DialogThemeData(backgroundColor: SaasPalette.bgCanvas),
           ),
           child: child!,
         );
@@ -2831,11 +2834,9 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                           size: 20,
                         ),
                         onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ClienteFormScreen(),
-                            ),
+                          Navigator.pop(context);
+                          Navigator.of(context).pushNamed(
+                            AppRouter.clienteCreate,
                           );
                         },
                         tooltip: 'Nuevo Cliente',
@@ -4743,8 +4744,7 @@ class _HotelPickerDialogState extends State<_HotelPickerDialog> {
                       TextButton.icon(
                         onPressed: () async {
                           Navigator.pop(context);
-                          await Navigator.pushNamed(
-                            context,
+                          await Navigator.of(context).pushNamed(
                             AppRouter.hotelCreate,
                           );
                         },

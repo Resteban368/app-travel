@@ -113,10 +113,9 @@ class PaymentMethodBloc extends Bloc<PaymentMethodEvent, PaymentMethodState> {
     CreatePaymentMethod event,
     Emitter<PaymentMethodState> emit,
   ) async {
-    final currentMethods =
-        state is PaymentMethodsLoaded
-            ? (state as PaymentMethodsLoaded).methods
-            : null;
+    final currentMethods = state is PaymentMethodsLoaded
+        ? (state as PaymentMethodsLoaded).methods
+        : null;
     emit(PaymentMethodSaving(currentMethods));
     try {
       await _paymentMethodRepository.createPaymentMethod(event.method);
@@ -131,10 +130,9 @@ class PaymentMethodBloc extends Bloc<PaymentMethodEvent, PaymentMethodState> {
     UpdatePaymentMethod event,
     Emitter<PaymentMethodState> emit,
   ) async {
-    final currentMethods =
-        state is PaymentMethodsLoaded
-            ? (state as PaymentMethodsLoaded).methods
-            : null;
+    final currentMethods = state is PaymentMethodsLoaded
+        ? (state as PaymentMethodsLoaded).methods
+        : null;
     emit(PaymentMethodSaving(currentMethods));
     try {
       await _paymentMethodRepository.updatePaymentMethod(event.method);
@@ -149,10 +147,9 @@ class PaymentMethodBloc extends Bloc<PaymentMethodEvent, PaymentMethodState> {
     DeletePaymentMethod event,
     Emitter<PaymentMethodState> emit,
   ) async {
-    final currentMethods =
-        state is PaymentMethodsLoaded
-            ? (state as PaymentMethodsLoaded).methods
-            : null;
+    final currentMethods = state is PaymentMethodsLoaded
+        ? (state as PaymentMethodsLoaded).methods
+        : null;
     emit(PaymentMethodSaving(currentMethods));
     try {
       await _paymentMethodRepository.deletePaymentMethod(event.id);

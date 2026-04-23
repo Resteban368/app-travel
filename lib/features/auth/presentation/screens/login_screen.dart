@@ -135,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen>
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          Navigator.pushReplacementNamed(context, AppRouter.profile);
+          Navigator.pushReplacementNamed(context, AppRouter.admin);
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -799,7 +799,7 @@ class _LoginScreenState extends State<LoginScreen>
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
-                    'AgenteViajes Platform v1.2.7',
+                    'AgenteViajes Platform v1.2.8',
                     style: TextStyle(
                       fontSize: 11,
                       color: _C.slate600.withOpacity(0.5),

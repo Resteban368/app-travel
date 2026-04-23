@@ -79,7 +79,10 @@ class AnalyticsExpansionCard extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     child: Text(
                       emptyText,
-                      style: const TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
+                      style: const TextStyle(
+                        color: SaasPalette.textTertiary,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ]
@@ -129,11 +132,17 @@ class PagoTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${pago.metodoPago} · Ref: ${pago.referencia}',
-                  style: const TextStyle(color: SaasPalette.textSecondary, fontSize: 12),
+                  style: const TextStyle(
+                    color: SaasPalette.textSecondary,
+                    fontSize: 12,
+                  ),
                 ),
                 Text(
                   dateFmt.format(pago.fechaCreacion.toLocal()),
-                  style: const TextStyle(color: SaasPalette.textTertiary, fontSize: 11),
+                  style: const TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
@@ -191,11 +200,17 @@ class ReservaTourTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   'ID: ${reserva.idReserva} · ${reserva.correo}',
-                  style: const TextStyle(color: SaasPalette.textSecondary, fontSize: 12),
+                  style: const TextStyle(
+                    color: SaasPalette.textSecondary,
+                    fontSize: 12,
+                  ),
                 ),
                 Text(
                   dateFmt.format(reserva.fechaCreacion.toLocal()),
-                  style: const TextStyle(color: SaasPalette.textTertiary, fontSize: 11),
+                  style: const TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
@@ -213,7 +228,10 @@ class ReservaTourTile extends StatelessWidget {
               ),
               Text(
                 reserva.estado,
-                style: const TextStyle(color: SaasPalette.textTertiary, fontSize: 11),
+                style: const TextStyle(
+                  color: SaasPalette.textTertiary,
+                  fontSize: 11,
+                ),
               ),
             ],
           ),
@@ -227,11 +245,7 @@ class CotizacionTile extends StatelessWidget {
   final AnalyticsCotizacion cot;
   final DateFormat dateFmt;
 
-  const CotizacionTile({
-    super.key,
-    required this.cot,
-    required this.dateFmt,
-  });
+  const CotizacionTile({super.key, required this.cot, required this.dateFmt});
 
   @override
   Widget build(BuildContext context) {
@@ -277,11 +291,17 @@ class CotizacionTile extends StatelessWidget {
                   '${cot.detallesPlan} · ${cot.numeroPasajeros} pax',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: SaasPalette.textSecondary, fontSize: 12),
+                  style: const TextStyle(
+                    color: SaasPalette.textSecondary,
+                    fontSize: 12,
+                  ),
                 ),
                 Text(
                   dateFmt.format(cot.createdAt.toLocal()),
-                  style: const TextStyle(color: SaasPalette.textTertiary, fontSize: 11),
+                  style: const TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),

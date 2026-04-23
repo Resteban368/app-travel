@@ -29,8 +29,9 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
       'page': page.toString(),
       'limit': limit.toString(),
     };
-    if (startDate != null)
+    if (startDate != null) {
       params['startDate'] = startDate.toUtc().toIso8601String();
+    }
     if (endDate != null) params['endDate'] = endDate.toUtc().toIso8601String();
 
     final uri = Uri.parse(_baseUrl).replace(queryParameters: params);

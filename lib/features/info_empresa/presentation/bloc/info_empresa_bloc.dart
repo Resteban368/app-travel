@@ -79,7 +79,7 @@ class InfoEmpresaBloc extends Bloc<InfoEmpresaEvent, InfoEmpresaState> {
   ) async {
     final currentInfo = _getCurrentInfo();
     if (currentInfo.isEmpty) return;
-    
+
     emit(InfoSyncing(currentInfo));
     try {
       await repository.syncVectors();

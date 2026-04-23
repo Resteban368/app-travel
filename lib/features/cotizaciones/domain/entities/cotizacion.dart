@@ -69,19 +69,19 @@ class Cotizacion extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        chatId,
-        nombreCompleto,
-        correoElectronico,
-        detallesPlan,
-        numeroPasajeros,
-        fechaSalida,
-        fechaRegreso,
-        origenDestino,
-        edadesMenuores,
-        especificaciones,
-        estado,
-        isRead,
-        createdAt,
-      ];
+    id,
+    chatId,
+    nombreCompleto,
+    correoElectronico,
+    detallesPlan,
+    numeroPasajeros,
+    fechaSalida,
+    fechaRegreso,
+    origenDestino,
+    edadesMenuores,
+    especificaciones,
+    estado,
+    isRead,
+    createdAt,
+  ];
 }

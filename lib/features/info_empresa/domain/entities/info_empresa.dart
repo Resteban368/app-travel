@@ -84,18 +84,18 @@ class InfoEmpresa extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        nombre,
-        direccion,
-        mision,
-        vision,
-        detalles,
-        horarioPresencial,
-        horarioVirtual,
-        redesSociales,
-        nombreGerente,
-        telefono,
-        correo,
-        sitioWeb,
-      ];
+    id,
+    nombre,
+    direccion,
+    mision,
+    vision,
+    detalles,
+    horarioPresencial,
+    horarioVirtual,
+    redesSociales,
+    nombreGerente,
+    telefono,
+    correo,
+    sitioWeb,
+  ];
 }

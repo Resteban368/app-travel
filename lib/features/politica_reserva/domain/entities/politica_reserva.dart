@@ -37,11 +37,11 @@ class PoliticaReserva extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        titulo,
-        descripcion,
-        tipoPolitica,
-        activo,
-        fechaCreacion,
-      ];
+    id,
+    titulo,
+    descripcion,
+    tipoPolitica,
+    activo,
+    fechaCreacion,
+  ];
 }

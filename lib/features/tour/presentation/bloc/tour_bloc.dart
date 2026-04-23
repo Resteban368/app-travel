@@ -155,7 +155,9 @@ class TourBloc extends Bloc<TourEvent, TourState> {
 
   Future<void> _onCreateTour(CreateTour event, Emitter<TourState> emit) async {
     final currentState = state;
-    final currentTours = currentState is ToursLoaded ? currentState.tours : null;
+    final currentTours = currentState is ToursLoaded
+        ? currentState.tours
+        : null;
     emit(TourSaving(tours: currentTours));
     try {
       await _tourRepository.createTour(event.tour);
@@ -169,7 +171,9 @@ class TourBloc extends Bloc<TourEvent, TourState> {
 
   Future<void> _onUpdateTour(UpdateTour event, Emitter<TourState> emit) async {
     final currentState = state;
-    final currentTours = currentState is ToursLoaded ? currentState.tours : null;
+    final currentTours = currentState is ToursLoaded
+        ? currentState.tours
+        : null;
     emit(TourSaving(tours: currentTours));
     try {
       await _tourRepository.updateTour(event.tour);
@@ -183,7 +187,9 @@ class TourBloc extends Bloc<TourEvent, TourState> {
 
   Future<void> _onDeleteTour(DeleteTour event, Emitter<TourState> emit) async {
     final currentState = state;
-    final currentTours = currentState is ToursLoaded ? currentState.tours : null;
+    final currentTours = currentState is ToursLoaded
+        ? currentState.tours
+        : null;
     emit(TourSaving(tours: currentTours));
     try {
       await _tourRepository.deleteTour(event.id);
@@ -238,7 +244,9 @@ class TourBloc extends Bloc<TourEvent, TourState> {
     Emitter<TourState> emit,
   ) async {
     final currentState = state;
-    if (currentState is ToursLoaded || currentState is TourSaving || currentState is TourSaved) {
+    if (currentState is ToursLoaded ||
+        currentState is TourSaving ||
+        currentState is TourSaved) {
       List<Tour>? currentTours;
       if (currentState is ToursLoaded) currentTours = currentState.tours;
       if (currentState is TourSaving) currentTours = currentState.tours;
@@ -264,7 +272,9 @@ class TourBloc extends Bloc<TourEvent, TourState> {
     Emitter<TourState> emit,
   ) async {
     final currentState = state;
-    if (currentState is ToursLoaded || currentState is TourSaving || currentState is TourSaved) {
+    if (currentState is ToursLoaded ||
+        currentState is TourSaving ||
+        currentState is TourSaved) {
       List<Tour>? currentTours;
       if (currentState is ToursLoaded) currentTours = currentState.tours;
       if (currentState is TourSaving) currentTours = currentState.tours;

@@ -61,23 +61,17 @@ class ServicioDetalle {
   final String nombre;
   final double? costo;
 
-  const ServicioDetalle({
-    required this.id,
-    required this.nombre,
-    this.costo,
-  });
+  const ServicioDetalle({required this.id, required this.nombre, this.costo});
 
-  factory ServicioDetalle.fromJson(Map<String, dynamic> json) =>
-      ServicioDetalle(
-        id: int.tryParse(
-              (json['id_servicio'] ?? json['id'] ?? 0).toString(),
-            ) ??
-            0,
-        nombre: json['nombre'] ?? json['name'] ?? 'Servicio',
-        costo: double.tryParse(
-          (json['costo'] ?? json['cost'] ?? json['valor'] ?? '').toString(),
-        ),
-      );
+  factory ServicioDetalle.fromJson(
+    Map<String, dynamic> json,
+  ) => ServicioDetalle(
+    id: int.tryParse((json['id_servicio'] ?? json['id'] ?? 0).toString()) ?? 0,
+    nombre: json['nombre'] ?? json['name'] ?? 'Servicio',
+    costo: double.tryParse(
+      (json['costo'] ?? json['cost'] ?? json['valor'] ?? '').toString(),
+    ),
+  );
 }
 
 class ReservaDetalle {
@@ -128,11 +122,10 @@ class ReservaDetalle {
       idReserva: json['id_reserva'] ?? '',
       estado: json['estado'] ?? '',
       notas: json['notas']?.toString(),
-      fechaCreacion: DateTime.tryParse(json['fecha_creacion'] ?? '') ??
-          DateTime.now(),
+      fechaCreacion:
+          DateTime.tryParse(json['fecha_creacion'] ?? '') ?? DateTime.now(),
       ocupaCupo: json['ocupa_cupo'] ?? false,
-      valorTotal:
-          double.tryParse(json['valor_total']?.toString() ?? '0') ?? 0,
+      valorTotal: double.tryParse(json['valor_total']?.toString() ?? '0') ?? 0,
       valorTourSnapshot:
           double.tryParse(json['valor_tour_snapshot']?.toString() ?? '0') ?? 0,
       costoServicios:
@@ -155,10 +148,7 @@ class TourDetalle {
   final List<ReservaDetalle> reservas;
   final int totalPasajeros;
 
-  const TourDetalle({
-    required this.reservas,
-    required this.totalPasajeros,
-  });
+  const TourDetalle({required this.reservas, required this.totalPasajeros});
 
   factory TourDetalle.fromJson(Map<String, dynamic> json) => TourDetalle(
     reservas: (json['reservas'] as List? ?? [])

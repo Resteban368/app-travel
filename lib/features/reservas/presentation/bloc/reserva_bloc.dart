@@ -26,13 +26,15 @@ class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
         endDate: event.endDate,
         status: event.status,
       );
-      emit(ReservaLoaded(
-        result.data,
-        page: result.page,
-        totalPages: result.totalPages,
-        total: result.total,
-        limit: result.limit,
-      ));
+      emit(
+        ReservaLoaded(
+          result.data,
+          page: result.page,
+          totalPages: result.totalPages,
+          total: result.total,
+          limit: result.limit,
+        ),
+      );
     } catch (e) {
       emit(ReservaError(e.toString()));
     }
