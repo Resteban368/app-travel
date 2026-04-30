@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:agente_viajes/core/theme/saas_palette.dart';
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -76,7 +77,32 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
   }
 
   void _save(BuildContext context) {
-    if (!_formKey.currentState!.validate()) return;
+    //VALIDAMOS QUE TENGA EL NOMBRE DEL SERVICIO
+    if (_nameCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El nombre del servicio es requerido');
+      return;
+    }
+
+    //VALIDAMOS QUE TENGA EL COSTO DEL SERVICIO
+    if (_costCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El costo del servicio es requerido');
+      return;
+    }
+
+    //VALIDAMOS QUE TENGA LA DESCRIPCIÓN DEL SERVICIO
+    if (_descriptionCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(
+        context,
+        'La descripción del servicio es requerida',
+      );
+      return;
+    }
+
+    //VALIDAMOS QUE TENGA LA SEDE
+    if (_selectedSedeId == null) {
+      SaasSnackBar.showWarning(context, 'La sede es requerida');
+      return;
+    }
 
     final service = Service(
       id: _isEditing ? widget.service!.id : 0,
@@ -210,7 +236,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
                                     const SizedBox(height: 20),
                                     PremiumTextField(
                                       controller: _costCtrl,
-                                      label: 'Costo Monetario',
+                                      label: 'Costo Monetario *',
                                       icon: Icons.attach_money_rounded,
                                       isNumeric: true,
                                       readOnly: !canWrite,
@@ -346,7 +372,8 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
               )
             else
               DropdownButtonFormField<int>(
-                initialValue: sedes.any((s) => int.tryParse(s.id) == _selectedSedeId)
+                initialValue:
+                    sedes.any((s) => int.tryParse(s.id) == _selectedSedeId)
                     ? _selectedSedeId
                     : null,
                 dropdownColor: D.white,

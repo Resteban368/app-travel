@@ -1,3 +1,4 @@
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -234,7 +235,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         servicios: allServices,
       );
       if (!mounted) return;
-      Navigator.pop(context); // Close dialog
+      // Cerrar el diálogo de carga usando el rootNavigator para asegurar que cerramos el diálogo
+      Navigator.of(context, rootNavigator: true).pop();
+
       final dateStr = DateFormat('dd-MM-yyyy').format(DateTime.now());
       final filename =
           'Reserva_${widget.reserva!.idReserva ?? widget.reserva!.id}_$dateStr.pdf';
@@ -343,7 +346,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         ),
       );
     } catch (e) {
-      if (mounted) Navigator.pop(context); // Close loading dialog
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -387,23 +392,173 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     }
   }
 
-  void _showMsg(String msg, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   void _save() {
-    if (!_formKey.currentState!.validate()) return;
-
-    if (_tipoReserva == 'tour' && _selectedTourId == null) {
-      _showMsg('Debe seleccionar un tour.', SaasPalette.danger);
+    //VALIDACIONES
+    //CLIENTE
+    if (_selectedCliente == null) {
+      SaasSnackBar.showWarning(context, 'Debe seleccionar un cliente.');
       return;
     }
+
+    //SI LA RESERVA ES TIPO TOUR
+    //DEBE TENER UN TOUR SELECIONADO
+    if (_tipoReserva == 'tour' && _selectedTourId == null) {
+      SaasSnackBar.showWarning(context, 'Debe seleccionar un tour.');
+      return;
+    }
+
+    //si la reserva es de tipo vuelos
+    // DEBE TENER AL MENOS UM VUELO
+    if (_tipoReserva == 'vuelos' && _vuelos.isEmpty) {
+      SaasSnackBar.showWarning(context, 'Debe seleccionar al menos un vuelo.');
+      return;
+    }
+
+    if (_tipoReserva == 'vuelos') {
+      //PARA TODOS LOS VUELOS AGREGADOS DEBEN DE TENER
+      for (var vuelo in _vuelos) {
+        //SELECIONAR UNA AEROLINEA
+        if (vuelo.aerolinea == null) {
+          SaasSnackBar.showWarning(context, 'Debe seleccionar una aerolínea.');
+          return;
+        }
+        //ORIGEN DEL VUELO
+        if (vuelo.origen.isEmpty) {
+          SaasSnackBar.showWarning(context, 'Debe seleccionar un origen.');
+          return;
+        }
+        //DESTINO DEL VUELO
+        if (vuelo.destino.isEmpty) {
+          SaasSnackBar.showWarning(context, 'Debe seleccionar un destino.');
+          return;
+        }
+
+        //fecha y hora de salida
+        if (vuelo.fechaSalida.isEmpty) {
+          SaasSnackBar.showWarning(
+            context,
+            'Debe seleccionar una fecha de salida.',
+          );
+          return;
+        }
+        if (vuelo.horaSalida.isEmpty) {
+          SaasSnackBar.showWarning(
+            context,
+            'Debe seleccionar una hora de salida.',
+          );
+          return;
+        }
+        //fecha y hora de llegada
+        if (vuelo.fechaLlegada.isEmpty) {
+          SaasSnackBar.showWarning(
+            context,
+            'Debe seleccionar una fecha de llegada.',
+          );
+          return;
+        }
+        if (vuelo.horaLlegada.isEmpty) {
+          SaasSnackBar.showWarning(
+            context,
+            'Debe seleccionar una hora de llegada.',
+          );
+          return;
+        }
+
+        //precio del vuelo
+        if (vuelo.precio == null) {
+          SaasSnackBar.showWarning(context, 'Debe seleccionar un precio.');
+          return;
+        }
+      }
+    }
+
+    //si tiene un hotel seleccionado debe tener
+
+    if (_hotelReservas.isNotEmpty) {
+      for (var hotel in _hotelReservas) {
+        //seleccion un hotel
+        if (hotel.hotel == null) {
+          SaasSnackBar.showWarning(context, 'Debe seleccionar un hotel.');
+          return;
+        }
+        //numero de reserva
+        if (hotel.numeroReserva.isEmpty) {
+          SaasSnackBar.showWarning(
+            context,
+            'Debe seleccionar un numero de reserva para el hotel',
+          );
+          return;
+        }
+        //valor del hotel
+        if (hotel.valor == null) {
+          SaasSnackBar.showWarning(
+            context,
+            'Debe seleccionar un valor para el hotel.',
+          );
+          return;
+        }
+        //check-in
+        if (hotel.fechaCheckin.isEmpty) {
+          SaasSnackBar.showWarning(
+            context,
+            'Debe seleccionar una fecha de check-in.',
+          );
+          return;
+        }
+        //check-out
+        if (hotel.fechaCheckout.isEmpty) {
+          SaasSnackBar.showWarning(
+            context,
+            'Debe seleccionar una fecha de check-out.',
+          );
+          return;
+        }
+      }
+    }
+
+    //si tiene integrantes creados debe tener
+    if (_integrantes.isNotEmpty) {
+      for (var integrante in _integrantes) {
+        //nombre
+        if (integrante.nombre.isEmpty) {
+          SaasSnackBar.showWarning(
+            context,
+            'Debe seleccionar un nombre para el integrante',
+          );
+          return;
+        }
+
+        //telefono
+        if (integrante.telefono.isEmpty) {
+          SaasSnackBar.showWarning(
+            context,
+            'Debe seleccionar un telefono para el integrante',
+          );
+          return;
+        }
+
+        //documento
+        if (integrante.documento.isEmpty) {
+          SaasSnackBar.showWarning(
+            context,
+            'Debe seleccionar un documento para el integrante',
+          );
+          return;
+        }
+
+        //numero documento
+        if (integrante.documento.isEmpty) {
+          SaasSnackBar.showWarning(
+            context,
+            'Debe seleccionar un numero de documento para el integrante',
+          );
+          return;
+        }
+      }
+    }
+
+    //SI TIENE UN VUELO CREADO DEBE TENER
+    //SELECIONAR UNA AEROLINEA
 
     // Calcular valor total para reservas de tipo vuelos
     double? calculatedVuelosTotal;
@@ -2560,7 +2715,8 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
               onPrimary: Colors.white,
               surface: SaasPalette.bgCanvas,
               onSurface: SaasPalette.textPrimary,
-            ), dialogTheme: DialogThemeData(backgroundColor: SaasPalette.bgCanvas),
+            ),
+            dialogTheme: DialogThemeData(backgroundColor: SaasPalette.bgCanvas),
           ),
           child: child!,
         );
@@ -2834,10 +2990,9 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                           size: 20,
                         ),
                         onPressed: () {
-                          Navigator.pop(context);
-                          Navigator.of(context).pushNamed(
-                            AppRouter.clienteCreate,
-                          );
+                          final nav = Navigator.of(context);
+                          nav.pop();
+                          nav.pushNamed(AppRouter.clienteCreate);
                         },
                         tooltip: 'Nuevo Cliente',
                       ),
@@ -4744,9 +4899,9 @@ class _HotelPickerDialogState extends State<_HotelPickerDialog> {
                       TextButton.icon(
                         onPressed: () async {
                           Navigator.pop(context);
-                          await Navigator.of(context).pushNamed(
-                            AppRouter.hotelCreate,
-                          );
+                          await Navigator.of(
+                            context,
+                          ).pushNamed(AppRouter.hotelCreate);
                         },
                         icon: const Icon(Icons.add_rounded, size: 16),
                         label: const Text('Nuevo'),

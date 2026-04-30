@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:agente_viajes/core/theme/saas_palette.dart';
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/payment_method.dart';
@@ -78,7 +79,38 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
   }
 
   void _save(BuildContext context) {
-    if (!_formKey.currentState!.validate()) return;
+    //VALIDSMSO QUE TENGA EL NOMBRE DE LA ENTIDAD
+    if (_bankCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El nombre de la entidad es requerido');
+      return;
+    }
+
+    //VALIDSMSO QUE TENGA EL TIPO DE PAGO
+    if (_paymentType.isEmpty) {
+      SaasSnackBar.showWarning(context, 'El tipo de pago es requerido');
+      return;
+    }
+
+    //VALIDSMSO QUE TENGA EL TIPO DE CUENTA
+    if (_accountType.isEmpty) {
+      SaasSnackBar.showWarning(context, 'El tipo de cuenta es requerido');
+      return;
+    }
+
+    //VALIDSMSO QUE TENGA EL NUMERO DE LA CUENTA
+    if (_accountNumberCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El numero de la cuenta es requerido');
+      return;
+    }
+
+    //VALIDSMSO QUE TENGA EL NOMBRE DEL TITULAR DE LA CUENTA
+    if (_accountHolderCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(
+        context,
+        'El nombre del titular de la cuenta es requerido',
+      );
+      return;
+    }
 
     final method = PaymentMethod(
       id: _isEditing ? widget.paymentMethod!.id : 0,

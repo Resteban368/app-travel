@@ -1,3 +1,4 @@
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -124,13 +125,79 @@ class _TourFormScreenState extends State<TourFormScreen>
   }
 
   void _saveTour(BuildContext context, {required bool publish}) {
-    if (!_formKey.currentState!.validate()) return;
-    if (_inclusions.isEmpty) {
-      _showMsg('Incluye al menos una inclusión', SaasPalette.danger);
+    //validamos que tenga un codigo de operacion
+    if (_idTourCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El codigo de operacion es requerido');
       return;
     }
+    //UN TITULO
+    if (_nameCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El titulo es requerido');
+      return;
+    }
+
+    //SEDE
+    if (_selectedSedeId == null) {
+      SaasSnackBar.showWarning(context, 'La sede es requerida');
+      return;
+    }
+
+    //UN PRECIO
+    if (_priceCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El precio es requerido');
+      return;
+    }
+    //FECHAS
     if (_dateRange == null) {
-      _showMsg('Selecciona el rango de fechas', SaasPalette.danger);
+      SaasSnackBar.showWarning(context, 'Las fechas son requeridas');
+      return;
+    }
+
+    //CUPOS
+    if (_cuposCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'Los cupos son requeridos');
+      return;
+    }
+
+    //LUGAR DE SALIDA
+    if (_departurePointCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El lugar de salida es requerido');
+      return;
+    }
+
+    //HORA DE SALIDA
+    if (_departureTimeCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'La hora de salida es requerida');
+      return;
+    }
+
+    //DESTINO FINAL
+    if (_arrivalCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El destino final es requerido');
+      return;
+    }
+
+    //LINKS
+    if (_pdfLinkCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El link del pdf es requerido');
+      return;
+    }
+
+    //INCLUSIONES
+    if (_inclusions.isEmpty) {
+      SaasSnackBar.showWarning(context, 'Las inclusiones son requeridas');
+      return;
+    }
+
+    //EXCLUSIONES
+    if (_exclusions.isEmpty) {
+      SaasSnackBar.showWarning(context, 'Las exclusiones son requeridas');
+      return;
+    }
+
+    //ITINERARIO
+    if (_itinerary.isEmpty) {
+      SaasSnackBar.showWarning(context, 'El itinerario es requerido');
       return;
     }
 
@@ -168,16 +235,6 @@ class _TourFormScreenState extends State<TourFormScreen>
     }
   }
 
-  void _showMsg(String msg, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
@@ -188,10 +245,13 @@ class _TourFormScreenState extends State<TourFormScreen>
     return BlocListener<TourBloc, TourState>(
       listener: (context, state) {
         if (state is TourSaved) {
-          _showMsg('Experiencia guardada exitosamente', SaasPalette.success);
+          SaasSnackBar.showSuccess(
+            context,
+            'Experiencia guardada exitosamente',
+          );
           Navigator.pop(context);
         } else if (state is TourError) {
-          _showMsg(state.message, SaasPalette.danger);
+          SaasSnackBar.showError(context, state.message);
         }
       },
       child: Scaffold(
@@ -282,7 +342,7 @@ class _TourFormScreenState extends State<TourFormScreen>
                                       Expanded(
                                         child: PremiumTextField(
                                           controller: _cuposCtrl,
-                                          label: 'Cupos totales',
+                                          label: 'Cupos totales *',
                                           icon: Icons.people_alt_rounded,
                                           isNumeric: true,
                                           readOnly: !canWrite,
@@ -340,7 +400,7 @@ class _TourFormScreenState extends State<TourFormScreen>
                                 children: [
                                   PremiumTextField(
                                     controller: _pdfLinkCtrl,
-                                    label: 'Link Catálogo (Google Drive)',
+                                    label: 'Link Catálogo (Google Drive) *',
                                     icon: Icons.picture_as_pdf_rounded,
                                     readOnly: !canWrite,
                                   ),
@@ -352,7 +412,7 @@ class _TourFormScreenState extends State<TourFormScreen>
                                 icon: Icons.inventory_2_rounded,
                                 children: [
                                   _buildDynamicList(
-                                    'Inclusiones',
+                                    'Inclusiones *',
                                     _inclusionCtrl,
                                     _inclusions,
                                     Icons.check_circle_rounded,
@@ -361,7 +421,7 @@ class _TourFormScreenState extends State<TourFormScreen>
                                   ),
                                   const SizedBox(height: 28),
                                   _buildDynamicList(
-                                    'Exclusiones',
+                                    'Exclusiones *',
                                     _exclusionCtrl,
                                     _exclusions,
                                     Icons.cancel_rounded,

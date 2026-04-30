@@ -44,7 +44,9 @@ import '../../features/whatsapp/domain/usecases/send_whatsapp_message.dart';
 import '../../features/whatsapp/presentation/bloc/whatsapp_bloc.dart';
 
 import '../../features/cotizaciones/data/repositories/api_cotizacion_repository.dart';
+import '../../features/cotizaciones/data/repositories/api_respuesta_cotizacion_repository.dart';
 import '../../features/cotizaciones/domain/repositories/cotizacion_repository.dart';
+import '../../features/cotizaciones/domain/repositories/respuesta_cotizacion_repository.dart';
 import '../../features/cotizaciones/presentation/bloc/cotizacion_bloc.dart';
 import '../../features/agentes/data/repositories/api_agente_repository.dart';
 import '../../features/agentes/domain/repositories/agente_repository.dart';
@@ -115,6 +117,9 @@ void initDependencies() {
   sl.registerLazySingleton<CotizacionRepository>(
     () => ApiCotizacionRepository(client: sl()),
   );
+  sl.registerLazySingleton<RespuestaCotizacionRepository>(
+    () => ApiRespuestaCotizacionRepository(client: sl()),
+  );
   sl.registerLazySingleton<AgenteRepository>(
     () => ApiAgenteRepository(client: sl()),
   );
@@ -149,7 +154,8 @@ void initDependencies() {
   sl.registerFactory(() => InfoEmpresaBloc(repository: sl()));
   sl.registerLazySingleton(() => PagoRealizadoBloc(repository: sl()));
   sl.registerFactory(() => WhatsAppBloc(sendWhatsAppMessage: sl()));
-  sl.registerLazySingleton(() => CotizacionBloc(repository: sl()));
+  sl.registerLazySingleton(
+      () => CotizacionBloc(repository: sl(), respuestaRepository: sl()));
   sl.registerFactory(() => AgenteBloc(repository: sl()));
   sl.registerFactory(() => ReservaBloc(repository: sl()));
   sl.registerFactory(() => ClienteBloc(repository: sl()));

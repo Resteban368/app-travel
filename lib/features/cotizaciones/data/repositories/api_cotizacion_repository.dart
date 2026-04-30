@@ -23,7 +23,7 @@ class ApiCotizacionRepository implements CotizacionRepository {
     int page = 1,
     int limit = 20,
   }) async {
-    final url = '$_baseUrl?page=$page&limit=$limit';
+    String url = '$_baseUrl?page=$page&limit=$limit';
     debugPrint('🌎 [ApiCotizacionRepository] GET $url');
     final response = await client.get(Uri.parse(url), headers: _headers);
 
@@ -115,7 +115,7 @@ class ApiCotizacionRepository implements CotizacionRepository {
       'origen_destino': cotizacion.origenDestino,
       'edades_menores': cotizacion.edadesMenuores,
       'especificaciones': cotizacion.especificaciones,
-      'estado': cotizacion.estado,
+      'respuesta_cotizacion_id': cotizacion.respuestaCotizacionId,
     });
     debugPrint('📤 [ApiCotizacionRepository] Creating: $body');
     final response = await client.post(
@@ -141,7 +141,7 @@ class ApiCotizacionRepository implements CotizacionRepository {
       'origen_destino': cotizacion.origenDestino,
       'edades_menores': cotizacion.edadesMenuores,
       'especificaciones': cotizacion.especificaciones,
-      'estado': cotizacion.estado,
+      'respuesta_cotizacion_id': cotizacion.respuestaCotizacionId,
     });
     debugPrint(
       '📤 [ApiCotizacionRepository] Updating #${cotizacion.id}: $body',
@@ -170,6 +170,20 @@ class ApiCotizacionRepository implements CotizacionRepository {
         response.statusCode != 204) {
       _handleAndThrowError(response, 'eliminar cotización');
     }
+  }
+
+  @override
+  Future<Cotizacion> getCotizacion(int id) async {
+    final response = await client.get(
+      Uri.parse('$_baseUrl/$id'),
+      headers: _headers,
+    );
+
+    if (response.statusCode == 200) {
+      return _fromJson(json.decode(response.body));
+    }
+    _handleAndThrowError(response, 'obtener cotización');
+    throw UnimplementedError();
   }
 
   void _handleAndThrowError(http.Response response, String action) {
@@ -204,11 +218,10 @@ class ApiCotizacionRepository implements CotizacionRepository {
       origenDestino: json['origen_destino'],
       edadesMenuores: json['edades_menores'],
       especificaciones: json['especificaciones'],
-      estado: json['estado'] ?? '',
-      isRead: json['is_read'] ?? false,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
+      respuestaCotizacionId: json['respuesta_cotizacion_id'],
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -68,18 +69,24 @@ class _PoliticaReservaFormScreenState extends State<PoliticaReservaFormScreen>
     super.dispose();
   }
 
-  void _showMsg(BuildContext context, String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: isError ? D.rose : D.emerald,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   void _save(BuildContext context) {
-    if (!_formKey.currentState!.validate()) return;
+    //VALIDAMOS QUE TENGA EL TITULO
+    if (_tituloCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El título es requerido');
+      return;
+    }
+
+    //VALIDAMOS QUE TENGA LA DESCRIPCIÓN
+    if (_descripcionCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'La descripción es requerida');
+      return;
+    }
+
+    //VALIDAMOS QUE TENGA EL TIPO DE POLÍTICA
+    if (_tipoCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El tipo de política es requerido');
+      return;
+    }
 
     final politica = PoliticaReserva(
       id: _isEditing ? widget.politica!.id : 0,
@@ -109,7 +116,7 @@ class _PoliticaReservaFormScreenState extends State<PoliticaReservaFormScreen>
     return BlocListener<PoliticaReservaBloc, PoliticaReservaState>(
       listener: (context, state) {
         if (state is PoliticaSaved) {
-          _showMsg(
+          SaasSnackBar.showSuccess(
             context,
             _isEditing
                 ? 'Política actualizada con éxito'
@@ -117,7 +124,7 @@ class _PoliticaReservaFormScreenState extends State<PoliticaReservaFormScreen>
           );
           Navigator.pop(context);
         } else if (state is PoliticaError) {
-          _showMsg(context, state.message, isError: true);
+          SaasSnackBar.showError(context, state.message);
         }
       },
       child: Scaffold(

@@ -11,4 +11,5 @@ abstract class CotizacionRepository {
   Future<void> updateCotizacion(Cotizacion cotizacion);
   Future<void> deleteCotizacion(int id);
   Future<void> updateEstado(int id, String estado);
+  Future<Cotizacion> getCotizacion(int id);
 }

@@ -1,13 +1,21 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/repositories/cotizacion_repository.dart';
+import '../../domain/repositories/respuesta_cotizacion_repository.dart';
 import 'cotizacion_event.dart';
 import 'cotizacion_state.dart';
 
 class CotizacionBloc extends Bloc<CotizacionEvent, CotizacionState> {
   final CotizacionRepository repository;
+  final RespuestaCotizacionRepository respuestaRepository;
 
-  CotizacionBloc({required this.repository}) : super(CotizacionInitial()) {
-    on<LoadCotizaciones>(_onLoadCotizaciones);
+  CotizacionBloc({
+    required this.repository,
+    required this.respuestaRepository,
+  }) : super(CotizacionInitial()) {
+    on<LoadPendingCotizaciones>(_onLoadPendingCotizaciones);
+    on<LoadAttendedCotizaciones>(_onLoadAttendedCotizaciones);
+    on<LoadStandaloneRespuestas>(_onLoadStandaloneRespuestas);
+    on<LoadAllData>(_onLoadAllData);
     on<MarkCotizacionAsRead>(_onMarkCotizacionAsRead);
     on<CreateCotizacion>(_onCreateCotizacion);
     on<UpdateEstadoCotizacion>(_onUpdateEstadoCotizacion);
@@ -15,23 +23,68 @@ class CotizacionBloc extends Bloc<CotizacionEvent, CotizacionState> {
     on<DeleteCotizacion>(_onDeleteCotizacion);
   }
 
-  Future<void> _onLoadCotizaciones(
-    LoadCotizaciones event,
+  Future<void> _onLoadPendingCotizaciones(
+    LoadPendingCotizaciones event,
+    Emitter<CotizacionState> emit,
+  ) async {
+    // Reload all data since the backend doesn't support server-side filtering
+    add(const LoadAllData());
+  }
+
+  Future<void> _onLoadAttendedCotizaciones(
+    LoadAttendedCotizaciones event,
+    Emitter<CotizacionState> emit,
+  ) async {
+    // Reload all data since the backend doesn't support server-side filtering
+    add(const LoadAllData());
+  }
+
+  Future<void> _onLoadStandaloneRespuestas(
+    LoadStandaloneRespuestas event,
+    Emitter<CotizacionState> emit,
+  ) async {
+    final currentState = state is CotizacionLoaded ? state as CotizacionLoaded : null;
+    emit(CotizacionLoading());
+    try {
+      final respuestas = await respuestaRepository.getRespuestas(sinCotizacion: false);
+      emit(
+        currentState != null
+            ? currentState.copyWith(allRespuestas: respuestas)
+            : CotizacionLoaded(
+                pendingCotizaciones: const [],
+                attendedCotizaciones: const [],
+                allRespuestas: respuestas,
+              ),
+      );
+    } catch (e) {
+      emit(CotizacionError(e.toString()));
+    }
+  }
+
+  Future<void> _onLoadAllData(
+    LoadAllData event,
     Emitter<CotizacionState> emit,
   ) async {
     emit(CotizacionLoading());
     try {
-      final result = await repository.getCotizaciones(
-        page: event.page,
-        limit: event.limit,
-      );
+      final allResult = await repository.getCotizaciones(page: 1, limit: 100);
+      final respuestasResult = await respuestaRepository.getRespuestas(sinCotizacion: false);
+
+      // Split client-side: pending = sin respuesta_cotizacion_id, attended = con respuesta_cotizacion_id
+      final pending = allResult.data.where((c) => c.respuestaCotizacionId == null).toList();
+      final attended = allResult.data.where((c) => c.respuestaCotizacionId != null).toList();
+
       emit(
         CotizacionLoaded(
-          result.data,
-          page: result.page,
-          totalPages: result.totalPages,
-          total: result.total,
-          limit: result.limit,
+          pendingCotizaciones: pending,
+          pendingPage: 1,
+          pendingTotalPages: 1,
+          pendingTotal: pending.length,
+          attendedCotizaciones: attended,
+          attendedPage: 1,
+          attendedTotalPages: 1,
+          attendedTotal: attended.length,
+          allRespuestas: respuestasResult,
         ),
       );
     } catch (e) {
@@ -48,35 +101,16 @@ class CotizacionBloc extends Bloc<CotizacionEvent, CotizacionState> {
       try {
         await repository.markAsRead(event.id);
 
-        // Update local state without re-fetching
-        final updatedCotizaciones = currentState.cotizaciones.map((cotizacion) {
-          if (cotizacion.id == event.id) {
-            return cotizacion.copyWith(isRead: true);
-          }
-          return cotizacion;
-        }).toList();
+        final pendingUpdated = currentState.pendingCotizaciones.map((c) => c.id == event.id ? c.copyWith(isRead: true) : c).toList();
+        final attendedUpdated = currentState.attendedCotizaciones.map((c) => c.id == event.id ? c.copyWith(isRead: true) : c).toList();
 
-        emit(
-          CotizacionLoaded(
-            updatedCotizaciones,
-            page: currentState.page,
-            totalPages: currentState.totalPages,
-            total: currentState.total,
-            limit: currentState.limit,
-          ),
-        );
+        emit(currentState.copyWith(
+          pendingCotizaciones: pendingUpdated,
+          attendedCotizaciones: attendedUpdated,
+        ));
       } catch (e) {
         emit(CotizacionError(e.toString()));
-        // Optionally, emit the loaded state again so UI can recover
-        emit(
-          CotizacionLoaded(
-            currentState.cotizaciones,
-            page: currentState.page,
-            totalPages: currentState.totalPages,
-            total: currentState.total,
-            limit: currentState.limit,
-          ),
-        );
+        emit(currentState);
       }
     }
   }
@@ -89,17 +123,7 @@ class CotizacionBloc extends Bloc<CotizacionEvent, CotizacionState> {
     try {
       await repository.createCotizacion(event.cotizacion);
       emit(CotizacionSaved());
-      // Recargar la lista después de crear
-      final result = await repository.getCotizaciones(page: 1, limit: 20);
-      emit(
-        CotizacionLoaded(
-          result.data,
-          page: result.page,
-          totalPages: result.totalPages,
-          total: result.total,
-          limit: result.limit,
-        ),
-      );
+      add(const LoadAllData());
     } catch (e) {
       emit(CotizacionError(e.toString()));
     }
@@ -113,34 +137,10 @@ class CotizacionBloc extends Bloc<CotizacionEvent, CotizacionState> {
       final currentState = state as CotizacionLoaded;
       try {
         await repository.updateEstado(event.id, event.estado);
-
-        final updatedCotizaciones = currentState.cotizaciones.map((cotizacion) {
-          if (cotizacion.id == event.id) {
-            return cotizacion.copyWith(estado: event.estado);
-          }
-          return cotizacion;
-        }).toList();
-
-        emit(
-          CotizacionLoaded(
-            updatedCotizaciones,
-            page: currentState.page,
-            totalPages: currentState.totalPages,
-            total: currentState.total,
-            limit: currentState.limit,
-          ),
-        );
+        add(const LoadAllData());
       } catch (e) {
         emit(CotizacionError(e.toString()));
-        emit(
-          CotizacionLoaded(
-            currentState.cotizaciones,
-            page: currentState.page,
-            totalPages: currentState.totalPages,
-            total: currentState.total,
-            limit: currentState.limit,
-          ),
-        );
+        emit(currentState);
       }
     }
   }
@@ -153,8 +153,7 @@ class CotizacionBloc extends Bloc<CotizacionEvent, CotizacionState> {
     try {
       await repository.updateCotizacion(event.cotizacion);
       emit(CotizacionSaved());
-      // Re-load list to get updated results
-      add(const LoadCotizaciones(page: 1, limit: 20));
+      add(const LoadAllData());
     } catch (e) {
       emit(CotizacionError(e.toString()));
     }
@@ -168,20 +167,17 @@ class CotizacionBloc extends Bloc<CotizacionEvent, CotizacionState> {
     try {
       await repository.deleteCotizacion(event.id);
       if (currentState is CotizacionLoaded) {
-        final updatedList = currentState.cotizaciones
-            .where((c) => c.id != event.id)
-            .toList();
-        emit(
-          CotizacionLoaded(
-            updatedList,
-            page: currentState.page,
-            totalPages: currentState.totalPages,
-            total: currentState.total - 1,
-            limit: currentState.limit,
-          ),
-        );
+        final pendingUpdated = currentState.pendingCotizaciones.where((c) => c.id != event.id).toList();
+        final attendedUpdated = currentState.attendedCotizaciones.where((c) => c.id != event.id).toList();
+
+        emit(currentState.copyWith(
+          pendingCotizaciones: pendingUpdated,
+          pendingTotal: pendingUpdated.length < currentState.pendingCotizaciones.length ? currentState.pendingTotal - 1 : currentState.pendingTotal,
+          attendedCotizaciones: attendedUpdated,
+          attendedTotal: attendedUpdated.length < currentState.attendedCotizaciones.length ? currentState.attendedTotal - 1 : currentState.attendedTotal,
+        ));
       } else {
-        add(const LoadCotizaciones(page: 1, limit: 20));
+        add(const LoadAllData());
       }
     } catch (e) {
       emit(CotizacionError(e.toString()));

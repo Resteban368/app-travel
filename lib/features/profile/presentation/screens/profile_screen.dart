@@ -1,3 +1,4 @@
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/saas_palette.dart';
@@ -552,7 +553,22 @@ class _ChangePasswordCardState extends State<_ChangePasswordCard> {
   }
 
   void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+    if (_currentCtrl.text.isEmpty) {
+      SaasSnackBar.showWarning(context, 'Debe ingresar su contraseña actual');
+      return;
+    }
+    if (_newCtrl.text.isEmpty) {
+      SaasSnackBar.showWarning(context, 'Debe ingresar su nueva contraseña');
+      return;
+    }
+    if (_confirmCtrl.text.isEmpty) {
+      SaasSnackBar.showWarning(context, 'Debe confirmar su nueva contraseña');
+      return;
+    }
+    if (_newCtrl.text != _confirmCtrl.text) {
+      SaasSnackBar.showWarning(context, 'Las contraseñas no coinciden');
+      return;
+    }
     context.read<AuthBloc>().add(
       ChangePasswordRequested(
         currentPassword: _currentCtrl.text,

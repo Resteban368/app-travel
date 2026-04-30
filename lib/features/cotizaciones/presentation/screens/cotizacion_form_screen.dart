@@ -1,8 +1,12 @@
 import 'package:agente_viajes/core/theme/saas_palette.dart';
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../config/app_router.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
 import '../../domain/entities/cotizacion.dart';
+import '../../domain/repositories/respuesta_cotizacion_repository.dart';
 import '../bloc/cotizacion_bloc.dart';
 import '../bloc/cotizacion_event.dart';
 import '../bloc/cotizacion_state.dart';
@@ -22,14 +26,16 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
   final _correoCtrl = TextEditingController();
   final _chatIdCtrl = TextEditingController();
   final _detallesPlanCtrl = TextEditingController();
-  final _origenDestinoCtrl = TextEditingController();
+  final _origenCtrl = TextEditingController();
+  final _destinoCtrl = TextEditingController();
   final _especificacionesCtrl = TextEditingController();
   final _edadesMenoresCtrl = TextEditingController();
   final _numeroPasajerosCtrl = TextEditingController(text: '1');
 
+  String _countryCode = '+57';
+
   DateTime? _fechaSalida;
   DateTime? _fechaRegreso;
-  String _estado = 'pendiente';
 
   @override
   void initState() {
@@ -38,13 +44,21 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
       final c = widget.cotizacion!;
       _nombreCtrl.text = c.nombreCompleto;
       _correoCtrl.text = c.correoElectronico ?? '';
-      _chatIdCtrl.text = c.chatId;
+      final parsed = _parsePhone(c.chatId.trim());
+      _countryCode = parsed.$1;
+      _chatIdCtrl.text = parsed.$2;
       _detallesPlanCtrl.text = c.detallesPlan;
-      _origenDestinoCtrl.text = c.origenDestino ?? '';
+      final od = c.origenDestino ?? '';
+      if (od.contains(' → ')) {
+        final parts = od.split(' → ');
+        _origenCtrl.text = parts[0].trim();
+        _destinoCtrl.text = parts.sublist(1).join(' → ').trim();
+      } else {
+        _destinoCtrl.text = od;
+      }
       _especificacionesCtrl.text = c.especificaciones ?? '';
       _edadesMenoresCtrl.text = c.edadesMenuores ?? '';
       _numeroPasajerosCtrl.text = c.numeroPasajeros.toString();
-      _estado = c.estado;
       if (c.fechaSalida != null) _fechaSalida = DateTime.parse(c.fechaSalida!);
       if (c.fechaRegreso != null) {
         _fechaRegreso = DateTime.parse(c.fechaRegreso!);
@@ -58,7 +72,8 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
     _correoCtrl.dispose();
     _chatIdCtrl.dispose();
     _detallesPlanCtrl.dispose();
-    _origenDestinoCtrl.dispose();
+    _origenCtrl.dispose();
+    _destinoCtrl.dispose();
     _especificacionesCtrl.dispose();
     _edadesMenoresCtrl.dispose();
     _numeroPasajerosCtrl.dispose();
@@ -78,7 +93,8 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
             onPrimary: Colors.white,
             surface: SaasPalette.bgCanvas,
             onSurface: SaasPalette.textPrimary,
-          ), dialogTheme: DialogThemeData(backgroundColor: SaasPalette.bgCanvas),
+          ),
+          dialogTheme: DialogThemeData(backgroundColor: SaasPalette.bgCanvas),
         ),
         child: child!,
       ),
@@ -94,12 +110,21 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
     }
   }
 
+  String? _buildOrigenDestino() {
+    final origen = _origenCtrl.text.trim();
+    final destino = _destinoCtrl.text.trim();
+    if (origen.isEmpty && destino.isEmpty) return null;
+    if (origen.isEmpty) return destino;
+    if (destino.isEmpty) return origen;
+    return '$origen → $destino';
+  }
+
   void _save() {
     if (!_formKey.currentState!.validate()) return;
 
     final cotizacion = Cotizacion(
       id: widget.cotizacion?.id ?? 0,
-      chatId: _chatIdCtrl.text.trim(),
+      chatId: '$_countryCode${_chatIdCtrl.text.trim()}',
       nombreCompleto: _nombreCtrl.text.trim(),
       correoElectronico: _correoCtrl.text.trim().isEmpty
           ? null
@@ -108,17 +133,13 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
       numeroPasajeros: int.tryParse(_numeroPasajerosCtrl.text.trim()) ?? 1,
       fechaSalida: _fechaSalida?.toIso8601String().split('T').first,
       fechaRegreso: _fechaRegreso?.toIso8601String().split('T').first,
-      origenDestino: _origenDestinoCtrl.text.trim().isEmpty
-          ? null
-          : _origenDestinoCtrl.text.trim(),
+      origenDestino: _buildOrigenDestino(),
       edadesMenuores: _edadesMenoresCtrl.text.trim().isEmpty
           ? null
           : _edadesMenoresCtrl.text.trim(),
       especificaciones: _especificacionesCtrl.text.trim().isEmpty
           ? null
           : _especificacionesCtrl.text.trim(),
-      estado: _estado,
-      isRead: widget.cotizacion?.isRead ?? true,
       createdAt: widget.cotizacion?.createdAt ?? DateTime.now(),
     );
 
@@ -134,28 +155,10 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
     return BlocListener<CotizacionBloc, CotizacionState>(
       listener: (context, state) {
         if (state is CotizacionSaved) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Cotización guardada exitosamente'),
-              backgroundColor: SaasPalette.success,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
+          SaasSnackBar.showSuccess(context, 'Cotización guardada exitosamente');
           Navigator.pop(context, true);
         } else if (state is CotizacionError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: SaasPalette.danger,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
+          SaasSnackBar.showError(context, state.message);
         }
       },
       child: Scaffold(
@@ -198,12 +201,11 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
                                   keyboardType: TextInputType.text,
                                 ),
                                 const SizedBox(height: 20),
-                                PremiumTextField(
+                                _WhatsAppField(
                                   controller: _chatIdCtrl,
-                                  label: 'Número de WhatsApp *',
-                                  icon: Icons.phone_android_rounded,
-                                  keyboardType: TextInputType.number,
-                                  isNumeric: true,
+                                  countryCode: _countryCode,
+                                  onCountryCodeChanged: (v) =>
+                                      setState(() => _countryCode = v),
                                 ),
                                 const SizedBox(height: 20),
                                 PremiumTextField(
@@ -221,15 +223,29 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
                               children: [
                                 PremiumTextField(
                                   controller: _detallesPlanCtrl,
-                                  label: 'Plan / Destino *',
+                                  label: 'Detalles del plan *',
                                   icon: Icons.map_rounded,
                                   maxLines: 2,
                                 ),
                                 const SizedBox(height: 20),
-                                PremiumTextField(
-                                  controller: _origenDestinoCtrl,
-                                  label: 'Origen → Destino',
-                                  icon: Icons.route_rounded,
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: PremiumTextField(
+                                        controller: _origenCtrl,
+                                        label: 'Origen',
+                                        icon: Icons.flight_takeoff_rounded,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: PremiumTextField(
+                                        controller: _destinoCtrl,
+                                        label: 'Destino',
+                                        icon: Icons.flight_land_rounded,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 20),
                                 Row(
@@ -286,7 +302,7 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
                             ),
                             const SizedBox(height: 24),
                             PremiumSectionCard(
-                              title: 'NOTAS Y ESTADO',
+                              title: 'NOTAS ',
                               icon: Icons.edit_note_rounded,
                               children: [
                                 PremiumTextField(
@@ -296,11 +312,6 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
                                   maxLines: 5,
                                 ),
                                 const SizedBox(height: 20),
-                                _StatusDropdownPremium(
-                                  value: _estado,
-                                  onChanged: (v) =>
-                                      setState(() => _estado = v ?? _estado),
-                                ),
                               ],
                             ),
                             const SizedBox(height: 32),
@@ -316,6 +327,58 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
                                 );
                               },
                             ),
+                            if (widget.cotizacion != null && widget.cotizacion?.respuestaCotizacionId == null) ...[
+                              const SizedBox(height: 16),
+                              GestureDetector(
+                                onTap: () async {
+                                  await Navigator.pushNamed(
+                                    context,
+                                    AppRouter.cotizacionResponder,
+                                    arguments: widget.cotizacion,
+                                  );
+                                  if (context.mounted) Navigator.pop(context);
+                                },
+                                child: Container(
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    color: SaasPalette.success,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: SaasPalette.success.withValues(alpha: 0.25),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      Icon(Icons.reply_rounded, color: Colors.white, size: 20),
+                                      SizedBox(width: 10),
+                                      Text(
+                                        'RESPONDER COTIZACIÓN',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          letterSpacing: 0.8,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                            if (widget.cotizacion?.respuestaCotizacionId != null) ...[
+                              const SizedBox(height: 16),
+                              PremiumActionButton(
+                                label: 'VER RESPUESTA ENVIADA',
+                                icon: Icons.forward_to_inbox_rounded,
+                                isLoading: false,
+                                onTap: _viewResponse,
+                              ),
+                            ],
                             const SizedBox(height: 100),
                           ],
                         ),
@@ -328,6 +391,212 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _viewResponse() async {
+    bool dialogShown = false;
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(
+          child: CircularProgressIndicator(color: SaasPalette.brand600),
+        ),
+      );
+      dialogShown = true;
+
+      final repository = context.read<RespuestaCotizacionRepository>();
+      final respuestas = await repository.getRespuestasByCotizacion(
+        widget.cotizacion!.id,
+      );
+
+      // Cerrar el diálogo ANTES de navegar
+      if (dialogShown && mounted) {
+        Navigator.pop(context);
+        dialogShown = false;
+      }
+
+      if (respuestas.isNotEmpty) {
+        if (mounted) {
+          await Navigator.pushNamed(
+            context,
+            AppRouter.respuestaDetalle,
+            arguments: respuestas.first,
+          );
+          // Opcional: cerramos este formulario al volver si así se desea
+          if (mounted) Navigator.pop(context);
+        }
+      } else {
+        if (mounted) {
+          SaasSnackBar.showWarning(
+            context,
+            'No se encontró una respuesta para esta cotización.',
+          );
+        }
+      }
+    } catch (e) {
+      if (dialogShown && mounted) {
+        Navigator.pop(context);
+        dialogShown = false;
+      }
+      if (mounted) {
+        SaasSnackBar.showError(
+          context,
+          'Error al obtener la respuesta: ${e.toString().replaceFirst('Exception: ', '')}',
+        );
+      }
+    }
+  }
+}
+
+// ─── Country codes ─────────────────────────────────────────────────────────────
+
+class _CountryCode {
+  final String code;
+  final String name;
+  final String flag;
+  const _CountryCode({required this.code, required this.name, required this.flag});
+}
+
+const _kCountryCodes = [
+  _CountryCode(code: '+57', name: 'Colombia', flag: '🇨🇴'),
+  _CountryCode(code: '+1', name: 'EE.UU./Canadá', flag: '🇺🇸'),
+  _CountryCode(code: '+34', name: 'España', flag: '🇪🇸'),
+  _CountryCode(code: '+52', name: 'México', flag: '🇲🇽'),
+  _CountryCode(code: '+54', name: 'Argentina', flag: '🇦🇷'),
+  _CountryCode(code: '+55', name: 'Brasil', flag: '🇧🇷'),
+  _CountryCode(code: '+56', name: 'Chile', flag: '🇨🇱'),
+  _CountryCode(code: '+51', name: 'Perú', flag: '🇵🇪'),
+  _CountryCode(code: '+58', name: 'Venezuela', flag: '🇻🇪'),
+  _CountryCode(code: '+593', name: 'Ecuador', flag: '🇪🇨'),
+  _CountryCode(code: '+591', name: 'Bolivia', flag: '🇧🇴'),
+  _CountryCode(code: '+595', name: 'Paraguay', flag: '🇵🇾'),
+  _CountryCode(code: '+598', name: 'Uruguay', flag: '🇺🇾'),
+  _CountryCode(code: '+507', name: 'Panamá', flag: '🇵🇦'),
+  _CountryCode(code: '+506', name: 'Costa Rica', flag: '🇨🇷'),
+  _CountryCode(code: '+44', name: 'Reino Unido', flag: '🇬🇧'),
+  _CountryCode(code: '+49', name: 'Alemania', flag: '🇩🇪'),
+  _CountryCode(code: '+33', name: 'Francia', flag: '🇫🇷'),
+];
+
+(String, String) _parsePhone(String raw) {
+  final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+  final sorted = _kCountryCodes.toList()
+    ..sort((a, b) => b.code.length.compareTo(a.code.length));
+  for (final cc in sorted) {
+    final dial = cc.code.replaceAll('+', '');
+    if (digits.startsWith(dial) && digits.length > dial.length) {
+      return (cc.code, digits.substring(dial.length));
+    }
+  }
+  return ('+57', digits);
+}
+
+// ─── WhatsApp field with country code selector ────────────────────────────────
+
+class _WhatsAppField extends StatelessWidget {
+  final TextEditingController controller;
+  final String countryCode;
+  final ValueChanged<String> onCountryCodeChanged;
+
+  const _WhatsAppField({
+    required this.controller,
+    required this.countryCode,
+    required this.onCountryCodeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Chat - WhatsApp *',
+          style: TextStyle(
+            color: SaasPalette.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: SaasPalette.bgCanvas,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: SaasPalette.border),
+          ),
+          child: Row(
+            children: [
+              // Selector de indicativo
+              DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: countryCode,
+                  dropdownColor: SaasPalette.bgCanvas,
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 13,
+                  ),
+                  icon: const Icon(
+                    Icons.arrow_drop_down_rounded,
+                    color: SaasPalette.textTertiary,
+                    size: 18,
+                  ),
+                  menuMaxHeight: 320,
+                  onChanged: (v) { if (v != null) onCountryCodeChanged(v); },
+                  items: _kCountryCodes
+                      .map(
+                        (cc) => DropdownMenuItem(
+                          value: cc.code,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Text(
+                              '${cc.flag} ${cc.code}',
+                              style: const TextStyle(
+                                color: SaasPalette.textPrimary,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+              Container(width: 1, height: 24, color: SaasPalette.border),
+              // Campo numérico
+              Expanded(
+                child: TextFormField(
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 14,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Número sin indicativo',
+                    hintStyle: TextStyle(
+                      color: SaasPalette.textTertiary,
+                      fontSize: 13,
+                    ),
+                    border: InputBorder.none,
+                    filled: true,
+                    fillColor: Colors.transparent,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
+                  ),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -404,83 +673,5 @@ class _DatePickerPremium extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-class _StatusDropdownPremium extends StatelessWidget {
-  final String value;
-  final ValueChanged<String?> onChanged;
-
-  const _StatusDropdownPremium({required this.value, required this.onChanged});
-
-  static const _estados = ['pendiente', 'atendida', 'cancelada'];
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _getStatusColor(value);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Estado Inicial',
-          style: TextStyle(
-            color: SaasPalette.textSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          height: 52,
-          decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: SaasPalette.border),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              dropdownColor: SaasPalette.bgCanvas,
-              icon: Icon(Icons.arrow_drop_down_rounded, color: color, size: 28),
-              isExpanded: true,
-              style: TextStyle(
-                color: color,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
-              ),
-              onChanged: onChanged,
-              items: _estados.map<DropdownMenuItem<String>>((String val) {
-                final itemColor = _getStatusColor(val);
-                return DropdownMenuItem<String>(
-                  value: val,
-                  child: Text(
-                    val.toUpperCase(),
-                    style: TextStyle(
-                      color: itemColor,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Color _getStatusColor(String estado) {
-    switch (estado.toLowerCase()) {
-      case 'atendida':
-        return SaasPalette.success;
-      case 'cancelada':
-        return SaasPalette.danger;
-      default:
-        return Colors.amber.shade700;
-    }
   }
 }

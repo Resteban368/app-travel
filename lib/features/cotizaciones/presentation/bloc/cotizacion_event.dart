@@ -8,13 +8,30 @@ abstract class CotizacionEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class LoadCotizaciones extends CotizacionEvent {
+class LoadPendingCotizaciones extends CotizacionEvent {
   final int page;
   final int limit;
-  const LoadCotizaciones({this.page = 1, this.limit = 20});
+  const LoadPendingCotizaciones({this.page = 1, this.limit = 20});
 
   @override
   List<Object?> get props => [page, limit];
+}
+
+class LoadAttendedCotizaciones extends CotizacionEvent {
+  final int page;
+  final int limit;
+  const LoadAttendedCotizaciones({this.page = 1, this.limit = 20});
+
+  @override
+  List<Object?> get props => [page, limit];
+}
+
+class LoadStandaloneRespuestas extends CotizacionEvent {
+  const LoadStandaloneRespuestas();
+}
+
+class LoadAllData extends CotizacionEvent {
+  const LoadAllData();
 }
 
 class MarkCotizacionAsRead extends CotizacionEvent {

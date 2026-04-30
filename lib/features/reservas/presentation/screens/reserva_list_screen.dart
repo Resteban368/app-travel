@@ -623,10 +623,14 @@ class _ReservaCardState extends State<_ReservaCard> {
         servicios: allServices,
       );
       if (!mounted) return;
-      Navigator.pop(context); // Close dialog
+      // Cerrar el diálogo de carga usando el rootNavigator para asegurar que cerramos el diálogo
+      Navigator.of(context, rootNavigator: true).pop();
+      
       await _showPdfPreviewDialog(bytes);
     } catch (e) {
-      if (mounted) Navigator.pop(context); // Close dialog
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

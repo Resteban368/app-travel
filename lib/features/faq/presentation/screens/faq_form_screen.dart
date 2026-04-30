@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/premium_palette.dart';
@@ -61,7 +62,17 @@ class _FaqFormScreenState extends State<FaqFormScreen>
   }
 
   void _save(BuildContext context) {
-    if (!_formKey.currentState!.validate()) return;
+    //VALIDAMOS QUE TENGA LA PREGUNTA
+    if (_questionCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'La pregunta es requerida');
+      return;
+    }
+
+    //VALIDAMOS QUE TENGA LA RESPUESTA
+    if (_answerCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'La respuesta es requerida');
+      return;
+    }
 
     final faq = Faq(
       id: _isEditing ? widget.faq!.id : 0,

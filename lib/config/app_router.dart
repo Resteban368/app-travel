@@ -36,7 +36,9 @@ import '../features/pagos_realizados/presentation/screens/pago_realizado_form_sc
 import '../../features/pagos_realizados/domain/entities/pago_realizado.dart';
 import '../features/cotizaciones/presentation/screens/cotizaciones_list_screen.dart';
 import '../features/cotizaciones/presentation/screens/cotizacion_form_screen.dart';
+import '../features/cotizaciones/presentation/screens/respuesta_cotizacion_form_screen.dart';
 import '../features/cotizaciones/domain/entities/cotizacion.dart';
+import '../features/cotizaciones/domain/entities/respuesta_cotizacion.dart';
 import '../features/agentes/presentation/screens/agente_list_screen.dart';
 import '../features/agentes/presentation/screens/agente_form_screen.dart';
 import '../features/agentes/domain/entities/agente.dart';
@@ -92,6 +94,8 @@ class AppRouter {
   static const String pagoRealizadoEdit = '/pagos-realizados/edit';
   static const String cotizaciones = '/cotizaciones';
   static const String cotizacionCreate = '/cotizaciones/create';
+  static const String cotizacionResponder = '/cotizaciones/responder';
+  static const String respuestaDetalle = '/cotizaciones/respuesta-detalle';
   static const String agentes = '/agentes';
   static const String agenteCreate = '/agentes/create';
   static const String agenteEdit = '/agentes/edit';
@@ -226,6 +230,13 @@ class AppRouter {
       case cotizacionCreate:
         final cotizacion = settings.arguments as Cotizacion?;
         return _fadeRoute(CotizacionFormScreen(cotizacion: cotizacion), settings);
+      case cotizacionResponder:
+        final cotizacion = settings.arguments as Cotizacion?;
+        return _fadeRoute(
+            RespuestaCotizacionFormScreen(cotizacion: cotizacion), settings);
+      case respuestaDetalle:
+        final respuesta = settings.arguments as RespuestaCotizacion;
+        return _fadeRoute(RespuestaCotizacionFormScreen(respuesta: respuesta), settings);
       case agenteCreate:
         return _fadeRoute(const AgenteFormScreen(), settings);
       case agenteEdit:

@@ -1,4 +1,5 @@
 import 'package:agente_viajes/core/theme/saas_palette.dart';
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -66,18 +67,18 @@ class _HotelFormScreenState extends State<HotelFormScreen>
     super.dispose();
   }
 
-  void _showMsg(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: isError ? SaasPalette.danger : SaasPalette.success,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   void _onSave(BuildContext context) {
-    if (!_formKey.currentState!.validate()) return;
+    //validamos el nombre del hotel
+
+    if (_nombreCtrl.text.isEmpty) {
+      SaasSnackBar.showWarning(context, 'Debe ingresar el nombre del hotel');
+      return;
+    }
+    //validamos la ciudad
+    if (_ciudadCtrl.text.isEmpty) {
+      SaasSnackBar.showWarning(context, 'Debe ingresar la ciudad');
+      return;
+    }
 
     final hotel = Hotel(
       id: widget.hotel?.id,
@@ -105,10 +106,13 @@ class _HotelFormScreenState extends State<HotelFormScreen>
     return BlocListener<HotelBloc, HotelState>(
       listener: (context, state) {
         if (state is HotelSaved) {
-          _showMsg(_isEditing ? 'Hotel actualizado' : 'Hotel creado');
+          SaasSnackBar.showSuccess(
+            context,
+            _isEditing ? 'Hotel actualizado' : 'Hotel creado',
+          );
           Navigator.pop(context);
         } else if (state is HotelError) {
-          _showMsg(state.message, isError: true);
+          SaasSnackBar.showError(context, state.message);
         }
       },
       child: Scaffold(

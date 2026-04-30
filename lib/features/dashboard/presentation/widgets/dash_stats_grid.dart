@@ -6,7 +6,7 @@ class DashStatsGrid extends StatelessWidget {
   final int pendingPagos;
   final int totalActive;
   final int totalPromos;
-  final int unreadCotizaciones;
+  final int pendingCotizaciones;
   final VoidCallback onPagosTap;
   final VoidCallback onToursTap;
   final VoidCallback onPromosTap;
@@ -17,7 +17,7 @@ class DashStatsGrid extends StatelessWidget {
     required this.pendingPagos,
     required this.totalActive,
     required this.totalPromos,
-    required this.unreadCotizaciones,
+    required this.pendingCotizaciones,
     required this.onPagosTap,
     required this.onToursTap,
     required this.onPromosTap,
@@ -74,11 +74,13 @@ class DashStatsGrid extends StatelessWidget {
               onTap: onCotizacionesTap,
               child: SaasStatCard(
                 label: 'Cotizaciones',
-                value: '$unreadCotizaciones',
-                trend: unreadCotizaciones > 0
-                    ? 'Nuevas solicitudes'
+                value: '$pendingCotizaciones',
+                trend: pendingCotizaciones > 0
+                    ? 'Sin responder'
                     : 'Todo atendido',
-                color: SaasPalette.brand600,
+                color: pendingCotizaciones > 0
+                    ? SaasPalette.warning
+                    : SaasPalette.success,
               ),
             ),
           ],

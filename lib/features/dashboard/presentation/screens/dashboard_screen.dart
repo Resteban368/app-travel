@@ -38,7 +38,7 @@ class _DashboardBodyState extends State<DashboardScreen> {
   void _refreshAll() {
     context.read<TourBloc>().add(LoadTours());
     context.read<PagoRealizadoBloc>().add(const LoadPagos());
-    context.read<CotizacionBloc>().add(LoadCotizaciones());
+    context.read<CotizacionBloc>().add(const LoadAllData());
   }
 
   void _showTourDetail(Tour tour) {
@@ -95,16 +95,14 @@ class _DashboardBodyState extends State<DashboardScreen> {
                       sliver: SliverToBoxAdapter(
                         child: BlocBuilder<CotizacionBloc, CotizacionState>(
                           builder: (context, cotState) {
-                            final unread = cotState is CotizacionLoaded
-                                ? cotState.cotizaciones
-                                      .where((c) => !c.isRead)
-                                      .length
+                            final pendingCotizaciones = cotState is CotizacionLoaded
+                                ? cotState.pendingCotizaciones.length
                                 : 0;
                             return DashStatsGrid(
                               pendingPagos: pendingPagos,
                               totalActive: totalActive,
                               totalPromos: totalPromos,
-                              unreadCotizaciones: unread,
+                              pendingCotizaciones: pendingCotizaciones,
                               onPagosTap: () => Navigator.pushNamed(
                                 context,
                                 AppRouter.pagosRealizados,

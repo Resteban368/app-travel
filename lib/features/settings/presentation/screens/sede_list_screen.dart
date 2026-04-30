@@ -125,13 +125,15 @@ class _SedeListScreenState extends State<SedeListScreen> {
                         return _SedeCard(
                           sede: sede,
                           canWrite: canWrite,
-                          onEdit: () {
-                            print('sede: $sede');
-                            Navigator.pushNamed(
+                          onEdit: () async {
+                            final result = await Navigator.pushNamed(
                               context,
                               AppRouter.sedeForm,
                               arguments: sede,
                             );
+                            if (result == true && context.mounted) {
+                              context.read<SedeBloc>().add(LoadSedes());
+                            }
                           },
                           onDelete: () => _confirmDelete(sede),
                           onToggleStatus: () => context.read<SedeBloc>().add(
@@ -210,9 +212,12 @@ class _SedeHeader extends StatelessWidget {
               SaasButton(
                 label: 'Nueva Sede',
                 icon: Icons.add_rounded,
-                onPressed: () {
-                  print('Nueva Sede');
-                  Navigator.pushNamed(context, AppRouter.sedeForm);
+                onPressed: () async {
+                  final result =
+                      await Navigator.pushNamed(context, AppRouter.sedeForm);
+                  if (result == true && context.mounted) {
+                    context.read<SedeBloc>().add(LoadSedes());
+                  }
                 },
               ),
           ],

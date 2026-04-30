@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/premium_palette.dart';
@@ -65,7 +66,30 @@ class _SedeFormScreenState extends State<SedeFormScreen>
   }
 
   void _save(BuildContext context) {
-    if (!_formKey.currentState!.validate()) return;
+    //VALDIAR QUE EL NOMBRE DE LA SEDE
+    if (_nameCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El nombre de la sede es requerido');
+      return;
+    }
+
+    //VALDIAR QUE EL TELEFONO
+    if (_phoneCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El telefono es requerido');
+      return;
+    }
+
+    //VALDIAR QUE LA DIRECCION
+    if (_addressCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'La direccion es requerida');
+      return;
+    }
+
+    //VALDIAR QUE EL LINK DE MAPS
+    if (_mapsLinkCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El link de maps es requerido');
+      return;
+    }
+
     final id = _isEditing
         ? widget.sede!.id
         : DateTime.now().millisecondsSinceEpoch.toString();
@@ -91,22 +115,13 @@ class _SedeFormScreenState extends State<SedeFormScreen>
       child: BlocListener<SedeBloc, SedeState>(
         listener: (context, state) {
           if (state is SedeSaved) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_isEditing ? 'Sede actualizada' : 'Sede creada'),
-                backgroundColor: D.emerald,
-                behavior: SnackBarBehavior.floating,
-              ),
+            SaasSnackBar.showSuccess(
+              context,
+              _isEditing ? 'Sede actualizada exitosamente' : 'Sede creada exitosamente',
             );
             Navigator.pop(context, true);
           } else if (state is SedeError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: D.rose,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            SaasSnackBar.showError(context, state.message);
           }
         },
         child: Scaffold(
@@ -168,7 +183,7 @@ class _SedeFormScreenState extends State<SedeFormScreen>
                                           Expanded(
                                             child: PremiumTextField(
                                               controller: _mapsLinkCtrl,
-                                              label: 'Google Maps Link',
+                                              label: 'Google Maps Link *',
                                               icon: Icons.map_rounded,
                                             ),
                                           ),

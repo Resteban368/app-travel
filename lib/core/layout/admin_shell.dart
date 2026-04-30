@@ -157,7 +157,7 @@ class _AdminShellState extends State<AdminShell> {
       icon: Icons.hotel_rounded,
       label: 'Hoteles',
       route: AppRouter.hoteles,
-      permission: 'hoteles',
+      permission: '',
     ),
     _NavItem(
       icon: Icons.manage_search_rounded,
@@ -200,7 +200,7 @@ class _AdminShellState extends State<AdminShell> {
       case AppRouter.reservas:
         context.read<ReservaBloc>().add(const LoadReservas());
       case AppRouter.cotizaciones:
-        context.read<CotizacionBloc>().add(LoadCotizaciones());
+        context.read<CotizacionBloc>().add(const LoadAllData());
       case AppRouter.clientes:
         context.read<ClienteBloc>().add(LoadClientes());
       case AppRouter.hoteles:

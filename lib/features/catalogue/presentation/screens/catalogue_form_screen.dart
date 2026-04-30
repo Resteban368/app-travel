@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:agente_viajes/core/theme/saas_palette.dart';
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../features/auth/presentation/bloc/auth_bloc.dart';
@@ -70,9 +71,21 @@ class _CatalogueFormScreenState extends State<CatalogueFormScreen>
   }
 
   void _save(BuildContext context) {
-    if (!_formKey.currentState!.validate()) return;
+    //VALIDAMOS QUE TENGA EL NOMBRE DEL CATÁLOGO
+    if (_nameCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El nombre del catálogo es requerido');
+      return;
+    }
+
+    //VALIDAMOS QUE TENGA LA URL DEL CATÁLOGO
+    if (_urlCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'La URL del catálogo es requerida');
+      return;
+    }
+
+    //VALIDAMOS QUE TENGA LA SEDE
     if (_selectedSedeId == null) {
-      _showToast(context, 'Por favor, selecciona una sede', isError: true);
+      SaasSnackBar.showWarning(context, 'La sede es requerida');
       return;
     }
 
@@ -344,7 +357,8 @@ class _CatalogueFormScreenState extends State<CatalogueFormScreen>
               )
             else
               DropdownButtonFormField<int>(
-                initialValue: sedes.any((s) => int.tryParse(s.id) == _selectedSedeId)
+                initialValue:
+                    sedes.any((s) => int.tryParse(s.id) == _selectedSedeId)
                     ? _selectedSedeId
                     : null,
                 dropdownColor: D.white,

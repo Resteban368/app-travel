@@ -1,4 +1,5 @@
 import 'package:agente_viajes/core/theme/saas_palette.dart';
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/premium_palette.dart';
@@ -74,18 +75,33 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
     super.dispose();
   }
 
-  void _showMsg(String msg, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   void _save() {
-    if (!_formKey.currentState!.validate()) return;
+    //nombre completo del cliente
+    if (_nombreCtrl.text.isEmpty) {
+      SaasSnackBar.showWarning(
+        context,
+        'Debe ingresar el nombre completo del cliente',
+      );
+      return;
+    }
+
+    //numero de documento del cliente
+    if (_numeroDocumentoCtrl.text.isEmpty) {
+      SaasSnackBar.showWarning(
+        context,
+        'Debe ingresar el numero de documento del cliente',
+      );
+      return;
+    }
+
+    //telefono del cliente
+    if (_telefonoCtrl.text.isEmpty) {
+      SaasSnackBar.showWarning(
+        context,
+        'Debe ingresar el telefono del cliente',
+      );
+      return;
+    }
 
     final cliente = Cliente(
       id: _isEditing ? widget.cliente!.id : null,
@@ -137,10 +153,10 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
               (_isEditing
                   ? 'Cliente actualizado con éxito'
                   : 'Cliente registrado');
-          _showMsg(successMsg, D.emerald);
+          SaasSnackBar.showSuccess(context, successMsg);
           Navigator.pop(context);
         } else if (state is ClienteError) {
-          _showMsg(state.message, D.rose);
+          SaasSnackBar.showError(context, state.message);
         }
       },
       child: Scaffold(

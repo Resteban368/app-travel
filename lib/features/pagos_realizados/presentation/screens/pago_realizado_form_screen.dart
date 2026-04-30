@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:agente_viajes/core/theme/saas_palette.dart';
@@ -143,15 +144,40 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   }
 
   void _save(BuildContext context) {
-    if (!_formKey.currentState!.validate()) return;
-
+    //VALIDAMOS QUE EL PAGO TENGA UNA RESERVA VINCULADA
     if (_selectedReservaId == null) {
-      _showToast('Debes seleccionar una reserva', isError: true);
+      SaasSnackBar.showWarning(context, 'Debes seleccionar una reserva');
       return;
     }
 
     if (_chatIdCtrl.text.trim().isEmpty) {
-      _showToast('El número de WhatsApp es requerido', isError: true);
+      SaasSnackBar.showWarning(context, 'El número de WhatsApp es requerido');
+      return;
+    }
+    //VALIDAMOS QUE TENGA EL COMERCIO
+    if (_proveedorCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El comercio es requerido');
+      return;
+    }
+    //VALIDAMOS QUE TENGA EL MONTO
+    if (_montoCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El monto es requerido');
+      return;
+    }
+
+    //REFERENCIA
+    if (_referenciaCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'La referencia es requerida');
+      return;
+    }
+    //FECHA DOCUMENTO
+    if (_fechaDocumentoCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'La fecha del documento es requerida');
+      return;
+    }
+    //METODO DE PAGO
+    if (_metodoPagoCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'El metodo de pago es requerido');
       return;
     }
 
@@ -468,10 +494,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               }
             } else if (state is UploadError) {
               _closeLoadingDialog();
-              _showToast(
-                'Error al subir imagen: ${state.message}',
-                isError: true,
-              );
+              SaasSnackBar.showError(context, state.message);
               context.read<UploadBloc>().add(const ResetUpload());
               _waitingForUploadToSave = false;
             }
@@ -503,7 +526,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
             } else if (state is WhatsAppError) {
               _pendingCambiarEstadoAfterWA = false;
               Navigator.pop(context); // cierra diálogo de carga
-              _showToast(state.message, isError: true);
+              SaasSnackBar.showError(context, state.message);
             }
           },
         ),
@@ -511,7 +534,8 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           listener: (context, state) {
             if (state is PagoRealizadoSaved) {
               _closeLoadingDialog();
-              _showToast(
+              SaasSnackBar.showSuccess(
+                context,
                 _wasWhatsappSent ? 'Validado y Notificado' : 'Pago procesado',
               );
               _wasWhatsappSent = false;
@@ -523,7 +547,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               _closeLoadingDialog();
             } else if (state is PagoRealizadoError) {
               _closeLoadingDialog();
-              _showToast(state.message, isError: true);
+              SaasSnackBar.showError(context, state.message);
             }
           },
         ),
@@ -1219,9 +1243,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
 
   void _confirmarValidar() {
     if (_selectedReservaId == null) {
-      _showToast(
+      SaasSnackBar.showWarning(
+        context,
         'Debes asignar una reserva antes de validar el pago',
-        isError: true,
       );
       return;
     }
@@ -1517,7 +1541,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
             }
           }
         });
-        _showToast('✅ Datos extraídos automáticamente');
+        SaasSnackBar.showSuccess(context, 'Datos extraídos automáticamente');
       } else {
         String msg = 'No se pudieron extraer los datos del comprobante';
         try {
@@ -1526,10 +1550,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
             msg = decoded['message'].toString();
           }
         } catch (_) {}
-        _showToast(msg, isError: true);
+        SaasSnackBar.showError(context, msg);
       }
     } catch (_) {
-      _showToast('Error al analizar el documento', isError: true);
+      SaasSnackBar.showError(context, 'Error al analizar el documento');
     } finally {
       if (mounted) setState(() => _isAnalyzing = false);
     }
@@ -1668,16 +1692,6 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
             borderRadius: BorderRadius.circular(14),
           ),
         ),
-      ),
-    );
-  }
-
-  void _showToast(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: isError ? SaasPalette.danger : SaasPalette.success,
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
