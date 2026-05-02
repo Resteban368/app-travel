@@ -103,6 +103,11 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             sliver: SliverToBoxAdapter(child: _buildCuposHeader()),
           ),
+          if (widget.tour.precios.isNotEmpty)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              sliver: SliverToBoxAdapter(child: _buildTablaPreciosTour()),
+            ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             sliver: SliverToBoxAdapter(child: _buildSearchBar()),
@@ -191,6 +196,91 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
           tour: widget.tour,
         ),
         childCount: reservas.length,
+      ),
+    );
+  }
+
+  Widget _buildTablaPreciosTour() {
+    final fmt = NumberFormat.currency(
+      locale: 'es_CO',
+      symbol: '\$',
+      decimalDigits: 0,
+    );
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.sell_rounded, color: SaasPalette.brand600, size: 18),
+              SizedBox(width: 8),
+              Text(
+                'TABLA DE PRECIOS',
+                style: TextStyle(
+                  color: SaasPalette.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...widget.tour.precios.map(
+            (p) {
+              final edadStr = (p.edadMin != null || p.edadMax != null)
+                  ? '${p.edadMin ?? 0}-${p.edadMax ?? '∞'} años'
+                  : null;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            p.descripcion,
+                            style: const TextStyle(
+                              color: SaasPalette.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (edadStr != null || p.puntoPartida != null)
+                            Text(
+                              [
+                                if (edadStr != null) edadStr,
+                                if (p.puntoPartida != null) 'desde ${p.puntoPartida}',
+                              ].join(' · '),
+                              style: const TextStyle(
+                                color: SaasPalette.textTertiary,
+                                fontSize: 11,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      fmt.format(p.precio),
+                      style: const TextStyle(
+                        color: SaasPalette.success,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

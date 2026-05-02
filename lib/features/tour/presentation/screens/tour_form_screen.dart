@@ -7,6 +7,7 @@ import '../../../../core/di/injection_container.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
 import '../../../../config/app_router.dart';
 import '../../domain/entities/tour.dart';
+import '../../domain/entities/tour_precio.dart';
 import '../../../../features/settings/domain/entities/sede.dart';
 import '../../../../features/settings/presentation/bloc/sede_bloc.dart';
 import '../bloc/tour_bloc.dart';
@@ -41,6 +42,8 @@ class _TourFormScreenState extends State<TourFormScreen>
   List<String> _inclusions = [];
   List<String> _exclusions = [];
   List<ItineraryDay> _itinerary = [];
+  List<TourPrecio> _precios = [];
+  bool _preciosModificados = false;
   final _inclusionCtrl = TextEditingController();
   final _exclusionCtrl = TextEditingController();
 
@@ -73,6 +76,7 @@ class _TourFormScreenState extends State<TourFormScreen>
       _inclusions = List.from(t.inclusions);
       _exclusions = List.from(t.exclusions);
       _itinerary = List.from(t.itinerary);
+      _precios = List.from(t.precios);
     }
 
     _entryCtrl = AnimationController(
@@ -226,10 +230,13 @@ class _TourFormScreenState extends State<TourFormScreen>
       isDraft: !publish,
       precioPorPareja: _precioPorPareja,
       cupos: int.tryParse(_cuposCtrl.text.trim()),
+      precios: _precios,
     );
 
     if (_isEditing) {
-      context.read<TourBloc>().add(UpdateTour(tour));
+      context.read<TourBloc>().add(
+        UpdateTour(tour, preciosPayload: _preciosModificados ? _precios : null),
+      );
     } else {
       context.read<TourBloc>().add(CreateTour(tour));
     }
@@ -433,6 +440,8 @@ class _TourFormScreenState extends State<TourFormScreen>
                               const SizedBox(height: 20),
                               _buildItinerarySection(canWrite: canWrite),
                               const SizedBox(height: 20),
+                              _buildPreciosSection(canWrite: canWrite),
+                              const SizedBox(height: 20),
                               _buildStatusCard(canWrite: canWrite),
                               if (_isEditing) ...[
                                 const SizedBox(height: 20),
@@ -454,6 +463,225 @@ class _TourFormScreenState extends State<TourFormScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildPreciosSection({required bool canWrite}) {
+    final fmt = NumberFormat.currency(
+      locale: 'es_CO',
+      symbol: '\$',
+      decimalDigits: 0,
+    );
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: PremiumSectionHeader(
+                  title: 'PRECIOS POR CATEGORÍA',
+                  icon: Icons.sell_rounded,
+                ),
+              ),
+              if (canWrite)
+                _MiniAddButton(
+                  label: 'PRECIO',
+                  onTap: () => _showAgregarPrecioSheet(),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_precios.isEmpty)
+            const PremiumEmptyIndicator(
+              msg: 'Opcional — agrega categorías de precio por edad o punto de salida.',
+              icon: Icons.local_offer_rounded,
+            )
+          else
+            ..._precios.asMap().entries.map(
+              (e) => _PrecioCard(
+                precio: e.value,
+                fmt: fmt,
+                canWrite: canWrite,
+                onRemove: () => setState(() {
+                  _precios.removeAt(e.key);
+                  _preciosModificados = true;
+                }),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showAgregarPrecioSheet() {
+    final descCtrl = TextEditingController();
+    final precioCtrl = TextEditingController();
+    final edadMinCtrl = TextEditingController();
+    final edadMaxCtrl = TextEditingController();
+    final puntoCtrl = TextEditingController();
+    bool activo = true;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: SaasPalette.bgCanvas,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Agregar precio',
+                        style: TextStyle(
+                          color: SaasPalette.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded, color: SaasPalette.textTertiary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                PremiumTextField(
+                  controller: descCtrl,
+                  label: 'Descripción *',
+                  icon: Icons.label_rounded,
+                ),
+                const SizedBox(height: 14),
+                PremiumTextField(
+                  controller: precioCtrl,
+                  label: 'Precio (COP) *',
+                  icon: Icons.attach_money_rounded,
+                  isNumeric: true,
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: PremiumTextField(
+                        controller: edadMinCtrl,
+                        label: 'Edad mín.',
+                        icon: Icons.child_care_rounded,
+                        isNumeric: true,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: PremiumTextField(
+                        controller: edadMaxCtrl,
+                        label: 'Edad máx.',
+                        icon: Icons.person_rounded,
+                        isNumeric: true,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                PremiumTextField(
+                  controller: puntoCtrl,
+                  label: 'Punto de salida',
+                  icon: Icons.place_rounded,
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Activo',
+                        style: TextStyle(
+                          color: SaasPalette.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    Switch(
+                      value: activo,
+                      activeColor: SaasPalette.brand600,
+                      onChanged: (v) => setSheetState(() => activo = v),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SaasPalette.brand600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      if (descCtrl.text.trim().isEmpty ||
+                          precioCtrl.text.trim().isEmpty) return;
+                      final nuevo = TourPrecio(
+                        descripcion: descCtrl.text.trim(),
+                        precio: double.tryParse(
+                          precioCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+                        ) ?? 0,
+                        edadMin: int.tryParse(edadMinCtrl.text.trim()),
+                        edadMax: int.tryParse(edadMaxCtrl.text.trim()),
+                        puntoPartida: puntoCtrl.text.trim().isEmpty
+                            ? null
+                            : puntoCtrl.text.trim(),
+                        activo: activo,
+                      );
+                      setState(() {
+                        _precios.add(nuevo);
+                        _preciosModificados = true;
+                      });
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text(
+                      'AGREGAR',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ).then((_) {
+      descCtrl.dispose();
+      precioCtrl.dispose();
+      edadMinCtrl.dispose();
+      edadMaxCtrl.dispose();
+      puntoCtrl.dispose();
+    });
   }
 
   Widget _buildSedeDropdown({required bool canWrite}) {
@@ -1039,6 +1267,115 @@ class _MiniAddButton extends StatelessWidget {
     label: Text(
       'AGREGAR $label',
       style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+    ),
+  );
+}
+
+class _PrecioCard extends StatelessWidget {
+  final TourPrecio precio;
+  final NumberFormat fmt;
+  final bool canWrite;
+  final VoidCallback onRemove;
+
+  const _PrecioCard({
+    required this.precio,
+    required this.fmt,
+    required this.canWrite,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final edadStr = precio.edadMin != null || precio.edadMax != null
+        ? '${precio.edadMin ?? '0'}-${precio.edadMax ?? '∞'} años'
+        : null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SaasPalette.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  precio.descripcion,
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (edadStr != null || precio.puntoPartida != null) ...[
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      if (edadStr != null)
+                        _SmallBadge(label: edadStr, color: SaasPalette.brand600),
+                      if (precio.puntoPartida != null)
+                        _SmallBadge(
+                          label: 'desde ${precio.puntoPartida}',
+                          color: SaasPalette.textTertiary,
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Text(
+            fmt.format(precio.precio),
+            style: const TextStyle(
+              color: SaasPalette.success,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (canWrite) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: onRemove,
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                color: SaasPalette.danger,
+                size: 20,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _SmallBadge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        color: color,
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+      ),
     ),
   );
 }

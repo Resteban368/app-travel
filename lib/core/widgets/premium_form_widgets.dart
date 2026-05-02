@@ -170,6 +170,7 @@ class PremiumTextField extends StatefulWidget {
   final bool isPassword;
   final TextInputAction? textInputAction;
   final FocusNode? focusNode;
+  final ValueChanged<String>? onChanged;
 
   const PremiumTextField({
     super.key,
@@ -184,6 +185,7 @@ class PremiumTextField extends StatefulWidget {
     this.isPassword = false,
     this.textInputAction,
     this.focusNode,
+    this.onChanged,
   });
 
   @override
@@ -282,6 +284,7 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
               vertical: 12,
             ),
           ),
+          onChanged: widget.onChanged,
           validator:
               widget.validator ??
               (v) => (v == null || v.isEmpty) && widget.label.contains('*')

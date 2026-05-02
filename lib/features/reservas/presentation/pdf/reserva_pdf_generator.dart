@@ -526,7 +526,7 @@ class ReservaPdfGenerator {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        _sectionTitle('Viajeros (${all.length} pax)', bold),
+        _sectionTitle('Integrantes (${all.length})', bold),
         pw.Table(
           border: pw.TableBorder.all(color: _border, width: 0.5),
           columnWidths: {
@@ -627,7 +627,7 @@ class ReservaPdfGenerator {
                 _infoRow('Hora de salida:', tour.departureTime, bold, regular),
               if (tour.arrival.isNotEmpty)
                 _infoRow('Destino/Llegada:', tour.arrival, bold, regular),
-              _infoRow('Precio por persona:', _fmt(tour.price), bold, regular),
+              // _infoRow('Precio por persona:', _fmt(tour.price), bold, regular),
             ],
           ),
         ),
@@ -1079,21 +1079,186 @@ class ReservaPdfGenerator {
           child: pw.Column(
             children: [
               // Detailed Costs
+              if (reserva.tour?.precioPorPareja == true)
+                _summaryRow(
+                  'Precios por pareja',
+                  '',
+                  bold,
+                  regular,
+                  isPending: true,
+                ),
               if (sinDescuento > 0)
                 _summaryRow(
                   'Valor sin descuento',
                   _fmt(sinDescuento),
                   bold,
                   regular,
+                  isPending: true,
                 ),
 
-              if (isTour && totalPaxValue > 0)
-                _summaryRow(
-                  'Valor por todas las personas ($displayPaxCount pax)',
-                  _fmt(totalPaxValue),
-                  bold,
-                  regular,
-                ),
+              if (isTour) ...[
+                if (reserva.tour?.precioPorPareja == true) ...[
+                  // Agrupar todos los viajeros (responsable + integrantes) por precio
+                  ...() {
+                    final travellers = <Map<String, dynamic>>[];
+                    final basePrice = reserva.tour?.price ?? 0.0;
+
+                    // Ayudante para obtener la descripción de la categoría
+                    String getCatLabel(int? catId) {
+                      if (catId == null) return 'Precio base';
+                      try {
+                        return reserva.tour!.precios
+                            .firstWhere((p) => p.id == catId)
+                            .descripcion;
+                      } catch (_) {
+                        return 'Tarifa especial';
+                      }
+                    }
+
+                    // 1. Recopilar Responsable e Integrantes
+                    travellers.add({
+                      'name': reserva.responsable?.nombre ?? 'Responsable',
+                      'catId': reserva.precioResponsableId,
+                      'price': reserva.precioResponsableId == null 
+                          ? basePrice 
+                          : (reserva.precioResponsableAplicado ?? 0.0),
+                    });
+
+                    for (int i = 0; i < reserva.integrantes.length; i++) {
+                      final integrante = reserva.integrantes[i];
+                      travellers.add({
+                        'name': integrante.nombre.isNotEmpty 
+                            ? integrante.nombre 
+                            : 'Integrante ${i + 1}',
+                        'catId': integrante.tourPrecioId,
+                        'price': integrante.tourPrecioId == null 
+                            ? basePrice 
+                            : (integrante.precioAplicado ?? 0.0),
+                      });
+                    }
+
+                    // 2. Agrupar por ID de categoría
+                    final groups = <int?, List<Map<String, dynamic>>>{};
+                    for (final t in travellers) {
+                      final catId = t['catId'] as int?;
+                      groups.putIfAbsent(catId, () => []).add(t);
+                    }
+
+                    final rows = <pw.Widget>[];
+                    final leftovers = <Map<String, dynamic>>[];
+
+                    // 3. Formar parejas de la misma categoría
+                    groups.forEach((catId, people) {
+                      final price = people.first['price'] as double;
+                      final catLabel = getCatLabel(catId);
+                      for (int i = 0; i < people.length; i += 2) {
+                        if (i + 1 < people.length) {
+                          final p1 = people[i];
+                          final p2 = people[i + 1];
+                          rows.add(
+                            _summaryRow(
+                              '${p1['name']} ($catLabel) + ${p2['name']} ($catLabel)',
+                              _fmt(price),
+                              bold,
+                              regular,
+                            ),
+                          );
+                        } else {
+                          leftovers.add(people[i]);
+                        }
+                      }
+                    });
+
+                    // 4. Formar parejas con sobrantes de categorías distintas
+                    for (int i = 0; i < leftovers.length; i += 2) {
+                      if (i + 1 < leftovers.length) {
+                        final p1 = leftovers[i];
+                        final p2 = leftovers[i + 1];
+                        final cat1Id = p1['catId'] as int?;
+                        final cat2Id = p2['catId'] as int?;
+
+                        // Si las categorías son distintas, usar precio base del tour
+                        final double price = (cat1Id == cat2Id)
+                            ? (p1['price'] as double)
+                            : basePrice;
+
+                        rows.add(
+                          _summaryRow(
+                            '${p1['name']} (${getCatLabel(cat1Id)}) + ${p2['name']} (${getCatLabel(cat2Id)})',
+                            _fmt(price),
+                            bold,
+                            regular,
+                          ),
+                        );
+                      } else {
+                        // Persona que queda verdaderamente sola
+                        final p = leftovers[i];
+                        rows.add(
+                          _summaryRow(
+                            '${p['name']} (${getCatLabel(p['catId'] as int?)} - Individual)',
+                            _fmt(p['price'] as double),
+                            bold,
+                            regular,
+                          ),
+                        );
+                      }
+                    }
+                    return rows;
+                  }(),
+                ] else ...[
+                  // Tour normal: mostrar cada persona individualmente
+                  () {
+                    var respCat;
+                    if (reserva.precioResponsableId != null &&
+                        reserva.tour != null) {
+                      try {
+                        respCat = reserva.tour!.precios.firstWhere(
+                          (p) => p.id == reserva.precioResponsableId,
+                        );
+                      } catch (_) {}
+                    }
+                    final respLabel = respCat != null
+                        ? 'Responsable (${respCat.descripcion})'
+                        : 'Responsable (Precio base)';
+                    return _summaryRow(
+                      respLabel,
+                      _fmt(
+                        reserva.precioResponsableId == null
+                            ? (reserva.tour?.price ?? 0.0)
+                            : (reserva.precioResponsableAplicado ?? 0.0),
+                      ),
+                      bold,
+                      regular,
+                    );
+                  }(),
+                  ...reserva.integrantes.asMap().entries.map((entry) {
+                    final integrante = entry.value;
+                    var cat;
+                    if (integrante.tourPrecioId != null &&
+                        reserva.tour != null) {
+                      try {
+                        cat = reserva.tour!.precios.firstWhere(
+                          (p) => p.id == integrante.tourPrecioId,
+                        );
+                      } catch (_) {}
+                    }
+                    final nombreLabel = 'Integrante ${entry.key + 1}';
+                    final label = cat != null
+                        ? '$nombreLabel (${cat.descripcion})'
+                        : '$nombreLabel (Precio base)';
+                    return _summaryRow(
+                      label,
+                      _fmt(
+                        integrante.tourPrecioId == null
+                            ? (reserva.tour?.price ?? 0.0)
+                            : (integrante.precioAplicado ?? 0.0),
+                      ),
+                      bold,
+                      regular,
+                    );
+                  }),
+                ],
+              ],
 
               if (serviciosList.isNotEmpty) ...[
                 ...serviciosList.map(

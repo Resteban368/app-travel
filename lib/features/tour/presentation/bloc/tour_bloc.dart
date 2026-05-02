@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/tour.dart';
+import '../../domain/entities/tour_precio.dart';
 import '../../domain/repositories/tour_repository.dart';
 
 // ─── Events ──────────────────────────────────────────────
@@ -22,9 +23,10 @@ class CreateTour extends TourEvent {
 
 class UpdateTour extends TourEvent {
   final Tour tour;
-  const UpdateTour(this.tour);
+  final List<TourPrecio>? preciosPayload;
+  const UpdateTour(this.tour, {this.preciosPayload});
   @override
-  List<Object?> get props => [tour];
+  List<Object?> get props => [tour, preciosPayload];
 }
 
 class DeleteTour extends TourEvent {
@@ -176,7 +178,7 @@ class TourBloc extends Bloc<TourEvent, TourState> {
         : null;
     emit(TourSaving(tours: currentTours));
     try {
-      await _tourRepository.updateTour(event.tour);
+      await _tourRepository.updateTour(event.tour, preciosPayload: event.preciosPayload);
       final tours = await _tourRepository.getTours();
       emit(TourSaved(tours: tours));
       emit(ToursLoaded(tours: tours, filteredTours: tours));

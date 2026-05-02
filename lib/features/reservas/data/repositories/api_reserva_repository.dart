@@ -14,6 +14,7 @@ import 'package:agente_viajes/core/constants/api_constants.dart';
 import 'package:agente_viajes/core/models/paged_result.dart';
 import 'package:agente_viajes/features/agentes/domain/entities/agente.dart';
 import 'package:agente_viajes/features/pagos_realizados/domain/entities/pago_realizado.dart';
+import 'package:agente_viajes/features/tour/domain/entities/tour_precio.dart';
 
 class ApiReservaRepository implements ReservaRepository {
   final http.Client client;
@@ -99,6 +100,7 @@ class ApiReservaRepository implements ReservaRepository {
       'correo': reserva.correo,
       'id_responsable': reserva.idResponsable,
       'estado': reserva.estado,
+      'notas': reserva.notas,
       'servicios_ids': reserva.serviciosIds,
       'integrantes': _serializeIntegrantes(reserva.integrantes),
     };
@@ -106,6 +108,16 @@ class ApiReservaRepository implements ReservaRepository {
     if (reserva.tipoReserva == 'tour') {
       bodyMap['id_tour'] = int.tryParse(reserva.idTour ?? '') ?? 0;
       bodyMap['descuento_por_persona'] = reserva.descuentoPorPersona ?? 0;
+      if (reserva.valorTotal != null) {
+        bodyMap['valor_total'] = reserva.valorTotal;
+      }
+      if (reserva.precioResponsableId != null) {
+        bodyMap['precio_responsable_id'] = reserva.precioResponsableId;
+      }
+      if (reserva.precioResponsableAplicado != null) {
+        bodyMap['precio_responsable_aplicado'] =
+            reserva.precioResponsableAplicado;
+      }
     } else {
       bodyMap['valor_total'] = reserva.valorTotal ?? 0;
     }
@@ -152,6 +164,16 @@ class ApiReservaRepository implements ReservaRepository {
     if (reserva.tipoReserva == 'tour') {
       bodyMap['id_tour'] = int.tryParse(reserva.idTour ?? '') ?? 0;
       bodyMap['descuento_por_persona'] = reserva.descuentoPorPersona ?? 0;
+      if (reserva.valorTotal != null) {
+        bodyMap['valor_total'] = reserva.valorTotal;
+      }
+      if (reserva.precioResponsableId != null) {
+        bodyMap['precio_responsable_id'] = reserva.precioResponsableId;
+      }
+      if (reserva.precioResponsableAplicado != null) {
+        bodyMap['precio_responsable_aplicado'] =
+            reserva.precioResponsableAplicado;
+      }
     } else {
       if (reserva.valorTotal != null) {
         bodyMap['valor_total'] = reserva.valorTotal;
@@ -221,8 +243,12 @@ class ApiReservaRepository implements ReservaRepository {
                   .toIso8601String()
                   .split('T')
                   .first,
-            'tipo_documento': i.tipoDocumento,
-            'documento': i.documento,
+            'tipo_documento': i.tipoDocumento.isNotEmpty
+                ? i.tipoDocumento
+                : null,
+            'documento': i.documento.isNotEmpty ? i.documento : null,
+            if (i.tourPrecioId != null) 'tour_precio_id': i.tourPrecioId,
+            if (i.precioAplicado != null) 'precio_aplicado': i.precioAplicado,
           },
         )
         .toList();
@@ -268,6 +294,8 @@ class ApiReservaRepository implements ReservaRepository {
           esResponsable: isRes,
           tipoDocumento: i['tipo_documento'] ?? 'CC',
           documento: i['documento']?.toString() ?? '',
+          tourPrecioId: int.tryParse(i['tour_precio_id']?.toString() ?? ''),
+          precioAplicado: double.tryParse(i['precio_aplicado']?.toString() ?? ''),
         );
       }).toList();
     }
@@ -379,6 +407,12 @@ class ApiReservaRepository implements ReservaRepository {
       tour: json['tour'] != null ? _parseTour(json['tour']) : null,
       responsable: parsedResponsable,
       agente: parsedAgente,
+      precioResponsableId: int.tryParse(
+        json['precio_responsable_id']?.toString() ?? '',
+      ),
+      precioResponsableAplicado: double.tryParse(
+        json['precio_responsable_aplicado']?.toString() ?? '',
+      ),
     );
   }
 
@@ -494,6 +528,9 @@ class ApiReservaRepository implements ReservaRepository {
         cuposDisponibles: int.tryParse(
           jsonTour['cupos_disponibles']?.toString() ?? '',
         ),
+        precios: (jsonTour['precios'] as List? ?? [])
+            .map((p) => TourPrecio.fromJson(p as Map<String, dynamic>))
+            .toList(),
       );
     } catch (e) {
       debugPrint('❌ [ApiReservaRepository] _parseTour error: $e');

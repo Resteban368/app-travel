@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:agente_viajes/core/constants/api_constants.dart';
 import '../../domain/entities/tour.dart';
 import '../../domain/entities/tour_detalle.dart';
+import '../../domain/entities/tour_precio.dart';
 import '../../domain/repositories/tour_repository.dart';
 
 class ApiTourRepository implements TourRepository {
@@ -42,7 +43,9 @@ class ApiTourRepository implements TourRepository {
 
   @override
   Future<void> createTour(Tour tour) async {
-    final body = json.encode(_toJson(tour));
+    final payload = _toJson(tour);
+    payload['precios'] = tour.precios.map((p) => p.toJson()).toList();
+    final body = json.encode(payload);
     debugPrint('📤 [ApiTourRepository] Creating tour: $body');
     final response = await client.post(
       Uri.parse(_baseUrl),
@@ -55,8 +58,12 @@ class ApiTourRepository implements TourRepository {
   }
 
   @override
-  Future<void> updateTour(Tour tour) async {
-    final body = json.encode(_toJson(tour));
+  Future<void> updateTour(Tour tour, {List<TourPrecio>? preciosPayload}) async {
+    final payload = _toJson(tour);
+    if (preciosPayload != null) {
+      payload['precios'] = preciosPayload.map((p) => p.toJson()).toList();
+    }
+    final body = json.encode(payload);
     final response = await client.patch(
       Uri.parse('$_baseUrl/${tour.id}'),
       headers: _headers,
@@ -137,6 +144,9 @@ class ApiTourRepository implements TourRepository {
       cuposDisponibles: json['cupos_disponibles'] != null
           ? int.tryParse(json['cupos_disponibles'].toString())
           : null,
+      precios: (json['precios'] as List? ?? [])
+          .map((p) => TourPrecio.fromJson(p as Map<String, dynamic>))
+          .toList(),
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'tour_precio.dart';
 
 /// Represents a day in the tour itinerary.
 class ItineraryDay extends Equatable {
@@ -47,6 +48,7 @@ class Tour extends Equatable {
   final bool precioPorPareja;
   final int? cupos;
   final int? cuposDisponibles;
+  final List<TourPrecio> precios;
 
   const Tour({
     required this.id,
@@ -70,6 +72,7 @@ class Tour extends Equatable {
     this.precioPorPareja = false,
     this.cupos,
     this.cuposDisponibles,
+    this.precios = const [],
   });
 
   Tour copyWith({
@@ -95,6 +98,7 @@ class Tour extends Equatable {
     bool? precioPorPareja,
     int? cupos,
     int? cuposDisponibles,
+    List<TourPrecio>? precios,
   }) {
     return Tour(
       id: id ?? this.id,
@@ -118,6 +122,7 @@ class Tour extends Equatable {
       precioPorPareja: precioPorPareja ?? this.precioPorPareja,
       cupos: cupos ?? this.cupos,
       cuposDisponibles: cuposDisponibles ?? this.cuposDisponibles,
+      precios: precios ?? this.precios,
     );
   }
 
@@ -144,5 +149,6 @@ class Tour extends Equatable {
     precioPorPareja,
     cupos,
     cuposDisponibles,
+    precios,
   ];
 }
