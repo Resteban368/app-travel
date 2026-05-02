@@ -179,6 +179,9 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
       updatedAt: json['ultimo_cambio'] != null
           ? DateTime.parse(json['ultimo_cambio'])
           : null,
+      conversationId: json['conversation_id'] is int
+          ? json['conversation_id']
+          : int.tryParse(json['conversation_id']?.toString() ?? ''),
     );
   }
 
@@ -194,6 +197,7 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
       'fecha_documento': pago.fechaDocumento,
       'is_validated': pago.isValidated,
       'is_rechazado': pago.isRechazado,
+      if (pago.conversationId != null) 'conversation_id': pago.conversationId,
       if (pago.motivoRechazo != null) 'motivo_rechazo': pago.motivoRechazo,
       'url_imagen': pago.urlImagen,
     };

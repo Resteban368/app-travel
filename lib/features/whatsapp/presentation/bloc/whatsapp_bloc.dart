@@ -17,7 +17,7 @@ class WhatsAppBloc extends Bloc<WhatsAppEvent, WhatsAppState> {
   ) async {
     emit(WhatsAppSending());
     try {
-      await sendWhatsAppMessage(to: event.to, body: event.body);
+      await sendWhatsAppMessage(conversationId: event.conversationId, content: event.content);
       emit(WhatsAppSent());
     } catch (e) {
       emit(WhatsAppError(e.toString()));

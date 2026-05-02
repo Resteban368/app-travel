@@ -5,7 +5,7 @@ class SendWhatsAppMessage {
 
   SendWhatsAppMessage(this.repository);
 
-  Future<void> call({required String to, required String body}) async {
-    return await repository.sendMessage(to: to, body: body);
+  Future<void> call({required int conversationId, required String content}) async {
+    return await repository.sendMessage(conversationId: conversationId, content: content);
   }
 }

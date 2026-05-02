@@ -4,7 +4,7 @@ class ApiConstants {
   ApiConstants._();
 
   //todo produccion
-  // static const String kBaseUrl = 'https://api-travel-api.rvbxuq.easypanel.host';
+  // static const String kBaseUrl = 'https://api-travel.agenteviajes.com';
 
   // todo para el navegador
   static const String kBaseUrl = 'http://localhost:3001';

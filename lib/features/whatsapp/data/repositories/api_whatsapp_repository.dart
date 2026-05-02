@@ -10,14 +10,14 @@ class ApiWhatsAppRepository implements WhatsAppRepository {
   ApiWhatsAppRepository({required this.client});
 
   @override
-  Future<void> sendMessage({required String to, required String body}) async {
+  Future<void> sendMessage({required int conversationId, required String content}) async {
     final url = '${ApiConstants.kBaseUrl}/v1/whatsapp/send';
 
     try {
       final response = await client.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'to': to, 'body': body}),
+        body: json.encode({'conversationId': conversationId, 'content': content}),
       );
 
       if (response.statusCode != 200 && response.statusCode != 201) {

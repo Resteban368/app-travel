@@ -463,7 +463,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         onConfirm: (msg) {
           final bloc = context.read<WhatsAppBloc>();
           Navigator.pop(ctx);
-          bloc.add(SendMessage(to: _fullChatId, body: msg));
+          bloc.add(SendMessage(
+            conversationId: widget.pago!.conversationId!,
+            content: msg,
+          ));
         },
       ),
     ).then((_) => messageCtrl.dispose());
@@ -1269,7 +1272,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           _pendingCambiarEstadoAfterWA = true;
           _wasWhatsappSent = true;
           context.read<WhatsAppBloc>().add(
-            SendMessage(to: _fullChatId, body: msg),
+            SendMessage(
+              conversationId: widget.pago!.conversationId!,
+              content: msg,
+            ),
           );
         },
       ),

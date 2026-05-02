@@ -119,8 +119,6 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
     context.read<CotizacionBloc>().add(LoadPendingCotizaciones(page: page));
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -165,7 +163,8 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
 
                 attendedUnifiedList = attendedUnifiedList.where((item) {
                   final resp = item as RespuestaCotizacion;
-                  final basicMatch = resp.tituloViaje.toLowerCase().contains(q) ||
+                  final basicMatch =
+                      resp.tituloViaje.toLowerCase().contains(q) ||
                       resp.condicionesGenerales.toLowerCase().contains(q);
 
                   if (basicMatch) return true;
@@ -238,7 +237,9 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                                         AppRouter.cotizacionResponder,
                                       );
                                       if (context.mounted) {
-                                        context.read<CotizacionBloc>().add(const LoadAllData());
+                                        context.read<CotizacionBloc>().add(
+                                          const LoadAllData(),
+                                        );
                                       }
                                     },
                                   ),
@@ -252,7 +253,9 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                                         AppRouter.cotizacionCreate,
                                       );
                                       if (context.mounted) {
-                                        context.read<CotizacionBloc>().add(const LoadAllData());
+                                        context.read<CotizacionBloc>().add(
+                                          const LoadAllData(),
+                                        );
                                       }
                                     },
                                   ),
@@ -564,10 +567,14 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                                   vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: SaasPalette.warning.withValues(alpha: 0.12),
+                                  color: SaasPalette.warning.withValues(
+                                    alpha: 0.12,
+                                  ),
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color: SaasPalette.warning.withValues(alpha: 0.4),
+                                    color: SaasPalette.warning.withValues(
+                                      alpha: 0.4,
+                                    ),
                                     width: 1,
                                   ),
                                 ),
@@ -647,37 +654,6 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                         ),
                       ],
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.reply_rounded,
-                      color: SaasPalette.brand600,
-                      size: 20,
-                    ),
-                    tooltip: 'Responder cotización',
-                    onPressed: () async {
-                      await Navigator.pushNamed(
-                        context,
-                        AppRouter.cotizacionResponder,
-                        arguments: c,
-                      );
-                      if (context.mounted) {
-                        context.read<CotizacionBloc>().add(const LoadAllData());
-                      }
-                    },
-                  ),
-                  if (context.canWrite('cotizaciones'))
-                    IconButton(
-                      icon: const Icon(
-                        Icons.delete_outline_rounded,
-                        color: SaasPalette.textTertiary,
-                        size: 20,
-                      ),
-                      onPressed: () => _confirmDelete(context, c),
-                    ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: SaasPalette.textTertiary,
                   ),
                 ],
               ),
@@ -791,8 +767,8 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                           widget.clientName != null
                               ? 'Cotización #${widget.linkedCotId} • ${widget.clientName} (${widget.clientPhone})'
                               : r.cotizacionId != null
-                                  ? 'Respuesta a Cotización #${r.cotizacionId}'
-                                  : 'Propuesta Independiente',
+                              ? 'Respuesta a Cotización #${r.cotizacionId}'
+                              : 'Propuesta Independiente',
                           style: const TextStyle(
                             color: SaasPalette.textSecondary,
                             fontSize: 13,

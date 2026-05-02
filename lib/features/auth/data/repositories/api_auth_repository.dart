@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:agente_viajes/core/constants/api_constants.dart';
@@ -56,12 +57,15 @@ class ApiAuthRepository implements AuthRepository {
             permisos: permisos,
           );
         } else {
+          debugPrint('API RESPONSE: ${userResponse.body}');
           throw Exception('No se pudo obtener la información del usuario');
         }
       } else {
+        debugPrint('API RESPONSE: ${response.body}');
         throw Exception('Credenciales incorrectas');
       }
     } catch (e) {
+      debugPrint('API RESPONSE: ${e.toString()}');
       if (e is Exception && e.toString().contains('Credenciales')) {
         rethrow;
       }

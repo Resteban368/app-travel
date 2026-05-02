@@ -191,20 +191,16 @@ class _RespuestaCotizacionFormScreenState
   }
 
   void _populateFromCotizacion(Cotizacion c) {
-    _tituloCtrl.text = 'Propuesta de Viaje - ${c.nombreCompleto}';
-    _condicionesCtrl.text =
-        'Esta propuesta se basa en los detalles proporcionados: ${c.detallesPlan}.';
+    // _tituloCtrl.text = 'Propuesta de Viaje - ${c.nombreCompleto}';
+    // _condicionesCtrl.text =
+    //     'Esta propuesta se basa en los detalles proporcionados: ${c.detallesPlan}.';
 
     // Si tiene origen/destino, podemos pre-cargar un tramo de vuelo
-    if (c.origenDestino != null && c.origenDestino!.isNotEmpty) {
+    if ((c.origen != null && c.origen!.isNotEmpty) ||
+        (c.destino != null && c.destino!.isNotEmpty)) {
       final data = _VueloData();
-      final parts = c.origenDestino!.split(' - ');
-      if (parts.length >= 2) {
-        data.origenCtrl.text = parts[0];
-        data.destinoCtrl.text = parts[1];
-      } else {
-        data.origenCtrl.text = c.origenDestino!;
-      }
+      data.origenCtrl.text = c.origen ?? '';
+      data.destinoCtrl.text = c.destino ?? '';
       data.numeroPasajerosCtrl.text = c.numeroPasajeros.toString();
       if (c.fechaSalida != null && c.fechaSalida!.isNotEmpty) {
         data.fecha = DateTime.tryParse(c.fechaSalida!);
@@ -215,10 +211,10 @@ class _RespuestaCotizacionFormScreenState
       _vuelos.add(data);
     }
 
-    // Si tiene más de un pasajero o especificaciones, podríamos agregarlas a condiciones
-    if (c.especificaciones != null && c.especificaciones!.isNotEmpty) {
-      _condicionesCtrl.text += '\n\nEspecificaciones: ${c.especificaciones}';
-    }
+    // // Si tiene más de un pasajero o especificaciones, podríamos agregarlas a condiciones
+    // if (c.especificaciones != null && c.especificaciones!.isNotEmpty) {
+    //   _condicionesCtrl.text += '\n\nEspecificaciones: ${c.especificaciones}';
+    // }
   }
 
   void _populateFromRespuesta(RespuestaCotizacion r) {
@@ -686,7 +682,8 @@ class _RespuestaCotizacionFormScreenState
               padding: const EdgeInsets.fromLTRB(32, 24, 32, 60),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  if (widget.cotizacion != null || _loadedCotizacion != null) ...[
+                  if (widget.cotizacion != null ||
+                      _loadedCotizacion != null) ...[
                     _CotizacionBanner(
                       cotizacion: widget.cotizacion ?? _loadedCotizacion!,
                     ),
@@ -2560,12 +2557,13 @@ class _CotizacionBanner extends StatelessWidget {
                   value: c.detallesPlan,
                   maxLines: 3,
                 ),
-                if (c.origenDestino != null && c.origenDestino!.isNotEmpty) ...[
+                if ((c.origen != null && c.origen!.isNotEmpty) ||
+                    (c.destino != null && c.destino!.isNotEmpty)) ...[
                   const SizedBox(height: 10),
                   _BannerRow(
                     icon: Icons.route_rounded,
                     label: 'Ruta',
-                    value: c.origenDestino!,
+                    value: [c.origen ?? '—', c.destino ?? '—'].join(' → '),
                   ),
                 ],
                 const Padding(
@@ -2602,14 +2600,14 @@ class _CotizacionBanner extends StatelessWidget {
                         value: '${c.numeroPasajeros}',
                       ),
                     ),
-                    if (c.edadesMenuores != null &&
-                        c.edadesMenuores!.isNotEmpty) ...[
+                    if (c.edadesMenores != null &&
+                        c.edadesMenores!.isNotEmpty) ...[
                       const SizedBox(width: 16),
                       Expanded(
                         child: _BannerRow(
                           icon: Icons.child_care_rounded,
                           label: 'Edades menores',
-                          value: c.edadesMenuores!,
+                          value: c.edadesMenores!,
                         ),
                       ),
                     ],

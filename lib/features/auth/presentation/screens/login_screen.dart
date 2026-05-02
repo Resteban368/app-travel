@@ -799,7 +799,7 @@ class _LoginScreenState extends State<LoginScreen>
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
-                    'AgenteViajes Platform v1.2.8',
+                    'AgenteViajes Platform v1.3.0',
                     style: TextStyle(
                       fontSize: 11,
                       color: _C.slate600.withOpacity(0.5),

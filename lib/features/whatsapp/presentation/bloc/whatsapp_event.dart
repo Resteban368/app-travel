@@ -7,13 +7,13 @@ abstract class WhatsAppEvent extends Equatable {
 }
 
 class SendMessage extends WhatsAppEvent {
-  final String to;
-  final String body;
+  final int conversationId;
+  final String content;
 
-  const SendMessage({required this.to, required this.body});
+  const SendMessage({required this.conversationId, required this.content});
 
   @override
-  List<Object?> get props => [to, body];
+  List<Object?> get props => [conversationId, content];
 }
 
 class ResetWhatsAppStatus extends WhatsAppEvent {}

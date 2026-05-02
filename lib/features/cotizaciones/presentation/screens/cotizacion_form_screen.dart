@@ -48,16 +48,10 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
       _countryCode = parsed.$1;
       _chatIdCtrl.text = parsed.$2;
       _detallesPlanCtrl.text = c.detallesPlan;
-      final od = c.origenDestino ?? '';
-      if (od.contains(' → ')) {
-        final parts = od.split(' → ');
-        _origenCtrl.text = parts[0].trim();
-        _destinoCtrl.text = parts.sublist(1).join(' → ').trim();
-      } else {
-        _destinoCtrl.text = od;
-      }
+      _origenCtrl.text = c.origen ?? '';
+      _destinoCtrl.text = c.destino ?? '';
       _especificacionesCtrl.text = c.especificaciones ?? '';
-      _edadesMenoresCtrl.text = c.edadesMenuores ?? '';
+      _edadesMenoresCtrl.text = c.edadesMenores ?? '';
       _numeroPasajerosCtrl.text = c.numeroPasajeros.toString();
       if (c.fechaSalida != null) _fechaSalida = DateTime.parse(c.fechaSalida!);
       if (c.fechaRegreso != null) {
@@ -110,14 +104,7 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
     }
   }
 
-  String? _buildOrigenDestino() {
-    final origen = _origenCtrl.text.trim();
-    final destino = _destinoCtrl.text.trim();
-    if (origen.isEmpty && destino.isEmpty) return null;
-    if (origen.isEmpty) return destino;
-    if (destino.isEmpty) return origen;
-    return '$origen → $destino';
-  }
+
 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
@@ -129,12 +116,14 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
       correoElectronico: _correoCtrl.text.trim().isEmpty
           ? null
           : _correoCtrl.text.trim(),
+      telefono: '$_countryCode${_chatIdCtrl.text.trim()}',
       detallesPlan: _detallesPlanCtrl.text.trim(),
       numeroPasajeros: int.tryParse(_numeroPasajerosCtrl.text.trim()) ?? 1,
       fechaSalida: _fechaSalida?.toIso8601String().split('T').first,
       fechaRegreso: _fechaRegreso?.toIso8601String().split('T').first,
-      origenDestino: _buildOrigenDestino(),
-      edadesMenuores: _edadesMenoresCtrl.text.trim().isEmpty
+      origen: _origenCtrl.text.trim().isEmpty ? null : _origenCtrl.text.trim(),
+      destino: _destinoCtrl.text.trim().isEmpty ? null : _destinoCtrl.text.trim(),
+      edadesMenores: _edadesMenoresCtrl.text.trim().isEmpty
           ? null
           : _edadesMenoresCtrl.text.trim(),
       especificaciones: _especificacionesCtrl.text.trim().isEmpty
@@ -201,11 +190,13 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
                                   keyboardType: TextInputType.text,
                                 ),
                                 const SizedBox(height: 20),
-                                _WhatsAppField(
+                                _PhoneField(
+                                  label: 'Teléfono / WhatsApp *',
                                   controller: _chatIdCtrl,
                                   countryCode: _countryCode,
                                   onCountryCodeChanged: (v) =>
                                       setState(() => _countryCode = v),
+                                  isRequired: true,
                                 ),
                                 const SizedBox(height: 20),
                                 PremiumTextField(
@@ -495,15 +486,19 @@ const _kCountryCodes = [
 
 // ─── WhatsApp field with country code selector ────────────────────────────────
 
-class _WhatsAppField extends StatelessWidget {
+class _PhoneField extends StatelessWidget {
+  final String label;
   final TextEditingController controller;
   final String countryCode;
   final ValueChanged<String> onCountryCodeChanged;
+  final bool isRequired;
 
-  const _WhatsAppField({
+  const _PhoneField({
+    required this.label,
     required this.controller,
     required this.countryCode,
     required this.onCountryCodeChanged,
+    this.isRequired = false,
   });
 
   @override
@@ -511,9 +506,9 @@ class _WhatsAppField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Chat - WhatsApp *',
-          style: TextStyle(
+        Text(
+          label,
+          style: const TextStyle(
             color: SaasPalette.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
@@ -590,7 +585,7 @@ class _WhatsAppField extends StatelessWidget {
                     ),
                   ),
                   validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+                      (isRequired && (v == null || v.trim().isEmpty)) ? 'Requerido' : null,
                 ),
               ),
             ],

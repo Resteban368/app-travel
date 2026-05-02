@@ -18,6 +18,7 @@ class PagoRealizado extends Equatable {
   final int? reservaId;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final int? conversationId;
 
   const PagoRealizado({
     required this.id,
@@ -36,6 +37,7 @@ class PagoRealizado extends Equatable {
     this.reservaId,
     this.createdAt,
     this.updatedAt,
+    this.conversationId,
   });
 
   PagoRealizado copyWith({
@@ -55,6 +57,7 @@ class PagoRealizado extends Equatable {
     int? reservaId,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? conversationId,
   }) {
     return PagoRealizado(
       id: id ?? this.id,
@@ -73,6 +76,7 @@ class PagoRealizado extends Equatable {
       reservaId: reservaId ?? this.reservaId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      conversationId: conversationId ?? this.conversationId,
     );
   }
 
@@ -94,5 +98,6 @@ class PagoRealizado extends Equatable {
     reservaId,
     createdAt,
     updatedAt,
+    conversationId,
   ];
 }
