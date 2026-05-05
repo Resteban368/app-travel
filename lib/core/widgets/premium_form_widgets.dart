@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../theme/saas_palette.dart';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -171,6 +172,7 @@ class PremiumTextField extends StatefulWidget {
   final TextInputAction? textInputAction;
   final FocusNode? focusNode;
   final ValueChanged<String>? onChanged;
+  final List<TextInputFormatter>? inputFormatters;
 
   const PremiumTextField({
     super.key,
@@ -186,6 +188,7 @@ class PremiumTextField extends StatefulWidget {
     this.textInputAction,
     this.focusNode,
     this.onChanged,
+    this.inputFormatters,
   });
 
   @override
@@ -230,9 +233,8 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
           keyboardType: kType,
           textInputAction: tAction,
           focusNode: widget.focusNode,
-          inputFormatters: widget.isNumeric
-              ? [FilteringTextInputFormatter.digitsOnly]
-              : null,
+          inputFormatters: widget.inputFormatters ??
+              (widget.isNumeric ? [FilteringTextInputFormatter.digitsOnly] : null),
           style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
           decoration: InputDecoration(
             prefixIcon: Icon(
@@ -522,4 +524,65 @@ class DotGridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 11. FORMATEADOR DE SEPARADOR DE MILES
+// ──────────────────────────────────────────────────────────────────────────────
+
+class ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  static final NumberFormat _formatter = NumberFormat.decimalPattern('es_CO');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue;
+    }
+
+    // Eliminamos todo lo que no sea número o coma (separador decimal es_CO)
+    String plainText = newValue.text.replaceAll(RegExp(r'[^0-9,]'), '');
+
+    // Si tiene más de una coma, nos quedamos con la primera
+    if (plainText.contains(',')) {
+      List<String> parts = plainText.split(',');
+      plainText = '${parts[0]},${parts.sublist(1).join('')}';
+    }
+
+    // Separamos parte entera y decimal
+    List<String> parts = plainText.split(',');
+    String integerPart = parts[0];
+    String? decimalPart = parts.length > 1 ? parts[1] : null;
+
+    if (integerPart.isEmpty && decimalPart != null) {
+      // Caso ",50" -> "0,50"
+      integerPart = '0';
+    } else if (integerPart.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // Formateamos la parte entera con puntos
+    int? number = int.tryParse(integerPart);
+    if (number == null) return oldValue;
+
+    String formattedInteger = _formatter.format(number);
+
+    // Reensamblamos
+    String finalString =
+        decimalPart != null ? '$formattedInteger,$decimalPart' : formattedInteger;
+
+    // Calculamos la nueva posición del cursor
+    // Esto es un poco complejo, una forma simple es:
+    int cursorPosition = newValue.selection.end;
+    // Ajuste básico de posición (puede no ser perfecto si se borra en medio, pero funciona bien para escritura al final)
+    int offset = finalString.length - newValue.text.length;
+    int newSelectionIndex = (cursorPosition + offset).clamp(0, finalString.length);
+
+    return TextEditingValue(
+      text: finalString,
+      selection: TextSelection.collapsed(offset: newSelectionIndex),
+    );
+  }
 }

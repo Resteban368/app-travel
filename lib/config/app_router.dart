@@ -231,6 +231,14 @@ class AppRouter {
         final cotizacion = settings.arguments as Cotizacion?;
         return _fadeRoute(CotizacionFormScreen(cotizacion: cotizacion), settings);
       case cotizacionResponder:
+        if (settings.arguments is RespuestaCotizacion) {
+          return _fadeRoute(
+            RespuestaCotizacionFormScreen(
+              duplicarDe: settings.arguments as RespuestaCotizacion,
+            ),
+            settings,
+          );
+        }
         final cotizacion = settings.arguments as Cotizacion?;
         return _fadeRoute(
             RespuestaCotizacionFormScreen(cotizacion: cotizacion), settings);

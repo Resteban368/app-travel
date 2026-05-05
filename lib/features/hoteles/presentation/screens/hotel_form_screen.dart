@@ -1,4 +1,5 @@
 import 'package:agente_viajes/core/theme/saas_palette.dart';
+import 'package:agente_viajes/core/widgets/phone_form_field.dart';
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +25,7 @@ class _HotelFormScreenState extends State<HotelFormScreen>
   late final TextEditingController _nombreCtrl;
   late final TextEditingController _ciudadCtrl;
   late final TextEditingController _telefonoCtrl;
+  String _countryCode = '+57';
   late final TextEditingController _direccionCtrl;
   late bool _isActive;
 
@@ -38,7 +40,14 @@ class _HotelFormScreenState extends State<HotelFormScreen>
     super.initState();
     _nombreCtrl = TextEditingController(text: widget.hotel?.nombre ?? '');
     _ciudadCtrl = TextEditingController(text: widget.hotel?.ciudad ?? '');
-    _telefonoCtrl = TextEditingController(text: widget.hotel?.telefono ?? '');
+    final rawPhone = widget.hotel?.telefono ?? '';
+    if (rawPhone.isNotEmpty) {
+      final parsed = parsePhone(rawPhone);
+      _countryCode = parsed.$1;
+      _telefonoCtrl = TextEditingController(text: parsed.$2);
+    } else {
+      _telefonoCtrl = TextEditingController();
+    }
     _direccionCtrl = TextEditingController(text: widget.hotel?.direccion ?? '');
     _isActive = widget.hotel?.isActive ?? true;
 
@@ -84,7 +93,9 @@ class _HotelFormScreenState extends State<HotelFormScreen>
       id: widget.hotel?.id,
       nombre: _nombreCtrl.text.trim(),
       ciudad: _ciudadCtrl.text.trim(),
-      telefono: _telefonoCtrl.text.trim(),
+      telefono: _telefonoCtrl.text.trim().isEmpty
+          ? ''
+          : '$_countryCode${_telefonoCtrl.text.trim()}',
       direccion: _direccionCtrl.text.trim(),
       isActive: _isActive,
     );
@@ -206,11 +217,13 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                                       : null,
                                 ),
                                 const SizedBox(height: 20),
-                                PremiumTextField(
+                                PhoneFormField(
                                   controller: _telefonoCtrl,
+                                  countryCode: _countryCode,
+                                  onCountryCodeChanged: (v) =>
+                                      setState(() => _countryCode = v),
                                   label: 'Teléfono (opcional)',
-                                  icon: Icons.phone_rounded,
-                                  isNumeric: true,
+                                  required: false,
                                   readOnly: !canWrite,
                                 ),
                                 const SizedBox(height: 20),

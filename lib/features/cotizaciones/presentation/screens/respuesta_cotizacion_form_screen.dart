@@ -9,7 +9,9 @@ import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:agente_viajes/features/reservas/domain/entities/aerolinea.dart';
 import 'package:agente_viajes/features/reservas/domain/repositories/reserva_repository.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:agente_viajes/core/widgets/phone_form_field.dart';
+import 'package:flutter/services.dart'
+    show Clipboard, ClipboardData, FilteringTextInputFormatter;
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../domain/entities/cotizacion.dart';
@@ -48,10 +50,12 @@ class _VueloData {
 
 class _HotelData {
   final nombreCtrl = TextEditingController();
-  String tipoHabitacion = 'Individual (1 persona)';
+  final tipoHabitacionCtrl = TextEditingController();
   final List<String> queIncluye = [];
   DateTime? fechaEntrada;
+  final horaEntradaCtrl = TextEditingController();
   DateTime? fechaSalida;
+  final horaSalidaCtrl = TextEditingController();
   final precioAdultoCtrl = TextEditingController();
   final precioMenorCtrl = TextEditingController();
   final precioTotalCtrl = TextEditingController();
@@ -62,6 +66,9 @@ class _HotelData {
 
   void dispose() {
     nombreCtrl.dispose();
+    tipoHabitacionCtrl.dispose();
+    horaEntradaCtrl.dispose();
+    horaSalidaCtrl.dispose();
     precioAdultoCtrl.dispose();
     precioMenorCtrl.dispose();
     precioTotalCtrl.dispose();
@@ -86,10 +93,15 @@ class _AdicionalData {
 class RespuestaCotizacionFormScreen extends StatefulWidget {
   final Cotizacion? cotizacion;
   final RespuestaCotizacion? respuesta;
+
+  /// Cuando se pasa, pre-llena el form con estos datos para crear una NUEVA
+  /// respuesta (duplicado). No edita la existente.
+  final RespuestaCotizacion? duplicarDe;
   const RespuestaCotizacionFormScreen({
     super.key,
     this.cotizacion,
     this.respuesta,
+    this.duplicarDe,
   });
 
   @override
@@ -110,6 +122,11 @@ class _RespuestaCotizacionFormScreenState
   Cotizacion? _loadedCotizacion;
   bool _loadingCotizacion = false;
 
+  // Cliente
+  final _nombreClienteCtrl = TextEditingController();
+  final _telefonoCtrl = TextEditingController();
+  String _countryCode = '+57';
+
   // Título
   final _tituloCtrl = TextEditingController();
 
@@ -128,9 +145,11 @@ class _RespuestaCotizacionFormScreenState
 
   // Vuelos
   final List<_VueloData> _vuelos = [];
+  final Set<_VueloData> _selectedVuelos = {};
 
   // Hoteles
   final List<_HotelData> _hoteles = [];
+  final Set<_HotelData> _selectedHoteles = {};
 
   // Adicionales
   final List<_AdicionalData> _adicionales = [];
@@ -138,21 +157,11 @@ class _RespuestaCotizacionFormScreenState
   // Condiciones generales
   final _condicionesCtrl = TextEditingController();
 
-  static const _tipoHabitacionOpciones = [
-    'Individual (1 persona)',
-    'Doble - Cama Matrimonial',
-    'Doble - Dos Camas',
-    'Triple (3 personas)',
-    'Cuádruple / Familiar (4+ personas)',
-    'Suite Júnior',
-    'Suite Ejecutiva',
-    'Suite Presidencial',
-  ];
-
   static const _incluyeOpciones = [
     'Todo Incluido',
     'Todas las Comidas',
     'Desayuno',
+    'Desayuno Buffet',
     'Almuerzo',
     'Cena',
     'Snacks',
@@ -173,6 +182,8 @@ class _RespuestaCotizacionFormScreenState
       if (widget.respuesta!.cotizacionId != null && widget.cotizacion == null) {
         _loadLinkedCotizacion(widget.respuesta!.cotizacionId!);
       }
+    } else if (widget.duplicarDe != null) {
+      _populateFromRespuesta(widget.duplicarDe!);
     } else if (widget.cotizacion != null) {
       _populateFromCotizacion(widget.cotizacion!);
     }
@@ -209,6 +220,7 @@ class _RespuestaCotizacionFormScreenState
       data.origenCtrl.addListener(_refreshResumen);
       data.destinoCtrl.addListener(_refreshResumen);
       _vuelos.add(data);
+      _selectedVuelos.add(data);
     }
 
     // // Si tiene más de un pasajero o especificaciones, podríamos agregarlas a condiciones
@@ -217,9 +229,30 @@ class _RespuestaCotizacionFormScreenState
     // }
   }
 
+  String _formatPrice(double value) {
+    if (value <= 0) return '';
+    return NumberFormat.decimalPattern('es_CO').format(value);
+  }
+
+  double _parsePrice(String text) {
+    if (text.isEmpty) return 0;
+    // Remove thousand separators (.) and convert decimal separator (,) to (.) for double.tryParse
+    final clean = text.replaceAll('.', '').replaceAll(',', '.');
+    return double.tryParse(clean) ?? 0;
+  }
+
   void _populateFromRespuesta(RespuestaCotizacion r) {
+    _nombreClienteCtrl.text = r.nombreCliente ?? '';
+    if (r.telefonoCliente != null && r.telefonoCliente!.isNotEmpty) {
+      final parsed = parsePhone(r.telefonoCliente!);
+      _countryCode = parsed.$1;
+      _telefonoCtrl.text = parsed.$2;
+    }
     _tituloCtrl.text = r.tituloViaje;
     _imagenes.addAll(r.imagenesDestino);
+    if (r.imagenesDestino.isNotEmpty) {
+      _imagenUrlCtrl.text = r.imagenesDestino.first;
+    }
     _itemsIncluidos.addAll(r.itemsIncluidos);
     _itemsNoIncluidos.addAll(r.itemsNoIncluidos);
     _condicionesCtrl.text = r.condicionesGenerales;
@@ -234,19 +267,21 @@ class _RespuestaCotizacionFormScreenState
       data.destinoCtrl.text = v.destino;
       data.horaSalidaCtrl.text = v.horaSalida;
       data.horaLlegadaCtrl.text = v.horaLlegada;
-      data.costoCtrl.text = v.costo > 0 ? v.costo.toStringAsFixed(0) : '';
+      data.costoCtrl.text = _formatPrice(v.costo);
       data.numeroPasajerosCtrl.text = v.numeroPasajeros.toString();
       data.costoCtrl.addListener(_refreshResumen);
       data.origenCtrl.addListener(_refreshResumen);
       data.destinoCtrl.addListener(_refreshResumen);
       _vuelos.add(data);
+      _selectedVuelos.add(data);
     }
 
     for (final h in r.opcionesHotel) {
       final data = _HotelData()
-        ..tipoHabitacion = h.tipoHabitacion
+        ..tipoHabitacionCtrl.text = h.tipoHabitacion
         ..queIncluye.addAll(h.queIncluye)
         ..fotos.addAll(h.fotos)
+        ..fotoUrlCtrl.text = h.fotos.isNotEmpty ? h.fotos.first : ''
         ..fechaEntrada = h.fechaEntrada.isNotEmpty
             ? DateTime.tryParse(h.fechaEntrada)
             : null
@@ -254,26 +289,23 @@ class _RespuestaCotizacionFormScreenState
             ? DateTime.tryParse(h.fechaSalida)
             : null;
       data.nombreCtrl.text = h.nombre;
-      data.precioAdultoCtrl.text = h.precioAdulto > 0
-          ? h.precioAdulto.toStringAsFixed(0)
-          : '';
-      data.precioMenorCtrl.text = h.precioMenor > 0
-          ? h.precioMenor.toStringAsFixed(0)
-          : '';
-      data.precioTotalCtrl.text = h.precioTotal > 0
-          ? h.precioTotal.toStringAsFixed(0)
-          : '';
+      data.horaEntradaCtrl.text = h.horaEntrada;
+      data.horaSalidaCtrl.text = h.horaSalida;
+      data.precioAdultoCtrl.text = _formatPrice(h.precioAdulto);
+      data.precioMenorCtrl.text = _formatPrice(h.precioMenor);
+      data.precioTotalCtrl.text = _formatPrice(h.precioTotal);
       data.precioTotalCtrl.addListener(_refreshResumen);
       data.precioAdultoCtrl.addListener(_refreshResumen);
       data.nombreCtrl.addListener(_refreshResumen);
       _hoteles.add(data);
+      _selectedHoteles.add(data);
     }
 
     for (final a in r.adicionales) {
       final data = _AdicionalData();
       data.nombreCtrl.text = a.nombre;
       data.descripcionCtrl.text = a.descripcion;
-      data.precioCtrl.text = a.precio > 0 ? a.precio.toStringAsFixed(0) : '';
+      data.precioCtrl.text = _formatPrice(a.precio);
       data.precioCtrl.addListener(_refreshResumen);
       data.nombreCtrl.addListener(_refreshResumen);
       _adicionales.add(data);
@@ -284,7 +316,19 @@ class _RespuestaCotizacionFormScreenState
     setState(() => _loadingAerolineas = true);
     try {
       final list = await sl<ReservaRepository>().getAerolineas();
-      if (mounted) setState(() => _aerolineas = list);
+      if (mounted) {
+        setState(() {
+          _aerolineas = list;
+          // Matches aerolineaId → Aerolinea en vuelos pre-cargados
+          for (final v in _vuelos) {
+            if (v.aerolineaId != null && v.aerolinea == null) {
+              try {
+                v.aerolinea = list.firstWhere((a) => a.id == v.aerolineaId);
+              } catch (_) {}
+            }
+          }
+        });
+      }
     } catch (_) {
       // silently ignore
     } finally {
@@ -294,6 +338,8 @@ class _RespuestaCotizacionFormScreenState
 
   @override
   void dispose() {
+    _nombreClienteCtrl.dispose();
+    _telefonoCtrl.dispose();
     _tituloCtrl.dispose();
     _imagenUrlCtrl.dispose();
     _itemCtrl.dispose();
@@ -369,14 +415,19 @@ class _RespuestaCotizacionFormScreenState
     data.numeroPasajerosCtrl.addListener(_refreshResumen);
     data.origenCtrl.addListener(_refreshResumen);
     data.destinoCtrl.addListener(_refreshResumen);
-    setState(() => _vuelos.add(data));
+    setState(() {
+      _vuelos.add(data);
+      _selectedVuelos.add(data);
+    });
   }
 
   void _refreshResumen() => setState(() {});
 
   void _removeVuelo(int i) {
     setState(() {
-      _vuelos[i].dispose();
+      final data = _vuelos[i];
+      _selectedVuelos.remove(data);
+      data.dispose();
       _vuelos.removeAt(i);
     });
   }
@@ -386,12 +437,17 @@ class _RespuestaCotizacionFormScreenState
     data.precioTotalCtrl.addListener(_refreshResumen);
     data.precioAdultoCtrl.addListener(_refreshResumen);
     data.nombreCtrl.addListener(_refreshResumen);
-    setState(() => _hoteles.add(data));
+    setState(() {
+      _hoteles.add(data);
+      _selectedHoteles.add(data);
+    });
   }
 
   void _removeHotel(int i) {
     setState(() {
-      _hoteles[i].dispose();
+      final data = _hoteles[i];
+      _selectedHoteles.remove(data);
+      data.dispose();
       _hoteles.removeAt(i);
     });
   }
@@ -420,11 +476,21 @@ class _RespuestaCotizacionFormScreenState
     });
   }
 
+  String get _fullTelefono =>
+      _telefonoCtrl.text.trim().isEmpty
+          ? ''
+          : '$_countryCode${_telefonoCtrl.text.trim()}';
+
   RespuestaCotizacion _buildCurrentRespuesta() {
     return RespuestaCotizacion(
       id: widget.respuesta?.id,
-      cotizacionId: widget.respuesta?.cotizacionId ?? widget.cotizacion?.id,
+      cotizacionId:
+          widget.respuesta?.cotizacionId ??
+          widget.cotizacion?.id ??
+          widget.duplicarDe?.cotizacionId,
       token: widget.respuesta?.token,
+      nombreCliente: _nombreClienteCtrl.text.trim(),
+      telefonoCliente: _fullTelefono,
       tituloViaje: _tituloCtrl.text.trim(),
       imagenesDestino: List.from(_imagenes),
       itemsIncluidos: List.from(_itemsIncluidos),
@@ -443,7 +509,7 @@ class _RespuestaCotizacionFormScreenState
                   : '',
               horaSalida: v.horaSalidaCtrl.text.trim(),
               horaLlegada: v.horaLlegadaCtrl.text.trim(),
-              costo: double.tryParse(v.costoCtrl.text.trim()) ?? 0,
+              costo: _parsePrice(v.costoCtrl.text.trim()),
               numeroPasajeros:
                   int.tryParse(v.numeroPasajerosCtrl.text.trim()) ?? 1,
             ),
@@ -453,18 +519,19 @@ class _RespuestaCotizacionFormScreenState
           .map(
             (h) => OpcionHotel(
               nombre: h.nombreCtrl.text.trim(),
-              tipoHabitacion: h.tipoHabitacion,
+              tipoHabitacion: h.tipoHabitacionCtrl.text.trim(),
               queIncluye: List.from(h.queIncluye),
               fechaEntrada: h.fechaEntrada != null
                   ? DateFormat('yyyy-MM-dd').format(h.fechaEntrada!)
                   : '',
+              horaEntrada: h.horaEntradaCtrl.text.trim(),
               fechaSalida: h.fechaSalida != null
                   ? DateFormat('yyyy-MM-dd').format(h.fechaSalida!)
                   : '',
-              precioAdulto:
-                  double.tryParse(h.precioAdultoCtrl.text.trim()) ?? 0,
-              precioMenor: double.tryParse(h.precioMenorCtrl.text.trim()) ?? 0,
-              precioTotal: double.tryParse(h.precioTotalCtrl.text.trim()) ?? 0,
+              horaSalida: h.horaSalidaCtrl.text.trim(),
+              precioAdulto: _parsePrice(h.precioAdultoCtrl.text.trim()),
+              precioMenor: _parsePrice(h.precioMenorCtrl.text.trim()),
+              precioTotal: _parsePrice(h.precioTotalCtrl.text.trim()),
               fotos: List.from(h.fotos),
             ),
           )
@@ -474,7 +541,7 @@ class _RespuestaCotizacionFormScreenState
             (a) => AdicionalViaje(
               nombre: a.nombreCtrl.text.trim(),
               descripcion: a.descripcionCtrl.text.trim(),
-              precio: double.tryParse(a.precioCtrl.text.trim()) ?? 0,
+              precio: _parsePrice(a.precioCtrl.text.trim()),
             ),
           )
           .toList(),
@@ -499,7 +566,19 @@ class _RespuestaCotizacionFormScreenState
     setState(() => _saving = true);
 
     //validaciones
-    //validamos el titulo no puede estar vacio
+    if (_nombreClienteCtrl.text.trim().isEmpty) {
+      setState(() => _saving = false);
+      SaasSnackBar.showWarning(context, 'El nombre del cliente es requerido');
+      return;
+    }
+    if (_telefonoCtrl.text.trim().isEmpty) {
+      setState(() => _saving = false);
+      SaasSnackBar.showWarning(
+        context,
+        'El teléfono del cliente es requerido',
+      );
+      return;
+    }
     if (_tituloCtrl.text.trim().isEmpty) {
       setState(() => _saving = false);
       SaasSnackBar.showWarning(context, 'El titulo es requerido');
@@ -531,6 +610,22 @@ class _RespuestaCotizacionFormScreenState
       SaasSnackBar.showWarning(
         context,
         'La fecha de salida del hotel es requerida',
+      );
+      return;
+    }
+    if (_hoteles.any((h) => h.horaEntradaCtrl.text.trim().isEmpty)) {
+      setState(() => _saving = false);
+      SaasSnackBar.showWarning(
+        context,
+        'La hora de entrada del hotel es requerida',
+      );
+      return;
+    }
+    if (_hoteles.any((h) => h.horaSalidaCtrl.text.trim().isEmpty)) {
+      setState(() => _saving = false);
+      SaasSnackBar.showWarning(
+        context,
+        'La hora de salida del hotel es requerida',
       );
       return;
     }
@@ -579,8 +674,13 @@ class _RespuestaCotizacionFormScreenState
 
     final respuesta = RespuestaCotizacion(
       id: widget.respuesta?.id,
-      cotizacionId: widget.respuesta?.cotizacionId ?? widget.cotizacion?.id,
+      cotizacionId:
+          widget.respuesta?.cotizacionId ??
+          widget.cotizacion?.id ??
+          widget.duplicarDe?.cotizacionId,
       token: widget.respuesta?.token,
+      nombreCliente: _nombreClienteCtrl.text.trim(),
+      telefonoCliente: _fullTelefono,
       tituloViaje: _tituloCtrl.text.trim(),
       imagenesDestino: List.from(_imagenes),
       itemsIncluidos: List.from(_itemsIncluidos),
@@ -598,24 +698,26 @@ class _RespuestaCotizacionFormScreenState
               : '',
           horaSalida: v.horaSalidaCtrl.text.trim(),
           horaLlegada: v.horaLlegadaCtrl.text.trim(),
-          costo: double.tryParse(v.costoCtrl.text.trim()) ?? 0,
+          costo: _parsePrice(v.costoCtrl.text.trim()),
           numeroPasajeros: int.tryParse(v.numeroPasajerosCtrl.text.trim()) ?? 1,
         );
       }).toList(),
       opcionesHotel: _hoteles.map((h) {
         return OpcionHotel(
           nombre: h.nombreCtrl.text.trim(),
-          tipoHabitacion: h.tipoHabitacion,
+          tipoHabitacion: h.tipoHabitacionCtrl.text.trim(),
           queIncluye: List.from(h.queIncluye),
           fechaEntrada: h.fechaEntrada != null
               ? DateFormat('yyyy-MM-dd').format(h.fechaEntrada!)
               : '',
+          horaEntrada: h.horaEntradaCtrl.text.trim(),
           fechaSalida: h.fechaSalida != null
               ? DateFormat('yyyy-MM-dd').format(h.fechaSalida!)
               : '',
-          precioAdulto: double.tryParse(h.precioAdultoCtrl.text.trim()) ?? 0,
-          precioMenor: double.tryParse(h.precioMenorCtrl.text.trim()) ?? 0,
-          precioTotal: double.tryParse(h.precioTotalCtrl.text.trim()) ?? 0,
+          horaSalida: h.horaSalidaCtrl.text.trim(),
+          precioAdulto: _parsePrice(h.precioAdultoCtrl.text.trim()),
+          precioMenor: _parsePrice(h.precioMenorCtrl.text.trim()),
+          precioTotal: _parsePrice(h.precioTotalCtrl.text.trim()),
           fotos: List.from(h.fotos),
         );
       }).toList(),
@@ -623,7 +725,7 @@ class _RespuestaCotizacionFormScreenState
         return AdicionalViaje(
           nombre: a.nombreCtrl.text.trim(),
           descripcion: a.descripcionCtrl.text.trim(),
-          precio: double.tryParse(a.precioCtrl.text.trim()) ?? 0,
+          precio: _parsePrice(a.precioCtrl.text.trim()),
         );
       }).toList(),
       condicionesGenerales: _condicionesCtrl.text.trim(),
@@ -717,7 +819,7 @@ class _RespuestaCotizacionFormScreenState
                   PremiumActionButton(
                     label: widget.respuesta != null
                         ? 'ACTUALIZAR PROPUESTA'
-                        : 'GUARDAR RESPUESTA',
+                        : 'CREAR RESPUESTA',
                     icon: Icons.save_rounded,
                     isLoading: _saving,
                     onTap: _save,
@@ -745,6 +847,19 @@ class _RespuestaCotizacionFormScreenState
           label: 'Título del viaje *',
           icon: Icons.title_rounded,
         ),
+        const SizedBox(height: 12),
+        PremiumTextField(
+          controller: _nombreClienteCtrl,
+          label: 'Nombre del cliente *',
+          icon: Icons.person_rounded,
+        ),
+        const SizedBox(height: 12),
+        PhoneFormField(
+          controller: _telefonoCtrl,
+          countryCode: _countryCode,
+          onCountryCodeChanged: (v) => setState(() => _countryCode = v),
+          label: 'Teléfono del cliente *',
+        ),
       ],
     );
   }
@@ -766,15 +881,16 @@ class _RespuestaCotizacionFormScreenState
                 fit: StackFit.expand,
                 children: [
                   Image.network(
+                    key: ValueKey(_imagenes[_activeImageIndex]),
                     _imagenes[_activeImageIndex],
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, e) => Container(
+                    errorBuilder: (context, error, _) => Container(
                       color: SaasPalette.bgSubtle,
                       child: const Center(
                         child: Icon(
                           Icons.broken_image_rounded,
                           color: SaasPalette.textTertiary,
-                          size: 40,
+                          size: 36,
                         ),
                       ),
                     ),
@@ -816,7 +932,10 @@ class _RespuestaCotizacionFormScreenState
               itemBuilder: (context, i) {
                 final isActive = i == _activeImageIndex;
                 return GestureDetector(
-                  onTap: () => setState(() => _activeImageIndex = i),
+                  onTap: () => setState(() {
+                    _activeImageIndex = i;
+                    _imagenUrlCtrl.text = _imagenes[i];
+                  }),
                   child: Stack(
                     children: [
                       AnimatedContainer(
@@ -834,15 +953,19 @@ class _RespuestaCotizacionFormScreenState
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(7),
-                          child: Image.network(
-                            _imagenes[i],
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, e) => Container(
-                              color: SaasPalette.bgSubtle,
-                              child: const Icon(
-                                Icons.broken_image_rounded,
-                                color: SaasPalette.textTertiary,
-                                size: 20,
+                          child: IgnorePointer(
+                            child: Image.network(
+                              _imagenes[i],
+                              width: 56,
+                              height: 56,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                color: SaasPalette.bgSubtle,
+                                child: const Icon(
+                                  Icons.broken_image_rounded,
+                                  color: SaasPalette.textTertiary,
+                                  size: 20,
+                                ),
                               ),
                             ),
                           ),
@@ -1302,6 +1425,7 @@ class _RespuestaCotizacionFormScreenState
                 controller: data.costoCtrl,
                 label: 'Costo del vuelo',
                 icon: Icons.attach_money_rounded,
+                inputFormatters: [ThousandsSeparatorInputFormatter()],
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
@@ -1389,6 +1513,7 @@ class _RespuestaCotizacionFormScreenState
                   fit: StackFit.expand,
                   children: [
                     Image.network(
+                      key: ValueKey(data.fotos[data.activeFotoIndex]),
                       data.fotos[data.activeFotoIndex],
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, e) => Container(
@@ -1454,14 +1579,11 @@ class _RespuestaCotizacionFormScreenState
                 ),
                 const SizedBox(height: 12),
 
-                _DropdownField(
+                PremiumTextField(
+                  controller: data.tipoHabitacionCtrl,
                   label: 'Tipo de Habitación',
-                  value: data.tipoHabitacion,
-                  options: _tipoHabitacionOpciones,
                   icon: Icons.bed_rounded,
-                  onChanged: (v) => setState(
-                    () => data.tipoHabitacion = v ?? data.tipoHabitacion,
-                  ),
+                  validator: (_) => null,
                 ),
                 const SizedBox(height: 14),
 
@@ -1581,6 +1703,39 @@ class _RespuestaCotizacionFormScreenState
                 ),
                 const SizedBox(height: 12),
 
+                // Horas entrada/salida
+                LayoutBuilder(
+                  builder: (ctx, constraints) {
+                    final wide = constraints.maxWidth > 500;
+                    final horaEntrada = PremiumTextField(
+                      controller: data.horaEntradaCtrl,
+                      label: 'Hora de Entrada *',
+                      icon: Icons.access_time_rounded,
+                    );
+                    final horaSalida = PremiumTextField(
+                      controller: data.horaSalidaCtrl,
+                      label: 'Hora de Salida *',
+                      icon: Icons.access_time_outlined,
+                    );
+                    return wide
+                        ? Row(
+                            children: [
+                              Expanded(child: horaEntrada),
+                              const SizedBox(width: 12),
+                              Expanded(child: horaSalida),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              horaEntrada,
+                              const SizedBox(height: 12),
+                              horaSalida,
+                            ],
+                          );
+                  },
+                ),
+                const SizedBox(height: 12),
+
                 // Precios
                 LayoutBuilder(
                   builder: (ctx, constraints) {
@@ -1593,7 +1748,9 @@ class _RespuestaCotizacionFormScreenState
                                   controller: data.precioAdultoCtrl,
                                   label: 'Precio por Adulto *',
                                   icon: Icons.person_rounded,
-                                  isNumeric: true,
+                                  inputFormatters: [
+                                    ThousandsSeparatorInputFormatter(),
+                                  ],
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
                                         decimal: true,
@@ -1605,8 +1762,10 @@ class _RespuestaCotizacionFormScreenState
                                 child: PremiumTextField(
                                   controller: data.precioMenorCtrl,
                                   label: 'Precio por Menor',
-                                  isNumeric: true,
                                   icon: Icons.child_care_rounded,
+                                  inputFormatters: [
+                                    ThousandsSeparatorInputFormatter(),
+                                  ],
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
                                         decimal: true,
@@ -1619,8 +1778,10 @@ class _RespuestaCotizacionFormScreenState
                                 child: PremiumTextField(
                                   controller: data.precioTotalCtrl,
                                   label: 'Precio Total',
-                                  isNumeric: true,
                                   icon: Icons.attach_money_rounded,
+                                  inputFormatters: [
+                                    ThousandsSeparatorInputFormatter(),
+                                  ],
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
                                         decimal: true,
@@ -1635,8 +1796,10 @@ class _RespuestaCotizacionFormScreenState
                               PremiumTextField(
                                 controller: data.precioAdultoCtrl,
                                 label: 'Precio por Adulto *',
-                                isNumeric: true,
                                 icon: Icons.person_rounded,
+                                inputFormatters: [
+                                  ThousandsSeparatorInputFormatter(),
+                                ],
                                 keyboardType:
                                     const TextInputType.numberWithOptions(
                                       decimal: true,
@@ -1646,8 +1809,10 @@ class _RespuestaCotizacionFormScreenState
                               PremiumTextField(
                                 controller: data.precioMenorCtrl,
                                 label: 'Precio por Menor',
-                                isNumeric: true,
                                 icon: Icons.child_care_rounded,
+                                inputFormatters: [
+                                  ThousandsSeparatorInputFormatter(),
+                                ],
                                 keyboardType:
                                     const TextInputType.numberWithOptions(
                                       decimal: true,
@@ -1658,8 +1823,10 @@ class _RespuestaCotizacionFormScreenState
                               PremiumTextField(
                                 controller: data.precioTotalCtrl,
                                 label: 'Precio Total',
-                                isNumeric: true,
                                 icon: Icons.attach_money_rounded,
+                                inputFormatters: [
+                                  ThousandsSeparatorInputFormatter(),
+                                ],
                                 keyboardType:
                                     const TextInputType.numberWithOptions(
                                       decimal: true,
@@ -1685,7 +1852,10 @@ class _RespuestaCotizacionFormScreenState
                       itemBuilder: (context, i) {
                         final isActive = i == data.activeFotoIndex;
                         return GestureDetector(
-                          onTap: () => setState(() => data.activeFotoIndex = i),
+                          onTap: () => setState(() {
+                            data.activeFotoIndex = i;
+                            data.fotoUrlCtrl.text = data.fotos[i];
+                          }),
                           child: Stack(
                             children: [
                               AnimatedContainer(
@@ -1859,8 +2029,10 @@ class _RespuestaCotizacionFormScreenState
                           child: PremiumTextField(
                             controller: data.precioCtrl,
                             label: 'Precio *',
-                            isNumeric: true,
                             icon: Icons.attach_money_rounded,
+                            inputFormatters: [
+                              ThousandsSeparatorInputFormatter(),
+                            ],
                             keyboardType: const TextInputType.numberWithOptions(
                               decimal: true,
                             ),
@@ -1879,8 +2051,10 @@ class _RespuestaCotizacionFormScreenState
                         PremiumTextField(
                           controller: data.precioCtrl,
                           label: 'Precio *',
-                          isNumeric: true,
                           icon: Icons.attach_money_rounded,
+                          inputFormatters: [
+                            ThousandsSeparatorInputFormatter(),
+                          ],
                           keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
                           ),
@@ -1923,64 +2097,23 @@ class _RespuestaCotizacionFormScreenState
   Widget _buildResumenCostos() {
     final priceFmt = NumberFormat('#,##0', 'es_CO');
 
-    // Filas de vuelos con costo
-    final vueloRows = _vuelos
-        .where((v) {
-          final costo = double.tryParse(v.costoCtrl.text.trim()) ?? 0;
-          return costo > 0;
-        })
-        .map((v) {
-          final costo = double.tryParse(v.costoCtrl.text.trim()) ?? 0;
-          final pax = int.tryParse(v.numeroPasajerosCtrl.text.trim()) ?? 1;
-          final origen = v.origenCtrl.text.trim();
-          final destino = v.destinoCtrl.text.trim();
-          final label = origen.isNotEmpty && destino.isNotEmpty
-              ? '$origen → $destino'
-              : origen.isNotEmpty
-              ? origen
-              : 'Vuelo ${_vuelos.indexOf(v) + 1}';
-          return _ResumenFila(
-            icono: Icons.flight_rounded,
-            color: const Color(0xFF2563EB),
-            label: label,
-            sublabel: '$pax pax · ${v.tipoVuelo == 'ida' ? 'Ida' : 'Vuelta'}',
-            valor: costo,
-          );
-        })
-        .toList();
+    // Vuelos con costo
+    final vuelosConCosto = _vuelos.where((v) {
+      return _parsePrice(v.costoCtrl.text.trim()) > 0;
+    }).toList();
 
-    // Filas de hoteles con costo
-    final hotelRows = _hoteles
-        .where((h) {
-          final total = double.tryParse(h.precioTotalCtrl.text.trim()) ?? 0;
-          final adulto = double.tryParse(h.precioAdultoCtrl.text.trim()) ?? 0;
-          return total > 0 || adulto > 0;
-        })
-        .map((h) {
-          final total = double.tryParse(h.precioTotalCtrl.text.trim()) ?? 0;
-          final adulto = double.tryParse(h.precioAdultoCtrl.text.trim()) ?? 0;
-          final valor = total > 0 ? total : adulto;
-          final nombre = h.nombreCtrl.text.trim();
-          return _ResumenFila(
-            icono: Icons.hotel_rounded,
-            color: const Color(0xFFF59E0B),
-            label: nombre.isNotEmpty
-                ? nombre
-                : 'Hotel ${_hoteles.indexOf(h) + 1}',
-            sublabel: h.tipoHabitacion,
-            valor: valor,
-          );
-        })
-        .toList();
+    // Hoteles con costo
+    final hotelesConCosto = _hoteles.where((h) {
+      final total = _parsePrice(h.precioTotalCtrl.text.trim());
+      final adulto = _parsePrice(h.precioAdultoCtrl.text.trim());
+      return total > 0 || adulto > 0;
+    }).toList();
 
-    // Filas de adicionales con precio
+    // Filas de adicionales con precio (siempre incluidas)
     final adicionalRows = _adicionales
-        .where((a) {
-          final precio = double.tryParse(a.precioCtrl.text.trim()) ?? 0;
-          return precio > 0;
-        })
+        .where((a) => _parsePrice(a.precioCtrl.text.trim()) > 0)
         .map((a) {
-          final precio = double.tryParse(a.precioCtrl.text.trim()) ?? 0;
+          final precio = _parsePrice(a.precioCtrl.text.trim());
           final nombre = a.nombreCtrl.text.trim();
           return _ResumenFila(
             icono: Icons.extension_rounded,
@@ -1994,9 +2127,28 @@ class _RespuestaCotizacionFormScreenState
         })
         .toList();
 
-    final todasLasFilas = [...vueloRows, ...hotelRows, ...adicionalRows];
-    final total = todasLasFilas.fold(0.0, (sum, f) => sum + f.valor);
-    final hayDatos = todasLasFilas.isNotEmpty;
+    // Total: solo items seleccionados + todos los adicionales
+    double total = 0;
+    for (final v in vuelosConCosto) {
+      if (_selectedVuelos.contains(v)) {
+        total += _parsePrice(v.costoCtrl.text.trim());
+      }
+    }
+    for (final h in hotelesConCosto) {
+      if (_selectedHoteles.contains(h)) {
+        final t = _parsePrice(h.precioTotalCtrl.text.trim());
+        final a = _parsePrice(h.precioAdultoCtrl.text.trim());
+        total += t > 0 ? t : a;
+      }
+    }
+    for (final f in adicionalRows) {
+      total += f.valor;
+    }
+
+    final hayDatos =
+        vuelosConCosto.isNotEmpty ||
+        hotelesConCosto.isNotEmpty ||
+        adicionalRows.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -2041,13 +2193,22 @@ class _RespuestaCotizacionFormScreenState
                   ),
                 ),
                 const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'RESUMEN DE COSTOS',
+                    style: TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.7,
+                    ),
+                  ),
+                ),
                 const Text(
-                  'RESUMEN DE COSTOS',
+                  'Selecciona los que incluir',
                   style: TextStyle(
-                    color: SaasPalette.textPrimary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.7,
+                    color: SaasPalette.textTertiary,
+                    fontSize: 11,
                   ),
                 ),
               ],
@@ -2068,31 +2229,84 @@ class _RespuestaCotizacionFormScreenState
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // Vuelos
-                  if (vueloRows.isNotEmpty) ...[
+                  // Vuelos con checkbox
+                  if (vuelosConCosto.isNotEmpty) ...[
                     _ResumenGrupoHeader(
                       label: 'Vuelos',
                       icon: Icons.flight_rounded,
                     ),
                     const SizedBox(height: 8),
-                    ...vueloRows.map(
-                      (f) => _ResumenFilaWidget(fila: f, priceFmt: priceFmt),
-                    ),
+                    ...vuelosConCosto.map((v) {
+                      final costo = _parsePrice(v.costoCtrl.text.trim());
+                      final pax =
+                          int.tryParse(v.numeroPasajerosCtrl.text.trim()) ?? 1;
+                      final origen = v.origenCtrl.text.trim();
+                      final destino = v.destinoCtrl.text.trim();
+                      final label = origen.isNotEmpty && destino.isNotEmpty
+                          ? '$origen → $destino'
+                          : origen.isNotEmpty
+                          ? origen
+                          : 'Vuelo ${_vuelos.indexOf(v) + 1}';
+                      final selected = _selectedVuelos.contains(v);
+                      return _ResumenFilaSeleccionable(
+                        fila: _ResumenFila(
+                          icono: Icons.flight_rounded,
+                          color: const Color(0xFF2563EB),
+                          label: label,
+                          sublabel:
+                              '$pax pax · ${v.tipoVuelo == 'ida' ? 'Ida' : 'Vuelta'}',
+                          valor: costo,
+                        ),
+                        priceFmt: priceFmt,
+                        selected: selected,
+                        onChanged: (val) => setState(() {
+                          if (val == true) {
+                            _selectedVuelos.add(v);
+                          } else {
+                            _selectedVuelos.remove(v);
+                          }
+                        }),
+                      );
+                    }),
                     const SizedBox(height: 12),
                   ],
-                  // Hoteles
-                  if (hotelRows.isNotEmpty) ...[
+                  // Hoteles con checkbox
+                  if (hotelesConCosto.isNotEmpty) ...[
                     _ResumenGrupoHeader(
                       label: 'Hoteles',
                       icon: Icons.hotel_rounded,
                     ),
                     const SizedBox(height: 8),
-                    ...hotelRows.map(
-                      (f) => _ResumenFilaWidget(fila: f, priceFmt: priceFmt),
-                    ),
+                    ...hotelesConCosto.map((h) {
+                      final t = _parsePrice(h.precioTotalCtrl.text.trim());
+                      final a = _parsePrice(h.precioAdultoCtrl.text.trim());
+                      final valor = t > 0 ? t : a;
+                      final nombre = h.nombreCtrl.text.trim();
+                      final selected = _selectedHoteles.contains(h);
+                      return _ResumenFilaSeleccionable(
+                        fila: _ResumenFila(
+                          icono: Icons.hotel_rounded,
+                          color: const Color(0xFFF59E0B),
+                          label: nombre.isNotEmpty
+                              ? nombre
+                              : 'Hotel ${_hoteles.indexOf(h) + 1}',
+                          sublabel: h.tipoHabitacionCtrl.text,
+                          valor: valor,
+                        ),
+                        priceFmt: priceFmt,
+                        selected: selected,
+                        onChanged: (val) => setState(() {
+                          if (val == true) {
+                            _selectedHoteles.add(h);
+                          } else {
+                            _selectedHoteles.remove(h);
+                          }
+                        }),
+                      );
+                    }),
                     const SizedBox(height: 12),
                   ],
-                  // Adicionales
+                  // Adicionales (siempre incluidos, sin checkbox)
                   if (adicionalRows.isNotEmpty) ...[
                     _ResumenGrupoHeader(
                       label: 'Adicionales',
@@ -2384,6 +2598,104 @@ class _ResumenFilaWidget extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ResumenFilaSeleccionable extends StatelessWidget {
+  final _ResumenFila fila;
+  final NumberFormat priceFmt;
+  final bool selected;
+  final ValueChanged<bool?> onChanged;
+  const _ResumenFilaSeleccionable({
+    required this.fila,
+    required this.priceFmt,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: InkWell(
+        onTap: () => onChanged(!selected),
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected
+                ? fila.color.withValues(alpha: 0.06)
+                : SaasPalette.bgSubtle,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected
+                  ? fila.color.withValues(alpha: 0.3)
+                  : SaasPalette.border,
+            ),
+          ),
+          child: Row(
+            children: [
+              Checkbox(
+                value: selected,
+                onChanged: onChanged,
+                activeColor: fila.color,
+                side: BorderSide(color: fila.color.withValues(alpha: 0.5)),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: fila.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Icon(fila.icono, color: fila.color, size: 13),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fila.label,
+                      style: TextStyle(
+                        color: selected
+                            ? SaasPalette.textPrimary
+                            : SaasPalette.textTertiary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (fila.sublabel != null && fila.sublabel!.isNotEmpty)
+                      Text(
+                        fila.sublabel!,
+                        style: const TextStyle(
+                          color: SaasPalette.textTertiary,
+                          fontSize: 11,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '\$ ${priceFmt.format(fila.valor)}',
+                style: TextStyle(
+                  color: selected
+                      ? SaasPalette.textPrimary
+                      : SaasPalette.textTertiary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  decoration: selected ? null : TextDecoration.lineThrough,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -2915,70 +3227,6 @@ class _PickerField extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _DropdownField extends StatelessWidget {
-  final String label;
-  final String value;
-  final List<String> options;
-  final IconData icon;
-  final ValueChanged<String?> onChanged;
-
-  const _DropdownField({
-    required this.label,
-    required this.value,
-    required this.options,
-    required this.icon,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
-          ),
-        ),
-        const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          // ignore: deprecated_member_use
-          value: value,
-          style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
-          decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: SaasPalette.brand600, size: 18),
-            filled: true,
-            fillColor: SaasPalette.bgCanvas,
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: SaasPalette.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                color: SaasPalette.brand600,
-                width: 1.5,
-              ),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
-          ),
-          items: options
-              .map((o) => DropdownMenuItem(value: o, child: Text(o)))
-              .toList(),
-          onChanged: onChanged,
-        ),
-      ],
     );
   }
 }
@@ -4219,3 +4467,4 @@ class _IataBadge extends StatelessWidget {
     );
   }
 }
+

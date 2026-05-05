@@ -31,7 +31,9 @@ class OpcionHotel {
   final String tipoHabitacion;
   final List<String> queIncluye;
   final String fechaEntrada;
+  final String horaEntrada;
   final String fechaSalida;
+  final String horaSalida;
   final double precioAdulto;
   final double precioMenor;
   final double precioTotal;
@@ -42,7 +44,9 @@ class OpcionHotel {
     required this.tipoHabitacion,
     required this.queIncluye,
     required this.fechaEntrada,
+    this.horaEntrada = '',
     required this.fechaSalida,
+    this.horaSalida = '',
     required this.precioAdulto,
     required this.precioMenor,
     required this.precioTotal,
@@ -76,6 +80,14 @@ class RespuestaCotizacion {
   final String condicionesGenerales;
   final DateTime createdAt;
 
+  final String? nombreCliente;
+  final String? telefonoCliente;
+
+  //creado_por_id
+  final int? creadoPorId;
+  //creado_por_nombre
+  final String? creadoPorNombre;
+
   const RespuestaCotizacion({
     this.id,
     this.cotizacionId,
@@ -89,5 +101,9 @@ class RespuestaCotizacion {
     required this.adicionales,
     required this.condicionesGenerales,
     required this.createdAt,
+    this.nombreCliente,
+    this.telefonoCliente,
+    this.creadoPorId,
+    this.creadoPorNombre,
   });
 }

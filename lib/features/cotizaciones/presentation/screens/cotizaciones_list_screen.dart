@@ -1,4 +1,5 @@
 import 'package:agente_viajes/core/theme/saas_palette.dart';
+import 'package:agente_viajes/core/widgets/premium_form_widgets.dart';
 import 'package:agente_viajes/core/widgets/saas_ui_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -101,7 +102,20 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
       clientPhone: linkedCot?.chatId,
       linkedCotId: linkedCot?.id,
       onTap: () => _onRespuestaTap(r),
+      onDuplicate: () => _onDuplicarRespuesta(r),
     );
+  }
+
+  Future<void> _onDuplicarRespuesta(RespuestaCotizacion r) async {
+    // Reutilizar la pantalla de formulario como base para duplicar
+    await Navigator.pushNamed(
+      context,
+      AppRouter.cotizacionResponder,
+      arguments: r,
+    );
+    if (mounted) {
+      context.read<CotizacionBloc>().add(const LoadAllData());
+    }
   }
 
   Future<void> _onRespuestaTap(RespuestaCotizacion resp) async {
@@ -668,6 +682,7 @@ class _CotizacionCardState extends State<_CotizacionCard> {
 class _RespuestaCard extends StatefulWidget {
   final RespuestaCotizacion respuesta;
   final VoidCallback onTap;
+  final VoidCallback onDuplicate;
   final String? clientName;
   final String? clientPhone;
   final int? linkedCotId;
@@ -675,6 +690,7 @@ class _RespuestaCard extends StatefulWidget {
   const _RespuestaCard({
     required this.respuesta,
     required this.onTap,
+    required this.onDuplicate,
     this.clientName,
     this.clientPhone,
     this.linkedCotId,
@@ -777,6 +793,32 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 6),
+
+                        //vamos a poner el usuario que creo la cotizacion
+                        if (r.creadoPorNombre != null) ...[
+                          const SizedBox(height: 4),
+                          //icono de nomre
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.person_rounded,
+                                color: SaasPalette.brand900,
+                                size: 13,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                "${r.creadoPorNombre}",
+                                style: const TextStyle(
+                                  color: SaasPalette.textSecondary,
+                                  fontSize: 13,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ],
+
                         Row(
                           children: [
                             const Icon(
@@ -799,6 +841,26 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                       ],
                     ),
                   ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: TextButton.icon(
+                      onPressed: widget.onDuplicate,
+                      style: TextButton.styleFrom(
+                        foregroundColor: SaasPalette.brand600,
+                        backgroundColor: SaasPalette.brand600,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      icon: const Icon(Icons.copy_rounded, color: Colors.white),
+                      label: const Text(
+                        'Duplicar',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   const Icon(
                     Icons.chevron_right_rounded,
                     color: SaasPalette.textTertiary,

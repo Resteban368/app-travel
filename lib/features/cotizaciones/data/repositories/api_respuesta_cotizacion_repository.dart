@@ -15,9 +15,9 @@ class ApiRespuestaCotizacionRepository
       '${ApiConstants.kBaseUrl}/v1/respuestas-cotizacion';
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json; charset=UTF-8',
-        'Accept': 'application/json',
-      };
+    'Content-Type': 'application/json; charset=UTF-8',
+    'Accept': 'application/json',
+  };
 
   // ── CREATE ────────────────────────────────────────────────────────────────
   @override
@@ -42,18 +42,19 @@ class ApiRespuestaCotizacionRepository
 
   // ── LIST ALL ──────────────────────────────────────────────────────────────
   @override
-  Future<List<RespuestaCotizacion>> getRespuestas({bool sinCotizacion = false}) async {
+  Future<List<RespuestaCotizacion>> getRespuestas({
+    bool sinCotizacion = false,
+  }) async {
     final url = sinCotizacion ? '$_baseUrl?sinCotizacion=true' : _baseUrl;
     debugPrint('🌎 [RespuestaCotizacion] GET $url');
     final response = await client.get(Uri.parse(url), headers: _headers);
 
     if (response.statusCode == 200) {
       final decoded = json.decode(response.body);
-      final List<dynamic> list =
-          decoded is List ? decoded : (decoded['data'] ?? []);
-      return list
-          .map((e) => _fromJson(e as Map<String, dynamic>))
-          .toList();
+      final List<dynamic> list = decoded is List
+          ? decoded
+          : (decoded['data'] ?? []);
+      return list.map((e) => _fromJson(e as Map<String, dynamic>)).toList();
     }
     _throw(response, 'listar respuestas de cotización');
     throw UnimplementedError();
@@ -84,11 +85,10 @@ class ApiRespuestaCotizacionRepository
 
     if (response.statusCode == 200) {
       final decoded = json.decode(response.body);
-      final List<dynamic> list =
-          decoded is List ? decoded : (decoded['data'] ?? []);
-      return list
-          .map((e) => _fromJson(e as Map<String, dynamic>))
-          .toList();
+      final List<dynamic> list = decoded is List
+          ? decoded
+          : (decoded['data'] ?? []);
+      return list.map((e) => _fromJson(e as Map<String, dynamic>)).toList();
     }
     _throw(response, 'listar respuestas de cotización #$cotizacionId');
     throw UnimplementedError();
@@ -97,47 +97,51 @@ class ApiRespuestaCotizacionRepository
   // ── Serialization ─────────────────────────────────────────────────────────
 
   Map<String, dynamic> _toJson(RespuestaCotizacion r) => {
-        if (r.cotizacionId != null) 'cotizacion_id': r.cotizacionId,
-        'titulo_viaje': r.tituloViaje,
-        'imagenes_destino': r.imagenesDestino,
-        'items_incluidos': r.itemsIncluidos,
-        'items_no_incluidos': r.itemsNoIncluidos,
-        'vuelos': r.vuelos.map(_vueloToJson).toList(),
-        'opciones_hotel': r.opcionesHotel.map(_hotelToJson).toList(),
-        'adicionales': r.adicionales.map(_adicionalToJson).toList(),
-        'condiciones_generales': r.condicionesGenerales,
-      };
+    if (r.cotizacionId != null) 'cotizacion_id': r.cotizacionId,
+    'titulo_viaje': r.tituloViaje,
+    'nombre_cliente': r.nombreCliente ?? '',
+    'telefono_cliente': r.telefonoCliente ?? '',
+    'imagenes_destino': r.imagenesDestino,
+    'items_incluidos': r.itemsIncluidos,
+    'items_no_incluidos': r.itemsNoIncluidos,
+    'vuelos': r.vuelos.map(_vueloToJson).toList(),
+    'opciones_hotel': r.opcionesHotel.map(_hotelToJson).toList(),
+    'adicionales': r.adicionales.map(_adicionalToJson).toList(),
+    'condiciones_generales': r.condicionesGenerales,
+  };
 
   Map<String, dynamic> _vueloToJson(VueloItinerario v) => {
-        'tipo': v.tipo,
-        if (v.aerolineaId != null) 'aerolinea_id': v.aerolineaId,
-        'numero_vuelo': v.numeroVuelo,
-        'origen': v.origen,
-        'destino': v.destino,
-        'fecha': v.fecha,
-        'hora_salida': v.horaSalida,
-        'hora_llegada': v.horaLlegada,
-        'costo': v.costo,
-        'numero_pasajeros': v.numeroPasajeros,
-      };
+    'tipo': v.tipo,
+    if (v.aerolineaId != null) 'aerolinea_id': v.aerolineaId,
+    'numero_vuelo': v.numeroVuelo,
+    'origen': v.origen,
+    'destino': v.destino,
+    'fecha': v.fecha,
+    'hora_salida': v.horaSalida,
+    'hora_llegada': v.horaLlegada,
+    'costo': v.costo,
+    'numero_pasajeros': v.numeroPasajeros,
+  };
 
   Map<String, dynamic> _hotelToJson(OpcionHotel h) => {
-        'nombre': h.nombre,
-        'tipo_habitacion': h.tipoHabitacion,
-        'que_incluye': h.queIncluye,
-        'fecha_entrada': h.fechaEntrada,
-        'fecha_salida': h.fechaSalida,
-        'precio_adulto': h.precioAdulto,
-        'precio_menor': h.precioMenor,
-        'precio_total': h.precioTotal,
-        'fotos': h.fotos,
-      };
+    'nombre': h.nombre,
+    'tipo_habitacion': h.tipoHabitacion,
+    'que_incluye': h.queIncluye,
+    'fecha_entrada': h.fechaEntrada,
+    'hora_entrada': h.horaEntrada,
+    'fecha_salida': h.fechaSalida,
+    'hora_salida': h.horaSalida,
+    'precio_adulto': h.precioAdulto,
+    'precio_menor': h.precioMenor,
+    'precio_total': h.precioTotal,
+    'fotos': h.fotos,
+  };
 
   Map<String, dynamic> _adicionalToJson(AdicionalViaje a) => {
-        'nombre': a.nombre,
-        'descripcion': a.descripcion,
-        'precio': a.precio,
-      };
+    'nombre': a.nombre,
+    'descripcion': a.descripcion,
+    'precio': a.precio,
+  };
 
   RespuestaCotizacion _fromJson(Map<String, dynamic> j) {
     List<dynamic> asList(dynamic v) => v is List ? v : [];
@@ -150,61 +154,67 @@ class ApiRespuestaCotizacionRepository
       imagenesDestino: List<String>.from(asList(j['imagenes_destino'])),
       itemsIncluidos: List<String>.from(asList(j['items_incluidos'])),
       itemsNoIncluidos: List<String>.from(asList(j['items_no_incluidos'])),
-      vuelos: asList(j['vuelos'])
-          .map((e) => _vueloFromJson(e as Map<String, dynamic>))
-          .toList(),
-      opcionesHotel: asList(j['opciones_hotel'])
-          .map((e) => _hotelFromJson(e as Map<String, dynamic>))
-          .toList(),
-      adicionales: asList(j['adicionales'])
-          .map((e) => _adicionalFromJson(e as Map<String, dynamic>))
-          .toList(),
+      vuelos: asList(
+        j['vuelos'],
+      ).map((e) => _vueloFromJson(e as Map<String, dynamic>)).toList(),
+      opcionesHotel: asList(
+        j['opciones_hotel'],
+      ).map((e) => _hotelFromJson(e as Map<String, dynamic>)).toList(),
+      adicionales: asList(
+        j['adicionales'],
+      ).map((e) => _adicionalFromJson(e as Map<String, dynamic>)).toList(),
       condicionesGenerales: j['condiciones_generales'] as String? ?? '',
       createdAt: j['created_at'] != null
           ? DateTime.parse(j['created_at'] as String)
           : DateTime.now(),
+      nombreCliente: j['nombre_cliente'] as String?,
+      telefonoCliente: j['telefono_cliente'] as String?,
+      creadoPorId: j['creado_por_id'] as int?,
+      creadoPorNombre: j['creado_por_nombre'] as String?,
     );
   }
 
   VueloItinerario _vueloFromJson(Map<String, dynamic> j) => VueloItinerario(
-        tipo: j['tipo'] as String? ?? 'ida',
-        aerolineaId: j['aerolinea_id'] as int?,
-        aerolinea: j['aerolinea'] as String? ?? '',
-        numeroVuelo: j['numero_vuelo'] as String? ?? '',
-        origen: j['origen'] as String? ?? '',
-        destino: j['destino'] as String? ?? '',
-        fecha: j['fecha'] as String? ?? '',
-        horaSalida: j['hora_salida'] as String? ?? '',
-        horaLlegada: j['hora_llegada'] as String? ?? '',
-        costo: (j['costo'] as num?)?.toDouble() ?? 0,
-        numeroPasajeros: (j['numero_pasajeros'] as int?) ?? 1,
-      );
+    tipo: j['tipo'] as String? ?? 'ida',
+    aerolineaId: j['aerolinea_id'] as int?,
+    aerolinea: j['aerolinea'] as String? ?? '',
+    numeroVuelo: j['numero_vuelo'] as String? ?? '',
+    origen: j['origen'] as String? ?? '',
+    destino: j['destino'] as String? ?? '',
+    fecha: j['fecha'] as String? ?? '',
+    horaSalida: j['hora_salida'] as String? ?? '',
+    horaLlegada: j['hora_llegada'] as String? ?? '',
+    costo: (j['costo'] as num?)?.toDouble() ?? 0,
+    numeroPasajeros: (j['numero_pasajeros'] as int?) ?? 1,
+  );
 
   OpcionHotel _hotelFromJson(Map<String, dynamic> j) => OpcionHotel(
-        nombre: j['nombre'] as String? ?? '',
-        tipoHabitacion: j['tipo_habitacion'] as String? ?? '',
-        queIncluye: List<String>.from(
-          j['que_incluye'] is List ? j['que_incluye'] as List : [],
-        ),
-        fechaEntrada: j['fecha_entrada'] as String? ?? '',
-        fechaSalida: j['fecha_salida'] as String? ?? '',
-        precioAdulto: (j['precio_adulto'] as num?)?.toDouble() ?? 0,
-        precioMenor: (j['precio_menor'] as num?)?.toDouble() ?? 0,
-        precioTotal: (j['precio_total'] as num?)?.toDouble() ?? 0,
-        fotos: List<String>.from(
-          j['fotos'] is List ? j['fotos'] as List : [],
-        ),
-      );
+    nombre: j['nombre'] as String? ?? '',
+    tipoHabitacion: j['tipo_habitacion'] as String? ?? '',
+    queIncluye: List<String>.from(
+      j['que_incluye'] is List ? j['que_incluye'] as List : [],
+    ),
+    fechaEntrada: j['fecha_entrada'] as String? ?? '',
+    horaEntrada: j['hora_entrada'] as String? ?? '',
+    fechaSalida: j['fecha_salida'] as String? ?? '',
+    horaSalida: j['hora_salida'] as String? ?? '',
+    precioAdulto: (j['precio_adulto'] as num?)?.toDouble() ?? 0,
+    precioMenor: (j['precio_menor'] as num?)?.toDouble() ?? 0,
+    precioTotal: (j['precio_total'] as num?)?.toDouble() ?? 0,
+    fotos: List<String>.from(j['fotos'] is List ? j['fotos'] as List : []),
+  );
 
   AdicionalViaje _adicionalFromJson(Map<String, dynamic> j) => AdicionalViaje(
-        nombre: j['nombre'] as String? ?? '',
-        descripcion: j['descripcion'] as String? ?? '',
-        precio: (j['precio'] as num?)?.toDouble() ?? 0,
-      );
+    nombre: j['nombre'] as String? ?? '',
+    descripcion: j['descripcion'] as String? ?? '',
+    precio: (j['precio'] as num?)?.toDouble() ?? 0,
+  );
 
   // ── UPDATE ────────────────────────────────────────────────────────────────
   @override
-  Future<RespuestaCotizacion> updateRespuesta(RespuestaCotizacion respuesta) async {
+  Future<RespuestaCotizacion> updateRespuesta(
+    RespuestaCotizacion respuesta,
+  ) async {
     final url = '$_baseUrl/${respuesta.id}';
     final body = json.encode(_toJson(respuesta));
     debugPrint('📤 [RespuestaCotizacion] PATCH $url\n$body');

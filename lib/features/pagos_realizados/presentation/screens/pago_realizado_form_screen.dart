@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:agente_viajes/core/theme/saas_palette.dart';
 import 'package:agente_viajes/core/widgets/dialog_loading_widget.dart';
+import 'package:agente_viajes/core/widgets/phone_form_field.dart';
 import 'package:agente_viajes/core/widgets/premium_form_widgets.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -83,7 +84,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   void initState() {
     super.initState();
     final p = widget.pago;
-    final parsedPhone = _parsePhone(p?.chatId ?? '');
+    final parsedPhone = parsePhone(p?.chatId ?? '');
     _countryCode = parsedPhone.$1;
     _chatIdCtrl = TextEditingController(text: parsedPhone.$2);
     _montoCtrl = TextEditingController(text: p?.monto.toString() ?? '');
@@ -171,7 +172,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       return;
     }
     //FECHA DOCUMENTO
-    if (_fechaDocumentoCtrl.text.trim().isEmpty) {
+    if (_fechaDocumento == null) {
       SaasSnackBar.showWarning(context, 'La fecha del documento es requerida');
       return;
     }
@@ -235,116 +236,6 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   // Número completo con indicativo (+XX...), ej: +573142266528
   String get _fullChatId => '$_countryCode${_chatIdCtrl.text.trim()}';
 
-  // Intenta detectar el indicativo al cargar un chatId existente.
-  // Retorna (countryCode, localNumber).
-  static (String, String) _parsePhone(String raw) {
-    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
-    // Buscar de más largo a más corto
-    final sorted = _kCountryCodes.toList()
-      ..sort((a, b) => b.code.length.compareTo(a.code.length));
-    for (final cc in sorted) {
-      final dial = cc.code.replaceAll('+', '');
-      if (digits.startsWith(dial) && digits.length > dial.length) {
-        return (cc.code, digits.substring(dial.length));
-      }
-    }
-    return ('+57', digits);
-  }
-
-  Widget _buildPhoneField({required bool canWrite}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Chat - WhatsApp *',
-          style: TextStyle(
-            color: SaasPalette.textSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: SaasPalette.border),
-          ),
-          child: Row(
-            children: [
-              // Selector de indicativo
-              DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _countryCode,
-                  dropdownColor: SaasPalette.bgCanvas,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
-                    fontSize: 13,
-                  ),
-                  icon: const Icon(
-                    Icons.arrow_drop_down_rounded,
-                    color: SaasPalette.textTertiary,
-                    size: 18,
-                  ),
-                  onChanged: canWrite
-                      ? (v) => setState(() => _countryCode = v!)
-                      : null,
-                  items: _kCountryCodes
-                      .map(
-                        (cc) => DropdownMenuItem(
-                          value: cc.code,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Text(
-                              '${cc.flag} ${cc.code}',
-                              style: const TextStyle(
-                                color: SaasPalette.textPrimary,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
-              Container(width: 1, height: 24, color: SaasPalette.border),
-              // Campo numérico
-              Expanded(
-                child: TextFormField(
-                  controller: _chatIdCtrl,
-                  readOnly: !canWrite,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
-                    fontSize: 14,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Número sin indicativo',
-                    hintStyle: TextStyle(
-                      color: SaasPalette.textTertiary,
-                      fontSize: 13,
-                    ),
-                    border: InputBorder.none,
-                    filled: true,
-                    fillColor: Colors.transparent,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 14,
-                    ),
-                  ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 
   Future<void> _pickFechaDocumento() async {
     final picked = await showDatePicker(
@@ -463,10 +354,12 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         onConfirm: (msg) {
           final bloc = context.read<WhatsAppBloc>();
           Navigator.pop(ctx);
-          bloc.add(SendMessage(
-            conversationId: widget.pago!.conversationId!,
-            content: msg,
-          ));
+          bloc.add(
+            SendMessage(
+              conversationId: widget.pago!.conversationId!,
+              content: msg,
+            ),
+          );
         },
       ),
     ).then((_) => messageCtrl.dispose());
@@ -597,7 +490,14 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                                   children: [
                                     _buildReservaSelector(canWrite: canWrite),
                                     const SizedBox(height: 20),
-                                    _buildPhoneField(canWrite: canWrite),
+                                    PhoneFormField(
+                                      controller: _chatIdCtrl,
+                                      countryCode: _countryCode,
+                                      onCountryCodeChanged: (v) =>
+                                          setState(() => _countryCode = v),
+                                      label: 'Chat - WhatsApp *',
+                                      readOnly: !canWrite,
+                                    ),
                                     const SizedBox(height: 20),
                                     _buildTypeDropdown(canWrite: canWrite),
                                     const SizedBox(height: 20),
@@ -879,7 +779,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               _reservaSearchCtrl.text =
                   '${result.idReserva ?? 'Reserva #${result.id}'} - ${responsable?.nombre ?? result.correo}';
               if (responsable != null && (responsable.telefono).isNotEmpty) {
-                final p = _parsePhone(responsable.telefono);
+                final p = parsePhone(responsable.telefono);
                 _countryCode = p.$1;
                 _chatIdCtrl.text = p.$2;
               }
@@ -1549,6 +1449,11 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         });
         SaasSnackBar.showSuccess(context, 'Datos extraídos automáticamente');
       } else {
+        //datos que se estan enviando
+        print("MIME: ${mimeType}");
+        print("Base64: ${base64Image}");
+
+        print("ERROR: ${response.body}");
         String msg = 'No se pudieron extraer los datos del comprobante';
         try {
           final decoded = json.decode(response.body);
@@ -1991,39 +1896,6 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
 
 // ─── WhatsApp Dialog ──────────────────────────────────────────────────────────
 
-// ─── Country Code ─────────────────────────────────────────────────────────────
-
-class _CountryCode {
-  final String code;
-  final String name;
-  final String flag;
-  const _CountryCode({
-    required this.code,
-    required this.name,
-    required this.flag,
-  });
-}
-
-const _kCountryCodes = [
-  _CountryCode(code: '+57', name: 'Colombia', flag: '🇨🇴'),
-  _CountryCode(code: '+1', name: 'EE.UU./Canadá', flag: '🇺🇸'),
-  _CountryCode(code: '+34', name: 'España', flag: '🇪🇸'),
-  _CountryCode(code: '+52', name: 'México', flag: '🇲🇽'),
-  _CountryCode(code: '+54', name: 'Argentina', flag: '🇦🇷'),
-  _CountryCode(code: '+55', name: 'Brasil', flag: '🇧🇷'),
-  _CountryCode(code: '+56', name: 'Chile', flag: '🇨🇱'),
-  _CountryCode(code: '+51', name: 'Perú', flag: '🇵🇪'),
-  _CountryCode(code: '+58', name: 'Venezuela', flag: '🇻🇪'),
-  _CountryCode(code: '+593', name: 'Ecuador', flag: '🇪🇨'),
-  _CountryCode(code: '+507', name: 'Panamá', flag: '🇵🇦'),
-  _CountryCode(code: '+506', name: 'Costa Rica', flag: '🇨🇷'),
-  _CountryCode(code: '+591', name: 'Bolivia', flag: '🇧🇴'),
-  _CountryCode(code: '+595', name: 'Paraguay', flag: '🇵🇾'),
-  _CountryCode(code: '+598', name: 'Uruguay', flag: '🇺🇾'),
-  _CountryCode(code: '+44', name: 'Reino Unido', flag: '🇬🇧'),
-  _CountryCode(code: '+49', name: 'Alemania', flag: '🇩🇪'),
-  _CountryCode(code: '+33', name: 'Francia', flag: '🇫🇷'),
-];
 
 class _PremiumWhatsAppDialog extends StatefulWidget {
   final TextEditingController messageCtrl;

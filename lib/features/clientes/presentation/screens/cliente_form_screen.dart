@@ -1,4 +1,5 @@
 import 'package:agente_viajes/core/theme/saas_palette.dart';
+import 'package:agente_viajes/core/widgets/phone_form_field.dart';
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -28,6 +29,7 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
   late final TextEditingController _notasCtrl;
 
   late String _tipoDocumento;
+  String _countryCode = '+57';
   DateTime? _fechaNacimiento;
 
   late final AnimationController _entryCtrl;
@@ -42,7 +44,14 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
     super.initState();
     _nombreCtrl = TextEditingController(text: widget.cliente?.nombre ?? '');
     _correoCtrl = TextEditingController(text: widget.cliente?.correo ?? '');
-    _telefonoCtrl = TextEditingController(text: widget.cliente?.telefono ?? '');
+    final rawPhone = widget.cliente?.telefono ?? '';
+    if (rawPhone.isNotEmpty) {
+      final parsed = parsePhone(rawPhone);
+      _countryCode = parsed.$1;
+      _telefonoCtrl = TextEditingController(text: parsed.$2);
+    } else {
+      _telefonoCtrl = TextEditingController();
+    }
     _numeroDocumentoCtrl = TextEditingController(
       text: widget.cliente?.documento ?? '',
     );
@@ -107,7 +116,7 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
       id: _isEditing ? widget.cliente!.id : null,
       nombre: _nombreCtrl.text.trim(),
       correo: _correoCtrl.text.trim(),
-      telefono: _telefonoCtrl.text.trim(),
+      telefono: '$_countryCode${_telefonoCtrl.text.trim()}',
       tipoDocumento: _tipoDocumento,
       documento: _numeroDocumentoCtrl.text.trim(),
       fechaNacimiento: _fechaNacimiento,
@@ -202,12 +211,12 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
                                     keyboardType: TextInputType.emailAddress,
                                   ),
                                   const SizedBox(height: 20),
-                                  PremiumTextField(
+                                  PhoneFormField(
                                     controller: _telefonoCtrl,
+                                    countryCode: _countryCode,
+                                    onCountryCodeChanged: (v) =>
+                                        setState(() => _countryCode = v),
                                     label: 'Teléfono de Contacto *',
-                                    icon: Icons.phone_rounded,
-                                    keyboardType: TextInputType.number,
-                                    isNumeric: true,
                                   ),
                                 ],
                               ),
@@ -231,6 +240,12 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
                               ),
                               const SizedBox(height: 24),
 
+                              // ── Fecha de Nacimiento ──────────────────────
+                              PremiumSectionCard(
+                                title: 'INFORMACIÓN ADICIONAL',
+                                icon: Icons.cake_rounded,
+                                children: [_buildDatePicker()],
+                              ),
                               const SizedBox(height: 48),
 
                               // ── Submit ──────────────────────────────────
@@ -324,42 +339,50 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Fecha de Nacimiento',
+          'FECHA DE NACIMIENTO',
           style: TextStyle(
-            color: D.slate400,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
+            color: SaasPalette.textTertiary,
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.8,
           ),
         ),
         const SizedBox(height: 8),
-        GestureDetector(
+        InkWell(
           onTap: _pickDate,
+          borderRadius: BorderRadius.circular(16),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: D.surfaceHigh.withOpacity(0.5),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
+              border: Border.all(color: SaasPalette.border),
+              color: SaasPalette.bgSubtle,
             ),
             child: Row(
               children: [
-                const Icon(Icons.cake_rounded, color: D.skyBlue, size: 20),
+                const Icon(
+                  Icons.cake_rounded,
+                  color: SaasPalette.brand600,
+                  size: 18,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     _fechaNacimiento != null
-                        ? '${_fechaNacimiento!.day.toString().padLeft(2, '0')}/${_fechaNacimiento!.month.toString().padLeft(2, '0')}/${_fechaNacimiento!.year}'
-                        : 'Seleccionar fecha...',
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                        ? '${_fechaNacimiento!.day}/${_fechaNacimiento!.month}/${_fechaNacimiento!.year}'
+                        : 'Seleccionar fecha (Opcional)',
+                    style: const TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
                 if (_fechaNacimiento != null)
                   GestureDetector(
                     onTap: () => setState(() => _fechaNacimiento = null),
-                    child: Icon(
+                    child: const Icon(
                       Icons.close_rounded,
-                      color: D.slate600,
+                      color: SaasPalette.textTertiary,
                       size: 16,
                     ),
                   ),

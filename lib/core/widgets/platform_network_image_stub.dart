@@ -5,6 +5,7 @@ Widget buildPlatformNetworkImage(
   String url, {
   double height = 300,
   BoxFit fit = BoxFit.contain,
+  String id = '0',
 }) {
   if (url.isEmpty) return SizedBox(height: height);
 
