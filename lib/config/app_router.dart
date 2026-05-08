@@ -54,6 +54,10 @@ import '../features/clientes/domain/entities/cliente.dart';
 import '../features/hoteles/presentation/screens/hotel_list_screen.dart';
 import '../features/hoteles/presentation/screens/hotel_form_screen.dart';
 import '../features/hoteles/domain/entities/hotel.dart';
+import '../features/bus_layouts/presentation/screens/bus_layout_list_screen.dart';
+import '../features/bus_layouts/presentation/screens/bus_layout_form_screen.dart';
+import '../features/bus_layouts/domain/entities/bus_layout.dart';
+import '../features/bus_layouts/presentation/screens/bus_manifiesto_screen.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
 import '../features/auditoria/presentation/screens/auditoria_screen.dart';
 import '../features/auditoria/presentation/bloc/sesiones_bloc.dart';
@@ -110,6 +114,10 @@ class AppRouter {
   static const String hoteles = '/hoteles';
   static const String hotelCreate = '/hoteles/create';
   static const String hotelEdit = '/hoteles/edit';
+  static const String busLayouts = '/bus-layouts';
+  static const String busLayoutCreate = '/bus-layouts/create';
+  static const String busLayoutEdit = '/bus-layouts/edit';
+  static const String busManifiesto = '/bus-layouts/manifiesto';
   static const String profile = '/profile';
   static const String admin = '/admin';
   static const String auditoria = '/auditoria';
@@ -163,6 +171,8 @@ class AppRouter {
         return _fadeRoute(const ClienteListScreen(), settings);
       case hoteles:
         return _fadeRoute(const HotelListScreen(), settings);
+      case busLayouts:
+        return _fadeRoute(const BusLayoutListScreen(), settings);
       case profile:
         return _fadeRoute(const ProfileScreen(), settings);
       case auditoria:
@@ -265,6 +275,15 @@ class AppRouter {
       case hotelEdit:
         final hotel = settings.arguments as Hotel;
         return _fadeRoute(HotelFormScreen(hotel: hotel), settings);
+      case busLayoutCreate:
+        return _fadeRoute(const BusLayoutFormScreen(), settings);
+      case busLayoutEdit:
+        final busLayout = settings.arguments as BusLayout;
+        return _fadeRoute(BusLayoutFormScreen(layout: busLayout), settings);
+      case busManifiesto:
+        final arg = settings.arguments;
+        final tourId = arg is int ? arg : int.parse(arg.toString());
+        return _fadeRoute(BusManifiestoScreen(tourId: tourId), settings);
       case clienteHistorial:
         final cliente = settings.arguments as Cliente;
         return _fadeRoute(

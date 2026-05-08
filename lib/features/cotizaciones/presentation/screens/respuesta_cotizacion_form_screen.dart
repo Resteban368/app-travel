@@ -21,6 +21,7 @@ import '../../domain/repositories/respuesta_cotizacion_repository.dart';
 
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../../../config/app_router.dart';
+import '../../../../core/widgets/dialog_loading_widget.dart';
 
 // ── Mutable state helpers ─────────────────────────────────────────────────────
 
@@ -35,6 +36,9 @@ class _VueloData {
   final horaLlegadaCtrl = TextEditingController();
   final costoCtrl = TextEditingController();
   final numeroPasajerosCtrl = TextEditingController(text: '1');
+  bool tieneEscala = false;
+  final ciudadEscalaCtrl = TextEditingController();
+  final tiempoEscalaCtrl = TextEditingController();
   DateTime? fecha;
 
   void dispose() {
@@ -45,6 +49,8 @@ class _VueloData {
     horaLlegadaCtrl.dispose();
     costoCtrl.dispose();
     numeroPasajerosCtrl.dispose();
+    ciudadEscalaCtrl.dispose();
+    tiempoEscalaCtrl.dispose();
   }
 }
 
@@ -59,6 +65,7 @@ class _HotelData {
   final precioAdultoCtrl = TextEditingController();
   final precioMenorCtrl = TextEditingController();
   final precioTotalCtrl = TextEditingController();
+  final notasCtrl = TextEditingController();
   // Multi-foto
   final List<String> fotos = [];
   final fotoUrlCtrl = TextEditingController();
@@ -72,6 +79,7 @@ class _HotelData {
     precioAdultoCtrl.dispose();
     precioMenorCtrl.dispose();
     precioTotalCtrl.dispose();
+    notasCtrl.dispose();
     fotoUrlCtrl.dispose();
   }
 }
@@ -80,6 +88,7 @@ class _AdicionalData {
   final nombreCtrl = TextEditingController();
   final descripcionCtrl = TextEditingController();
   final precioCtrl = TextEditingController();
+  bool esSeleccionable = true;
 
   void dispose() {
     nombreCtrl.dispose();
@@ -113,6 +122,10 @@ class _RespuestaCotizacionFormScreenState
     extends State<RespuestaCotizacionFormScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _saving = false;
+
+  // Plantillas
+  List<RespuestaCotizacion> _plantillas = [];
+  RespuestaCotizacion? _selectedPlantilla;
 
   // Aerolineas
   List<Aerolinea> _aerolineas = [];
@@ -177,6 +190,7 @@ class _RespuestaCotizacionFormScreenState
   void initState() {
     super.initState();
     _loadAerolineas();
+    _loadPlantillas();
     if (widget.respuesta != null) {
       _populateFromRespuesta(widget.respuesta!);
       if (widget.respuesta!.cotizacionId != null && widget.cotizacion == null) {
@@ -184,9 +198,127 @@ class _RespuestaCotizacionFormScreenState
       }
     } else if (widget.duplicarDe != null) {
       _populateFromRespuesta(widget.duplicarDe!);
-    } else if (widget.cotizacion != null) {
-      _populateFromCotizacion(widget.cotizacion!);
+    } else {
+      // Nueva respuesta — adicionales por defecto
+      _addAdicionalDefault(
+        nombre: 'Asistencia médica obligatoria',
+        descripcion:
+            'En Travel Tours pensamos en la tranquilidad y bienestar de cada viajero, por eso nuestros planes incluyen asistencia al viajero y acompañamiento durante el viaje. Este servicio brinda respaldo ante eventualidades que puedan presentarse en el destino, permitiendo que disfrutes tu experiencia con mayor seguridad y confianza.',
+      );
+      _addAdicionalDefault(
+        nombre: 'Impuestos',
+        descripcion:
+            'Los impuestos correspondientes al destino y/o actividades son de carácter obligatorio y deberán ser cancelados por el pasajero como parte de la cotización y servicios del viaje.',
+      );
+      if (widget.cotizacion != null) {
+        _populateFromCotizacion(widget.cotizacion!);
+      }
     }
+  }
+
+  Future<void> _loadPlantillas() async {
+    try {
+      final repo = sl<RespuestaCotizacionRepository>();
+      final todas = await repo.getRespuestas();
+      if (mounted) {
+        setState(() {
+          _plantillas = todas
+              .where((r) => r.tituloViaje.toUpperCase().startsWith('PLANTILLA'))
+              .toList();
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _applyPlantilla(RespuestaCotizacion plantilla) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => const DialogLoadingNetwork(titel: 'Cargando plantilla'),
+    );
+    await Future.delayed(const Duration(milliseconds: 400));
+    
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop(); // close dialog
+      setState(() {
+        _selectedPlantilla = plantilla;
+        // Limpiamos listas antes de aplicar
+        for (final v in _vuelos) {
+          v.dispose();
+        }
+        for (final h in _hoteles) {
+          h.dispose();
+        }
+        for (final a in _adicionales) {
+          a.dispose();
+        }
+        _vuelos.clear();
+        _selectedVuelos.clear();
+        _hoteles.clear();
+        _selectedHoteles.clear();
+        _adicionales.clear();
+        _imagenes.clear();
+        _itemsIncluidos.clear();
+        _itemsNoIncluidos.clear();
+        
+        final savedNombre = _nombreClienteCtrl.text;
+        final savedTelefono = _telefonoCtrl.text;
+        final savedCountryCode = _countryCode;
+
+        _populateFromRespuesta(plantilla);
+
+        _nombreClienteCtrl.text = savedNombre;
+        _telefonoCtrl.text = savedTelefono;
+        _countryCode = savedCountryCode;
+      });
+    }
+  }
+
+  Widget _buildPlantillaSelector() {
+    return PremiumSectionCard(
+      title: 'USAR PLANTILLA',
+      icon: Icons.auto_awesome_rounded,
+      children: [
+        DropdownButtonFormField<RespuestaCotizacion>(
+          decoration: InputDecoration(
+            labelText: 'Seleccionar una plantilla',
+            labelStyle: const TextStyle(color: SaasPalette.textSecondary),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: SaasPalette.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: SaasPalette.border),
+            ),
+            filled: true,
+            fillColor: SaasPalette.bgApp,
+          ),
+          value: _selectedPlantilla,
+          icon: const Icon(Icons.arrow_drop_down_rounded),
+          isExpanded: true,
+          items: _plantillas.map((p) {
+            final displayName = p.tituloViaje
+                .replaceFirst(RegExp(r'^PLANTILLA[\s:\-]*', caseSensitive: false), '')
+                .trim();
+            return DropdownMenuItem(
+              value: p,
+              child: Text(
+                displayName.isNotEmpty ? displayName : p.tituloViaje,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            if (val != null) {
+              _applyPlantilla(val);
+            }
+          },
+        ),
+      ],
+    );
   }
 
   Future<void> _loadLinkedCotizacion(int id) async {
@@ -202,9 +334,19 @@ class _RespuestaCotizacionFormScreenState
   }
 
   void _populateFromCotizacion(Cotizacion c) {
-    // _tituloCtrl.text = 'Propuesta de Viaje - ${c.nombreCompleto}';
-    // _condicionesCtrl.text =
-    //     'Esta propuesta se basa en los detalles proporcionados: ${c.detallesPlan}.';
+    _nombreClienteCtrl.text = c.nombreCompleto;
+    final phoneToParse = (c.telefono != null && c.telefono!.isNotEmpty)
+        ? c.telefono!
+        : c.chatId;
+
+    if (phoneToParse.isNotEmpty) {
+      final parsed = parsePhone(phoneToParse);
+      _countryCode = parsed.$1;
+      _telefonoCtrl.text = parsed.$2;
+    }
+    _tituloCtrl.text = 'Propuesta de Viaje - ${c.nombreCompleto}';
+    _condicionesCtrl.text =
+        'Esta propuesta se basa en los detalles proporcionados: ${c.detallesPlan}.';
 
     // Si tiene origen/destino, podemos pre-cargar un tramo de vuelo
     if ((c.origen != null && c.origen!.isNotEmpty) ||
@@ -269,6 +411,9 @@ class _RespuestaCotizacionFormScreenState
       data.horaLlegadaCtrl.text = v.horaLlegada;
       data.costoCtrl.text = _formatPrice(v.costo);
       data.numeroPasajerosCtrl.text = v.numeroPasajeros.toString();
+      data.tieneEscala = v.tieneEscala;
+      data.ciudadEscalaCtrl.text = v.ciudadEscala;
+      data.tiempoEscalaCtrl.text = v.tiempoEscala;
       data.costoCtrl.addListener(_refreshResumen);
       data.origenCtrl.addListener(_refreshResumen);
       data.destinoCtrl.addListener(_refreshResumen);
@@ -294,6 +439,7 @@ class _RespuestaCotizacionFormScreenState
       data.precioAdultoCtrl.text = _formatPrice(h.precioAdulto);
       data.precioMenorCtrl.text = _formatPrice(h.precioMenor);
       data.precioTotalCtrl.text = _formatPrice(h.precioTotal);
+      data.notasCtrl.text = h.notas;
       data.precioTotalCtrl.addListener(_refreshResumen);
       data.precioAdultoCtrl.addListener(_refreshResumen);
       data.nombreCtrl.addListener(_refreshResumen);
@@ -306,6 +452,7 @@ class _RespuestaCotizacionFormScreenState
       data.nombreCtrl.text = a.nombre;
       data.descripcionCtrl.text = a.descripcion;
       data.precioCtrl.text = _formatPrice(a.precio);
+      data.esSeleccionable = a.esSeleccionable;
       data.precioCtrl.addListener(_refreshResumen);
       data.nombreCtrl.addListener(_refreshResumen);
       _adicionales.add(data);
@@ -459,6 +606,19 @@ class _RespuestaCotizacionFormScreenState
     setState(() => _adicionales.add(data));
   }
 
+  void _addAdicionalDefault({
+    required String nombre,
+    required String descripcion,
+  }) {
+    final data = _AdicionalData();
+    data.nombreCtrl.text = nombre;
+    data.descripcionCtrl.text = descripcion;
+    data.esSeleccionable = false;
+    data.precioCtrl.addListener(_refreshResumen);
+    data.nombreCtrl.addListener(_refreshResumen);
+    _adicionales.add(data);
+  }
+
   void _removeAdicional(int i) {
     setState(() {
       _adicionales[i].dispose();
@@ -476,10 +636,9 @@ class _RespuestaCotizacionFormScreenState
     });
   }
 
-  String get _fullTelefono =>
-      _telefonoCtrl.text.trim().isEmpty
-          ? ''
-          : '$_countryCode${_telefonoCtrl.text.trim()}';
+  String get _fullTelefono => _telefonoCtrl.text.trim().isEmpty
+      ? ''
+      : '$_countryCode${_telefonoCtrl.text.trim()}';
 
   RespuestaCotizacion _buildCurrentRespuesta() {
     return RespuestaCotizacion(
@@ -512,6 +671,9 @@ class _RespuestaCotizacionFormScreenState
               costo: _parsePrice(v.costoCtrl.text.trim()),
               numeroPasajeros:
                   int.tryParse(v.numeroPasajerosCtrl.text.trim()) ?? 1,
+              tieneEscala: v.tieneEscala,
+              ciudadEscala: v.ciudadEscalaCtrl.text.trim(),
+              tiempoEscala: v.tiempoEscalaCtrl.text.trim(),
             ),
           )
           .toList(),
@@ -533,6 +695,7 @@ class _RespuestaCotizacionFormScreenState
               precioMenor: _parsePrice(h.precioMenorCtrl.text.trim()),
               precioTotal: _parsePrice(h.precioTotalCtrl.text.trim()),
               fotos: List.from(h.fotos),
+              notas: h.notasCtrl.text.trim(),
             ),
           )
           .toList(),
@@ -542,10 +705,12 @@ class _RespuestaCotizacionFormScreenState
               nombre: a.nombreCtrl.text.trim(),
               descripcion: a.descripcionCtrl.text.trim(),
               precio: _parsePrice(a.precioCtrl.text.trim()),
+              esSeleccionable: a.esSeleccionable,
             ),
           )
           .toList(),
       condicionesGenerales: _condicionesCtrl.text.trim(),
+      anclada: widget.respuesta?.anclada ?? false,
       createdAt: DateTime.now(),
     );
   }
@@ -573,10 +738,7 @@ class _RespuestaCotizacionFormScreenState
     }
     if (_telefonoCtrl.text.trim().isEmpty) {
       setState(() => _saving = false);
-      SaasSnackBar.showWarning(
-        context,
-        'El teléfono del cliente es requerido',
-      );
+      SaasSnackBar.showWarning(context, 'El teléfono del cliente es requerido');
       return;
     }
     if (_tituloCtrl.text.trim().isEmpty) {
@@ -672,65 +834,7 @@ class _RespuestaCotizacionFormScreenState
       return;
     }
 
-    final respuesta = RespuestaCotizacion(
-      id: widget.respuesta?.id,
-      cotizacionId:
-          widget.respuesta?.cotizacionId ??
-          widget.cotizacion?.id ??
-          widget.duplicarDe?.cotizacionId,
-      token: widget.respuesta?.token,
-      nombreCliente: _nombreClienteCtrl.text.trim(),
-      telefonoCliente: _fullTelefono,
-      tituloViaje: _tituloCtrl.text.trim(),
-      imagenesDestino: List.from(_imagenes),
-      itemsIncluidos: List.from(_itemsIncluidos),
-      itemsNoIncluidos: List.from(_itemsNoIncluidos),
-      vuelos: _vuelos.map((v) {
-        return VueloItinerario(
-          tipo: v.tipoVuelo,
-          aerolineaId: v.aerolineaId,
-          aerolinea: v.aerolinea?.nombre ?? '',
-          numeroVuelo: v.numeroVueloCtrl.text.trim(),
-          origen: v.origenCtrl.text.trim(),
-          destino: v.destinoCtrl.text.trim(),
-          fecha: v.fecha != null
-              ? DateFormat('yyyy-MM-dd').format(v.fecha!)
-              : '',
-          horaSalida: v.horaSalidaCtrl.text.trim(),
-          horaLlegada: v.horaLlegadaCtrl.text.trim(),
-          costo: _parsePrice(v.costoCtrl.text.trim()),
-          numeroPasajeros: int.tryParse(v.numeroPasajerosCtrl.text.trim()) ?? 1,
-        );
-      }).toList(),
-      opcionesHotel: _hoteles.map((h) {
-        return OpcionHotel(
-          nombre: h.nombreCtrl.text.trim(),
-          tipoHabitacion: h.tipoHabitacionCtrl.text.trim(),
-          queIncluye: List.from(h.queIncluye),
-          fechaEntrada: h.fechaEntrada != null
-              ? DateFormat('yyyy-MM-dd').format(h.fechaEntrada!)
-              : '',
-          horaEntrada: h.horaEntradaCtrl.text.trim(),
-          fechaSalida: h.fechaSalida != null
-              ? DateFormat('yyyy-MM-dd').format(h.fechaSalida!)
-              : '',
-          horaSalida: h.horaSalidaCtrl.text.trim(),
-          precioAdulto: _parsePrice(h.precioAdultoCtrl.text.trim()),
-          precioMenor: _parsePrice(h.precioMenorCtrl.text.trim()),
-          precioTotal: _parsePrice(h.precioTotalCtrl.text.trim()),
-          fotos: List.from(h.fotos),
-        );
-      }).toList(),
-      adicionales: _adicionales.map((a) {
-        return AdicionalViaje(
-          nombre: a.nombreCtrl.text.trim(),
-          descripcion: a.descripcionCtrl.text.trim(),
-          precio: _parsePrice(a.precioCtrl.text.trim()),
-        );
-      }).toList(),
-      condicionesGenerales: _condicionesCtrl.text.trim(),
-      createdAt: DateTime.now(),
-    );
+    final respuesta = _buildCurrentRespuesta();
 
     try {
       final repo = sl<RespuestaCotizacionRepository>();
@@ -792,6 +896,10 @@ class _RespuestaCotizacionFormScreenState
                     const SizedBox(height: 20),
                   ] else if (_loadingCotizacion) ...[
                     const SaasBannerSkeleton(),
+                    const SizedBox(height: 20),
+                  ],
+                  if (widget.respuesta == null && _plantillas.isNotEmpty) ...[
+                    _buildPlantillaSelector(),
                     const SizedBox(height: 20),
                   ],
                   _buildDatosGenerales(),
@@ -1417,7 +1525,6 @@ class _RespuestaCotizacionFormScreenState
                     );
             },
           ),
-          const SizedBox(height: 12),
           LayoutBuilder(
             builder: (ctx, constraints) {
               final wide = constraints.maxWidth > 400;
@@ -1455,6 +1562,73 @@ class _RespuestaCotizacionFormScreenState
                     );
             },
           ),
+          const SizedBox(height: 12),
+
+          // Escalas
+          Theme(
+            data: Theme.of(context).copyWith(
+              unselectedWidgetColor: SaasPalette.textTertiary,
+            ),
+            child: CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                '¿Tiene escala?',
+                style: TextStyle(
+                  color: SaasPalette.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: const Text(
+                'Indica si el vuelo requiere conexión',
+                style: TextStyle(
+                  color: SaasPalette.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              value: data.tieneEscala,
+              activeColor: SaasPalette.brand600,
+              onChanged: (val) {
+                setState(() => data.tieneEscala = val ?? false);
+              },
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+          ),
+          if (data.tieneEscala) ...[
+            const SizedBox(height: 8),
+            LayoutBuilder(
+              builder: (ctx, constraints) {
+                final wide = constraints.maxWidth > 500;
+                final ciudadEscala = PremiumTextField(
+                  controller: data.ciudadEscalaCtrl,
+                  label: 'Ciudad de Escala',
+                  icon: Icons.location_city_rounded,
+                  validator: (_) => null,
+                );
+                final tiempoEscala = PremiumTextField(
+                  controller: data.tiempoEscalaCtrl,
+                  label: 'Tiempo de Escala (ej. 2h 30m)',
+                  icon: Icons.timer_rounded,
+                  validator: (_) => null,
+                );
+                return wide
+                    ? Row(
+                        children: [
+                          Expanded(child: ciudadEscala),
+                          const SizedBox(width: 12),
+                          Expanded(child: tiempoEscala),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          ciudadEscala,
+                          const SizedBox(height: 12),
+                          tiempoEscala,
+                        ],
+                      );
+              },
+            ),
+          ],
         ],
       ),
     );
@@ -1839,6 +2013,15 @@ class _RespuestaCotizacionFormScreenState
                 ),
                 const SizedBox(height: 12),
 
+                PremiumTextField(
+                  controller: data.notasCtrl,
+                  label: 'Notas adicionales del hotel',
+                  icon: Icons.notes_rounded,
+                  maxLines: 2,
+                  validator: (_) => null,
+                ),
+                const SizedBox(height: 12),
+
                 // Fotos del hotel — galería multi-imagen
                 const _FieldLabel(label: 'Fotos del Hotel'),
                 const SizedBox(height: 8),
@@ -2005,8 +2188,57 @@ class _RespuestaCotizacionFormScreenState
                 color: const Color(0xFF7C3AED),
                 icon: Icons.extension_rounded,
               ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => setState(
+                  () => data.esSeleccionable = !data.esSeleccionable,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: !data.esSeleccionable
+                        ? SaasPalette.success.withValues(alpha: 0.12)
+                        : SaasPalette.textTertiary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: !data.esSeleccionable
+                          ? SaasPalette.success.withValues(alpha: 0.4)
+                          : SaasPalette.border,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        !data.esSeleccionable
+                            ? Icons.lock_rounded
+                            : Icons.lock_open_rounded,
+                        size: 10,
+                        color: !data.esSeleccionable
+                            ? SaasPalette.success
+                            : SaasPalette.textTertiary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        !data.esSeleccionable ? 'Incluido' : 'Seleccionable',
+                        style: TextStyle(
+                          color: !data.esSeleccionable
+                              ? SaasPalette.success
+                              : SaasPalette.textTertiary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               const Spacer(),
-              _RemoveButton(onTap: () => _removeAdicional(index)),
+              if (data.esSeleccionable)
+                _RemoveButton(onTap: () => _removeAdicional(index)),
             ],
           ),
           const SizedBox(height: 14),
@@ -2052,9 +2284,7 @@ class _RespuestaCotizacionFormScreenState
                           controller: data.precioCtrl,
                           label: 'Precio *',
                           icon: Icons.attach_money_rounded,
-                          inputFormatters: [
-                            ThousandsSeparatorInputFormatter(),
-                          ],
+                          inputFormatters: [ThousandsSeparatorInputFormatter()],
                           keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
                           ),
@@ -4467,4 +4697,3 @@ class _IataBadge extends StatelessWidget {
     );
   }
 }
-

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -25,25 +26,73 @@ class _PagoRealizadoListBody extends StatefulWidget {
 
 class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
   final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
   String _searchQuery = '';
+  Timer? _debounce;
   DateTimeRange? _selectedDateRange;
+  int _currentPage = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    _loadFirstPage();
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
-  void _goToPage(int page) {
-    final currentState = context.read<PagoRealizadoBloc>().state;
-    DateTime? startDate, endDate;
-    if (currentState is PagosRealizadosLoaded) {
-      startDate = currentState.filterStartDate;
-      endDate = currentState.filterEndDate;
+  void _onScroll() {
+    if (_isBottom && !(_debounce?.isActive ?? false)) {
+      final state = context.read<PagoRealizadoBloc>().state;
+      if (state is PagosRealizadosLoaded && !state.hasReachedMax) {
+        _loadNextPage();
+      }
     }
+  }
+
+  bool get _isBottom {
+    if (!_scrollController.hasClients) return false;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    return currentScroll >= (maxScroll * 0.9);
+  }
+
+  void _loadFirstPage() {
+    _currentPage = 1;
     context.read<PagoRealizadoBloc>().add(
-      LoadPagos(page: page, startDate: startDate, endDate: endDate),
+      LoadPagos(
+        page: _currentPage,
+        search: _searchQuery.isEmpty ? null : _searchQuery,
+        startDate: _selectedDateRange?.start,
+        endDate: _selectedDateRange?.end,
+      ),
     );
+  }
+
+  void _loadNextPage() {
+    _currentPage++;
+    context.read<PagoRealizadoBloc>().add(
+      LoadPagos(
+        page: _currentPage,
+        search: _searchQuery.isEmpty ? null : _searchQuery,
+        startDate: _selectedDateRange?.start,
+        endDate: _selectedDateRange?.end,
+      ),
+    );
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() => _searchQuery = value);
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _loadFirstPage();
+    });
   }
 
   void _onFilterDates() async {
@@ -53,33 +102,18 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
       initialDateRange: _selectedDateRange,
       firstDate: DateTime(2020),
       lastDate: DateTime(now.year + 1),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: SaasPalette.brand600,
-              onPrimary: Colors.white,
-              surface: SaasPalette.bgCanvas,
-              onSurface: SaasPalette.textPrimary,
-            ), dialogTheme: DialogThemeData(backgroundColor: SaasPalette.bgCanvas),
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (picked != null) {
       if (!mounted) return;
       setState(() => _selectedDateRange = picked);
-      context.read<PagoRealizadoBloc>().add(
-        LoadPagos(page: 1, startDate: picked.start, endDate: picked.end),
-      );
+      _loadFirstPage();
     }
   }
 
   void _clearFilter() {
     setState(() => _selectedDateRange = null);
-    context.read<PagoRealizadoBloc>().add(const LoadPagos(page: 1));
+    _loadFirstPage();
   }
 
   @override
@@ -95,30 +129,20 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
             pagos = state.pagos!;
           }
 
-          final query = _searchQuery.toLowerCase();
-          final filtered = pagos
-              .where(
-                (p) =>
-                    p.chatId.toLowerCase().contains(query) ||
-                    p.referencia.toLowerCase().contains(query) ||
-                    p.proveedorComercio.toLowerCase().contains(query),
-              )
-              .toList();
-
-          final isLoading = state is PagoRealizadoLoading && pagos.isEmpty;
+          final isLoadingFirst = state is PagoRealizadoLoading && pagos.isEmpty;
 
           // Group by chat_id
           final Map<String, List<PagoRealizado>> grouped = {};
-          for (var p in filtered) {
+          for (var p in pagos) {
             grouped.putIfAbsent(p.chatId, () => []).add(p);
           }
           final chatIds = grouped.keys.toList();
 
           return RefreshIndicator(
-            onRefresh: () async =>
-                context.read<PagoRealizadoBloc>().add(const LoadPagos(page: 1)),
+            onRefresh: () async => _loadFirstPage(),
             color: SaasPalette.brand600,
             child: CustomScrollView(
+              controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 // ── Header ─────────────────────────────────────────────────
@@ -143,10 +167,10 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
                         SaasSearchField(
                           controller: _searchController,
                           hintText: 'Buscar por referencia, comercio o chat...',
-                          onChanged: (v) => setState(() => _searchQuery = v),
+                          onChanged: _onSearchChanged,
                           onClear: () {
                             _searchController.clear();
-                            setState(() => _searchQuery = '');
+                            _onSearchChanged('');
                           },
                         ),
                         const SizedBox(height: 12),
@@ -161,32 +185,30 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
                 ),
 
                 // ── Content ────────────────────────────────────────────────
-                if (isLoading)
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (_, __) => const SaasListSkeleton(),
-                        childCount: 4,
+                if (isLoadingFirst)
+                  const SliverFillRemaining(
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: SaasPalette.brand600,
                       ),
                     ),
                   )
-                else if (filtered.isEmpty)
+                else if (pagos.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: SaasEmptyState(
-                      icon: (query.isNotEmpty || _selectedDateRange != null)
+                      icon: (_searchQuery.isNotEmpty || _selectedDateRange != null)
                           ? Icons.search_off_rounded
                           : Icons.payments_rounded,
-                      title: (query.isNotEmpty || _selectedDateRange != null)
+                      title: (_searchQuery.isNotEmpty || _selectedDateRange != null)
                           ? 'Sin coincidencias'
                           : 'Historial vacío',
-                      subtitle: (query.isNotEmpty || _selectedDateRange != null)
+                      subtitle: (_searchQuery.isNotEmpty || _selectedDateRange != null)
                           ? 'No encontramos pagos con los criterios actuales.'
                           : 'Los reportes de pagos registrados aparecerán aquí.',
                     ),
                   )
-                else
+                else ...[
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(32, 24, 32, 24),
                     sliver: SliverList(
@@ -201,20 +223,20 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
                       }, childCount: chatIds.length),
                     ),
                   ),
-
-                // ── Pagination ─────────────────────────────────────────────
-                if (state is PagosRealizadosLoaded && state.totalPages > 1)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 40),
-                      child: _PaginationBar(
-                        page: state.page,
-                        totalPages: state.totalPages,
-                        total: state.total,
-                        onPageChanged: _goToPage,
+                  if (state is PagosRealizadosLoaded && !state.hasReachedMax)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: SaasPalette.brand600,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+                ],
               ],
             ),
           );
@@ -682,97 +704,3 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  PAGINATION BAR
-// ─────────────────────────────────────────────────────────────────────────────
-class _PaginationBar extends StatelessWidget {
-  final int page;
-  final int totalPages;
-  final int total;
-  final void Function(int) onPageChanged;
-
-  const _PaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.total,
-    required this.onPageChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: SaasPalette.border),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _PageArrow(
-              icon: Icons.chevron_left_rounded,
-              enabled: page > 1,
-              onTap: () => onPageChanged(page - 1),
-            ),
-            Column(
-              children: [
-                Text(
-                  'Página $page de $totalPages',
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  '$total registros en total',
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-            _PageArrow(
-              icon: Icons.chevron_right_rounded,
-              enabled: page < totalPages,
-              onTap: () => onPageChanged(page + 1),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PageArrow extends StatelessWidget {
-  final IconData icon;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  const _PageArrow({
-    required this.icon,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: enabled ? onTap : null,
-      icon: Icon(icon),
-      color: SaasPalette.brand600,
-      disabledColor: SaasPalette.textTertiary.withOpacity(0.3),
-      style: IconButton.styleFrom(
-        backgroundColor: enabled
-            ? SaasPalette.brand50
-            : SaasPalette.bgApp.withOpacity(0.5),
-        padding: const EdgeInsets.all(8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-}

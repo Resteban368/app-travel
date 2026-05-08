@@ -21,9 +21,16 @@ class ApiClienteRepository implements ClienteRepository {
   };
 
   @override
-  Future<List<Cliente>> getClientes() async {
+  Future<List<Cliente>> getClientes({String? search, int page = 1, int limit = 20}) async {
     debugPrint('🌎 [ApiClienteRepository] GET $_baseUrl');
-    final response = await client.get(Uri.parse(_baseUrl), headers: _headers);
+    final params = <String, String>{
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
+    if (search != null && search.isNotEmpty) params['search'] = search;
+    
+    final uri = Uri.parse(_baseUrl).replace(queryParameters: params);
+    final response = await client.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       final decoded = json.decode(response.body);
       // Handle both paginated { data: [] } and simple list []

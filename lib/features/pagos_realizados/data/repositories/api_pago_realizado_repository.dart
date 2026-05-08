@@ -22,6 +22,7 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
   Future<PagedResult<PagoRealizado>> getPagos({
     int page = 1,
     int limit = 20,
+    String? search,
     DateTime? startDate,
     DateTime? endDate,
   }) async {
@@ -29,6 +30,7 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
       'page': page.toString(),
       'limit': limit.toString(),
     };
+    if (search != null && search.isNotEmpty) params['search'] = search;
     if (startDate != null) {
       params['startDate'] = startDate.toUtc().toIso8601String();
     }

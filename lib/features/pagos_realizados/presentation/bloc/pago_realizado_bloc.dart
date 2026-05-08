@@ -14,18 +14,20 @@ abstract class PagoRealizadoEvent extends Equatable {
 class LoadPagos extends PagoRealizadoEvent {
   final int page;
   final int limit;
+  final String? search;
   final DateTime? startDate;
   final DateTime? endDate;
 
   const LoadPagos({
     this.page = 1,
     this.limit = 20,
+    this.search,
     this.startDate,
     this.endDate,
   });
 
   @override
-  List<Object?> get props => [page, limit, startDate, endDate];
+  List<Object?> get props => [page, limit, search, startDate, endDate];
 }
 
 class CreatePago extends PagoRealizadoEvent {
@@ -87,6 +89,8 @@ class PagosRealizadosLoaded extends PagoRealizadoState {
   final int totalPages;
   final int total;
   final int limit;
+  final bool hasReachedMax;
+  final String? filterSearch;
   final DateTime? filterStartDate;
   final DateTime? filterEndDate;
 
@@ -96,6 +100,8 @@ class PagosRealizadosLoaded extends PagoRealizadoState {
     this.totalPages = 1,
     this.total = 0,
     this.limit = 20,
+    this.hasReachedMax = false,
+    this.filterSearch,
     this.filterStartDate,
     this.filterEndDate,
   });
@@ -107,6 +113,8 @@ class PagosRealizadosLoaded extends PagoRealizadoState {
     totalPages,
     total,
     limit,
+    hasReachedMax,
+    filterSearch,
     filterStartDate,
     filterEndDate,
   ];
@@ -153,25 +161,54 @@ class PagoRealizadoBloc extends Bloc<PagoRealizadoEvent, PagoRealizadoState> {
     LoadPagos event,
     Emitter<PagoRealizadoState> emit,
   ) async {
-    emit(PagoRealizadoLoading());
+    final isFirstPage = event.page == 1;
+    if (isFirstPage) {
+      emit(PagoRealizadoLoading());
+    }
+
     try {
       final result = await _repository.getPagos(
         page: event.page,
         limit: event.limit,
+        search: event.search,
         startDate: event.startDate,
         endDate: event.endDate,
       );
-      emit(
-        PagosRealizadosLoaded(
-          pagos: result.data,
-          page: result.page,
-          totalPages: result.totalPages,
-          total: result.total,
-          limit: result.limit,
-          filterStartDate: event.startDate,
-          filterEndDate: event.endDate,
-        ),
-      );
+
+      final hasReachedMax = result.data.length < event.limit || result.page >= result.totalPages;
+
+      if (isFirstPage) {
+        emit(
+          PagosRealizadosLoaded(
+            pagos: result.data,
+            page: result.page,
+            totalPages: result.totalPages,
+            total: result.total,
+            limit: result.limit,
+            hasReachedMax: hasReachedMax,
+            filterSearch: event.search,
+            filterStartDate: event.startDate,
+            filterEndDate: event.endDate,
+          ),
+        );
+      } else {
+        if (state is PagosRealizadosLoaded) {
+          final current = state as PagosRealizadosLoaded;
+          emit(
+            PagosRealizadosLoaded(
+              pagos: List.from(current.pagos)..addAll(result.data),
+              page: result.page,
+              totalPages: result.totalPages,
+              total: result.total,
+              limit: result.limit,
+              hasReachedMax: hasReachedMax,
+              filterSearch: event.search,
+              filterStartDate: event.startDate,
+              filterEndDate: event.endDate,
+            ),
+          );
+        }
+      }
     } catch (e) {
       emit(PagoRealizadoError(e.toString()));
     }

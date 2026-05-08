@@ -80,7 +80,7 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
   Future<void> _onCotizacionTap(Cotizacion cot) async {
     await Navigator.pushNamed(
       context,
-      AppRouter.cotizacionResponder,
+      AppRouter.cotizacionCreate,
       arguments: cot,
     );
     if (mounted) {
@@ -103,15 +103,29 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
       linkedCotId: linkedCot?.id,
       onTap: () => _onRespuestaTap(r),
       onDuplicate: () => _onDuplicarRespuesta(r),
+      onDelete: () {
+        if (r.id != null) {
+          context.read<CotizacionBloc>().add(DeleteRespuestaCotizacion(r.id!));
+        }
+      },
+      onToggleAnclada: () {
+        if (r.id != null) {
+          context.read<CotizacionBloc>().add(
+            ToggleAncladaRespuesta(r.id!, anclada: !r.anclada),
+          );
+        }
+      },
     );
   }
 
   Future<void> _onDuplicarRespuesta(RespuestaCotizacion r) async {
-    // Reutilizar la pantalla de formulario como base para duplicar
+    // Duplicar sin ID (para que sea nueva) y sin cotizacionId (requerimiento user)
+    final duplicated = r.copyWith(id: null, clearCotizacionId: true);
+    
     await Navigator.pushNamed(
       context,
       AppRouter.cotizacionResponder,
-      arguments: r,
+      arguments: duplicated,
     );
     if (mounted) {
       context.read<CotizacionBloc>().add(const LoadAllData());
@@ -157,9 +171,13 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
 
               attendedUnifiedList = [...state.allRespuestas];
               attendedUnifiedList.sort((a, b) {
-                final dateA = a.createdAt;
-                final dateB = b.createdAt;
-                return dateB.compareTo(dateA); // DESC
+                final ra = a as RespuestaCotizacion;
+                final rb = b as RespuestaCotizacion;
+                // Ancladas primero, luego por fecha DESC
+                if (ra.anclada != rb.anclada) {
+                  return ra.anclada ? -1 : 1;
+                }
+                return rb.createdAt.compareTo(ra.createdAt);
               });
 
               cotizacionesMap = {
@@ -683,6 +701,8 @@ class _RespuestaCard extends StatefulWidget {
   final RespuestaCotizacion respuesta;
   final VoidCallback onTap;
   final VoidCallback onDuplicate;
+  final VoidCallback onDelete;
+  final VoidCallback onToggleAnclada;
   final String? clientName;
   final String? clientPhone;
   final int? linkedCotId;
@@ -691,6 +711,8 @@ class _RespuestaCard extends StatefulWidget {
     required this.respuesta,
     required this.onTap,
     required this.onDuplicate,
+    required this.onDelete,
+    required this.onToggleAnclada,
     this.clientName,
     this.clientPhone,
     this.linkedCotId,
@@ -702,6 +724,21 @@ class _RespuestaCard extends StatefulWidget {
 
 class _RespuestaCardState extends State<_RespuestaCard> {
   bool _hover = false;
+
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => SaasConfirmDialog(
+        title: '¿Eliminar propuesta?',
+        body:
+            'Esta acción no se puede deshacer. ¿Deseas eliminar la propuesta "${widget.respuesta.tituloViaje}"?',
+        onConfirm: () {
+          widget.onDelete();
+          Navigator.pop(ctx);
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -718,8 +755,12 @@ class _RespuestaCardState extends State<_RespuestaCard> {
             color: SaasPalette.bgCanvas,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _hover ? SaasPalette.warning : SaasPalette.border,
-              width: _hover ? 1.5 : 1,
+              color: r.anclada
+                  ? SaasPalette.brand600
+                  : _hover
+                  ? SaasPalette.warning
+                  : SaasPalette.border,
+              width: r.anclada || _hover ? 1.5 : 1,
             ),
             boxShadow: [
               BoxShadow(
@@ -842,6 +883,27 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                     ),
                   ),
 
+                  IconButton(
+                    onPressed: widget.onToggleAnclada,
+                    icon: Icon(
+                      r.anclada
+                          ? Icons.push_pin_rounded
+                          : Icons.push_pin_outlined,
+                      color: r.anclada
+                          ? SaasPalette.brand600
+                          : SaasPalette.textTertiary,
+                    ),
+                    tooltip: r.anclada ? 'Desanclar' : 'Anclar',
+                    style: IconButton.styleFrom(
+                      backgroundColor: r.anclada
+                          ? SaasPalette.brand600.withValues(alpha: 0.1)
+                          : Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   Padding(
                     padding: const EdgeInsets.all(6),
                     child: TextButton.icon(
@@ -857,6 +919,23 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                       label: const Text(
                         'Duplicar',
                         style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    onPressed: () => _confirmDelete(context),
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: SaasPalette.danger,
+                    ),
+                    tooltip: 'Eliminar',
+                    style: IconButton.styleFrom(
+                      backgroundColor: SaasPalette.danger.withValues(
+                        alpha: 0.08,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),

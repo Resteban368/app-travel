@@ -18,6 +18,11 @@ class ReservaLoaded extends ReservaState {
   final int totalPages;
   final int total;
   final int limit;
+  final bool hasReachedMax;
+  final String? filterSearch;
+  final String? filterStatus;
+  final DateTime? filterStartDate;
+  final DateTime? filterEndDate;
 
   const ReservaLoaded(
     this.reservas, {
@@ -25,10 +30,26 @@ class ReservaLoaded extends ReservaState {
     this.totalPages = 1,
     this.total = 0,
     this.limit = 20,
+    this.hasReachedMax = false,
+    this.filterSearch,
+    this.filterStatus,
+    this.filterStartDate,
+    this.filterEndDate,
   });
 
   @override
-  List<Object?> get props => [reservas, page, totalPages, total, limit];
+  List<Object?> get props => [
+        reservas,
+        page,
+        totalPages,
+        total,
+        limit,
+        hasReachedMax,
+        filterSearch,
+        filterStatus,
+        filterStartDate,
+        filterEndDate,
+      ];
 }
 
 class ReservaSaving extends ReservaState {
@@ -41,10 +62,11 @@ class ReservaSaving extends ReservaState {
 
 class ReservaActionSuccess extends ReservaState {
   final List<Reserva> reservas;
-  const ReservaActionSuccess(this.reservas);
+  final Reserva? createdReserva;
+  const ReservaActionSuccess(this.reservas, {this.createdReserva});
 
   @override
-  List<Object?> get props => [reservas];
+  List<Object?> get props => [reservas, createdReserva];
 }
 
 class ReservaError extends ReservaState {

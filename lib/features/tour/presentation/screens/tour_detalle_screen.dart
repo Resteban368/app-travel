@@ -1,7 +1,9 @@
 import 'dart:js_interop';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:web/web.dart' as webLib;
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/di/injection_container.dart';
@@ -13,6 +15,7 @@ import '../../../../core/widgets/premium_form_widgets.dart';
 import '../../../reservas/domain/repositories/reserva_repository.dart';
 import '../../../reservas/presentation/pdf/reserva_pdf_generator.dart';
 import '../../../service/domain/repositories/service_repository.dart';
+import '../../../../config/app_router.dart';
 
 class TourDetalleScreen extends StatefulWidget {
   final Tour tour;
@@ -41,7 +44,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
     _searchCtrl.addListener(
       () => setState(() => _searchQuery = _searchCtrl.text),
     );
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
   @override
@@ -55,9 +58,19 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
       _loading = true;
       _loadError = null;
     });
+
+    // Mostrar diálogo de carga premium
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          const DialogLoadingNetwork(titel: 'Cargando detalle del tour...'),
+    );
+
     try {
       final d = await sl<TourRepository>().getTourDetalle(widget.tour.id);
       if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Cerrar diálogo
         setState(() {
           _detalle = d;
           _loading = false;
@@ -65,6 +78,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
       }
     } catch (e) {
       if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Cerrar diálogo
         setState(() {
           _loadError = e;
           _loading = false;
@@ -232,54 +246,53 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          ...widget.tour.precios.map(
-            (p) {
-              final edadStr = (p.edadMin != null || p.edadMax != null)
-                  ? '${p.edadMin ?? 0}-${p.edadMax ?? '∞'} años'
-                  : null;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+          ...widget.tour.precios.map((p) {
+            final edadStr = (p.edadMin != null || p.edadMax != null)
+                ? '${p.edadMin ?? 0}-${p.edadMax ?? '∞'} años'
+                : null;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          p.descripcion,
+                          style: const TextStyle(
+                            color: SaasPalette.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (edadStr != null || p.puntoPartida != null)
                           Text(
-                            p.descripcion,
+                            [
+                              if (edadStr != null) edadStr,
+                              if (p.puntoPartida != null)
+                                'desde ${p.puntoPartida}',
+                            ].join(' · '),
                             style: const TextStyle(
-                              color: SaasPalette.textPrimary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                              color: SaasPalette.textTertiary,
+                              fontSize: 11,
                             ),
                           ),
-                          if (edadStr != null || p.puntoPartida != null)
-                            Text(
-                              [
-                                if (edadStr != null) edadStr,
-                                if (p.puntoPartida != null) 'desde ${p.puntoPartida}',
-                              ].join(' · '),
-                              style: const TextStyle(
-                                color: SaasPalette.textTertiary,
-                                fontSize: 11,
-                              ),
-                            ),
-                        ],
-                      ),
+                      ],
                     ),
-                    Text(
-                      fmt.format(p.precio),
-                      style: const TextStyle(
-                        color: SaasPalette.success,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
+                  ),
+                  Text(
+                    fmt.format(p.precio),
+                    style: const TextStyle(
+                      color: SaasPalette.success,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
                     ),
-                  ],
-                ),
-              );
-            },
-          ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -352,6 +365,59 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
               minHeight: 8,
             ),
           ),
+          if (widget.tour.busLayoutIds.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(
+                context,
+                AppRouter.busManifiesto,
+                arguments: widget.tour.id,
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [SaasPalette.brand600, SaasPalette.brand900],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: SaasPalette.brand600.withValues(alpha: 0.25),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+
+                width: double.infinity,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.directions_bus_rounded,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Ver manifiesto de bus',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -649,8 +715,36 @@ class _ReservaCardState extends State<_ReservaCard> {
                                 color: SaasPalette.danger,
                               ),
                             ],
+                            const SizedBox(width: 6),
+                            //agregar estado si no tiene asientos
+                            if (reserva.asientosBus.isEmpty)
+                              const _EstadoBadge(
+                                label: 'SIN ASIENTOS',
+                                color: SaasPalette.brand600,
+                              ),
                           ],
                         ),
+                        //cedula del responsable
+                        Row(
+                          children: [
+                            Text(
+                              "${reserva.responsable.tipoDocumento} ",
+                              style: const TextStyle(
+                                color: SaasPalette.brand600,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              reserva.responsable.documento,
+                              style: const TextStyle(
+                                color: SaasPalette.textPrimary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+
                         const SizedBox(height: 4),
                         Text(
                           'Creada $dateLabel · ${reserva.totalPersonas} persona${reserva.totalPersonas != 1 ? 's' : ''}',
@@ -717,6 +811,145 @@ class _ReservaCardState extends State<_ReservaCard> {
                   ),
                   const SizedBox(height: 16),
                   _DesgloseCard(reserva: reserva, currency: widget.currency),
+                  const SizedBox(height: 16),
+
+                  // Sección de Asientos
+                  const _SectionLabel(label: 'ASIENTOS'),
+                  const SizedBox(height: 8),
+                  if (reserva.asientosBus.isNotEmpty)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: reserva.asientosBus
+                          .map(
+                            (asiento) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: SaasPalette.brand600.withValues(
+                                  alpha: 0.08,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: SaasPalette.brand600.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.event_seat_rounded,
+                                    color: SaasPalette.brand600,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    asiento,
+                                    style: const TextStyle(
+                                      color: SaasPalette.brand600,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: SaasPalette.warning.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: SaasPalette.warning.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: SaasPalette.warning,
+                            size: 16,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Falta por asignar asientos',
+                            style: TextStyle(
+                              color: SaasPalette.warning,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (reserva.seleccionLink != null &&
+                      reserva.seleccionLink!.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: SaasPalette.brand50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: SaasPalette.brand600.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.link_rounded,
+                            color: SaasPalette.brand600,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              reserva.seleccionLink!,
+                              style: const TextStyle(
+                                color: SaasPalette.brand600,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () {
+                              Clipboard.setData(
+                                ClipboardData(text: reserva.seleccionLink!),
+                              );
+                              SaasSnackBar.showSuccess(
+                                context,
+                                'Link copiado al portapapeles',
+                              );
+                            },
+                            child: const Icon(
+                              Icons.copy_rounded,
+                              color: SaasPalette.brand600,
+                              size: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
 
                   if (reserva.notas != null && reserva.notas!.isNotEmpty) ...[

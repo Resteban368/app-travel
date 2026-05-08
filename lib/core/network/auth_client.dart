@@ -40,6 +40,13 @@ class AuthClient extends http.BaseClient {
       requestClone?.createClone() ?? request,
     );
 
+    // Retry automático en 500 (puede ocurrir durante sync de TypeORM al arrancar)
+    if (response.statusCode == 500 && requestClone != null) {
+      await Future.delayed(const Duration(milliseconds: 800));
+      response = await _inner.send(requestClone.createClone()
+        ..headers['Authorization'] = request.headers['Authorization'] ?? '');
+    }
+
     // Verificamos error 401
     if (response.statusCode == 401) {
       final refreshToken = await _storage.read(key: 'refresh_token');

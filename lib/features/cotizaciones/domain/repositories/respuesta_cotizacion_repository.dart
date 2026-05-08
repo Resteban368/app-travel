@@ -15,4 +15,10 @@ abstract class RespuestaCotizacionRepository {
 
   /// PATCH /v1/respuestas-cotizacion/:id
   Future<RespuestaCotizacion> updateRespuesta(RespuestaCotizacion respuesta);
+
+  /// DELETE /v1/respuestas-cotizacion/:id
+  Future<void> deleteRespuesta(int id);
+
+  /// PATCH /v1/respuestas-cotizacion/:id  { anclada: bool }
+  Future<void> toggleAnclada(int id, {required bool anclada});
 }

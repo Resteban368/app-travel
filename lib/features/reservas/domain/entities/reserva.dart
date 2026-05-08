@@ -36,6 +36,10 @@ class Reserva extends Equatable {
   final Agente? agente;
   final int? precioResponsableId;
   final double? precioResponsableAplicado;
+  final int? busLayoutId;
+  final double? valorCancelado;
+  final String? seleccionLink;
+  final List<String> asientosBus;
 
   const Reserva({
     this.id,
@@ -65,6 +69,10 @@ class Reserva extends Equatable {
     this.valorPersonas,
     this.precioResponsableId,
     this.precioResponsableAplicado,
+    this.busLayoutId,
+    this.valorCancelado,
+    this.seleccionLink,
+    this.asientosBus = const [],
   });
 
   Reserva copyWith({
@@ -95,6 +103,10 @@ class Reserva extends Equatable {
     double? valorPersonas,
     int? precioResponsableId,
     double? precioResponsableAplicado,
+    int? busLayoutId,
+    double? valorCancelado,
+    String? seleccionLink,
+    List<String>? asientosBus,
   }) {
     return Reserva(
       id: id ?? this.id,
@@ -125,6 +137,10 @@ class Reserva extends Equatable {
       precioResponsableId: precioResponsableId ?? this.precioResponsableId,
       precioResponsableAplicado:
           precioResponsableAplicado ?? this.precioResponsableAplicado,
+      busLayoutId: busLayoutId ?? this.busLayoutId,
+      valorCancelado: valorCancelado ?? this.valorCancelado,
+      seleccionLink: seleccionLink ?? this.seleccionLink,
+      asientosBus: asientosBus ?? this.asientosBus,
     );
   }
 
@@ -157,5 +173,9 @@ class Reserva extends Equatable {
     valorPersonas,
     precioResponsableId,
     precioResponsableAplicado,
+    busLayoutId,
+    valorCancelado,
+    seleccionLink,
+    asientosBus,
   ];
 }

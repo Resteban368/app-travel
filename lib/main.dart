@@ -14,6 +14,7 @@ import 'package:agente_viajes/features/agentes/presentation/bloc/agente_bloc.dar
 import 'package:agente_viajes/features/reservas/presentation/bloc/reserva_bloc.dart';
 import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_bloc.dart';
 import 'package:agente_viajes/features/hoteles/presentation/bloc/hotel_bloc.dart';
+import 'package:agente_viajes/features/bus_layouts/presentation/bloc/bus_layout_bloc.dart';
 import 'package:agente_viajes/features/uploads/presentation/bloc/upload_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -189,6 +190,7 @@ class _TravelToursAppState extends State<TravelToursApp> {
         BlocProvider<ReservaBloc>(create: (_) => sl<ReservaBloc>()),
         BlocProvider<ClienteBloc>(create: (_) => sl<ClienteBloc>()),
         BlocProvider<HotelBloc>(create: (_) => sl<HotelBloc>()),
+        BlocProvider<BusLayoutBloc>(create: (_) => sl<BusLayoutBloc>()),
         BlocProvider<AuthBloc>(create: (_) => sl<AuthBloc>()),
         BlocProvider<UploadBloc>(create: (_) => sl<UploadBloc>()),
       ],

@@ -23,6 +23,8 @@ import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_bloc.d
 import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_event.dart';
 import 'package:agente_viajes/features/hoteles/presentation/bloc/hotel_bloc.dart';
 import 'package:agente_viajes/features/hoteles/presentation/bloc/hotel_event.dart';
+import 'package:agente_viajes/features/bus_layouts/presentation/bloc/bus_layout_bloc.dart';
+import 'package:agente_viajes/features/bus_layouts/presentation/bloc/bus_layout_event.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../config/app_router.dart';
@@ -160,11 +162,18 @@ class _AdminShellState extends State<AdminShell> {
       permission: '',
     ),
     _NavItem(
+      icon: Icons.directions_bus_rounded,
+      label: 'Buses',
+      route: AppRouter.busLayouts,
+      permission: '',
+    ),
+    _NavItem(
       icon: Icons.manage_search_rounded,
       label: 'Auditoría',
       route: AppRouter.auditoria,
       permission: 'auditoria',
     ),
+
     _NavItem(
       icon: Icons.account_circle_rounded,
       label: 'Mi Perfil',
@@ -205,6 +214,8 @@ class _AdminShellState extends State<AdminShell> {
         context.read<ClienteBloc>().add(LoadClientes());
       case AppRouter.hoteles:
         context.read<HotelBloc>().add(const LoadHoteles());
+      case AppRouter.busLayouts:
+        context.read<BusLayoutBloc>().add(const LoadBusLayouts());
     }
 
     widget.onItemTapped(item.route);
@@ -256,7 +267,7 @@ class _AdminShellState extends State<AdminShell> {
           elevation: 0,
           shape: const Border(bottom: BorderSide(color: SaasPalette.border)),
           title: const Text(
-            'Travel Tours Florencia',
+            'Agente Viajes',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 16,
@@ -413,7 +424,7 @@ class _AdminShellState extends State<AdminShell> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  'Travel Tours Florencia',
+                  'Agente Viajes',
                   style: TextStyle(
                     color: SaasPalette.textPrimary,
                     fontSize: 14,

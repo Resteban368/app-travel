@@ -79,6 +79,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   // Tour control
   String? _selectedTourId;
 
+  // Bus selection
+  int? _selectedBusLayoutId;
+  List<Map<String, dynamic>> _busesDisponibilidad = [];
+  bool _loadingBuses = false;
+
   /// Prices per person: key -1 = responsable, key 0,1,2... = integrante index
   Map<int, TourPrecio?> _preciosPorPersona = {};
   bool _preciosInitialized = false;
@@ -107,52 +112,34 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   late final AnimationController _entryCtrl;
 
   bool get _isEditing => widget.reserva != null;
+  bool _loadingReserva = false;
+  int? _precioResponsableId;
+  Reserva? _currentReserva;
 
   @override
   void initState() {
     super.initState();
 
-    _notasCtrl = TextEditingController(text: widget.reserva?.notas ?? '');
-    _utilidadCtrl = TextEditingController(
-      text: widget.reserva?.utilidad != null
-          ? widget.reserva!.utilidad!.toStringAsFixed(0)
-          : '',
-    );
-    _descuentoPorPersona = widget.reserva?.descuentoPorPersona ?? 0.0;
-    _descuentoCtrl = TextEditingController(
-      text: _descuentoPorPersona > 0
-          ? _descuentoPorPersona.toStringAsFixed(0)
-          : '',
-    );
+    _notasCtrl = TextEditingController();
+    _utilidadCtrl = TextEditingController();
+    _descuentoCtrl = TextEditingController();
 
     if (_isEditing) {
-      _estado = widget.reserva!.estado;
-      _tipoReserva = widget.reserva!.tipoReserva;
-      _selectedClienteId = widget.reserva!.idResponsable;
-      _selectedTourId =
-          (widget.reserva!.idTour != null && widget.reserva!.idTour!.isNotEmpty)
-          ? widget.reserva!.idTour
-          : null;
-      _integrantes = List.from(widget.reserva!.integrantes);
-      _servicios = List.from(widget.reserva!.serviciosIds);
-      _vuelos = List.from(widget.reserva!.vuelos);
-      _hotelReservas = List.from(widget.reserva!.hoteles);
-      if (widget.reserva!.tour != null) {
-        _tourSearchCtrl.text = widget.reserva!.tour!.name;
-      }
-      _idReservaCtrl.text = widget.reserva!.idReserva ?? '';
-      // Pre-cargar responsable embebido si el API lo devolvió
-      if (widget.reserva!.responsable != null) {
-        _selectedCliente = widget.reserva!.responsable;
-      }
-      _loadPagos();
+      // Poblar con datos básicos del widget mientras carga la versión completa
+      _populateFromReserva(widget.reserva!);
+      // Carga inicial unificada (Reserva + Buses)
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadInitialData());
     }
 
     _loadAerolineas();
 
-    // Attempt to load tours if not loaded
+    // Attempt to load tours if not loaded or empty
     final tourState = context.read<TourBloc>().state;
-    if (tourState is TourInitial || tourState is TourError) {
+    debugPrint('🔍 [ReservaFormScreen] initState - TourBloc state: $tourState');
+    if (tourState is TourInitial ||
+        tourState is TourError ||
+        (tourState is ToursLoaded && tourState.tours.isEmpty)) {
+      debugPrint('🔄 [ReservaFormScreen] Dispatching LoadTours()...');
       context.read<TourBloc>().add(LoadTours());
     }
 
@@ -191,8 +178,90 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     }
   }
 
+  Future<void> _loadInitialData() async {
+    if (!mounted) return;
+
+    // Mostramos un único diálogo de carga premium
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const DialogLoadingNetwork(
+        titel: 'Cargando información de la reserva...',
+      ),
+    );
+
+    try {
+      // 1. Cargar reserva completa desde el API
+      final fresh = await sl<ReservaRepository>().getReservaById(
+        widget.reserva!.id!,
+      );
+      if (!mounted) return;
+
+      // 2. Poblar datos básicos (saltando carga automática de buses para controlarla aquí)
+      _populateFromReserva(fresh, skipBuses: true);
+
+      // 3. Cargar buses sincronizadamente si es un tour
+      final tourIdInt = int.tryParse(fresh.idTour ?? '');
+      if (tourIdInt != null) {
+        await _loadBusesDisponibilidad(tourIdInt);
+      }
+    } catch (e) {
+      debugPrint('❌ [ReservaForm] _loadInitialData: $e');
+    } finally {
+      if (mounted) {
+        // Cerramos el diálogo único
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+  }
+
+  void _populateFromReserva(Reserva r, {bool skipBuses = false}) {
+    _currentReserva = r;
+    _estado = r.estado;
+    _tipoReserva = r.tipoReserva;
+    _selectedClienteId = r.idResponsable;
+    _selectedTourId = (r.idTour != null && r.idTour!.isNotEmpty)
+        ? r.idTour
+        : null;
+    _selectedBusLayoutId = r.busLayoutId;
+    _precioResponsableId = r.precioResponsableId;
+    _descuentoPorPersona = r.descuentoPorPersona ?? 0.0;
+
+    _notasCtrl.text = r.notas;
+    _utilidadCtrl.text = r.utilidad != null
+        ? r.utilidad!.toStringAsFixed(0)
+        : '';
+    _descuentoCtrl.text = _descuentoPorPersona > 0
+        ? _descuentoPorPersona.toStringAsFixed(0)
+        : '';
+    _idReservaCtrl.text = r.idReserva ?? '';
+
+    _integrantes = List.from(r.integrantes);
+    _servicios = List.from(r.serviciosIds);
+    _vuelos = List.from(r.vuelos);
+    _hotelReservas = List.from(r.hoteles);
+
+    if (r.tour != null) _tourSearchCtrl.text = r.tour!.name;
+    if (r.responsable != null) _selectedCliente = r.responsable;
+
+    final tourIdInt = int.tryParse(r.idTour ?? '');
+    if (tourIdInt != null && !skipBuses) {
+      Future.microtask(() => _loadBusesDisponibilidad(tourIdInt));
+    }
+
+    if (_selectedClienteId != null && _selectedCliente == null) {
+      _loadingResponsable = true;
+      _loadClienteResponsable(_selectedClienteId!);
+    }
+
+    _loadPagos();
+    setState(() {});
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _tryInitPrecios());
+  }
+
   void _tryInitPrecios() {
-    if (_preciosInitialized || !_isEditing || widget.reserva == null) return;
+    if (_preciosInitialized || !_isEditing) return;
     if (_selectedTourId == null) return;
 
     final tourState = context.read<TourBloc>().state;
@@ -218,18 +287,17 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     final Map<int, TourPrecio?> newMap = {};
 
     // Responsable
-    final respPrecioId = widget.reserva!.precioResponsableId;
-    if (respPrecioId != null) {
+    if (_precioResponsableId != null) {
       final precio = tour.precios.cast<TourPrecio?>().firstWhere(
-        (p) => p?.id == respPrecioId,
+        (p) => p?.id == _precioResponsableId,
         orElse: () => null,
       );
       if (precio != null) newMap[-1] = precio;
     }
 
     // Integrantes
-    for (int i = 0; i < widget.reserva!.integrantes.length; i++) {
-      final precioId = widget.reserva!.integrantes[i].tourPrecioId;
+    for (int i = 0; i < _integrantes.length; i++) {
+      final precioId = _integrantes[i].tourPrecioId;
       if (precioId != null) {
         final precio = tour.precios.cast<TourPrecio?>().firstWhere(
           (p) => p?.id == precioId,
@@ -256,10 +324,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   }
 
   Future<void> _loadPagos() async {
-    final reservaIdInt = int.tryParse(widget.reserva?.id ?? '');
-    debugPrint(
-      '🔍 [_loadPagos] widget.reserva.id=${widget.reserva?.id}, parsed=$reservaIdInt',
-    );
+    final reservaId = _currentReserva?.id ?? widget.reserva?.id;
+    final reservaIdInt = int.tryParse(reservaId ?? '');
+    debugPrint('🔍 [_loadPagos] reserva.id=$reservaId, parsed=$reservaIdInt');
     if (reservaIdInt == null) return;
     setState(() => _loadingPagos = true);
     try {
@@ -278,8 +345,26 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     }
   }
 
+  Future<void> _loadBusesDisponibilidad(int tourId) async {
+    setState(() {
+      _loadingBuses = true;
+      _busesDisponibilidad = [];
+    });
+    try {
+      final buses = await sl<ReservaRepository>().getBusesDisponibilidad(
+        tourId,
+      );
+      if (mounted) setState(() => _busesDisponibilidad = buses);
+    } catch (e) {
+      debugPrint('❌ [ReservaForm] loadBuses: $e');
+    } finally {
+      if (mounted) setState(() => _loadingBuses = false);
+    }
+  }
+
   Future<void> _generateAndShowPdf() async {
-    if (widget.reserva == null) return;
+    final reserva = _currentReserva ?? widget.reserva;
+    if (reserva == null) return;
     setState(() => _generatingPdf = true);
     showDialog(
       context: context,
@@ -289,9 +374,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     );
 
     try {
-      final fullReserva = widget.reserva!.id != null
-          ? await sl<ReservaRepository>().getReservaById(widget.reserva!.id!)
-          : widget.reserva!;
+      final fullReserva = reserva.id != null
+          ? await sl<ReservaRepository>().getReservaById(reserva.id!)
+          : reserva;
       final allServices = await sl<ServiceRepository>().getServices();
       final bytes = await ReservaPdfGenerator.generate(
         fullReserva,
@@ -303,7 +388,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
 
       final dateStr = DateFormat('dd-MM-yyyy').format(DateTime.now());
       final filename =
-          'Reserva_${widget.reserva!.idReserva ?? widget.reserva!.id}_$dateStr.pdf';
+          'Reserva_${reserva.idReserva ?? reserva.id}_$dateStr.pdf';
       final uint8Bytes = Uint8List.fromList(bytes);
 
       void openInNewTab() {
@@ -470,6 +555,19 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       return;
     }
 
+    // Si es tipo tour y el tour tiene buses asignados, debe seleccionar uno
+    if (_tipoReserva == 'tour' &&
+        _selectedTourId != null &&
+        _busesDisponibilidad.isNotEmpty) {
+      if (_selectedBusLayoutId == null) {
+        SaasSnackBar.showWarning(
+          context,
+          'Debe seleccionar un bus para esta reserva.',
+        );
+        return;
+      }
+    }
+
     //si la reserva es de tipo vuelos
     // DEBE TENER AL MENOS UM VUELO
     if (_tipoReserva == 'vuelos' && _vuelos.isEmpty) {
@@ -529,7 +627,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
 
         //precio del vuelo
         if (vuelo.precio == null) {
-          SaasSnackBar.showWarning(context, 'Debe seleccionar un precio.');
+          SaasSnackBar.showWarning(
+            context,
+            'Debe seleccionar un precio para el vuelo.',
+          );
           return;
         }
       }
@@ -722,10 +823,14 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     final catResponsable = _preciosPorPersona[-1];
 
     final reserva = Reserva(
-      id: _isEditing ? widget.reserva!.id : null,
+      id: _isEditing ? (_currentReserva?.id ?? widget.reserva!.id) : null,
       tipoReserva: _tipoReserva,
       idTour: _tipoReserva == 'tour' ? _selectedTourId : null,
-      correo: _selectedCliente?.correo ?? widget.reserva?.correo ?? '',
+      correo:
+          _selectedCliente?.correo ??
+          _currentReserva?.correo ??
+          widget.reserva?.correo ??
+          '',
       estado: _estado,
       notas: _notasCtrl.text.trim(),
       descuentoPorPersona: _descuentoPorPersona,
@@ -739,12 +844,12 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           : null,
       idResponsable: _selectedClienteId,
       fechaCreacion: _isEditing
-          ? widget.reserva!.fechaCreacion
+          ? (_currentReserva?.fechaCreacion ?? widget.reserva!.fechaCreacion)
           : DateTime.now(),
       fechaActualizacion: DateTime.now(),
       precioResponsableId: catResponsable?.id,
-      precioResponsableAplicado:
-          catResponsable?.precio ?? selectedTour?.price,
+      precioResponsableAplicado: catResponsable?.precio ?? selectedTour?.price,
+      busLayoutId: _selectedBusLayoutId,
     );
 
     if (_isEditing) {
@@ -757,18 +862,31 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   @override
   Widget build(BuildContext context) {
     return BlocListener<ReservaBloc, ReservaState>(
-      listener: (context, state) {
+      listener: (context, state) async {
         if (state is ReservaActionSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                _isEditing ? 'Reserva actualizada' : 'Reserva creada',
-              ),
-              backgroundColor: SaasPalette.success,
-            ),
-          );
-
           context.read<ReservaBloc>().add(const LoadReservas());
+
+          if (!_isEditing &&
+              state.createdReserva != null &&
+              state.createdReserva!.tipoReserva == 'tour') {
+            await showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) =>
+                  _ReservaCreatedDialog(reserva: state.createdReserva!),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  _isEditing ? 'Reserva actualizada' : 'Reserva creada',
+                ),
+                backgroundColor: SaasPalette.success,
+              ),
+            );
+          }
+
+          if (!mounted) return;
           Navigator.pop(context);
         } else if (state is ReservaError) {
           showDialog(
@@ -851,6 +969,20 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         backgroundColor: SaasPalette.bgApp,
         body: Stack(
           children: [
+            if (_loadingReserva)
+              const Positioned.fill(
+                child: AbsorbPointer(
+                  child: ColoredBox(
+                    color: Colors.black12,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: SaasPalette.brand600,
+                        strokeWidth: 3,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             CustomScrollView(
               slivers: [
                 PremiumSliverAppBar(
@@ -947,9 +1079,175 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         const SizedBox(height: 24),
         if (_tipoReserva == 'tour') ...[
           _buildTourDropdown(),
+          if (_busesDisponibilidad.isNotEmpty || _loadingBuses) ...[
+            const SizedBox(height: 24),
+            _buildBusSelector(),
+          ],
+          _buildAsientosDisplay(),
           const SizedBox(height: 24),
         ],
         _buildStatusDropdown(),
+      ],
+    );
+  }
+
+  Widget _buildAsientosDisplay() {
+    final res = _currentReserva ?? widget.reserva;
+    if (res == null) return const SizedBox.shrink();
+
+    final hasAsientos = res.asientosBus.isNotEmpty;
+    final hasLink = res.seleccionLink != null && res.seleccionLink!.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        if (hasAsientos) ...[
+          Text(
+            'ASIENTOS ASIGNADOS',
+            style: TextStyle(
+              color: SaasPalette.textPrimary,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: res.asientosBus.map((asiento) {
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: SaasPalette.brand600.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: SaasPalette.brand600.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.event_seat_rounded,
+                      color: SaasPalette.brand600,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      asiento,
+                      style: const TextStyle(
+                        color: SaasPalette.brand600,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ] else ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: SaasPalette.danger.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: SaasPalette.danger.withValues(alpha: 0.2),
+              ),
+            ),
+            child: const Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: SaasPalette.danger,
+                  size: 18,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Falta por asignar asientos',
+                  style: TextStyle(
+                    color: SaasPalette.danger,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (hasLink) ...[
+          const SizedBox(height: 24),
+          Text(
+            'LINK DE SELECCIÓN',
+            style: TextStyle(
+              color: SaasPalette.textPrimary,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: SaasPalette.brand50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: SaasPalette.brand600.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.link_rounded,
+                  color: SaasPalette.brand600,
+                  size: 18,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    res.seleccionLink!,
+                    style: const TextStyle(
+                      color: SaasPalette.brand600,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {
+                      Clipboard.setData(
+                        ClipboardData(text: res.seleccionLink!),
+                      );
+                      SaasSnackBar.showSuccess(
+                        context,
+                        'Link copiado al portapapeles',
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      child: const Icon(
+                        Icons.copy_rounded,
+                        color: SaasPalette.brand600,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1014,21 +1312,29 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 (_) => _tryInitPrecios(),
               );
             }
-            final isLoading = state is TourLoading;
+
+            final isLoading = state is TourLoading || state is TourInitial || state is TourSaving;
+            final isError = state is TourError;
+            final errorMessage = isError ? state.message : null;
+
             List<Tour> tours = [];
             if (state is ToursLoaded) {
               tours = state.tours;
             } else if (state is TourSaved && state.tours != null) {
               tours = state.tours!;
+            } else if (state is TourSaving && state.tours != null) {
+              tours = state.tours!;
             }
+
+            debugPrint('🎨 [ReservaFormScreen] _buildTourDropdown - State: $state, Tours: ${tours.length}, isLoading: $isLoading');
 
             final selectedTour = _selectedTourId != null
                 ? tours.firstWhere(
                     (t) => t.id == _selectedTourId,
                     orElse: () => Tour(
-                      id: '',
+                      id: _selectedTourId!,
                       idTour: 0,
-                      name: '',
+                      name: _tourSearchCtrl.text,
                       agency: '',
                       startDate: DateTime.now(),
                       endDate: DateTime.now(),
@@ -1044,7 +1350,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   )
                 : null;
             final isTourFound =
-                selectedTour != null && selectedTour.id.isNotEmpty;
+                selectedTour != null && selectedTour.name.isNotEmpty;
+            final isEmpty = state is ToursLoaded && tours.isEmpty;
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1057,8 +1364,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       InkWell(
-                        onTap: isLoading
-                            ? null
+                        onTap: (isLoading || (isError && !isLoading))
+                            ? (isError ? () => context.read<TourBloc>().add(LoadTours()) : null)
                             : () async {
                                 final result = await showDialog<Tour>(
                                   context: context,
@@ -1071,8 +1378,14 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                     _tourSearchCtrl.text = result.name;
                                     _tourCardExpanded = false;
                                     _preciosPorPersona = {};
+                                    _selectedBusLayoutId = null;
+                                    _busesDisponibilidad = [];
                                   });
                                   field.didChange(result.id);
+                                  final tourIdInt = int.tryParse(result.id);
+                                  if (tourIdInt != null) {
+                                    _loadBusesDisponibilidad(tourIdInt);
+                                  }
                                 }
                               },
                         borderRadius: BorderRadius.circular(16),
@@ -1095,27 +1408,35 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           child: Row(
                             children: [
                               Icon(
-                                Icons.tour_rounded,
-                                color: isTourFound
-                                    ? SaasPalette.brand600
-                                    : SaasPalette.textTertiary,
-                                size: 18,
-                              ),
+                                  isError ? Icons.error_outline_rounded : Icons.tour_rounded,
+                                  color: isError
+                                      ? SaasPalette.danger
+                                      : isTourFound
+                                      ? SaasPalette.brand600
+                                      : SaasPalette.textTertiary,
+                                  size: 18,
+                                ),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: Text(
-                                  isTourFound
-                                      ? _tourSearchCtrl.text
-                                      : 'Seleccionar tour...',
-                                  style: TextStyle(
-                                    color: isTourFound
-                                        ? SaasPalette.textPrimary
-                                        : SaasPalette.textTertiary,
-                                    fontSize: 14,
+                                  child: Text(
+                                    isError
+                                        ? 'Error al cargar tours (Toca para reintentar)'
+                                        : isEmpty
+                                            ? 'No hay tours disponibles'
+                                            : isTourFound
+                                                ? _tourSearchCtrl.text
+                                                : 'Seleccionar tour...',
+                                    style: TextStyle(
+                                      color: isError
+                                          ? SaasPalette.danger
+                                          : isTourFound
+                                              ? SaasPalette.textPrimary
+                                              : SaasPalette.textTertiary,
+                                      fontSize: 14,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
                               if (isLoading)
                                 const SizedBox(
                                   width: 16,
@@ -1138,16 +1459,38 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                     size: 18,
                                   ),
                                 )
-                              else
-                                const Icon(
-                                  Icons.search_rounded,
-                                  color: SaasPalette.textTertiary,
-                                  size: 18,
-                                ),
+                                else ...[
+                                  const Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    color: SaasPalette.textTertiary,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  if (!isLoading)
+                                    IconButton(
+                                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                                      onPressed: () => context.read<TourBloc>().add(LoadTours()),
+                                      color: SaasPalette.textTertiary,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      tooltip: 'Refrescar tours',
+                                    ),
+                                ],
                             ],
                           ),
                         ),
                       ),
+                      if (errorMessage != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8, left: 4),
+                          child: Text(
+                            errorMessage,
+                            style: const TextStyle(
+                              color: SaasPalette.danger,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
                       if (field.hasError) ...[
                         const SizedBox(height: 6),
                         Text(
@@ -1284,6 +1627,121 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBusSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'BUS ASIGNADO *',
+          style: TextStyle(
+            color: SaasPalette.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 6),
+        if (_loadingBuses)
+          const SizedBox(
+            height: 48,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          )
+        else
+          DropdownButtonFormField<int>(
+            value:
+                _busesDisponibilidad.any(
+                  (b) =>
+                      (b['bus_layout_id'] as num?)?.toInt() ==
+                      _selectedBusLayoutId,
+                )
+                ? _selectedBusLayoutId
+                : null,
+            dropdownColor: SaasPalette.bgCanvas,
+            style: const TextStyle(
+              color: SaasPalette.textPrimary,
+              fontSize: 14,
+            ),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(
+                Icons.directions_bus_rounded,
+                color: SaasPalette.brand600,
+                size: 18,
+              ),
+              filled: true,
+              fillColor: SaasPalette.bgCanvas,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: SaasPalette.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(
+                  color: SaasPalette.brand600,
+                  width: 1.5,
+                ),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
+            ),
+            hint: const Text(
+              'Selecciona un bus',
+              style: TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
+            ),
+            items: _busesDisponibilidad.map((bus) {
+              final disponibles = (bus['disponibles'] as num?)?.toInt() ?? 0;
+              final total =
+                  (bus['total_asientos_cliente'] as num?)?.toInt() ?? 0;
+              final color = disponibles == 0
+                  ? Colors.red
+                  : disponibles <= 5
+                  ? Colors.orange
+                  : Colors.green;
+              return DropdownMenuItem<int>(
+                value: (bus['bus_layout_id'] as num).toInt(),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        bus['nombre'] as String? ?? '',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: color.withValues(alpha: 0.4)),
+                      ),
+                      child: Text(
+                        '$disponibles/$total libres',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: color,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: (val) => setState(() => _selectedBusLayoutId = val),
+            validator: (v) => v == null && _busesDisponibilidad.isNotEmpty
+                ? 'Requerido'
+                : null,
+          ),
+      ],
     );
   }
 
@@ -1901,8 +2359,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 (p) => p != null,
               );
               final snapshotTotal = (_isEditing && !hasPrecioSeleccionado)
-                  ? (widget.reserva?.valorSinDescuento ??
-                        widget.reserva?.valorTotal ??
+                  ? ((_currentReserva ?? widget.reserva)?.valorSinDescuento ??
+                        (_currentReserva ?? widget.reserva)?.valorTotal ??
                         0.0)
                   : null;
               final useSnapshot = snapshotTotal != null && snapshotTotal > 0;
@@ -1911,12 +2369,12 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               final double tourSub;
 
               if (useSnapshot) {
-                final originalIds = widget.reserva!.serviciosIds.toSet();
+                final originalIds = _servicios.toSet();
                 final originalSvcCost = allServices
                     .where((s) => originalIds.contains(s.id))
                     .fold<double>(0.0, (sum, s) => sum + (s.cost ?? 0));
                 final tourBaseSnapshot = snapshotTotal - originalSvcCost;
-                final originalPersonas = 1 + widget.reserva!.integrantes.length;
+                final originalPersonas = 1 + _integrantes.length;
                 final originalUnits = precioPorPareja
                     ? (originalPersonas / 2).ceil()
                     : originalPersonas;
@@ -1999,10 +2457,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       // Queda una persona verdaderamente sola al final (total pax impar)
                       final k = leftovers[i];
                       final price = _preciosPorPersona[k]?.precio ?? basePrice;
-                      rows.add((
-                        label: personLabel(k),
-                        price: price,
-                      ));
+                      rows.add((label: personLabel(k), price: price));
                       pairSum += price;
                     }
                   }
@@ -2012,24 +2467,25 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   double personSum = 0.0;
                   for (final key in allPersonKeys) {
                     final price = _preciosPorPersona[key]?.precio ?? basePrice;
-                    rows.add((
-                      label: personLabel(key),
-                      price: price,
-                    ));
+                    rows.add((label: personLabel(key), price: price));
                     personSum += price;
                   }
                   tourSub = personSum;
                 }
 
                 tourBreakdown = rows;
-                efectiveUnitPrice =
-                    currentUnits > 0 ? tourSub / currentUnits : 0.0;
+                efectiveUnitPrice = currentUnits > 0
+                    ? tourSub / currentUnits
+                    : 0.0;
               }
 
               tourSubtotalFinal = tourSub;
               descuentoTotal = _descuentoPorPersona * currentUnits;
               valorSinDescuento =
-                  tourSubtotalFinal + serviciosTotal + vuelosTotal + hotelesTotal;
+                  tourSubtotalFinal +
+                  serviciosTotal +
+                  vuelosTotal +
+                  hotelesTotal;
 
               if (precioPorPareja) {
                 tourUnitLabel =
@@ -4271,7 +4727,11 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
     _fechaLlegadaCtrl = TextEditingController(text: v.fechaLlegada);
     _horaSalidaCtrl = TextEditingController(text: v.horaSalida);
     _horaLlegadaCtrl = TextEditingController(text: v.horaLlegada);
-    _precioCtrl = TextEditingController(text: v.precio?.toString() ?? '');
+    _precioCtrl = TextEditingController(
+      text: v.precio != null
+          ? NumberFormat.decimalPattern('es_CO').format(v.precio)
+          : '',
+    );
     _reservaVueloCtrl = TextEditingController(text: v.reservaVuelo);
     _aerolineaId = v.aerolineaId ?? v.aerolinea?.id;
     _clase = v.clase.isNotEmpty ? v.clase : 'economy';
@@ -4312,7 +4772,9 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
         horaSalida: _horaSalidaCtrl.text.trim(),
         horaLlegada: _horaLlegadaCtrl.text.trim(),
         clase: _clase,
-        precio: double.tryParse(_precioCtrl.text.trim().replaceAll(',', '.')),
+        precio: double.tryParse(
+          _precioCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.'),
+        ),
         reservaVuelo: _reservaVueloCtrl.text.trim(),
         tipoVuelo: _tipoVuelo,
       ),
@@ -4678,22 +5140,33 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
               ],
             ),
             const SizedBox(height: 12),
+
             // Precio del vuelo (solo si tipo reserva es vuelos o si se desea poner)
-            TextField(
+            // TextFormField(
+            //   controller: _precioCtrl,
+            //   style: const TextStyle(
+            //     color: SaasPalette.textPrimary,
+            //     fontSize: 14,
+            //   ),
+            //   decoration: _dec('Precio del vuelo ', Icons.attach_money_rounded),
+            //   inputFormatters: [ThousandsSeparatorInputFormatter()],
+            //   keyboardType: const TextInputType.numberWithOptions(
+            //     decimal: true,
+            //   ),
+            //   onChanged: (_) => _notify(),
+            // ),
+            PremiumTextField(
               controller: _precioCtrl,
+              label: 'Costo del vuelo',
+              icon: Icons.attach_money_rounded,
+              inputFormatters: [ThousandsSeparatorInputFormatter()],
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              style: const TextStyle(
-                color: SaasPalette.textPrimary,
-                fontSize: 14,
-              ),
-              decoration: _dec('Precio del vuelo ', Icons.attach_money_rounded),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-              ],
+              validator: (_) => null,
               onChanged: (_) => _notify(),
             ),
+
             const SizedBox(height: 12),
             // Reserva vuelo (obligatorio)
             TextFormField(
@@ -5106,7 +5579,8 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
     );
     _valorCtrl = TextEditingController(
       text: widget.hotelReserva.valor != null
-          ? widget.hotelReserva.valor!.toStringAsFixed(0)
+          ? NumberFormat.decimalPattern('es_CO')
+              .format(widget.hotelReserva.valor)
           : '',
     );
     _selectedHotelId =
@@ -5146,7 +5620,9 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
         numeroReserva: _numeroCtrl.text.trim(),
         fechaCheckin: _checkinCtrl.text.trim(),
         fechaCheckout: _checkoutCtrl.text.trim(),
-        valor: double.tryParse(_valorCtrl.text.trim()),
+        valor: double.tryParse(
+          _valorCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.'),
+        ),
       ),
     );
   }
@@ -5351,21 +5827,33 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
               const SizedBox(height: 12),
 
               // Valor
-              TextField(
+              // TextField(
+              //   controller: _valorCtrl,
+              //   keyboardType: const TextInputType.numberWithOptions(
+              //     decimal: true,
+              //   ),
+              //   inputFormatters: [
+              //     FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              //   ],
+              //   style: const TextStyle(
+              //     color: SaasPalette.textPrimary,
+              //     fontSize: 14,
+              //   ),
+              //   decoration: _dec('Valor del hotel', Icons.attach_money_rounded),
+              //   onChanged: (_) => _notify(),
+              // ),
+              PremiumTextField(
                 controller: _valorCtrl,
+                label: 'Valor del hotel',
+                icon: Icons.attach_money_rounded,
+                inputFormatters: [ThousandsSeparatorInputFormatter()],
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                ],
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
-                  fontSize: 14,
-                ),
-                decoration: _dec('Valor del hotel', Icons.attach_money_rounded),
+                validator: (_) => null,
                 onChanged: (_) => _notify(),
               ),
+
               const SizedBox(height: 12),
 
               // Fechas check-in / check-out
@@ -5678,6 +6166,354 @@ class _HotelPickerDialogState extends State<_HotelPickerDialog> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  DIÁLOGO RESERVA CREADA
+// ─────────────────────────────────────────────────────────────────────────────
+class _ReservaCreatedDialog extends StatefulWidget {
+  final Reserva reserva;
+  const _ReservaCreatedDialog({required this.reserva});
+
+  @override
+  State<_ReservaCreatedDialog> createState() => _ReservaCreatedDialogState();
+}
+
+class _ReservaCreatedDialogState extends State<_ReservaCreatedDialog> {
+  bool _copied = false;
+
+  void _copyLink() {
+    final link = widget.reserva.seleccionLink ?? '';
+    Clipboard.setData(ClipboardData(text: link));
+    setState(() => _copied = true);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
+  void _openLink() {
+    final link = widget.reserva.seleccionLink ?? '';
+    if (link.isNotEmpty) webLib.window.open(link, '_blank', '');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.reserva;
+    final nombreResponsable = r.responsable?.nombre ?? 'Sin nombre';
+    final documento = '${r.responsable?.documento ?? ''}'.trim();
+    final tourNombre = r.tour?.name ?? 'Tour';
+    final link = r.seleccionLink ?? '';
+
+    return Dialog(
+      backgroundColor: SaasPalette.bgCanvas,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: SaasPalette.success.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_circle_rounded,
+                  color: SaasPalette.success,
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '¡Reserva Creada!',
+                style: TextStyle(
+                  color: SaasPalette.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                r.idReserva ?? '',
+                style: const TextStyle(
+                  color: SaasPalette.textTertiary,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: SaasPalette.bgSubtle,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: SaasPalette.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _DialogInfoRow(
+                      icon: Icons.person_outline_rounded,
+                      label: 'Responsable',
+                      value: nombreResponsable,
+                    ),
+                    const SizedBox(height: 8),
+                    _DialogInfoRow(
+                      icon: Icons.badge_outlined,
+                      label: 'Documento',
+                      value: documento.isEmpty ? 'N/A' : documento,
+                      copiable: documento.isNotEmpty,
+                    ),
+                    const SizedBox(height: 8),
+                    _DialogInfoRow(
+                      icon: Icons.tour_outlined,
+                      label: 'Tour',
+                      value: tourNombre,
+                    ),
+                    if (r.asientosBus.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.event_seat_rounded,
+                            size: 14,
+                            color: SaasPalette.textTertiary,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Asientos: ',
+                            style: TextStyle(
+                              color: SaasPalette.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Flexible(
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: r.asientosBus
+                                  .map(
+                                    (asiento) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: SaasPalette.brand600.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: SaasPalette.brand600
+                                              .withValues(alpha: 0.4),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        asiento,
+                                        style: const TextStyle(
+                                          color: SaasPalette.brand600,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (link.isNotEmpty) ...[
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Link de Selección de Asientos',
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: SaasPalette.brand50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: SaasPalette.brand600.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.link_rounded,
+                        color: SaasPalette.brand600,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          link,
+                          style: const TextStyle(
+                            color: SaasPalette.brand600,
+                            fontSize: 12,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: Icon(
+                          _copied ? Icons.check_rounded : Icons.copy_rounded,
+                          size: 16,
+                        ),
+                        label: Text(_copied ? 'Copiado' : 'Copiar link'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _copied
+                              ? SaasPalette.success
+                              : SaasPalette.brand600,
+                          side: BorderSide(
+                            color: _copied
+                                ? SaasPalette.success
+                                : SaasPalette.brand600,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: _copyLink,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                        label: const Text('Abrir link'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: SaasPalette.brand600,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: _openLink,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Cerrar',
+                    style: TextStyle(color: SaasPalette.textTertiary),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DialogInfoRow extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool copiable;
+
+  const _DialogInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.copiable = false,
+  });
+
+  @override
+  State<_DialogInfoRow> createState() => _DialogInfoRowState();
+}
+
+class _DialogInfoRowState extends State<_DialogInfoRow> {
+  bool _copied = false;
+
+  void _copy() {
+    Clipboard.setData(ClipboardData(text: widget.value));
+    setState(() => _copied = true);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(widget.icon, size: 14, color: SaasPalette.textTertiary),
+        const SizedBox(width: 8),
+        Text(
+          '${widget.label}: ',
+          style: const TextStyle(
+            color: SaasPalette.textSecondary,
+            fontSize: 13,
+          ),
+        ),
+        Flexible(
+          child: Text(
+            widget.value,
+            style: const TextStyle(
+              color: SaasPalette.textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (widget.copiable) ...[
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: _copy,
+            child: Tooltip(
+              message: _copied ? 'Copiado' : 'Copiar',
+              child: Icon(
+                _copied ? Icons.check_rounded : Icons.copy_rounded,
+                size: 14,
+                color: _copied ? SaasPalette.success : SaasPalette.textTertiary,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

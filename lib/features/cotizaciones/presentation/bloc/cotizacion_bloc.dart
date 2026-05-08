@@ -21,6 +21,8 @@ class CotizacionBloc extends Bloc<CotizacionEvent, CotizacionState> {
     on<UpdateEstadoCotizacion>(_onUpdateEstadoCotizacion);
     on<UpdateCotizacion>(_onUpdateCotizacion);
     on<DeleteCotizacion>(_onDeleteCotizacion);
+    on<DeleteRespuestaCotizacion>(_onDeleteRespuestaCotizacion);
+    on<ToggleAncladaRespuesta>(_onToggleAncladaRespuesta);
   }
 
   Future<void> _onLoadPendingCotizaciones(
@@ -181,6 +183,46 @@ class CotizacionBloc extends Bloc<CotizacionEvent, CotizacionState> {
       }
     } catch (e) {
       emit(CotizacionError(e.toString()));
+    }
+  }
+
+  Future<void> _onToggleAncladaRespuesta(
+    ToggleAncladaRespuesta event,
+    Emitter<CotizacionState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is! CotizacionLoaded) return;
+    // Optimistic update
+    final updated = currentState.allRespuestas.map((r) {
+      return r.id == event.id ? r.copyWith(anclada: event.anclada) : r;
+    }).toList();
+    emit(currentState.copyWith(allRespuestas: updated));
+    try {
+      await respuestaRepository.toggleAnclada(event.id, anclada: event.anclada);
+    } catch (e) {
+      // Revert on error
+      emit(currentState);
+    }
+  }
+
+  Future<void> _onDeleteRespuestaCotizacion(
+    DeleteRespuestaCotizacion event,
+    Emitter<CotizacionState> emit,
+  ) async {
+    final currentState = state;
+    try {
+      await respuestaRepository.deleteRespuesta(event.id);
+      if (currentState is CotizacionLoaded) {
+        final updatedRespuestas = currentState.allRespuestas
+            .where((r) => r.id != event.id)
+            .toList();
+        emit(currentState.copyWith(allRespuestas: updatedRespuestas));
+      } else {
+        add(const LoadAllData());
+      }
+    } catch (e) {
+      emit(CotizacionError(e.toString()));
+      if (currentState is CotizacionLoaded) emit(currentState);
     }
   }
 }

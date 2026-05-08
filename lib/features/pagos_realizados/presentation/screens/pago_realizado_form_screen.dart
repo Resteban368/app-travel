@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 // ignore: avoid_web_libraries_in_flutter
@@ -106,7 +107,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ReservaBloc>().add(const LoadReservas(limit: 200));
+      context.read<ReservaBloc>().add(const LoadReservas(limit: 20));
     });
 
     _entryCtrl = AnimationController(
@@ -235,7 +236,6 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
 
   // Número completo con indicativo (+XX...), ej: +573142266528
   String get _fullChatId => '$_countryCode${_chatIdCtrl.text.trim()}';
-
 
   Future<void> _pickFechaDocumento() async {
     final picked = await showDatePicker(
@@ -730,10 +730,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         List<Reserva> reservas = [];
         if (state is ReservaLoaded) reservas = state.reservas;
 
-        if (state is ReservaLoaded &&
-            _selectedReservaId != null &&
-            _reservaSearchCtrl.text.startsWith('Reserva #')) {
-          final match = reservas.firstWhere(
+        Reserva? selectedReserva;
+        if (state is ReservaLoaded && _selectedReservaId != null) {
+          selectedReserva = reservas.firstWhere(
             (r) => int.tryParse(r.id ?? '') == _selectedReservaId,
             orElse: () => Reserva(
               id: '',
@@ -747,20 +746,22 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               serviciosIds: [],
             ),
           );
-          if (match.id?.isNotEmpty == true) {
-            final responsable = match.integrantes.isNotEmpty
-                ? match.integrantes.firstWhere(
+          if (selectedReserva.id?.isNotEmpty == true) {
+            final responsable = selectedReserva.integrantes.isNotEmpty
+                ? selectedReserva.integrantes.firstWhere(
                     (i) => i.esResponsable,
-                    orElse: () => match.integrantes.first,
+                    orElse: () => selectedReserva!.integrantes.first,
                   )
                 : null;
             final lbl =
-                '${match.idReserva ?? 'Reserva #$_selectedReservaId'} - ${responsable?.nombre ?? match.correo}';
-            if (_reservaSearchCtrl.text != lbl) {
+                '${selectedReserva.idReserva ?? 'Reserva #$_selectedReservaId'} - ${responsable?.nombre ?? selectedReserva.correo}';
+            if (_reservaSearchCtrl.text != lbl && !_reservaSearchCtrl.text.contains(' - ')) {
               WidgetsBinding.instance.addPostFrameCallback(
                 (_) => setState(() => _reservaSearchCtrl.text = lbl),
               );
             }
+          } else {
+            selectedReserva = null;
           }
         }
 
@@ -769,7 +770,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         Future<void> openPicker() async {
           final result = await showDialog<Reserva>(
             context: context,
-            builder: (_) => _ReservaPickerDialog(reservas: reservas),
+            builder: (_) => const _ReservaPickerDialog(),
           );
           if (result != null) {
             final parsed = int.tryParse(result.id ?? '');
@@ -779,9 +780,12 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               _reservaSearchCtrl.text =
                   '${result.idReserva ?? 'Reserva #${result.id}'} - ${responsable?.nombre ?? result.correo}';
               if (responsable != null && (responsable.telefono).isNotEmpty) {
-                final p = parsePhone(responsable.telefono);
-                _countryCode = p.$1;
-                _chatIdCtrl.text = p.$2;
+                // Solo sobreescribimos si el campo de teléfono está vacío
+                if (_chatIdCtrl.text.trim().isEmpty) {
+                  final p = parsePhone(responsable.telefono);
+                  _countryCode = p.$1;
+                  _chatIdCtrl.text = p.$2;
+                }
               }
             });
           }
@@ -850,6 +854,15 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                               fontSize: 11,
                             ),
                           ),
+                          if (selectedReserva?.responsable?.documento != null)
+                            Text(
+                              'Documento: ${selectedReserva!.responsable!.documento}',
+                              style: const TextStyle(
+                                color: SaasPalette.textSecondary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -1611,8 +1624,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
 // ─── Reserva Picker Dialog ───────────────────────────────────────────────────
 
 class _ReservaPickerDialog extends StatefulWidget {
-  final List<Reserva> reservas;
-  const _ReservaPickerDialog({required this.reservas});
+  const _ReservaPickerDialog();
 
   @override
   State<_ReservaPickerDialog> createState() => _ReservaPickerDialogState();
@@ -1620,42 +1632,52 @@ class _ReservaPickerDialog extends StatefulWidget {
 
 class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
   final _searchCtrl = TextEditingController();
-  List<Reserva> _filtered = [];
+  final _scrollCtrl = ScrollController();
+  Timer? _debounce;
+  int _currentPage = 1;
 
   @override
   void initState() {
     super.initState();
-    _filtered = widget.reservas;
-    _searchCtrl.addListener(_onSearch);
+    _searchCtrl.addListener(_onSearchChanged);
+    _scrollCtrl.addListener(_onScroll);
+
+    // Al abrir el picker, reiniciamos la búsqueda para asegurarnos de tener datos frescos
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ReservaBloc>().add(const LoadReservas(page: 1, search: ''));
+    });
   }
 
-  void _onSearch() {
-    final q = _searchCtrl.text.toLowerCase().trim();
-    setState(() {
-      _filtered = q.isEmpty
-          ? widget.reservas
-          : widget.reservas.where((r) {
-              final id = (r.idReserva ?? r.id ?? '').toLowerCase();
-              final correo = r.correo.toLowerCase();
-              final responsable = r.integrantes.isNotEmpty
-                  ? r.integrantes
-                        .firstWhere(
-                          (i) => i.esResponsable,
-                          orElse: () => r.integrantes.first,
-                        )
-                        .nombre
-                        .toLowerCase()
-                  : '';
-              return id.contains(q) ||
-                  correo.contains(q) ||
-                  responsable.contains(q);
-            }).toList();
+  void _onSearchChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _currentPage = 1;
+      context.read<ReservaBloc>().add(
+        LoadReservas(page: _currentPage, search: _searchCtrl.text.trim()),
+      );
     });
+  }
+
+  void _onScroll() {
+    if (_scrollCtrl.position.pixels >=
+        _scrollCtrl.position.maxScrollExtent - 200) {
+      final state = context.read<ReservaBloc>().state;
+      if (state is ReservaLoaded &&
+          !state.hasReachedMax &&
+          state is! ReservaLoading) {
+        _currentPage++;
+        context.read<ReservaBloc>().add(
+          LoadReservas(page: _currentPage, search: _searchCtrl.text.trim()),
+        );
+      }
+    }
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchCtrl.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
@@ -1671,231 +1693,349 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
-        decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: SaasPalette.border),
-        ),
-        child: Column(
-          children: [
-            // Gradient header
-            Container(
-              padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [SaasPalette.brand600, SaasPalette.brand900],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.airplane_ticket_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Seleccionar Reserva',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          '${widget.reservas.length} reservas disponibles',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
+    return BlocBuilder<ReservaBloc, ReservaState>(
+      builder: (context, state) {
+        List<Reserva> reservas = [];
+        bool isLoading = state is ReservaLoading;
+        bool hasMore = false;
+
+        if (state is ReservaLoaded) {
+          reservas = state.reservas;
+          hasMore = !state.hasReachedMax;
+        }
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 40,
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 620, maxHeight: 660),
+            decoration: BoxDecoration(
+              color: SaasPalette.bgCanvas,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: SaasPalette.border),
+            ),
+            child: Column(
+              children: [
+                // Gradient header
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [SaasPalette.brand600, SaasPalette.brand900],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      color: Colors.white70,
-                      size: 20,
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-            ),
-            // Search field
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-              child: TextField(
-                controller: _searchCtrl,
-                autofocus: true,
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
-                  fontSize: 14,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Buscar por ID, correo o responsable...',
-                  hintStyle: const TextStyle(
-                    color: SaasPalette.textTertiary,
-                    fontSize: 13,
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.search_rounded,
-                    color: SaasPalette.textTertiary,
-                    size: 18,
-                  ),
-                  filled: true,
-                  fillColor: SaasPalette.bgSubtle,
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: SaasPalette.border),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: SaasPalette.brand600),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                ),
-              ),
-            ),
-            // Results count
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '${_filtered.length} resultado${_filtered.length != 1 ? 's' : ''}',
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-            ),
-            // List
-            Expanded(
-              child: _filtered.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.search_off_rounded,
-                            color: SaasPalette.textTertiary,
-                            size: 40,
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Sin resultados',
-                            style: TextStyle(
-                              color: SaasPalette.textSecondary,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.airplane_ticket_rounded,
+                        color: Colors.white,
+                        size: 20,
                       ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Seleccionar Reserva',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              isLoading
+                                  ? 'Buscando...'
+                                  : '${reservas.length} reservas encontradas',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white70,
+                          size: 20,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+                // Search field
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: TextField(
+                    controller: _searchCtrl,
+                    autofocus: true,
+                    style: const TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 14,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por ID, correo o responsable...',
+                      hintStyle: const TextStyle(
+                        color: SaasPalette.textTertiary,
+                        fontSize: 13,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        color: SaasPalette.textTertiary,
+                        size: 18,
+                      ),
+                      suffixIcon: isLoading
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: SaasPalette.brand600,
+                                ),
+                              ),
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: SaasPalette.bgSubtle,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: SaasPalette.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: SaasPalette.brand600,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 4,
+                        vertical: 12,
                       ),
-                      itemCount: _filtered.length,
-                      separatorBuilder: (context, i) =>
-                          const SizedBox(height: 6),
-                      itemBuilder: (_, index) {
-                        final r = _filtered[index];
-                        final responsable = r.responsable?.nombre;
-                        final label = r.idReserva ?? 'Reserva #${r.id}';
-                        return Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(10),
-                            onTap: () => Navigator.pop(context, r),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: SaasPalette.bgSubtle,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: SaasPalette.border),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 5,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: SaasPalette.brand50,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      label,
-                                      style: const TextStyle(
-                                        color: SaasPalette.brand600,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      responsable ?? 'Sin responsable',
-                                      style: const TextStyle(
-                                        color: SaasPalette.textPrimary,
-                                        fontSize: 13,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  Text(
-                                    r.estado,
-                                    style: TextStyle(
-                                      color: _estadoColor(r.estado),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
                     ),
+                  ),
+                ),
+                // Results count
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 6,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${reservas.length} resultado${reservas.length != 1 ? 's' : ''}',
+                      style: const TextStyle(
+                        color: SaasPalette.textTertiary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ),
+                // List
+                Expanded(
+                  child: (reservas.isEmpty && !isLoading)
+                      ? const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.search_off_rounded,
+                                color: SaasPalette.textTertiary,
+                                size: 40,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Sin resultados',
+                                style: TextStyle(
+                                  color: SaasPalette.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.separated(
+                          controller: _scrollCtrl,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          itemCount: reservas.length + (hasMore ? 1 : 0),
+                          separatorBuilder: (context, i) =>
+                              const SizedBox(height: 6),
+                          itemBuilder: (_, index) {
+                            if (index >= reservas.length) {
+                              return const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: SaasPalette.brand600,
+                                  ),
+                                ),
+                              );
+                            }
+                            final r = reservas[index];
+                            final responsable = r.responsable?.nombre;
+                            final label = r.idReserva ?? 'Reserva #${r.id}';
+                            return Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(10),
+                                onTap: () => Navigator.pop(context, r),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: SaasPalette.bgSubtle,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: SaasPalette.border,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 5,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: SaasPalette.brand50,
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          label,
+                                          style: const TextStyle(
+                                            color: SaasPalette.brand600,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.person,
+                                                  size: 13,
+                                                  color: SaasPalette.brand600,
+                                                ),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  responsable ??
+                                                      'Sin responsable',
+                                                  style: const TextStyle(
+                                                    color:
+                                                        SaasPalette.textPrimary,
+                                                    fontSize: 13,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.tour,
+                                                  size: 13,
+                                                  color: SaasPalette.brand600,
+                                                ),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  r.tour?.name ?? 'Sin tour',
+                                                  style: const TextStyle(
+                                                    color:
+                                                        SaasPalette.textPrimary,
+                                                    fontSize: 13,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.date_range,
+                                                  size: 13,
+                                                  color: SaasPalette.brand600,
+                                                ),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  //ponemos la fecga en formato dd/MM/yyyy
+                                                  DateFormat(
+                                                    'dd/MM/yyyy',
+                                                  ).format(
+                                                    r.tour?.startDate ??
+                                                        DateTime.now(),
+                                                  ),
+                                                  style: const TextStyle(
+                                                    color:
+                                                        SaasPalette.textPrimary,
+                                                    fontSize: 13,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Text(
+                                        r.estado,
+                                        style: TextStyle(
+                                          color: _estadoColor(r.estado),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                const SizedBox(height: 12),
+              ],
             ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
 
 // ─── WhatsApp Dialog ──────────────────────────────────────────────────────────
-
 
 class _PremiumWhatsAppDialog extends StatefulWidget {
   final TextEditingController messageCtrl;

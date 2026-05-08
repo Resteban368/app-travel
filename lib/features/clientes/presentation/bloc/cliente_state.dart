@@ -14,10 +14,17 @@ class ClienteLoading extends ClienteState {}
 
 class ClienteLoaded extends ClienteState {
   final List<Cliente> clientes;
-  const ClienteLoaded(this.clientes);
+  final int page;
+  final bool hasReachedMax;
+
+  const ClienteLoaded(
+    this.clientes, {
+    this.page = 1,
+    this.hasReachedMax = false,
+  });
 
   @override
-  List<Object?> get props => [clientes];
+  List<Object?> get props => [clientes, page, hasReachedMax];
 }
 
 class ClienteSaving extends ClienteState {

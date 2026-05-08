@@ -73,6 +73,11 @@ const _modules = [
     icon: Icons.request_quote_rounded,
   ),
   _Module(key: 'clientes', label: 'Clientes', icon: Icons.people_rounded),
+  _Module(
+    key: 'bus_layouts',
+    label: 'Layouts de Bus',
+    icon: Icons.directions_bus_rounded,
+  ),
 ];
 
 // ─── Screen ──────────────────────────────────────────────────────────────────

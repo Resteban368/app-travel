@@ -91,6 +91,8 @@ class ApiTourRepository implements TourRepository {
       Uri.parse('$_baseUrl/$id/detalle'),
       headers: _headers,
     );
+    print('$_baseUrl/$id/detalle');
+    print('Respuesta $_baseUrl/$id/detalle ${response.body}');
     if (response.statusCode == 200) {
       return TourDetalle.fromJson(json.decode(response.body));
     }
@@ -133,6 +135,7 @@ class ApiTourRepository implements TourRepository {
             ),
           )
           .toList(),
+      imageUrl: json['url_imagen'],
       sedeId: json['sede_id']?.toString(),
       isPromotion: json['es_promocion'] ?? false,
       isActive: json['is_active'] ?? true,
@@ -146,6 +149,10 @@ class ApiTourRepository implements TourRepository {
           : null,
       precios: (json['precios'] as List? ?? [])
           .map((p) => TourPrecio.fromJson(p as Map<String, dynamic>))
+          .toList(),
+      busLayoutIds: (json['bus_layout_ids'] as List? ?? [])
+          .map((e) => int.tryParse(e.toString()) ?? 0)
+          .where((e) => e != 0)
           .toList(),
     );
   }
@@ -177,8 +184,10 @@ class ApiTourRepository implements TourRepository {
       'es_promocion': tour.isPromotion,
       'is_active': tour.isActive,
       'es_borrador': tour.isDraft,
+      'url_imagen': tour.imageUrl,
       'precio_por_pareja': tour.precioPorPareja,
       if (tour.cupos != null) 'cupos': tour.cupos,
+      'bus_layout_ids': tour.busLayoutIds,
     };
   }
 }

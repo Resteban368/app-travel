@@ -1,4 +1,5 @@
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
+import 'package:agente_viajes/core/widgets/dialog_loading_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +11,10 @@ import '../../domain/entities/tour.dart';
 import '../../domain/entities/tour_precio.dart';
 import '../../../../features/settings/domain/entities/sede.dart';
 import '../../../../features/settings/presentation/bloc/sede_bloc.dart';
+import '../../../../features/bus_layouts/domain/entities/bus_layout.dart';
+import '../../../../features/bus_layouts/presentation/bloc/bus_layout_bloc.dart';
+import '../../../../features/bus_layouts/presentation/bloc/bus_layout_event.dart';
+import '../../../../features/bus_layouts/presentation/bloc/bus_layout_state.dart';
 import '../bloc/tour_bloc.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 
@@ -36,6 +41,7 @@ class _TourFormScreenState extends State<TourFormScreen>
 
   DateTimeRange? _dateRange;
   String? _selectedSedeId;
+  List<int> _selectedBusLayoutIds = [];
   bool _isPromotion = false;
   bool _isActive = true;
   bool _precioPorPareja = false;
@@ -46,6 +52,7 @@ class _TourFormScreenState extends State<TourFormScreen>
   bool _preciosModificados = false;
   final _inclusionCtrl = TextEditingController();
   final _exclusionCtrl = TextEditingController();
+  bool _isLoadingFullData = false;
 
   late final AnimationController _entryCtrl;
   late final Animation<double> _fade;
@@ -57,9 +64,7 @@ class _TourFormScreenState extends State<TourFormScreen>
     super.initState();
     final t = widget.tour;
     _nameCtrl = TextEditingController(text: t?.name ?? '');
-    _agencyCtrl = TextEditingController(
-      text: t?.agency ?? 'Travel Tours Florencia',
-    );
+    _agencyCtrl = TextEditingController(text: t?.agency ?? 'Agente Viajes');
     _priceCtrl = TextEditingController(text: t?.price.toInt().toString() ?? '');
     _departurePointCtrl = TextEditingController(text: t?.departurePoint ?? '');
     _departureTimeCtrl = TextEditingController(text: t?.departureTime ?? '');
@@ -70,6 +75,7 @@ class _TourFormScreenState extends State<TourFormScreen>
     if (t != null) {
       _dateRange = DateTimeRange(start: t.startDate, end: t.endDate);
       _selectedSedeId = t.sedeId;
+      _selectedBusLayoutIds = List<int>.from(t.busLayoutIds);
       _isPromotion = t.isPromotion;
       _isActive = t.isActive;
       _precioPorPareja = t.precioPorPareja;
@@ -88,6 +94,44 @@ class _TourFormScreenState extends State<TourFormScreen>
       end: 1,
     ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut));
     _entryCtrl.forward();
+
+    if (_isEditing) {
+      _isLoadingFullData = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const DialogLoadingNetwork(
+            titel: 'Cargando información del tour...',
+          ),
+        );
+        context.read<TourBloc>().add(GetTourDetail(widget.tour!.id));
+      });
+    }
+  }
+
+  void _updateFieldsFromTour(Tour t) {
+    _nameCtrl.text = t.name;
+    _agencyCtrl.text = t.agency;
+    _priceCtrl.text = t.price.toInt().toString();
+    _departurePointCtrl.text = t.departurePoint;
+    _departureTimeCtrl.text = t.departureTime;
+    _arrivalCtrl.text = t.arrival;
+    _pdfLinkCtrl.text = t.pdfLink;
+    _idTourCtrl.text = t.idTour.toString();
+    _cuposCtrl.text = t.cupos?.toString() ?? '';
+
+    _dateRange = DateTimeRange(start: t.startDate, end: t.endDate);
+    _selectedSedeId = t.sedeId;
+    _selectedBusLayoutIds = List<int>.from(t.busLayoutIds);
+    _isPromotion = t.isPromotion;
+    _isActive = t.isActive;
+    _precioPorPareja = t.precioPorPareja;
+    _inclusions = List.from(t.inclusions);
+    _exclusions = List.from(t.exclusions);
+    _itinerary = List.from(t.itinerary);
+    _precios = List.from(t.precios);
+    _isLoadingFullData = false;
   }
 
   @override
@@ -205,6 +249,12 @@ class _TourFormScreenState extends State<TourFormScreen>
       return;
     }
 
+    //BUS LAYOUT
+    if (_selectedBusLayoutIds.isEmpty) {
+      SaasSnackBar.showWarning(context, 'Debes asignar al menos un bus');
+      return;
+    }
+
     final tour = Tour(
       id: _isEditing
           ? widget.tour!.id
@@ -231,6 +281,7 @@ class _TourFormScreenState extends State<TourFormScreen>
       precioPorPareja: _precioPorPareja,
       cupos: int.tryParse(_cuposCtrl.text.trim()),
       precios: _precios,
+      busLayoutIds: _selectedBusLayoutIds,
     );
 
     if (_isEditing) {
@@ -251,13 +302,25 @@ class _TourFormScreenState extends State<TourFormScreen>
 
     return BlocListener<TourBloc, TourState>(
       listener: (context, state) {
+        if (state is TourDetailLoaded) {
+          Navigator.of(context, rootNavigator: true).pop();
+          setState(() => _updateFieldsFromTour(state.tour));
+        } else if (state is TourError && _isLoadingFullData) {
+          Navigator.of(context, rootNavigator: true).pop();
+          setState(() => _isLoadingFullData = false);
+          SaasSnackBar.showError(
+            context,
+            'Error al cargar detalle: ${state.message}',
+          );
+        }
+
         if (state is TourSaved) {
           SaasSnackBar.showSuccess(
             context,
             'Experiencia guardada exitosamente',
           );
           Navigator.pop(context);
-        } else if (state is TourError) {
+        } else if (state is TourError && !_isLoadingFullData) {
           SaasSnackBar.showError(context, state.message);
         }
       },
@@ -314,6 +377,8 @@ class _TourFormScreenState extends State<TourFormScreen>
                                   ),
                                   const SizedBox(height: 20),
                                   _buildSedeDropdown(canWrite: canWrite),
+                                  const SizedBox(height: 20),
+                                  _buildBusLayoutDropdown(canWrite: canWrite),
                                 ],
                               ),
                               const SizedBox(height: 20),
@@ -459,6 +524,16 @@ class _TourFormScreenState extends State<TourFormScreen>
                 ),
               ],
             ),
+            BlocBuilder<TourBloc, TourState>(
+              builder: (context, state) {
+                if (state is TourSaving) {
+                  return const DialogLoadingNetwork(
+                    titel: 'Guardando cambios...',
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
           ],
         ),
       ),
@@ -506,7 +581,8 @@ class _TourFormScreenState extends State<TourFormScreen>
           const SizedBox(height: 16),
           if (_precios.isEmpty)
             const PremiumEmptyIndicator(
-              msg: 'Opcional — agrega categorías de precio por edad o punto de salida.',
+              msg:
+                  'Opcional — agrega categorías de precio por edad o punto de salida.',
               icon: Icons.local_offer_rounded,
             )
           else
@@ -567,7 +643,10 @@ class _TourFormScreenState extends State<TourFormScreen>
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(Icons.close_rounded, color: SaasPalette.textTertiary),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: SaasPalette.textTertiary,
+                      ),
                     ),
                   ],
                 ),
@@ -645,12 +724,15 @@ class _TourFormScreenState extends State<TourFormScreen>
                     ),
                     onPressed: () {
                       if (descCtrl.text.trim().isEmpty ||
-                          precioCtrl.text.trim().isEmpty) return;
+                          precioCtrl.text.trim().isEmpty)
+                        return;
                       final nuevo = TourPrecio(
                         descripcion: descCtrl.text.trim(),
-                        precio: double.tryParse(
-                          precioCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
-                        ) ?? 0,
+                        precio:
+                            double.tryParse(
+                              precioCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+                            ) ??
+                            0,
                         edadMin: int.tryParse(edadMinCtrl.text.trim()),
                         edadMax: int.tryParse(edadMaxCtrl.text.trim()),
                         puntoPartida: puntoCtrl.text.trim().isEmpty
@@ -666,7 +748,10 @@ class _TourFormScreenState extends State<TourFormScreen>
                     },
                     child: const Text(
                       'AGREGAR',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -791,6 +876,124 @@ class _TourFormScreenState extends State<TourFormScreen>
                       color: SaasPalette.textTertiary,
                       fontSize: 13,
                     ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildBusLayoutDropdown({required bool canWrite}) {
+    return BlocProvider(
+      create: (_) => sl<BusLayoutBloc>()..add(const LoadBusLayouts()),
+      child: BlocBuilder<BusLayoutBloc, BusLayoutState>(
+        builder: (context, state) {
+          final layouts = state is BusLayoutLoaded
+              ? state.layouts
+              : <BusLayout>[];
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'BUSES ASIGNADOS *',
+                style: TextStyle(
+                  color: SaasPalette.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: SaasPalette.bgCanvas,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: SaasPalette.border),
+                ),
+                child: state is BusLayoutLoading
+                    ? const SizedBox(
+                        height: 36,
+                        child: Center(
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      )
+                    : Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          ...layouts.map((l) {
+                            final isSelected = _selectedBusLayoutIds.contains(
+                              l.id,
+                            );
+                            return FilterChip(
+                              label: Text(
+                                '${l.nombre} (${l.totalAsientosCliente})',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : SaasPalette.textPrimary,
+                                ),
+                              ),
+                              avatar: Icon(
+                                Icons.directions_bus_rounded,
+                                size: 15,
+                                color: isSelected
+                                    ? Colors.white
+                                    : SaasPalette.brand600,
+                              ),
+                              selected: isSelected,
+                              selectedColor: SaasPalette.brand600,
+                              backgroundColor: SaasPalette.bgSubtle,
+                              checkmarkColor: Colors.white,
+                              showCheckmark: false,
+                              side: BorderSide(
+                                color: isSelected
+                                    ? SaasPalette.brand600
+                                    : SaasPalette.border,
+                              ),
+                              onSelected: canWrite
+                                  ? (val) {
+                                      if (l.id == null) return;
+                                      setState(() {
+                                        if (val) {
+                                          _selectedBusLayoutIds.add(l.id!);
+                                        } else {
+                                          _selectedBusLayoutIds.remove(l.id);
+                                        }
+                                      });
+                                    }
+                                  : null,
+                            );
+                          }),
+                          if (layouts.isEmpty)
+                            const Text(
+                              'No hay buses disponibles',
+                              style: TextStyle(
+                                color: SaasPalette.textTertiary,
+                                fontSize: 13,
+                              ),
+                            ),
+                        ],
+                      ),
+              ),
+              if (_selectedBusLayoutIds.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 4, left: 4),
+                  child: Text(
+                    'Selecciona al menos un bus',
+                    style: TextStyle(color: Colors.red, fontSize: 11),
                   ),
                 ),
             ],
@@ -1058,17 +1261,6 @@ class _TourFormScreenState extends State<TourFormScreen>
       context: context,
       firstDate: DateTime(2023),
       lastDate: DateTime(2030),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: SaasPalette.brand600,
-            onPrimary: Colors.white,
-            surface: SaasPalette.bgCanvas,
-            onSurface: SaasPalette.textPrimary,
-          ),
-        ),
-        child: child!,
-      ),
     );
     if (range != null) setState(() => _dateRange = range);
   }
@@ -1318,7 +1510,10 @@ class _PrecioCard extends StatelessWidget {
                     spacing: 6,
                     children: [
                       if (edadStr != null)
-                        _SmallBadge(label: edadStr, color: SaasPalette.brand600),
+                        _SmallBadge(
+                          label: edadStr,
+                          color: SaasPalette.brand600,
+                        ),
                       if (precio.puntoPartida != null)
                         _SmallBadge(
                           label: 'desde ${precio.puntoPartida}',
@@ -1371,11 +1566,7 @@ class _SmallBadge extends StatelessWidget {
     ),
     child: Text(
       label,
-      style: TextStyle(
-        color: color,
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-      ),
+      style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
     ),
   );
 }

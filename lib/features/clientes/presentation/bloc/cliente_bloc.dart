@@ -18,10 +18,35 @@ class ClienteBloc extends Bloc<ClienteEvent, ClienteState> {
     LoadClientes event,
     Emitter<ClienteState> emit,
   ) async {
-    emit(ClienteLoading());
+    final isFirstPage = event.page == 1;
+    
+    if (isFirstPage) {
+      emit(ClienteLoading());
+    }
+
     try {
-      final clientes = await repository.getClientes();
-      emit(ClienteLoaded(clientes));
+      final newClientes = await repository.getClientes(
+        search: event.search,
+        page: event.page,
+        limit: event.limit,
+      );
+
+      if (isFirstPage) {
+        emit(ClienteLoaded(
+          newClientes,
+          page: event.page,
+          hasReachedMax: newClientes.length < event.limit,
+        ));
+      } else {
+        if (state is ClienteLoaded) {
+          final current = state as ClienteLoaded;
+          emit(ClienteLoaded(
+            List.from(current.clientes)..addAll(newClientes),
+            page: event.page,
+            hasReachedMax: newClientes.length < event.limit,
+          ));
+        }
+      }
     } catch (e) {
       emit(ClienteError(e.toString()));
     }

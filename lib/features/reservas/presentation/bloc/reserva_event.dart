@@ -14,6 +14,7 @@ class LoadReservas extends ReservaEvent {
   final DateTime? startDate;
   final DateTime? endDate;
   final String? status;
+  final String? search;
 
   const LoadReservas({
     this.page = 1,
@@ -21,10 +22,11 @@ class LoadReservas extends ReservaEvent {
     this.startDate,
     this.endDate,
     this.status,
+    this.search,
   });
 
   @override
-  List<Object?> get props => [page, limit, startDate, endDate, status];
+  List<Object?> get props => [page, limit, startDate, endDate, status, search];
 }
 
 class CreateReserva extends ReservaEvent {

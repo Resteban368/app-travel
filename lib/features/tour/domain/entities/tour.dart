@@ -41,6 +41,7 @@ class Tour extends Equatable {
   final List<String> inclusions;
   final List<String> exclusions;
   final List<ItineraryDay> itinerary;
+  final String? imageUrl;
   final String? sedeId;
   final bool isPromotion;
   final bool isActive;
@@ -49,6 +50,7 @@ class Tour extends Equatable {
   final int? cupos;
   final int? cuposDisponibles;
   final List<TourPrecio> precios;
+  final List<int> busLayoutIds;
 
   const Tour({
     required this.id,
@@ -65,6 +67,7 @@ class Tour extends Equatable {
     required this.inclusions,
     required this.exclusions,
     required this.itinerary,
+    this.imageUrl,
     this.sedeId,
     this.isPromotion = false,
     this.isActive = true,
@@ -73,6 +76,7 @@ class Tour extends Equatable {
     this.cupos,
     this.cuposDisponibles,
     this.precios = const [],
+    this.busLayoutIds = const [],
   });
 
   Tour copyWith({
@@ -99,6 +103,7 @@ class Tour extends Equatable {
     int? cupos,
     int? cuposDisponibles,
     List<TourPrecio>? precios,
+    List<int>? busLayoutIds,
   }) {
     return Tour(
       id: id ?? this.id,
@@ -115,6 +120,7 @@ class Tour extends Equatable {
       inclusions: inclusions ?? this.inclusions,
       exclusions: exclusions ?? this.exclusions,
       itinerary: itinerary ?? this.itinerary,
+      imageUrl: imageUrl ?? this.imageUrl,
       sedeId: sedeId ?? this.sedeId,
       isPromotion: isPromotion ?? this.isPromotion,
       isActive: isActive ?? this.isActive,
@@ -123,6 +129,7 @@ class Tour extends Equatable {
       cupos: cupos ?? this.cupos,
       cuposDisponibles: cuposDisponibles ?? this.cuposDisponibles,
       precios: precios ?? this.precios,
+      busLayoutIds: busLayoutIds ?? this.busLayoutIds,
     );
   }
 
@@ -142,6 +149,7 @@ class Tour extends Equatable {
     inclusions,
     exclusions,
     itinerary,
+    imageUrl,
     sedeId,
     isPromotion,
     isActive,
@@ -150,5 +158,6 @@ class Tour extends Equatable {
     cupos,
     cuposDisponibles,
     precios,
+    busLayoutIds,
   ];
 }

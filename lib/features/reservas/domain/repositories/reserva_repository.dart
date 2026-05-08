@@ -9,9 +9,11 @@ abstract class ReservaRepository {
     DateTime? startDate,
     DateTime? endDate,
     String? status,
+    String? search,
   });
   Future<Reserva> getReservaById(String id);
-  Future<void> createReserva(Reserva reserva);
+  Future<Reserva> createReserva(Reserva reserva);
   Future<void> updateReserva(Reserva reserva);
   Future<List<Aerolinea>> getAerolineas();
+  Future<List<Map<String, dynamic>>> getBusesDisponibilidad(int tourId);
 }

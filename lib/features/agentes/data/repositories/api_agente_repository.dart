@@ -28,6 +28,7 @@ class ApiAgenteRepository implements AgenteRepository {
     'reservas': 24,
     'cotizacion': 12,
     'clientes': 25,
+    'bus_layouts': 26,
   };
 
   /// Convierte Map<moduloKey, nivel> → lista de objetos que espera el API

@@ -123,6 +123,10 @@ class ReservaPdfGenerator {
           if (reserva.tipoReserva == 'tour') ...[
             _buildTourSection(reserva, bold, regular, oblique),
             pw.SizedBox(height: 16),
+            if (reserva.asientosBus.isNotEmpty) ...[
+              _buildAsientosSection(reserva, bold, regular),
+              pw.SizedBox(height: 16),
+            ],
           ] else ...[
             _buildVuelosSection(reserva, bold, regular),
             pw.SizedBox(height: 16),
@@ -740,6 +744,80 @@ class ReservaPdfGenerator {
             ],
           ),
         ],
+      ],
+    );
+  }
+
+  // ─── Asientos de Bus ──────────────────────────────────────────────
+
+  static pw.Widget _buildAsientosSection(
+    Reserva reserva,
+    pw.Font bold,
+    pw.Font regular,
+  ) {
+    final asientos = reserva.asientosBus;
+
+    // Ordenar los asientos numéricamente si es posible
+    final asientosOrdenados = List<String>.from(asientos)
+      ..sort((a, b) {
+        final numA = int.tryParse(a);
+        final numB = int.tryParse(b);
+        if (numA != null && numB != null) return numA.compareTo(numB);
+        return a.compareTo(b);
+      });
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        _sectionTitle('Asientos Asignados en el Bus', bold),
+        _card(
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'Total de asientos: ${asientos.length}',
+                style: pw.TextStyle(
+                  font: bold,
+                  fontSize: 9,
+                  color: _textSecondary,
+                ),
+              ),
+              pw.SizedBox(height: 8),
+              pw.Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: asientosOrdenados
+                    .map(
+                      (asiento) => pw.Container(
+                        width: 36,
+                        height: 36,
+                        decoration: pw.BoxDecoration(
+                          color: _brandLight,
+                          borderRadius: const pw.BorderRadius.all(
+                            pw.Radius.circular(6),
+                          ),
+                          border: pw.Border.all(
+                            color: _brand,
+                            width: 0.8,
+                          ),
+                        ),
+                        child: pw.Center(
+                          child: pw.Text(
+                            asiento,
+                            style: pw.TextStyle(
+                              font: bold,
+                              fontSize: 10,
+                              color: _brandDark,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

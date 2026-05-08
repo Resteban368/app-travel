@@ -181,8 +181,11 @@ class _TourListScreenState extends State<TourListScreen> {
                   SaasButton(
                     label: isTab ? '' : 'Nuevo tour',
                     icon: Icons.add,
-                    onPressed: () =>
-                        Navigator.pushNamed(context, AppRouter.tourCreate),
+                    onPressed: () async {
+                      final bloc = context.read<TourBloc>();
+                      await Navigator.pushNamed(context, AppRouter.tourCreate);
+                      bloc.add(LoadTours());
+                    },
                   ),
               ],
             ),
@@ -329,7 +332,7 @@ class _TourListScreenState extends State<TourListScreen> {
               final range = await showDateRangePicker(
                 context: context,
                 firstDate: DateTime(2023),
-                lastDate: DateTime(2030),
+                lastDate: DateTime(DateTime.now().year + 2),
               );
               if (range != null) setState(() => _dateRange = range);
             },
@@ -492,8 +495,15 @@ class _TourRowState extends State<_TourRow> {
           ],
         ),
         child: InkWell(
-          onTap: () =>
-              Navigator.pushNamed(context, AppRouter.tourEdit, arguments: tour),
+          onTap: () async {
+            final bloc = context.read<TourBloc>();
+            await Navigator.pushNamed(
+              context,
+              AppRouter.tourEdit,
+              arguments: tour,
+            );
+            bloc.add(LoadTours());
+          },
           borderRadius: BorderRadius.circular(14),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

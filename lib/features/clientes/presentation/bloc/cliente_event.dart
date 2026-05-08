@@ -8,7 +8,15 @@ abstract class ClienteEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class LoadClientes extends ClienteEvent {}
+class LoadClientes extends ClienteEvent {
+  final String? search;
+  final int page;
+  final int limit;
+  const LoadClientes({this.search, this.page = 1, this.limit = 20});
+
+  @override
+  List<Object?> get props => [search, page, limit];
+}
 
 class CreateCliente extends ClienteEvent {
   final Cliente cliente;

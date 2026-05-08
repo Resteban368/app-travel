@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Corporate color palette for Travel Tours Florencia.
+/// Corporate color palette for Agente Viajes.
 class AppColors {
   AppColors._();
 

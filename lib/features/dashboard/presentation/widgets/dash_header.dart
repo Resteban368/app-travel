@@ -34,7 +34,7 @@ class DashHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Bienvenido al centro de operaciones de Travel Tours.',
+                  'Bienvenido al centro de operaciones de Agente Viajes.',
                   style: TextStyle(
                     color: SaasPalette.textSecondary,
                     fontSize: 14,

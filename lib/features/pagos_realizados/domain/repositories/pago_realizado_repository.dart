@@ -6,6 +6,7 @@ abstract class PagoRealizadoRepository {
   Future<PagedResult<PagoRealizado>> getPagos({
     int page = 1,
     int limit = 20,
+    String? search,
     DateTime? startDate,
     DateTime? endDate,
   });

@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../config/app_router.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
 import '../../domain/entities/cotizacion.dart';
+
 import '../../domain/repositories/respuesta_cotizacion_repository.dart';
 import '../bloc/cotizacion_bloc.dart';
 import '../bloc/cotizacion_event.dart';
@@ -360,6 +362,44 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
                                   ),
                                 ),
                               ),
+                              const SizedBox(height: 12),
+                              GestureDetector(
+                                onTap: _showPlantillaPicker,
+                                child: Container(
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Color(0xFF6366F1),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
+                                      SizedBox(width: 10),
+                                      Text(
+                                        'RESPONDER DESDE PLANTILLA',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          letterSpacing: 0.8,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ],
                             if (widget.cotizacion?.respuestaCotizacionId != null) ...[
                               const SizedBox(height: 16),
@@ -395,9 +435,10 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
           child: CircularProgressIndicator(color: SaasPalette.brand600),
         ),
       );
+      await Future.delayed(const Duration(milliseconds: 150));
       dialogShown = true;
 
-      final repository = context.read<RespuestaCotizacionRepository>();
+      final repository = sl<RespuestaCotizacionRepository>();
       final respuestas = await repository.getRespuestasByCotizacion(
         widget.cotizacion!.id,
       );
@@ -438,6 +479,15 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
         );
       }
     }
+  }
+
+  Future<void> _showPlantillaPicker() async {
+    await Navigator.pushNamed(
+      context,
+      AppRouter.cotizacionResponder,
+      arguments: widget.cotizacion,
+    );
+    if (mounted) Navigator.pop(context);
   }
 }
 
@@ -670,3 +720,5 @@ class _DatePickerPremium extends StatelessWidget {
     );
   }
 }
+
+

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:agente_viajes/core/theme/saas_palette.dart';
 import 'package:agente_viajes/core/widgets/saas_ui_components.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +28,10 @@ class _ClienteListScreenState extends State<ClienteListScreen>
   late final Animation<double> _contentOpacity;
 
   final _searchCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
   String _searchQuery = '';
+  Timer? _debounce;
+  int _currentPage = 1;
 
   @override
   void initState() {
@@ -62,7 +66,8 @@ class _ClienteListScreenState extends State<ClienteListScreen>
       ),
     );
 
-    context.read<ClienteBloc>().add(LoadClientes());
+    _scrollCtrl.addListener(_onScroll);
+    _loadFirstPage();
     _entryCtrl.forward();
   }
 
@@ -71,7 +76,53 @@ class _ClienteListScreenState extends State<ClienteListScreen>
     _bgCtrl.dispose();
     _entryCtrl.dispose();
     _searchCtrl.dispose();
+    _scrollCtrl.dispose();
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isBottom && !(_debounce?.isActive ?? false)) {
+      final state = context.read<ClienteBloc>().state;
+      if (state is ClienteLoaded && !state.hasReachedMax) {
+        _loadNextPage();
+      }
+    }
+  }
+
+  bool get _isBottom {
+    if (!_scrollCtrl.hasClients) return false;
+    final maxScroll = _scrollCtrl.position.maxScrollExtent;
+    final currentScroll = _scrollCtrl.offset;
+    return currentScroll >= (maxScroll * 0.9);
+  }
+
+  void _loadFirstPage() {
+    _currentPage = 1;
+    context.read<ClienteBloc>().add(
+      LoadClientes(
+        search: _searchQuery.isEmpty ? null : _searchQuery,
+        page: _currentPage,
+      ),
+    );
+  }
+
+  void _loadNextPage() {
+    _currentPage++;
+    context.read<ClienteBloc>().add(
+      LoadClientes(
+        search: _searchQuery.isEmpty ? null : _searchQuery,
+        page: _currentPage,
+      ),
+    );
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() => _searchQuery = value);
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _loadFirstPage();
+    });
   }
 
   @override
@@ -89,7 +140,9 @@ class _ClienteListScreenState extends State<ClienteListScreen>
                   ),
                 );
               } else if (state is ClienteActionSuccess) {
-                context.read<ClienteBloc>().add(LoadClientes());
+                context.read<ClienteBloc>().add(
+                  LoadClientes(search: _searchQuery.isEmpty ? null : _searchQuery),
+                );
               }
             },
             builder: (context, state) {
@@ -124,30 +177,53 @@ class _ClienteListScreenState extends State<ClienteListScreen>
                     child: SaasSearchField(
                       controller: _searchCtrl,
                       hintText: 'Buscar clientes',
-                      onChanged: (v) => setState(() => _searchQuery = v),
+                      onChanged: _onSearchChanged,
                       onClear: () {
                         _searchCtrl.clear();
-                        setState(() => _searchQuery = '');
+                        _onSearchChanged('');
                       },
                     ),
                   ),
                   const SizedBox(height: 12),
                   Expanded(
                     child: CustomScrollView(
+                      controller: _scrollCtrl,
                       physics: const BouncingScrollPhysics(),
                       slivers: [
-                        SliverFadeTransition(
-                          opacity: _contentOpacity,
-                          sliver: _buildContent(
-                            context,
-                            state,
-                            clientes,
-                            canWrite,
+                        if (state is ClienteLoading && (clientes == null || clientes.isEmpty))
+                          const SliverFillRemaining(
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: SaasPalette.brand600,
+                              ),
+                            ),
+                          )
+                        else ...[
+                          SliverFadeTransition(
+                            opacity: _contentOpacity,
+                            sliver: _buildContent(
+                              context,
+                              state,
+                              clientes,
+                              canWrite,
+                            ),
                           ),
-                        ),
-                        const SliverPadding(
-                          padding: EdgeInsets.only(bottom: 100),
-                        ),
+                          if (state is ClienteLoaded && !state.hasReachedMax)
+                            const SliverToBoxAdapter(
+                              child: Padding(
+                                padding: EdgeInsets.all(32),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: SaasPalette.brand600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          const SliverPadding(
+                            padding: EdgeInsets.only(bottom: 100),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -212,42 +288,24 @@ class _ClienteListScreenState extends State<ClienteListScreen>
     List<Cliente>? clientes,
     bool canWrite,
   ) {
-    if (state is ClienteLoading && clientes == null) {
-      return SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (_, i) => _SkelCard(),
-          childCount: 5,
-        ),
-      );
-    }
-
     if (clientes == null || clientes.isEmpty) {
-      return const SliverFillRemaining(child: _EmptyState());
-    }
-
-    final filtered = clientes.where((c) {
-      final q = _searchQuery.toLowerCase();
-      return c.nombre.toLowerCase().contains(q) ||
-          c.correo.toLowerCase().contains(q) ||
-          c.telefono.toLowerCase().contains(q) ||
-          c.documento.toLowerCase().contains(q);
-    }).toList();
-
-    if (filtered.isEmpty) {
-      return const SliverFillRemaining(child: _EmptyState(isSearch: true));
+      if (state is ClienteLoading) return const SliverToBoxAdapter(child: SizedBox.shrink());
+      return SliverFillRemaining(
+        child: _EmptyState(isSearch: _searchQuery.isNotEmpty),
+      );
     }
 
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
-          final cliente = filtered[index];
+          final cliente = clientes[index];
           return _ClienteCard(
             cliente: cliente,
             state: state,
             canWrite: canWrite,
           );
-        }, childCount: filtered.length),
+        }, childCount: clientes.length),
       ),
     );
   }

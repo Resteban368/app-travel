@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:js_interop';
 import 'dart:typed_data';
+import 'package:agente_viajes/features/tour/presentation/bloc/tour_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -27,7 +29,10 @@ class ReservaListScreen extends StatefulWidget {
 
 class _ReservaListScreenState extends State<ReservaListScreen> {
   final _searchCtrl = TextEditingController();
+  final _scrollController = ScrollController();
   String _searchQuery = '';
+  Timer? _debounce;
+  int _currentPage = 1;
 
   DateTime? _startDate;
   DateTime? _endDate;
@@ -36,24 +41,66 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<ReservaBloc>().add(const LoadReservas());
+    _scrollController.addListener(_onScroll);
+    _loadFirstPage();
   }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _scrollController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
-  void _goToPage(int page) {
+  void _onScroll() {
+    if (_isBottom && !(_debounce?.isActive ?? false)) {
+      final state = context.read<ReservaBloc>().state;
+      if (state is ReservaLoaded && !state.hasReachedMax) {
+        _loadNextPage();
+      }
+    }
+  }
+
+  bool get _isBottom {
+    if (!_scrollController.hasClients) return false;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    return currentScroll >= (maxScroll * 0.9);
+  }
+
+  void _loadFirstPage() {
+    _currentPage = 1;
     context.read<ReservaBloc>().add(
-      LoadReservas(
-        page: page,
-        startDate: _startDate,
-        endDate: _endDate,
-        status: _selectedStatus,
-      ),
-    );
+          LoadReservas(
+            page: _currentPage,
+            startDate: _startDate,
+            endDate: _endDate,
+            status: _selectedStatus,
+            search: _searchQuery.isEmpty ? null : _searchQuery,
+          ),
+        );
+  }
+
+  void _loadNextPage() {
+    _currentPage++;
+    context.read<ReservaBloc>().add(
+          LoadReservas(
+            page: _currentPage,
+            startDate: _startDate,
+            endDate: _endDate,
+            status: _selectedStatus,
+            search: _searchQuery.isEmpty ? null : _searchQuery,
+          ),
+        );
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() => _searchQuery = value);
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _loadFirstPage();
+    });
   }
 
   Future<void> _pickDateRange(BuildContext context) async {
@@ -64,19 +111,6 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
       initialDateRange: _startDate != null && _endDate != null
           ? DateTimeRange(start: _startDate!, end: _endDate!)
           : null,
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: SaasPalette.brand600,
-              onPrimary: Colors.white,
-              surface: SaasPalette.bgCanvas,
-              onSurface: SaasPalette.textPrimary,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (picked != null) {
@@ -90,6 +124,7 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
           startDate: _startDate,
           endDate: _endDate,
           status: _selectedStatus,
+          search: _searchQuery.isEmpty ? null : _searchQuery,
         ),
       );
     }
@@ -101,7 +136,11 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
       _endDate = null;
     });
     context.read<ReservaBloc>().add(
-      LoadReservas(page: 1, status: _selectedStatus),
+      LoadReservas(
+        page: 1,
+        status: _selectedStatus,
+        search: _searchQuery.isEmpty ? null : _searchQuery,
+      ),
     );
   }
 
@@ -112,7 +151,8 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
         page: 1,
         startDate: _startDate,
         endDate: _endDate,
-        status: _selectedStatus,
+        status: status,
+        search: _searchQuery.isEmpty ? null : _searchQuery,
       ),
     );
   }
@@ -148,6 +188,7 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
           }
 
           return CustomScrollView(
+            controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               // ── Header ─────────────────────────────────────────────────
@@ -164,7 +205,7 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
                 sliver: SliverToBoxAdapter(
                   child: _ReservaFilters(
                     searchCtrl: _searchCtrl,
-                    onSearchChanged: (v) => setState(() => _searchQuery = v),
+                    onSearchChanged: _onSearchChanged,
                     onPickDates: () => _pickDateRange(context),
                     onClearDates: _clearDates,
                     startDate: _startDate,
@@ -176,23 +217,9 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
               ),
 
               // ── Content ────────────────────────────────────────────────
-              _buildContent(context, state, reservas, canWrite),
+              ..._buildContent(context, state, reservas, canWrite),
 
-              // ── Pagination ─────────────────────────────────────────────
-              if (state is ReservaLoaded && state.totalPages > 1)
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
-                  sliver: SliverToBoxAdapter(
-                    child: _SaasPaginationBar(
-                      page: state.page,
-                      totalPages: state.totalPages,
-                      total: state.total,
-                      onPageChanged: _goToPage,
-                    ),
-                  ),
-                )
-              else
-                const SliverPadding(padding: EdgeInsets.only(bottom: 60)),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
             ],
           );
         },
@@ -200,103 +227,73 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
     );
   }
 
-  Widget _buildContent(
+  List<Widget> _buildContent(
     BuildContext context,
     ReservaState state,
     List<Reserva>? reservas,
     bool canWrite,
   ) {
-    if (state is ReservaLoading && reservas == null) {
-      return SliverPadding(
-        padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
-        sliver: SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (_, __) => const SaasListSkeleton(),
-            childCount: 4,
+    final isLoadingFirst = state is ReservaLoading && (reservas == null || reservas.isEmpty);
+
+    if (isLoadingFirst) {
+      return [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (_, __) => const SaasListSkeleton(),
+              childCount: 4,
+            ),
           ),
-        ),
-      );
+        )
+      ];
     }
 
     if (reservas == null || reservas.isEmpty) {
-      return SliverFillRemaining(
-        hasScrollBody: false,
-        child: const SaasEmptyState(
-          icon: Icons.airplane_ticket_outlined,
-          title: 'Sin reservas',
-          subtitle: 'Aún no se han registrado reservas en el sistema.',
-        ),
-      );
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: SaasEmptyState(
+            icon: (_searchQuery.isNotEmpty || _selectedStatus != null || _startDate != null)
+                ? Icons.search_off_rounded
+                : Icons.airplane_ticket_outlined,
+            title: (_searchQuery.isNotEmpty || _selectedStatus != null || _startDate != null)
+                ? 'Sin coincidencias'
+                : 'Sin reservas',
+            subtitle: (_searchQuery.isNotEmpty || _selectedStatus != null || _startDate != null)
+                ? 'No se encontraron reservas con los filtros aplicados.'
+                : 'Aún no se han registrado reservas en el sistema.',
+          ),
+        )
+      ];
     }
 
-    final filtered = reservas.where((r) {
-      // Status filter (local, complements server-side filter)
-      if (_selectedStatus != null) {
-        final estadoNorm = r.estado.toLowerCase().trim();
-        final filter = _selectedStatus!.toLowerCase();
-        if (filter == 'al dia' &&
-            !estadoNorm.contains('al dia') &&
-            !estadoNorm.contains('al día')) {
-          return false;
-        } else if (filter != 'al dia' && !estadoNorm.contains(filter)) {
-          return false;
-        }
-      }
-
-      // Search filter
-      if (_searchQuery.isNotEmpty) {
-        final query = _searchQuery.toLowerCase();
-
-        // 1. Tour Name
-        final tourName = (r.tour?.name ?? '').toLowerCase();
-        // 2. Reservation ID
-        final idReserva = (r.idReserva ?? '').toLowerCase();
-        // 3. Responsible Info
-        final responsable = r.responsable;
-        final respNombre = (responsable?.nombre ?? '').toLowerCase();
-        final respDoc = (responsable?.documento?.toString() ?? '')
-            .toLowerCase();
-        final respTel = (responsable?.telefono ?? '').toLowerCase();
-        // 4. Agent Info
-        final agenteNombre = (r.agente?.nombre ?? '').toLowerCase();
-        // 5. Correo
-        final correo = r.correo.toLowerCase();
-
-        final matches =
-            tourName.contains(query) ||
-            idReserva.contains(query) ||
-            respNombre.contains(query) ||
-            respDoc.contains(query) ||
-            respTel.contains(query) ||
-            agenteNombre.contains(query) ||
-            correo.contains(query);
-
-        if (!matches) return false;
-      }
-
-      return true;
-    }).toList();
-
-    if (filtered.isEmpty) {
-      return SliverFillRemaining(
-        hasScrollBody: false,
-        child: const SaasEmptyState(
-          icon: Icons.search_off_rounded,
-          title: 'Sin coincidencias',
-          subtitle: 'No se encontraron reservas con los filtros aplicados.',
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final reserva = reservas[index];
+              return _ReservaCard(reserva: reserva, canWrite: canWrite);
+            },
+            childCount: reservas.length,
+          ),
         ),
-      );
-    }
-
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate((context, index) {
-          final reserva = filtered[index];
-          return _ReservaCard(reserva: reserva, canWrite: canWrite);
-        }, childCount: filtered.length),
       ),
-    );
+      if (state is ReservaLoaded && !state.hasReachedMax)
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: SaasPalette.brand600,
+              ),
+            ),
+          ),
+        ),
+    ];
   }
 }
 
@@ -345,8 +342,10 @@ class _ReservaHeader extends StatelessWidget {
               SaasButton(
                 label: 'Nueva Reserva',
                 icon: Icons.add_rounded,
-                onPressed: () =>
-                    Navigator.pushNamed(context, AppRouter.reservaCreate),
+                onPressed: () {
+                  context.read<TourBloc>().add(LoadTours());
+                  Navigator.pushNamed(context, AppRouter.reservaCreate);
+                },
               ),
           ],
         ),
@@ -405,50 +404,74 @@ class _ReservaFilters extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               flex: 2,
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
                 height: 48,
                 decoration: BoxDecoration(
                   color: hasDates ? SaasPalette.brand50 : SaasPalette.bgCanvas,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: hasDates ? SaasPalette.brand600 : SaasPalette.border,
+                    width: hasDates ? 1.5 : 1,
                   ),
+                  boxShadow: hasDates
+                      ? [
+                          BoxShadow(
+                            color: SaasPalette.brand600.withOpacity(0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Row(
                   children: [
                     Expanded(
                       child: InkWell(
                         onTap: onPickDates,
-                        borderRadius: const BorderRadius.horizontal(
-                          left: Radius.circular(12),
-                          right: Radius.circular(0),
-                        ),
+                        borderRadius: BorderRadius.circular(12),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Row(
                             children: [
                               Icon(
                                 Icons.calendar_today_rounded,
-                                size: 18,
+                                size: 16,
                                 color: hasDates
                                     ? SaasPalette.brand600
                                     : SaasPalette.textTertiary,
                               ),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: Text(
-                                  dateStr,
-                                  style: TextStyle(
-                                    color: hasDates
-                                        ? SaasPalette.brand600
-                                        : SaasPalette.textSecondary,
-                                    fontSize: 13,
-                                    fontWeight: hasDates
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (hasDates)
+                                      Text(
+                                        'Rango seleccionado',
+                                        style: TextStyle(
+                                          color: SaasPalette.brand600
+                                              .withOpacity(0.7),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    Text(
+                                      dateStr,
+                                      style: TextStyle(
+                                        color: hasDates
+                                            ? SaasPalette.brand600
+                                            : SaasPalette.textSecondary,
+                                        fontSize: 13,
+                                        fontWeight: hasDates
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -458,21 +481,22 @@ class _ReservaFilters extends StatelessWidget {
                     ),
                     if (hasDates)
                       Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: Tooltip(
-                          message: 'Limpiar fechas',
-                          child: GestureDetector(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
                             onTap: onClearDates,
+                            borderRadius: BorderRadius.circular(8),
                             child: Container(
-                              padding: const EdgeInsets.all(4),
+                              padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: SaasPalette.bgSubtle,
-                                borderRadius: BorderRadius.circular(6),
+                                color: SaasPalette.brand600.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(
                                 Icons.close_rounded,
-                                size: 16,
-                                color: SaasPalette.textTertiary,
+                                size: 14,
+                                color: SaasPalette.brand600,
                               ),
                             ),
                           ),
@@ -625,7 +649,7 @@ class _ReservaCardState extends State<_ReservaCard> {
       if (!mounted) return;
       // Cerrar el diálogo de carga usando el rootNavigator para asegurar que cerramos el diálogo
       Navigator.of(context, rootNavigator: true).pop();
-      
+
       await _showPdfPreviewDialog(bytes);
     } catch (e) {
       if (mounted) {
@@ -799,11 +823,9 @@ class _ReservaCardState extends State<_ReservaCard> {
             ],
           ),
           child: InkWell(
-            onTap: () => Navigator.pushNamed(
-              context,
-              AppRouter.reservaEdit,
-              arguments: r,
-            ),
+            onTap: () {
+              Navigator.pushNamed(context, AppRouter.reservaEdit, arguments: r);
+            },
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -1085,106 +1107,3 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  PAGINATION
-// ─────────────────────────────────────────────────────────────────────────────
-class _SaasPaginationBar extends StatelessWidget {
-  final int page;
-  final int totalPages;
-  final int total;
-  final void Function(int) onPageChanged;
-
-  const _SaasPaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.total,
-    required this.onPageChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _PageBtn(
-            icon: Icons.chevron_left_rounded,
-            enabled: page > 1,
-            onTap: () => onPageChanged(page - 1),
-          ),
-          Column(
-            children: [
-              Text(
-                'Página $page de $totalPages',
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '$total resultados encontrados',
-                style: const TextStyle(
-                  color: SaasPalette.textTertiary,
-                  fontSize: 11,
-                ),
-              ),
-            ],
-          ),
-          _PageBtn(
-            icon: Icons.chevron_right_rounded,
-            enabled: page < totalPages,
-            onTap: () => onPageChanged(page + 1),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PageBtn extends StatelessWidget {
-  final IconData icon;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  const _PageBtn({
-    required this.icon,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: enabled
-              ? SaasPalette.bgApp
-              : SaasPalette.bgApp.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: enabled
-                ? SaasPalette.border
-                : SaasPalette.border.withValues(alpha: 0.5),
-          ),
-        ),
-        child: Icon(
-          icon,
-          color: enabled ? SaasPalette.brand600 : SaasPalette.textTertiary,
-          size: 24,
-        ),
-      ),
-    );
-  }
-}

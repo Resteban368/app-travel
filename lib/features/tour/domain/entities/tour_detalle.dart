@@ -91,6 +91,9 @@ class ReservaDetalle {
   final List<IntegranteDetalle> integrantes;
   final List<ServicioDetalle> servicios;
 
+  final List<String> asientosBus;
+  final String? seleccionLink;
+
   const ReservaDetalle({
     required this.id,
     required this.idReserva,
@@ -107,6 +110,8 @@ class ReservaDetalle {
     required this.responsable,
     required this.integrantes,
     this.servicios = const [],
+    this.asientosBus = const [],
+    this.seleccionLink,
   });
 
   factory ReservaDetalle.fromJson(Map<String, dynamic> json) {
@@ -140,6 +145,10 @@ class ReservaDetalle {
           .map((i) => IntegranteDetalle.fromJson(i))
           .toList(),
       servicios: servicios,
+      asientosBus: (json['asientos_bus'] as List? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+      seleccionLink: json['seleccion_link'],
     );
   }
 }

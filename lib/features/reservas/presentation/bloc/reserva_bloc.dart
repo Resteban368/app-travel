@@ -17,7 +17,11 @@ class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
     LoadReservas event,
     Emitter<ReservaState> emit,
   ) async {
-    emit(ReservaLoading());
+    final isFirstPage = event.page == 1;
+    if (isFirstPage) {
+      emit(ReservaLoading());
+    }
+
     try {
       final result = await repository.getReservas(
         page: event.page,
@@ -25,16 +29,45 @@ class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
         startDate: event.startDate,
         endDate: event.endDate,
         status: event.status,
+        search: event.search,
       );
-      emit(
-        ReservaLoaded(
-          result.data,
-          page: result.page,
-          totalPages: result.totalPages,
-          total: result.total,
-          limit: result.limit,
-        ),
-      );
+
+      final hasReachedMax = result.data.length < event.limit || result.page >= result.totalPages;
+
+      if (isFirstPage) {
+        emit(
+          ReservaLoaded(
+            result.data,
+            page: result.page,
+            totalPages: result.totalPages,
+            total: result.total,
+            limit: result.limit,
+            hasReachedMax: hasReachedMax,
+            filterSearch: event.search,
+            filterStatus: event.status,
+            filterStartDate: event.startDate,
+            filterEndDate: event.endDate,
+          ),
+        );
+      } else {
+        if (state is ReservaLoaded) {
+          final current = state as ReservaLoaded;
+          emit(
+            ReservaLoaded(
+              List.from(current.reservas)..addAll(result.data),
+              page: result.page,
+              totalPages: result.totalPages,
+              total: result.total,
+              limit: result.limit,
+              hasReachedMax: hasReachedMax,
+              filterSearch: event.search,
+              filterStatus: event.status,
+              filterStartDate: event.startDate,
+              filterEndDate: event.endDate,
+            ),
+          );
+        }
+      }
     } catch (e) {
       emit(ReservaError(e.toString()));
     }
@@ -47,9 +80,9 @@ class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
     final currentReservas = _getCurrentReservas();
     emit(ReservaSaving(reservas: currentReservas));
     try {
-      await repository.createReserva(event.reserva);
+      final created = await repository.createReserva(event.reserva);
       final result = await repository.getReservas(page: 1, limit: 20);
-      emit(ReservaActionSuccess(result.data));
+      emit(ReservaActionSuccess(result.data, createdReserva: created));
     } catch (e) {
       emit(ReservaError(e.toString()));
     }

@@ -61,6 +61,12 @@ import '../../features/clientes/presentation/bloc/cliente_bloc.dart';
 import '../../features/hoteles/data/repositories/api_hotel_repository.dart';
 import '../../features/hoteles/domain/repositories/hotel_repository.dart';
 import '../../features/hoteles/presentation/bloc/hotel_bloc.dart';
+import '../../features/bus_layouts/data/repositories/api_bus_layout_repository.dart';
+import '../../features/bus_layouts/domain/repositories/bus_layout_repository.dart';
+import '../../features/bus_layouts/presentation/bloc/bus_layout_bloc.dart';
+import '../../features/bus_layouts/data/repositories/api_bus_manifiesto_repository.dart';
+import '../../features/bus_layouts/domain/repositories/bus_manifiesto_repository.dart';
+import '../../features/bus_layouts/presentation/bloc/bus_manifiesto_bloc.dart';
 import '../../features/clientes/presentation/bloc/historial/cliente_historial_bloc.dart';
 import '../../features/auditoria/data/repositories/api_auditoria_repository.dart';
 import '../../features/auditoria/domain/repositories/auditoria_repository.dart';
@@ -132,6 +138,12 @@ void initDependencies() {
   sl.registerLazySingleton<HotelRepository>(
     () => ApiHotelRepository(client: sl()),
   );
+  sl.registerLazySingleton<BusLayoutRepository>(
+    () => ApiBusLayoutRepository(client: sl()),
+  );
+  sl.registerLazySingleton<BusManifiestoRepository>(
+    () => ApiBusManifiestoRepository(client: sl()),
+  );
   sl.registerLazySingleton<UploadRepository>(
     () => ApiUploadRepository(client: sl()),
   );
@@ -160,6 +172,8 @@ void initDependencies() {
   sl.registerFactory(() => ReservaBloc(repository: sl()));
   sl.registerFactory(() => ClienteBloc(repository: sl()));
   sl.registerLazySingleton(() => HotelBloc(repository: sl()));
+  sl.registerFactory(() => BusLayoutBloc(repository: sl()));
+  sl.registerFactory(() => BusManifiestoBloc(repository: sl()));
   sl.registerFactory(() => UploadBloc(repository: sl()));
   sl.registerFactory(() => ClienteHistorialBloc(repository: sl()));
   sl.registerFactory(() => SesionesBloc(repository: sl()));

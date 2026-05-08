@@ -10,6 +10,9 @@ class VueloItinerario {
   final String horaLlegada;
   final double costo;
   final int numeroPasajeros;
+  final bool tieneEscala;
+  final String ciudadEscala;
+  final String tiempoEscala;
 
   const VueloItinerario({
     required this.tipo,
@@ -23,6 +26,9 @@ class VueloItinerario {
     required this.horaLlegada,
     this.costo = 0,
     this.numeroPasajeros = 1,
+    this.tieneEscala = false,
+    this.ciudadEscala = '',
+    this.tiempoEscala = '',
   });
 }
 
@@ -38,6 +44,7 @@ class OpcionHotel {
   final double precioMenor;
   final double precioTotal;
   final List<String> fotos;
+  final String notas;
 
   const OpcionHotel({
     required this.nombre,
@@ -51,6 +58,7 @@ class OpcionHotel {
     required this.precioMenor,
     required this.precioTotal,
     this.fotos = const [],
+    this.notas = '',
   });
 }
 
@@ -58,11 +66,13 @@ class AdicionalViaje {
   final String nombre;
   final String descripcion;
   final double precio;
+  final bool esSeleccionable;
 
   const AdicionalViaje({
     required this.nombre,
     required this.descripcion,
     required this.precio,
+    this.esSeleccionable = true,
   });
 }
 
@@ -87,6 +97,7 @@ class RespuestaCotizacion {
   final int? creadoPorId;
   //creado_por_nombre
   final String? creadoPorNombre;
+  final bool anclada;
 
   const RespuestaCotizacion({
     this.id,
@@ -105,5 +116,33 @@ class RespuestaCotizacion {
     this.telefonoCliente,
     this.creadoPorId,
     this.creadoPorNombre,
+    this.anclada = false,
   });
+
+  RespuestaCotizacion copyWith({
+    int? id,
+    int? cotizacionId,
+    bool? anclada,
+    bool clearCotizacionId = false,
+  }) {
+    return RespuestaCotizacion(
+      id: id ?? this.id,
+      cotizacionId: clearCotizacionId ? null : (cotizacionId ?? this.cotizacionId),
+      token: token,
+      tituloViaje: tituloViaje,
+      imagenesDestino: imagenesDestino,
+      itemsIncluidos: itemsIncluidos,
+      itemsNoIncluidos: itemsNoIncluidos,
+      vuelos: vuelos,
+      opcionesHotel: opcionesHotel,
+      adicionales: adicionales,
+      condicionesGenerales: condicionesGenerales,
+      createdAt: createdAt,
+      nombreCliente: nombreCliente,
+      telefonoCliente: telefonoCliente,
+      creadoPorId: creadoPorId,
+      creadoPorNombre: creadoPorNombre,
+      anclada: anclada ?? this.anclada,
+    );
+  }
 }

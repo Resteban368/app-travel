@@ -73,3 +73,18 @@ class UpdateEstadoCotizacion extends CotizacionEvent {
   @override
   List<Object?> get props => [id, estado];
 }
+
+class DeleteRespuestaCotizacion extends CotizacionEvent {
+  final int id;
+  const DeleteRespuestaCotizacion(this.id);
+  @override
+  List<Object?> get props => [id];
+}
+
+class ToggleAncladaRespuesta extends CotizacionEvent {
+  final int id;
+  final bool anclada;
+  const ToggleAncladaRespuesta(this.id, {required this.anclada});
+  @override
+  List<Object?> get props => [id, anclada];
+}

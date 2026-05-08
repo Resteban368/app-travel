@@ -32,10 +32,11 @@ class ApiReservaRepository implements ReservaRepository {
   @override
   Future<PagedResult<Reserva>> getReservas({
     int page = 1,
-    int limit = 20,
+    int limit = 100,
     DateTime? startDate,
     DateTime? endDate,
     String? status,
+    String? search,
   }) async {
     debugPrint('🌎 [ApiReservaRepository] GET request to $_baseUrl');
 
@@ -46,6 +47,7 @@ class ApiReservaRepository implements ReservaRepository {
     if (startDate != null) params['start_date'] = startDate.toIso8601String();
     if (endDate != null) params['end_date'] = endDate.toIso8601String();
     if (status != null && status.isNotEmpty) params['estado'] = status;
+    if (search != null && search.isNotEmpty) params['search'] = search;
 
     final uri = Uri.parse(_baseUrl).replace(queryParameters: params);
 
@@ -94,7 +96,7 @@ class ApiReservaRepository implements ReservaRepository {
   }
 
   @override
-  Future<void> createReserva(Reserva reserva) async {
+  Future<Reserva> createReserva(Reserva reserva) async {
     final Map<String, dynamic> bodyMap = {
       'tipo_reserva': reserva.tipoReserva,
       'correo': reserva.correo,
@@ -135,6 +137,10 @@ class ApiReservaRepository implements ReservaRepository {
       }
     }
 
+    if (reserva.busLayoutId != null) {
+      bodyMap['bus_layout_id'] = reserva.busLayoutId;
+    }
+
     final body = json.encode(bodyMap);
     debugPrint('📤 [ApiReservaRepository] Creating: $body');
     final response = await client.post(
@@ -147,6 +153,7 @@ class ApiReservaRepository implements ReservaRepository {
         'Error al crear reserva: ${response.statusCode} - ${response.body}',
       );
     }
+    return _fromJson(json.decode(response.body) as Map<String, dynamic>);
   }
 
   @override
@@ -191,6 +198,10 @@ class ApiReservaRepository implements ReservaRepository {
       bodyMap['hoteles'] = _serializeHoteles(reserva.hoteles);
     }
 
+    if (reserva.busLayoutId != null) {
+      bodyMap['bus_layout_id'] = reserva.busLayoutId;
+    }
+
     final body = json.encode(bodyMap);
     debugPrint('📤 [ApiReservaRepository] Updating: $body');
     final response = await client.patch(
@@ -226,6 +237,22 @@ class ApiReservaRepository implements ReservaRepository {
       return [];
     } catch (e) {
       debugPrint('❌ [ApiReservaRepository] getAerolineas exception: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getBusesDisponibilidad(int tourId) async {
+    final url = '${ApiConstants.kBaseUrl}/v1/tours/$tourId/buses-disponibilidad';
+    try {
+      final response = await client.get(Uri.parse(url), headers: _headers);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as List<dynamic>;
+        return data.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('❌ [ApiReservaRepository] getBusesDisponibilidad: $e');
       return [];
     }
   }
@@ -295,7 +322,9 @@ class ApiReservaRepository implements ReservaRepository {
           tipoDocumento: i['tipo_documento'] ?? 'CC',
           documento: i['documento']?.toString() ?? '',
           tourPrecioId: int.tryParse(i['tour_precio_id']?.toString() ?? ''),
-          precioAplicado: double.tryParse(i['precio_aplicado']?.toString() ?? ''),
+          precioAplicado: double.tryParse(
+            i['precio_aplicado']?.toString() ?? '',
+          ),
         );
       }).toList();
     }
@@ -413,6 +442,14 @@ class ApiReservaRepository implements ReservaRepository {
       precioResponsableAplicado: double.tryParse(
         json['precio_responsable_aplicado']?.toString() ?? '',
       ),
+      busLayoutId: int.tryParse(json['bus_layout_id']?.toString() ?? ''),
+      valorCancelado: double.tryParse(
+        json['valor_cancelado']?.toString() ?? '',
+      ),
+      seleccionLink: json['seleccion_link']?.toString(),
+      asientosBus: (json['asientos_bus'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
     );
   }
 

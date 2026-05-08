@@ -121,6 +121,9 @@ class ApiRespuestaCotizacionRepository
     'hora_llegada': v.horaLlegada,
     'costo': v.costo,
     'numero_pasajeros': v.numeroPasajeros,
+    'tiene_escala': v.tieneEscala,
+    'ciudad_escala': v.ciudadEscala,
+    'tiempo_escala': v.tiempoEscala,
   };
 
   Map<String, dynamic> _hotelToJson(OpcionHotel h) => {
@@ -135,12 +138,14 @@ class ApiRespuestaCotizacionRepository
     'precio_menor': h.precioMenor,
     'precio_total': h.precioTotal,
     'fotos': h.fotos,
+    'notas': h.notas,
   };
 
   Map<String, dynamic> _adicionalToJson(AdicionalViaje a) => {
     'nombre': a.nombre,
     'descripcion': a.descripcion,
     'precio': a.precio,
+    'es_seleccionable': a.esSeleccionable,
   };
 
   RespuestaCotizacion _fromJson(Map<String, dynamic> j) {
@@ -171,6 +176,7 @@ class ApiRespuestaCotizacionRepository
       telefonoCliente: j['telefono_cliente'] as String?,
       creadoPorId: j['creado_por_id'] as int?,
       creadoPorNombre: j['creado_por_nombre'] as String?,
+      anclada: j['anclada'] as bool? ?? false,
     );
   }
 
@@ -186,6 +192,9 @@ class ApiRespuestaCotizacionRepository
     horaLlegada: j['hora_llegada'] as String? ?? '',
     costo: (j['costo'] as num?)?.toDouble() ?? 0,
     numeroPasajeros: (j['numero_pasajeros'] as int?) ?? 1,
+    tieneEscala: j['tiene_escala'] as bool? ?? false,
+    ciudadEscala: j['ciudad_escala'] as String? ?? '',
+    tiempoEscala: j['tiempo_escala'] as String? ?? '',
   );
 
   OpcionHotel _hotelFromJson(Map<String, dynamic> j) => OpcionHotel(
@@ -202,12 +211,14 @@ class ApiRespuestaCotizacionRepository
     precioMenor: (j['precio_menor'] as num?)?.toDouble() ?? 0,
     precioTotal: (j['precio_total'] as num?)?.toDouble() ?? 0,
     fotos: List<String>.from(j['fotos'] is List ? j['fotos'] as List : []),
+    notas: j['notas'] as String? ?? '',
   );
 
   AdicionalViaje _adicionalFromJson(Map<String, dynamic> j) => AdicionalViaje(
     nombre: j['nombre'] as String? ?? '',
     descripcion: j['descripcion'] as String? ?? '',
     precio: (j['precio'] as num?)?.toDouble() ?? 0,
+    esSeleccionable: j['es_seleccionable'] as bool? ?? true,
   );
 
   // ── UPDATE ────────────────────────────────────────────────────────────────
@@ -249,5 +260,30 @@ class ApiRespuestaCotizacionRepository
     } catch (_) {}
     debugPrint('❌ [RespuestaCotizacion] $message');
     throw Exception(message);
+  }
+
+  // ── TOGGLE ANCLADA ────────────────────────────────────────────────────────
+  @override
+  Future<void> toggleAnclada(int id, {required bool anclada}) async {
+    debugPrint('📌 [RespuestaCotizacion] PATCH $_baseUrl/$id {anclada: $anclada}');
+    final response = await client.patch(
+      Uri.parse('$_baseUrl/$id'),
+      headers: _headers,
+      body: json.encode({'anclada': anclada}),
+    );
+    if (response.statusCode == 200 || response.statusCode == 204) return;
+    _throw(response, 'anclar respuesta de cotización');
+  }
+
+  // ── DELETE ────────────────────────────────────────────────────────────────
+  @override
+  Future<void> deleteRespuesta(int id) async {
+    debugPrint('🗑️ [RespuestaCotizacion] DELETE $_baseUrl/$id');
+    final response = await client.delete(
+      Uri.parse('$_baseUrl/$id'),
+      headers: _headers,
+    );
+    if (response.statusCode == 200 || response.statusCode == 204) return;
+    _throw(response, 'eliminar respuesta de cotización');
   }
 }
