@@ -68,6 +68,11 @@ const _modules = [
     icon: Icons.airplane_ticket_rounded,
   ),
   _Module(
+    key: 'saldo_pendiente',
+    label: 'Saldos Pendientes',
+    icon: Icons.account_balance_wallet_rounded,
+  ),
+  _Module(
     key: 'cotizacion',
     label: 'Cotizaciones',
     icon: Icons.request_quote_rounded,
@@ -75,7 +80,7 @@ const _modules = [
   _Module(key: 'clientes', label: 'Clientes', icon: Icons.people_rounded),
   _Module(
     key: 'bus_layouts',
-    label: 'Layouts de Bus',
+    label: 'Diseños de Bus',
     icon: Icons.directions_bus_rounded,
   ),
 ];
@@ -245,13 +250,10 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: SaasPalette.brand600.withOpacity(
-                                          0.1,
-                                        ),
+                                        color: SaasPalette.brand600.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
-                                          color: SaasPalette.brand600
-                                              .withOpacity(0.2),
+                                          color: SaasPalette.brand600.withValues(alpha: 0.2),
                                         ),
                                       ),
                                       child: Row(
@@ -422,9 +424,9 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
             Switch(
               value: _isActive,
               activeThumbColor: SaasPalette.success,
-              activeTrackColor: SaasPalette.success.withOpacity(0.2),
+              activeTrackColor: SaasPalette.success.withValues(alpha: 0.2),
               inactiveThumbColor: SaasPalette.danger,
-              inactiveTrackColor: SaasPalette.danger.withOpacity(0.2),
+              inactiveTrackColor: SaasPalette.danger.withValues(alpha: 0.2),
               onChanged: (v) => setState(() => _isActive = v),
             ),
           ],
@@ -442,11 +444,11 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
     final activeColor = isCompleto ? SaasPalette.success : SaasPalette.brand600;
     final rowBg = enabled
         ? (isCompleto
-              ? SaasPalette.success.withOpacity(0.05)
+              ? SaasPalette.success.withValues(alpha: 0.05)
               : SaasPalette.brand50)
         : SaasPalette.bgCanvas;
     final rowBorder = enabled
-        ? activeColor.withOpacity(0.15)
+        ? activeColor.withValues(alpha: 0.15)
         : SaasPalette.border;
 
     return Padding(
@@ -467,7 +469,7 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: enabled
-                        ? activeColor.withOpacity(0.1)
+                        ? activeColor.withValues(alpha: 0.1)
                         : SaasPalette.bgSubtle,
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -493,14 +495,14 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                 Switch(
                   value: enabled,
                   activeThumbColor: activeColor,
-                  activeTrackColor: activeColor.withOpacity(0.2),
+                  activeTrackColor: activeColor.withValues(alpha: 0.2),
                   onChanged: (v) => _toggleModule(module.key, v),
                 ),
               ],
             ),
             if (enabled) ...[
               const SizedBox(height: 12),
-              Divider(color: activeColor.withOpacity(0.1)),
+              Divider(color: activeColor.withValues(alpha: 0.1)),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -552,10 +554,10 @@ class _LevelChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? color.withOpacity(0.12) : Colors.transparent,
+          color: active ? color.withValues(alpha: 0.12) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: active ? color.withOpacity(0.3) : SaasPalette.border,
+            color: active ? color.withValues(alpha: 0.3) : SaasPalette.border,
           ),
         ),
         child: Row(

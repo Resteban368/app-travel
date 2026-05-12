@@ -72,6 +72,9 @@ import '../../features/auditoria/data/repositories/api_auditoria_repository.dart
 import '../../features/auditoria/domain/repositories/auditoria_repository.dart';
 import '../../features/auditoria/presentation/bloc/sesiones_bloc.dart';
 import '../../features/auditoria/presentation/bloc/auditoria_general_bloc.dart';
+import '../../features/saldos_pendientes/data/repositories/api_saldo_pendiente_repository.dart';
+import '../../features/saldos_pendientes/domain/repositories/saldo_pendiente_repository.dart';
+import '../../features/saldos_pendientes/presentation/bloc/saldo_pendiente_bloc.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -150,6 +153,9 @@ void initDependencies() {
   sl.registerLazySingleton<AuditoriaRepository>(
     () => ApiAuditoriaRepository(client: sl()),
   );
+  sl.registerLazySingleton<SaldoPendienteRepository>(
+    () => ApiSaldoPendienteRepository(client: sl()),
+  );
 
   // ─── Use Cases ────────────────────────────────────────
   sl.registerLazySingleton(() => SendWhatsAppMessage(sl()));
@@ -178,4 +184,5 @@ void initDependencies() {
   sl.registerFactory(() => ClienteHistorialBloc(repository: sl()));
   sl.registerFactory(() => SesionesBloc(repository: sl()));
   sl.registerFactory(() => AuditoriaGeneralBloc(repository: sl()));
+  sl.registerFactory(() => SaldoPendienteBloc(repository: sl()));
 }

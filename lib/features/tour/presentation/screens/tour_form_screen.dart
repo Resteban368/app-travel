@@ -324,7 +324,17 @@ class _TourFormScreenState extends State<TourFormScreen>
           SaasSnackBar.showError(context, state.message);
         }
       },
-      child: Scaffold(
+      child: PopScope(
+        canPop: !_isLoadingFullData && (context.watch<TourBloc>().state is! TourSaving),
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop) {
+            SaasSnackBar.showWarning(
+              context,
+              'Por favor espera a que termine el proceso actual',
+            );
+          }
+        },
+        child: Scaffold(
         body: Stack(
           children: [
             CustomScrollView(
@@ -537,8 +547,9 @@ class _TourFormScreenState extends State<TourFormScreen>
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildPreciosSection({required bool canWrite}) {
     final fmt = NumberFormat.currency(

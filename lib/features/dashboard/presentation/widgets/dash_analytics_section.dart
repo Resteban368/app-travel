@@ -9,6 +9,34 @@ import '../../../../core/widgets/shimmer_loading.dart';
 import '../../domain/entities/dash_analytics.dart';
 import 'dash_tiles.dart';
 import 'dash_analytics_widgets.dart';
+import 'dash_chart_widgets.dart';
+
+class _SectionDivider extends StatelessWidget {
+  final String label;
+  const _SectionDivider({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Divider(color: SaasPalette.border, height: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              color: SaasPalette.textTertiary,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.8,
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: SaasPalette.border, height: 1)),
+      ],
+    );
+  }
+}
 
 class DashAnalyticsSection extends StatefulWidget {
   const DashAnalyticsSection({super.key});
@@ -307,6 +335,66 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                     currFmt: currFmt,
                     dateFmt: dateFmt,
                   ),
+
+                const SizedBox(height: 8),
+                const _SectionDivider(label: 'Gráficas y análisis'),
+                const SizedBox(height: 16),
+
+                // ── Rendimiento por agente ──────────────────────────────────
+                if (data.rendimientoPorAgente.isNotEmpty) ...[
+                  RendimientoAgenteChart(data: data.rendimientoPorAgente),
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 16),
+                    child: RendimientoLegend(),
+                  ),
+                ],
+
+                // ── Ingresos por tour ───────────────────────────────────────
+                IngresosPorTourChart(
+                  data: data.ingresosPorTour,
+                  currFmt: currFmt,
+                ),
+
+                // ── Tours más vendidos ──────────────────────────────────────
+                ToursMasVendidosChart(data: data.toursMasVendidos),
+
+                // ── Destinos más solicitados ────────────────────────────────
+                DestinosPieChart(data: data.destinosMasSolicitados),
+
+                // ── Servicios más contratados ───────────────────────────────
+                ServiciosChart(data: data.serviciosMasContratados),
+
+                // ── Ocupación por tour ──────────────────────────────────────
+                OcupacionTourChart(data: data.ocupacionPorTour),
+
+                const SizedBox(height: 8),
+                const _SectionDivider(label: 'Tendencias temporales'),
+                const SizedBox(height: 16),
+
+                // ── Evolución de reservas ───────────────────────────────────
+                EvolucionReservasChart(data: data.evolucionReservas),
+
+                // ── Evolución de pagos ──────────────────────────────────────
+                EvolucionPagosChart(
+                  data: data.evolucionPagos,
+                  currFmt: currFmt,
+                ),
+
+                // ── Cotizaciones por día de la semana ───────────────────────
+                CotizacionesPorDiaChart(data: data.cotizacionesPorDia),
+
+                const SizedBox(height: 8),
+                const _SectionDivider(label: 'Tours'),
+                const SizedBox(height: 16),
+
+                // ── Cupos críticos (primero — más urgente) ──────────────────
+                if (data.toursCuposCriticos.isNotEmpty)
+                  ToursCuposCriticosCard(data: data.toursCuposCriticos),
+
+                // ── Tours próximos ──────────────────────────────────────────
+                ToursProximosCard(data: data.toursProximos),
+
+                const SizedBox(height: 16),
               ],
             );
           },

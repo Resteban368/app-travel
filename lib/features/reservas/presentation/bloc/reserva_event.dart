@@ -44,3 +44,18 @@ class UpdateReserva extends ReservaEvent {
   @override
   List<Object?> get props => [reserva];
 }
+class LoadReservaById extends ReservaEvent {
+  final String id;
+  const LoadReservaById(this.id);
+
+  @override
+  List<Object?> get props => [id];
+}
+
+class DeleteReserva extends ReservaEvent {
+  final int id;
+  const DeleteReserva(this.id);
+
+  @override
+  List<Object?> get props => [id];
+}

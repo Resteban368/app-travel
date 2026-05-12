@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:agente_viajes/core/constants/api_constants.dart';
+import 'package:agente_viajes/core/network/api_exception.dart';
 import '../../domain/entities/tour.dart';
 import '../../domain/entities/tour_detalle.dart';
 import '../../domain/entities/tour_precio.dart';
@@ -22,11 +23,11 @@ class ApiTourRepository implements TourRepository {
   @override
   Future<List<Tour>> getTours() async {
     final response = await client.get(Uri.parse(_baseUrl), headers: _headers);
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      return data.map((item) => _fromJson(item)).toList();
+    if (response.statusCode != 200) {
+      throw ApiException.fromResponse(response);
     }
-    throw Exception('Failed to load tours: ${response.statusCode}');
+    final List<dynamic> data = json.decode(response.body);
+    return data.map((item) => _fromJson(item)).toList();
   }
 
   @override
@@ -35,10 +36,10 @@ class ApiTourRepository implements TourRepository {
       Uri.parse('$_baseUrl/$id'),
       headers: _headers,
     );
-    if (response.statusCode == 200) {
-      return _fromJson(json.decode(response.body));
+    if (response.statusCode != 200) {
+      throw ApiException.fromResponse(response);
     }
-    throw Exception('Failed to load tour: ${response.statusCode}');
+    return _fromJson(json.decode(response.body));
   }
 
   @override
@@ -53,7 +54,7 @@ class ApiTourRepository implements TourRepository {
       body: body,
     );
     if (response.statusCode != 201 && response.statusCode != 200) {
-      throw Exception('Failed to create tour: ${response.statusCode}');
+      throw ApiException.fromResponse(response);
     }
   }
 
@@ -70,7 +71,7 @@ class ApiTourRepository implements TourRepository {
       body: body,
     );
     if (response.statusCode != 200) {
-      throw Exception('Failed to update tour: ${response.statusCode}');
+      throw ApiException.fromResponse(response);
     }
   }
 
@@ -81,7 +82,7 @@ class ApiTourRepository implements TourRepository {
       headers: _headers,
     );
     if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('Failed to delete tour: ${response.statusCode}');
+      throw ApiException.fromResponse(response);
     }
   }
 
@@ -93,10 +94,10 @@ class ApiTourRepository implements TourRepository {
     );
     print('$_baseUrl/$id/detalle');
     print('Respuesta $_baseUrl/$id/detalle ${response.body}');
-    if (response.statusCode == 200) {
-      return TourDetalle.fromJson(json.decode(response.body));
+    if (response.statusCode != 200) {
+      throw ApiException.fromResponse(response);
     }
-    throw Exception('Failed to load tour detalle: ${response.statusCode}');
+    return TourDetalle.fromJson(json.decode(response.body));
   }
 
   @override
@@ -107,7 +108,7 @@ class ApiTourRepository implements TourRepository {
       body: json.encode({'is_active': isActive}),
     );
     if (response.statusCode != 200) {
-      throw Exception('Failed to toggle tour active: ${response.statusCode}');
+      throw ApiException.fromResponse(response);
     }
   }
 

@@ -5,6 +5,7 @@ import '../../domain/entities/cliente.dart';
 import '../../domain/entities/cliente_historial.dart';
 import '../../domain/repositories/cliente_repository.dart';
 import 'package:agente_viajes/core/constants/api_constants.dart';
+import 'package:agente_viajes/core/network/api_exception.dart';
 import 'package:agente_viajes/features/reservas/domain/entities/reserva.dart';
 import 'package:agente_viajes/features/tour/domain/entities/tour.dart';
 
@@ -31,20 +32,17 @@ class ApiClienteRepository implements ClienteRepository {
     
     final uri = Uri.parse(_baseUrl).replace(queryParameters: params);
     final response = await client.get(uri, headers: _headers);
-    if (response.statusCode == 200) {
-      final decoded = json.decode(response.body);
-      // Handle both paginated { data: [] } and simple list []
-      final List<dynamic> data = (decoded is Map)
-          ? (decoded['data'] ?? [])
-          : decoded;
-      return data
-          .map((item) => _fromJson(item as Map<String, dynamic>))
-          .toList();
+    if (response.statusCode != 200) {
+      throw ApiException.fromResponse(response);
     }
-    print(
-      'Error al cargar clientes: ${response.statusCode} - ${response.body}',
-    );
-    throw Exception('Error al cargar clientes: ${response.statusCode}');
+    final decoded = json.decode(response.body);
+    // Handle both paginated { data: [] } and simple list []
+    final List<dynamic> data = (decoded is Map)
+        ? (decoded['data'] ?? [])
+        : decoded;
+    return data
+        .map((item) => _fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   @override
@@ -54,19 +52,15 @@ class ApiClienteRepository implements ClienteRepository {
       Uri.parse('$_baseUrl/$id'),
       headers: _headers,
     );
-    debugPrint(
-      '📥 [ApiClienteRepository] getClienteById status=${response.statusCode} body=${response.body}',
-    );
-    if (response.statusCode == 200) {
-      final decoded = json.decode(response.body);
-      final Map<String, dynamic> data =
-          (decoded is Map && decoded.containsKey('data'))
-          ? decoded['data'] as Map<String, dynamic>
-          : decoded as Map<String, dynamic>;
-      return _fromJson(data);
+    if (response.statusCode != 200) {
+      throw ApiException.fromResponse(response);
     }
-    print('Error al cargar cliente: ${response.statusCode} - ${response.body}');
-    throw Exception('Error al cargar cliente: ${response.statusCode}');
+    final decoded = json.decode(response.body);
+    final Map<String, dynamic> data =
+        (decoded is Map && decoded.containsKey('data'))
+        ? decoded['data'] as Map<String, dynamic>
+        : decoded as Map<String, dynamic>;
+    return _fromJson(data);
   }
 
   @override
@@ -79,26 +73,14 @@ class ApiClienteRepository implements ClienteRepository {
       body: body,
     );
 
-    if (response.statusCode == 201 || response.statusCode == 200) {
-      final decoded = json.decode(response.body);
-      if (decoded is Map<String, dynamic> && decoded.containsKey('message')) {
-        return decoded['message'] as String;
-      }
-      return null;
-    } else {
-      String errorMessage = 'Error al crear cliente';
-      try {
-        final decoded = json.decode(response.body);
-        if (decoded is Map && decoded.containsKey('message')) {
-          errorMessage = decoded['message'].toString();
-        }
-      } catch (_) {}
-
-      print(
-        'Error al crear cliente: ${response.statusCode} - ${response.body}',
-      );
-      throw Exception(errorMessage);
+    if (response.statusCode != 201 && response.statusCode != 200) {
+      throw ApiException.fromResponse(response);
     }
+    final decoded = json.decode(response.body);
+    if (decoded is Map<String, dynamic> && decoded.containsKey('message')) {
+      return decoded['message'] as String;
+    }
+    return null;
   }
 
   @override
@@ -110,12 +92,7 @@ class ApiClienteRepository implements ClienteRepository {
       body: body,
     );
     if (response.statusCode != 200) {
-      print(
-        'Error al actualizar cliente: ${response.statusCode} - ${response.body}',
-      );
-      throw Exception(
-        'Error al actualizar cliente: ${response.statusCode} - ${response.body}',
-      );
+      throw ApiException.fromResponse(response);
     }
   }
 
@@ -126,10 +103,7 @@ class ApiClienteRepository implements ClienteRepository {
       headers: _headers,
     );
     if (response.statusCode != 200 && response.statusCode != 204) {
-      print(
-        'Error al eliminar cliente: ${response.statusCode} - ${response.body}',
-      );
-      throw Exception('Error al eliminar cliente: ${response.statusCode}');
+      throw ApiException.fromResponse(response);
     }
   }
 
@@ -139,15 +113,11 @@ class ApiClienteRepository implements ClienteRepository {
     debugPrint('🌎 [ApiClienteRepository] GET $url');
     final response = await client.get(Uri.parse(url), headers: _headers);
 
-    if (response.statusCode == 200) {
-      final decoded = json.decode(response.body);
-      return _parseHistorial(decoded);
+    if (response.statusCode != 200) {
+      throw ApiException.fromResponse(response);
     }
-
-    print(
-      'Error al cargar historial: ${response.statusCode} - ${response.body}',
-    );
-    throw Exception('Error al cargar historial: ${response.statusCode}');
+    final decoded = json.decode(response.body);
+    return _parseHistorial(decoded);
   }
 
   ClienteHistorial _parseHistorial(Map<String, dynamic> json) {

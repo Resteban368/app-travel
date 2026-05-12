@@ -20,7 +20,7 @@ class SaasPalette {
   static const Color brand900 = Color(0xFF1E3A8A);
 
   // Semánticos
-  static const Color success = Color(0xFF16A34A);
+  static const Color success = Color.fromARGB(255, 29, 175, 83);
   static const Color warning = Color(0xFFD97706);
   static const Color danger = Color(0xFFDC2626);
 

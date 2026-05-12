@@ -9,8 +9,40 @@ class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
 
   ReservaBloc({required this.repository}) : super(ReservaInitial()) {
     on<LoadReservas>(_onLoadReservas);
+    on<LoadReservaById>(_onLoadReservaById);
     on<CreateReserva>(_onCreateReserva);
     on<UpdateReserva>(_onUpdateReserva);
+    on<DeleteReserva>(_onDeleteReserva);
+  }
+
+  Future<void> _onLoadReservaById(
+    LoadReservaById event,
+    Emitter<ReservaState> emit,
+  ) async {
+    try {
+      final reserva = await repository.getReservaById(event.id);
+      final currentReservas = _getCurrentReservas();
+      
+      // Si ya existe la reemplazamos, si no la añadimos
+      final updatedReservas = List<Reserva>.from(currentReservas);
+      final index = updatedReservas.indexWhere((r) => r.id == reserva.id);
+      if (index != -1) {
+        updatedReservas[index] = reserva;
+      } else {
+        updatedReservas.add(reserva);
+      }
+
+      emit(ReservaLoaded(
+        updatedReservas,
+        page: (state is ReservaLoaded) ? (state as ReservaLoaded).page : 1,
+        totalPages: (state is ReservaLoaded) ? (state as ReservaLoaded).totalPages : 1,
+        total: (state is ReservaLoaded) ? (state as ReservaLoaded).total : updatedReservas.length,
+        limit: (state is ReservaLoaded) ? (state as ReservaLoaded).limit : 20,
+        hasReachedMax: (state is ReservaLoaded) ? (state as ReservaLoaded).hasReachedMax : false,
+      ));
+    } catch (e) {
+      emit(ReservaError(e.toString()));
+    }
   }
 
   Future<void> _onLoadReservas(
@@ -97,6 +129,24 @@ class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
     try {
       await repository.updateReserva(event.reserva);
       final result = await repository.getReservas(page: 1, limit: 20);
+      emit(ReservaActionSuccess(result.data));
+    } catch (e) {
+      emit(ReservaError(e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteReserva(
+    DeleteReserva event,
+    Emitter<ReservaState> emit,
+  ) async {
+    final currentReservas = _getCurrentReservas();
+    emit(ReservaSaving(reservas: currentReservas));
+    try {
+      await repository.deleteReserva(event.id);
+      final result = await repository.getReservas(
+        page: (state is ReservaLoaded) ? (state as ReservaLoaded).page : 1,
+        limit: (state is ReservaLoaded) ? (state as ReservaLoaded).limit : 20,
+      );
       emit(ReservaActionSuccess(result.data));
     } catch (e) {
       emit(ReservaError(e.toString()));

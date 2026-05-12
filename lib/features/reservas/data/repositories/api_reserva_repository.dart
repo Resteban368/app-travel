@@ -11,6 +11,7 @@ import '../../domain/repositories/reserva_repository.dart';
 import 'package:agente_viajes/features/tour/domain/entities/tour.dart';
 import 'package:agente_viajes/features/clientes/domain/entities/cliente.dart';
 import 'package:agente_viajes/core/constants/api_constants.dart';
+import 'package:agente_viajes/core/network/api_exception.dart';
 import 'package:agente_viajes/core/models/paged_result.dart';
 import 'package:agente_viajes/features/agentes/domain/entities/agente.dart';
 import 'package:agente_viajes/features/pagos_realizados/domain/entities/pago_realizado.dart';
@@ -87,12 +88,10 @@ class ApiReservaRepository implements ReservaRepository {
       Uri.parse('$_baseUrl/$id'),
       headers: _headers,
     );
-    if (response.statusCode == 200) {
-      return _fromJson(json.decode(response.body));
+    if (response.statusCode != 200) {
+      throw ApiException.fromResponse(response);
     }
-    throw Exception(
-      'Error al cargar detalle de reserva: ${response.statusCode}',
-    );
+    return _fromJson(json.decode(response.body));
   }
 
   @override
@@ -149,9 +148,7 @@ class ApiReservaRepository implements ReservaRepository {
       body: body,
     );
     if (response.statusCode != 201 && response.statusCode != 200) {
-      throw Exception(
-        'Error al crear reserva: ${response.statusCode} - ${response.body}',
-      );
+      throw ApiException.fromResponse(response);
     }
     return _fromJson(json.decode(response.body) as Map<String, dynamic>);
   }
@@ -211,9 +208,7 @@ class ApiReservaRepository implements ReservaRepository {
     );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception(
-        'Error al actualizar reserva: ${response.statusCode} - ${response.body}',
-      );
+      throw ApiException.fromResponse(response);
     }
   }
 
@@ -254,6 +249,17 @@ class ApiReservaRepository implements ReservaRepository {
     } catch (e) {
       debugPrint('❌ [ApiReservaRepository] getBusesDisponibilidad: $e');
       return [];
+    }
+  }
+
+  @override
+  Future<void> deleteReserva(int id) async {
+    final response = await client.delete(
+      Uri.parse('$_baseUrl/$id'),
+      headers: _headers,
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw ApiException.fromResponse(response);
     }
   }
 

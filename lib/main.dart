@@ -16,6 +16,7 @@ import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_bloc.d
 import 'package:agente_viajes/features/hoteles/presentation/bloc/hotel_bloc.dart';
 import 'package:agente_viajes/features/bus_layouts/presentation/bloc/bus_layout_bloc.dart';
 import 'package:agente_viajes/features/uploads/presentation/bloc/upload_bloc.dart';
+import 'package:agente_viajes/features/saldos_pendientes/presentation/bloc/saldo_pendiente_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -193,6 +194,9 @@ class _TravelToursAppState extends State<TravelToursApp> {
         BlocProvider<BusLayoutBloc>(create: (_) => sl<BusLayoutBloc>()),
         BlocProvider<AuthBloc>(create: (_) => sl<AuthBloc>()),
         BlocProvider<UploadBloc>(create: (_) => sl<UploadBloc>()),
+        BlocProvider<SaldoPendienteBloc>(
+          create: (_) => sl<SaldoPendienteBloc>(),
+        ),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,

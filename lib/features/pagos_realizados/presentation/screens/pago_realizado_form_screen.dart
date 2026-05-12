@@ -29,6 +29,8 @@ import '../../../reservas/presentation/bloc/reserva_bloc.dart';
 import '../../../reservas/presentation/bloc/reserva_event.dart';
 import '../../../reservas/presentation/bloc/reserva_state.dart';
 import '../../../reservas/domain/entities/reserva.dart';
+import '../../../reservas/domain/entities/integrante.dart';
+import '../../../clientes/domain/entities/cliente.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 
 class PagoRealizadoFormScreen extends StatefulWidget {
@@ -58,9 +60,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   bool _wasWhatsappSent = false;
   bool _waitingForUploadToSave = false;
   bool _showingLoadingDialog = false;
-  // true cuando el usuario confirmó "Validar" vía WA: el CambiarEstadoPago
-  // debe dispararse DESPUÉS de que el mensaje WA sea enviado, no antes.
-  bool _pendingCambiarEstadoAfterWA = false;
+  bool _isResetting = false;
   // Imagen pendiente (seleccionada pero aún no subida)
   Uint8List? _pendingImageBytes;
   String? _pendingImageMimeType;
@@ -107,6 +107,11 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_selectedReservaId != null) {
+        context.read<ReservaBloc>().add(
+          LoadReservaById(_selectedReservaId.toString()),
+        );
+      }
       context.read<ReservaBloc>().add(const LoadReservas(limit: 20));
     });
 
@@ -183,7 +188,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       return;
     }
 
-    if (_isValidated && (!_isEditing || !(widget.pago?.isValidated ?? false))) {
+    if (_isValidated &&
+        (!_isEditing || !(widget.pago?.isValidated ?? false)) &&
+        !_wasWhatsappSent) {
       _showWhatsAppConfirmation();
       return;
     }
@@ -217,19 +224,25 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   }
 
   void _showLoadingDialog(String message) {
+    if (_showingLoadingDialog) return;
     _showingLoadingDialog = true;
     showDialog(
       context: context,
       barrierDismissible: false,
       useRootNavigator: true,
       builder: (_) => DialogLoadingNetwork(titel: message),
-    );
+    ).then((_) {
+      if (mounted) {
+        setState(() {
+          _showingLoadingDialog = false;
+        });
+      }
+    });
   }
 
   void _closeLoadingDialog() {
     if (_showingLoadingDialog && mounted) {
       _showingLoadingDialog = false;
-      // Usamos el rootNavigator para asegurar que cerramos el diálogo y no la pantalla
       Navigator.of(context, rootNavigator: true).pop();
     }
   }
@@ -361,6 +374,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
             ),
           );
         },
+        onSkip: () {
+          Navigator.pop(ctx);
+          _doSave();
+        },
       ),
     ).then((_) => messageCtrl.dispose());
   }
@@ -399,29 +416,13 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         BlocListener<WhatsAppBloc, WhatsAppState>(
           listener: (context, state) {
             if (state is WhatsAppSending) {
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (ctx) =>
-                    const DialogLoadingNetwork(titel: 'Enviando mensaje...'),
-              );
+              _showLoadingDialog('Enviando mensaje...');
             } else if (state is WhatsAppSent) {
               setState(() => _wasWhatsappSent = true);
-              Navigator.pop(context); // cierra diálogo "Enviando mensaje..."
-              if (_pendingCambiarEstadoAfterWA) {
-                // Flujo: validar pago existente — ahora sí cambiamos estado en BD
-                _pendingCambiarEstadoAfterWA = false;
-                _showLoadingDialog('Procesando pago...');
-                context.read<PagoRealizadoBloc>().add(
-                  CambiarEstadoPago(idPago: widget.pago!.id, accion: 'validar'),
-                );
-              } else {
-                // Flujo: crear pago nuevo con validación marcada
-                _doSave();
-              }
+              _closeLoadingDialog();
+              _doSave();
             } else if (state is WhatsAppError) {
-              _pendingCambiarEstadoAfterWA = false;
-              Navigator.pop(context); // cierra diálogo de carga
+              _closeLoadingDialog();
               SaasSnackBar.showError(context, state.message);
             }
           },
@@ -432,172 +433,199 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               _closeLoadingDialog();
               SaasSnackBar.showSuccess(
                 context,
-                _wasWhatsappSent ? 'Validado y Notificado' : 'Pago procesado',
+                _isResetting
+                    ? 'Pago reseteado exitosamente'
+                    : (_wasWhatsappSent
+                          ? 'Validado y Notificado'
+                          : 'Pago procesado'),
               );
               _wasWhatsappSent = false;
-              // Esperamos un frame para que el diálogo se cierre completamente antes de cerrar la pantalla
-              Future.delayed(Duration.zero, () {
-                if (mounted) Navigator.pop(context);
-              });
+
+              if (_isResetting) {
+                _isResetting = false;
+                setState(() {
+                  _isValidated = false;
+                  _selectedReservaId = null;
+                  _reservaSearchCtrl.clear();
+                });
+              } else {
+                // Esperamos un frame para que el diálogo se cierre completamente antes de cerrar la pantalla
+                Future.delayed(Duration.zero, () {
+                  if (mounted) Navigator.pop(context);
+                });
+              }
             } else if (state is PagosRealizadosLoaded && _isEditing) {
               _closeLoadingDialog();
             } else if (state is PagoRealizadoError) {
+              _isResetting = false;
               _closeLoadingDialog();
               SaasSnackBar.showError(context, state.message);
             }
           },
         ),
       ],
-      child: Scaffold(
-        body: Stack(
-          children: [
-            CustomScrollView(
-              slivers: [
-                PremiumSliverAppBar(
-                  title: _isEditing ? 'Detalle de Pago' : 'Nuevo Pago Manual',
-                  actions: IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back_rounded,
-                      color: Colors.white,
+      child: PopScope(
+        canPop: !_showingLoadingDialog,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop && _showingLoadingDialog) {
+            SaasSnackBar.showWarning(
+              context,
+              'Por favor espera a que termine el proceso actual',
+            );
+          }
+        },
+        child: Scaffold(
+          body: Stack(
+            children: [
+              CustomScrollView(
+                slivers: [
+                  PremiumSliverAppBar(
+                    title: _isEditing ? 'Detalle de Pago' : 'Nuevo Pago Manual',
+                    actions: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Colors.white,
+                      ),
+                      onPressed: () => Navigator.pop(context),
                     ),
-                    onPressed: () => Navigator.pop(context),
                   ),
-                ),
-                SliverToBoxAdapter(
-                  child: FadeTransition(
-                    opacity: _fade,
-                    child: SlideTransition(
-                      position: _slide,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        ),
-                        child: Center(
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (_urlImagenCtrl.text.isNotEmpty)
-                                  _buildImagePreview(),
-                                if (_urlImagenCtrl.text.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: FadeTransition(
+                      opacity: _fade,
+                      child: SlideTransition(
+                        position: _slide,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 16,
+                          ),
+                          child: Center(
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (_urlImagenCtrl.text.isNotEmpty)
+                                    _buildImagePreview(),
+                                  if (_urlImagenCtrl.text.isNotEmpty)
+                                    const SizedBox(height: 24),
+
+                                  PremiumSectionCard(
+                                    title: 'INFORMACIÓN DEL PAGO',
+                                    icon: Icons.receipt_long_rounded,
+                                    children: [
+                                      _buildReservaSelector(canWrite: canWrite),
+                                      const SizedBox(height: 20),
+                                      PhoneFormField(
+                                        controller: _chatIdCtrl,
+                                        countryCode: _countryCode,
+                                        onCountryCodeChanged: (v) =>
+                                            setState(() => _countryCode = v),
+                                        label: 'Chat - WhatsApp *',
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      _buildTypeDropdown(canWrite: canWrite),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _proveedorCtrl,
+                                        label: 'Comercio / Proveedor *',
+                                        icon: Icons.store_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _nitCtrl,
+                                        label: 'NIT / ID Fiscal (opcional)',
+                                        icon: Icons.badge_outlined,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _montoCtrl,
+                                        label: 'Monto Recibido *',
+                                        icon: Icons.attach_money_rounded,
+                                        isNumeric: true,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _metodoPagoCtrl,
+                                        label: 'Método de Pago *',
+                                        icon: Icons
+                                            .account_balance_wallet_outlined,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _referenciaCtrl,
+                                        label: 'No. Referencia *',
+                                        icon: Icons.tag_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      _buildFechaDocumentoPicker(
+                                        canWrite: canWrite,
+                                      ),
+                                      const SizedBox(height: 20),
+                                      PremiumTextField(
+                                        controller: _urlImagenCtrl,
+                                        label: 'URL del Comprobante',
+                                        icon: Icons.link_rounded,
+                                        readOnly: !canWrite,
+                                      ),
+                                      if (canWrite && kIsWeb) ...[
+                                        const SizedBox(height: 8),
+                                        _buildUploadBtn(),
+                                      ],
+                                    ],
+                                  ),
                                   const SizedBox(height: 24),
 
-                                PremiumSectionCard(
-                                  title: 'INFORMACIÓN DEL PAGO',
-                                  icon: Icons.receipt_long_rounded,
-                                  children: [
-                                    _buildReservaSelector(canWrite: canWrite),
-                                    const SizedBox(height: 20),
-                                    PhoneFormField(
-                                      controller: _chatIdCtrl,
-                                      countryCode: _countryCode,
-                                      onCountryCodeChanged: (v) =>
-                                          setState(() => _countryCode = v),
-                                      label: 'Chat - WhatsApp *',
-                                      readOnly: !canWrite,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _buildTypeDropdown(canWrite: canWrite),
-                                    const SizedBox(height: 20),
-                                    PremiumTextField(
-                                      controller: _proveedorCtrl,
-                                      label: 'Comercio / Proveedor *',
-                                      icon: Icons.store_rounded,
-                                      readOnly: !canWrite,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    PremiumTextField(
-                                      controller: _nitCtrl,
-                                      label: 'NIT / ID Fiscal (opcional)',
-                                      icon: Icons.badge_outlined,
-                                      readOnly: !canWrite,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    PremiumTextField(
-                                      controller: _montoCtrl,
-                                      label: 'Monto Recibido *',
-                                      icon: Icons.attach_money_rounded,
-                                      isNumeric: true,
-                                      readOnly: !canWrite,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    PremiumTextField(
-                                      controller: _metodoPagoCtrl,
-                                      label: 'Método de Pago *',
-                                      icon:
-                                          Icons.account_balance_wallet_outlined,
-                                      readOnly: !canWrite,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    PremiumTextField(
-                                      controller: _referenciaCtrl,
-                                      label: 'No. Referencia *',
-                                      icon: Icons.tag_rounded,
-                                      readOnly: !canWrite,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _buildFechaDocumentoPicker(
-                                      canWrite: canWrite,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    PremiumTextField(
-                                      controller: _urlImagenCtrl,
-                                      label: 'URL del Comprobante',
-                                      icon: Icons.link_rounded,
-                                      readOnly: !canWrite,
-                                    ),
-                                    if (canWrite && kIsWeb) ...[
-                                      const SizedBox(height: 8),
-                                      _buildUploadBtn(),
+                                  PremiumSectionCard(
+                                    title: 'ESTADO DEL PAGO',
+                                    icon: Icons.verified_user_rounded,
+                                    children: [
+                                      if (_isEditing)
+                                        _buildEstadoSection(canWrite: canWrite)
+                                      else
+                                        _buildSwitch(canWrite: canWrite),
                                     ],
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
-
-                                PremiumSectionCard(
-                                  title: 'ESTADO DEL PAGO',
-                                  icon: Icons.verified_user_rounded,
-                                  children: [
-                                    if (_isEditing)
-                                      _buildEstadoSection(canWrite: canWrite)
-                                    else
-                                      _buildSwitch(canWrite: canWrite),
-                                  ],
-                                ),
-                                const SizedBox(height: 48),
-
-                                if (canWrite)
-                                  Builder(
-                                    builder: (ctx) =>
-                                        BlocBuilder<
-                                          PagoRealizadoBloc,
-                                          PagoRealizadoState
-                                        >(
-                                          builder: (context, state) {
-                                            return PremiumActionButton(
-                                              label: 'PROCESAR PAGO',
-                                              icon: Icons.verified_rounded,
-                                              isLoading:
-                                                  state is PagoRealizadoSaving,
-                                              onTap: () => _save(ctx),
-                                            );
-                                          },
-                                        ),
                                   ),
-                                const SizedBox(height: 100),
-                              ],
+                                  const SizedBox(height: 48),
+
+                                  if (canWrite)
+                                    Builder(
+                                      builder: (ctx) =>
+                                          BlocBuilder<
+                                            PagoRealizadoBloc,
+                                            PagoRealizadoState
+                                          >(
+                                            builder: (context, state) {
+                                              return PremiumActionButton(
+                                                label: 'PROCESAR PAGO',
+                                                icon: Icons.verified_rounded,
+                                                isLoading:
+                                                    state
+                                                        is PagoRealizadoSaving,
+                                                onTap: () => _save(ctx),
+                                              );
+                                            },
+                                          ),
+                                    ),
+                                  const SizedBox(height: 100),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -731,6 +759,8 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         if (state is ReservaLoaded) reservas = state.reservas;
 
         Reserva? selectedReserva;
+        String lbl = _reservaSearchCtrl.text;
+
         if (state is ReservaLoaded && _selectedReservaId != null) {
           selectedReserva = reservas.firstWhere(
             (r) => int.tryParse(r.id ?? '') == _selectedReservaId,
@@ -747,15 +777,26 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
             ),
           );
           if (selectedReserva.id?.isNotEmpty == true) {
-            final responsable = selectedReserva.integrantes.isNotEmpty
-                ? selectedReserva.integrantes.firstWhere(
-                    (i) => i.esResponsable,
-                    orElse: () => selectedReserva!.integrantes.first,
-                  )
-                : null;
-            final lbl =
-                '${selectedReserva.idReserva ?? 'Reserva #$_selectedReservaId'} - ${responsable?.nombre ?? selectedReserva.correo}';
-            if (_reservaSearchCtrl.text != lbl && !_reservaSearchCtrl.text.contains(' - ')) {
+            final responsable =
+                selectedReserva.responsable ??
+                (selectedReserva.integrantes.isNotEmpty
+                    ? selectedReserva.integrantes.firstWhere(
+                        (i) => i.esResponsable,
+                        orElse: () => selectedReserva!.integrantes.first,
+                      )
+                    : null);
+            String? respNombre;
+            if (responsable is Integrante) {
+              respNombre = responsable.nombre;
+            } else if (responsable is Cliente) {
+              respNombre = responsable.nombre;
+            }
+
+            lbl =
+                '${selectedReserva.idReserva ?? 'Reserva #$_selectedReservaId'} - ${respNombre ?? selectedReserva.correo}';
+
+            if (_reservaSearchCtrl.text != lbl &&
+                !_reservaSearchCtrl.text.contains(' - ')) {
               WidgetsBinding.instance.addPostFrameCallback(
                 (_) => setState(() => _reservaSearchCtrl.text = lbl),
               );
@@ -839,7 +880,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _reservaSearchCtrl.text,
+                            lbl,
                             style: const TextStyle(
                               color: SaasPalette.textPrimary,
                               fontWeight: FontWeight.w600,
@@ -1111,12 +1152,12 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           ),
         ],
 
-        // Botones de acción (visibles para cualquier usuario autenticado)
-        if (true) ...[
+        // Botones de acción
+        if (canWrite && pago != null) ...[
           const SizedBox(height: 16),
           Row(
             children: [
-              if (!pago!.isValidated)
+              if (!pago.isValidated)
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () => _confirmarValidar(),
@@ -1150,6 +1191,29 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     ),
                   ),
                 ),
+              if (pago.isValidated ||
+                  pago.isRechazado ||
+                  pago.reservaId != null) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _confirmarResetear(),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Resetear'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: SaasPalette.textSecondary,
+                      side: const BorderSide(
+                        color: SaasPalette.border,
+                        width: 1.5,
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ],
@@ -1157,42 +1221,61 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     );
   }
 
-  void _confirmarValidar() {
-    if (_selectedReservaId == null) {
-      SaasSnackBar.showWarning(
-        context,
-        'Debes asignar una reserva antes de validar el pago',
-      );
-      return;
-    }
-    _showWhatsAppConfirmationForValidar();
-  }
-
-  void _showWhatsAppConfirmationForValidar() {
-    final messageCtrl = TextEditingController(
-      text:
-          'Tu pago ya fue validado con éxito. Muchas gracias por preferirnos ✅🙏✨',
-    );
+  void _confirmarResetear() {
     showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) => _PremiumWhatsAppDialog(
-        messageCtrl: messageCtrl,
-        onConfirm: (msg) {
-          Navigator.pop(ctx);
-          // Marcar que al recibir WhatsAppSent debemos cambiar estado en BD.
-          // NO disparamos CambiarEstadoPago aquí para evitar la llamada duplicada.
-          _pendingCambiarEstadoAfterWA = true;
-          _wasWhatsappSent = true;
-          context.read<WhatsAppBloc>().add(
-            SendMessage(
-              conversationId: widget.pago!.conversationId!,
-              content: msg,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: SaasPalette.bgCanvas,
+        title: const Text(
+          'Resetear Pago',
+          style: TextStyle(
+            color: SaasPalette.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          '¿Estás seguro de que deseas resetear este pago? Se desvinculará de la reserva actual y volverá a estado "Pendiente".',
+          style: TextStyle(color: SaasPalette.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: SaasPalette.textSecondary),
             ),
-          );
-        },
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _isResetting = true;
+              _showLoadingDialog('Reseteando pago...');
+              context.read<PagoRealizadoBloc>().add(
+                CambiarEstadoPago(idPago: widget.pago!.id, accion: 'resetear'),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SaasPalette.brand600,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              'Sí, Resetear',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
       ),
-    ).then((_) => messageCtrl.dispose());
+    );
+  }
+
+  void _confirmarValidar() {
+    setState(() {
+      _isValidated = true;
+    });
+    _save(context);
   }
 
   void _showRejectionDialog() {
@@ -2040,9 +2123,11 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
 class _PremiumWhatsAppDialog extends StatefulWidget {
   final TextEditingController messageCtrl;
   final Function(String) onConfirm;
+  final VoidCallback onSkip;
   const _PremiumWhatsAppDialog({
     required this.messageCtrl,
     required this.onConfirm,
+    required this.onSkip,
   });
   @override
   State<_PremiumWhatsAppDialog> createState() => _PremiumWhatsAppDialogState();
@@ -2143,16 +2228,49 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: const Text(
-                      'Enviar',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/images/whatsapp.png',
+                          width: 24,
+                          height: 24,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Enviar Mensaje',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => widget.onSkip(),
+
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: SaasPalette.brand600,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                side: const BorderSide(color: Colors.transparent),
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              child: const Text(
+                'Validar sin enviar mensaje',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ],
         ),

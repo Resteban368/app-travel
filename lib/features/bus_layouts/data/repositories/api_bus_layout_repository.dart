@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:agente_viajes/core/constants/api_constants.dart';
+import 'package:agente_viajes/core/network/api_exception.dart';
 import '../../domain/entities/bus_layout.dart';
 import '../../domain/repositories/bus_layout_repository.dart';
 
@@ -21,19 +22,16 @@ class ApiBusLayoutRepository implements BusLayoutRepository {
   Future<List<BusLayout>> getBusLayouts() async {
     debugPrint('🌎 [ApiBusLayoutRepository] GET $_baseUrl');
     final response = await client.get(Uri.parse(_baseUrl), headers: _headers);
-    if (response.statusCode == 200) {
-      final decoded = json.decode(response.body);
-      final List<dynamic> data = decoded is Map
-          ? (decoded['data'] ?? [])
-          : decoded;
-      return data
-          .map((item) => _fromJson(item as Map<String, dynamic>))
-          .toList();
+    if (response.statusCode != 200) {
+      throw ApiException.fromResponse(response);
     }
-    debugPrint(
-      '❌ [ApiBusLayoutRepository] Error: ${response.statusCode} — ${response.body}',
-    );
-    throw Exception('Error al cargar layouts de bus: ${response.statusCode}');
+    final decoded = json.decode(response.body);
+    final List<dynamic> data = decoded is Map
+        ? (decoded['data'] ?? [])
+        : decoded;
+    return data
+        .map((item) => _fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   @override
@@ -43,14 +41,11 @@ class ApiBusLayoutRepository implements BusLayoutRepository {
       Uri.parse('$_baseUrl/$id'),
       headers: _headers,
     );
-    if (response.statusCode == 200) {
-      final decoded = json.decode(response.body);
-      return _fromJson(decoded as Map<String, dynamic>);
+    if (response.statusCode != 200) {
+      throw ApiException.fromResponse(response);
     }
-    debugPrint(
-      '❌ [ApiBusLayoutRepository] Error: ${response.statusCode} — ${response.body}',
-    );
-    throw Exception('Error al cargar layout de bus: ${response.statusCode}');
+    final decoded = json.decode(response.body);
+    return _fromJson(decoded as Map<String, dynamic>);
   }
 
   @override
@@ -63,10 +58,7 @@ class ApiBusLayoutRepository implements BusLayoutRepository {
       body: body,
     );
     if (response.statusCode != 201 && response.statusCode != 200) {
-      debugPrint(
-        '❌ [ApiBusLayoutRepository] Error: ${response.statusCode} — ${response.body}',
-      );
-      throw Exception('Error al crear layout de bus: ${response.statusCode}');
+      throw ApiException.fromResponse(response);
     }
   }
 
@@ -80,12 +72,7 @@ class ApiBusLayoutRepository implements BusLayoutRepository {
       body: body,
     );
     if (response.statusCode != 200) {
-      debugPrint(
-        '❌ [ApiBusLayoutRepository] Error: ${response.statusCode} — ${response.body}',
-      );
-      throw Exception(
-        'Error al actualizar layout de bus: ${response.statusCode}',
-      );
+      throw ApiException.fromResponse(response);
     }
   }
 
@@ -96,12 +83,7 @@ class ApiBusLayoutRepository implements BusLayoutRepository {
       headers: _headers,
     );
     if (response.statusCode != 200 && response.statusCode != 204) {
-      debugPrint(
-        '❌ [ApiBusLayoutRepository] Delete error: ${response.statusCode} — ${response.body}',
-      );
-      throw Exception(
-        'Error al eliminar layout de bus: ${response.statusCode}',
-      );
+      throw ApiException.fromResponse(response);
     }
   }
 

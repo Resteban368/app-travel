@@ -1313,7 +1313,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               );
             }
 
-            final isLoading = state is TourLoading || state is TourInitial || state is TourSaving;
+            final isLoading =
+                state is TourLoading ||
+                state is TourInitial ||
+                state is TourSaving;
             final isError = state is TourError;
             final errorMessage = isError ? state.message : null;
 
@@ -1326,7 +1329,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               tours = state.tours!;
             }
 
-            debugPrint('🎨 [ReservaFormScreen] _buildTourDropdown - State: $state, Tours: ${tours.length}, isLoading: $isLoading');
+            debugPrint(
+              '🎨 [ReservaFormScreen] _buildTourDropdown - State: $state, Tours: ${tours.length}, isLoading: $isLoading',
+            );
 
             final selectedTour = _selectedTourId != null
                 ? tours.firstWhere(
@@ -1365,7 +1370,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     children: [
                       InkWell(
                         onTap: (isLoading || (isError && !isLoading))
-                            ? (isError ? () => context.read<TourBloc>().add(LoadTours()) : null)
+                            ? (isError
+                                  ? () => context.read<TourBloc>().add(
+                                      LoadTours(),
+                                    )
+                                  : null)
                             : () async {
                                 final result = await showDialog<Tour>(
                                   context: context,
@@ -1408,35 +1417,37 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           child: Row(
                             children: [
                               Icon(
-                                  isError ? Icons.error_outline_rounded : Icons.tour_rounded,
-                                  color: isError
-                                      ? SaasPalette.danger
-                                      : isTourFound
-                                      ? SaasPalette.brand600
-                                      : SaasPalette.textTertiary,
-                                  size: 18,
-                                ),
+                                isError
+                                    ? Icons.error_outline_rounded
+                                    : Icons.tour_rounded,
+                                color: isError
+                                    ? SaasPalette.danger
+                                    : isTourFound
+                                    ? SaasPalette.brand600
+                                    : SaasPalette.textTertiary,
+                                size: 18,
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
-                                  child: Text(
-                                    isError
-                                        ? 'Error al cargar tours (Toca para reintentar)'
-                                        : isEmpty
-                                            ? 'No hay tours disponibles'
-                                            : isTourFound
-                                                ? _tourSearchCtrl.text
-                                                : 'Seleccionar tour...',
-                                    style: TextStyle(
-                                      color: isError
-                                          ? SaasPalette.danger
-                                          : isTourFound
-                                              ? SaasPalette.textPrimary
-                                              : SaasPalette.textTertiary,
-                                      fontSize: 14,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
+                                child: Text(
+                                  isError
+                                      ? 'Error al cargar tours (Toca para reintentar)'
+                                      : isEmpty
+                                      ? 'No hay tours disponibles'
+                                      : isTourFound
+                                      ? _tourSearchCtrl.text
+                                      : 'Seleccionar tour...',
+                                  style: TextStyle(
+                                    color: isError
+                                        ? SaasPalette.danger
+                                        : isTourFound
+                                        ? SaasPalette.textPrimary
+                                        : SaasPalette.textTertiary,
+                                    fontSize: 14,
                                   ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
+                              ),
                               if (isLoading)
                                 const SizedBox(
                                   width: 16,
@@ -1459,23 +1470,28 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                     size: 18,
                                   ),
                                 )
-                                else ...[
-                                  const Icon(
-                                    Icons.keyboard_arrow_down_rounded,
-                                    color: SaasPalette.textTertiary,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  if (!isLoading)
-                                    IconButton(
-                                      icon: const Icon(Icons.refresh_rounded, size: 18),
-                                      onPressed: () => context.read<TourBloc>().add(LoadTours()),
-                                      color: SaasPalette.textTertiary,
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      tooltip: 'Refrescar tours',
+                              else ...[
+                                const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  color: SaasPalette.textTertiary,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                if (!isLoading)
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.refresh_rounded,
+                                      size: 18,
                                     ),
-                                ],
+                                    onPressed: () => context
+                                        .read<TourBloc>()
+                                        .add(LoadTours()),
+                                    color: SaasPalette.textTertiary,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    tooltip: 'Refrescar tours',
+                                  ),
+                              ],
                             ],
                           ),
                         ),
@@ -4537,6 +4553,16 @@ class _PagoCard extends StatelessWidget {
                   ),
                 ),
                 Text(
+                  pago.referencia.isNotEmpty
+                      ? pago.referencia
+                      : 'Sin referencia',
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
                   pago.fechaDocumento.isNotEmpty
                       ? pago.fechaDocumento
                       : 'Sin fecha',
@@ -5579,8 +5605,9 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
     );
     _valorCtrl = TextEditingController(
       text: widget.hotelReserva.valor != null
-          ? NumberFormat.decimalPattern('es_CO')
-              .format(widget.hotelReserva.valor)
+          ? NumberFormat.decimalPattern(
+              'es_CO',
+            ).format(widget.hotelReserva.valor)
           : '',
     );
     _selectedHotelId =

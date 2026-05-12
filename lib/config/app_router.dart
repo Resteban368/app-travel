@@ -64,6 +64,8 @@ import '../features/auditoria/presentation/bloc/sesiones_bloc.dart';
 import '../features/auditoria/presentation/bloc/sesiones_event.dart';
 import '../features/auditoria/presentation/bloc/auditoria_general_bloc.dart';
 import '../features/auditoria/presentation/bloc/auditoria_general_event.dart';
+import '../features/saldos_pendientes/presentation/screens/saldo_pendiente_screen.dart';
+import '../features/saldos_pendientes/presentation/bloc/saldo_pendiente_bloc.dart';
 
 /// Centralised route configuration.
 class AppRouter {
@@ -121,6 +123,7 @@ class AppRouter {
   static const String profile = '/profile';
   static const String admin = '/admin';
   static const String auditoria = '/auditoria';
+  static const String saldosPendientes = '/saldos-pendientes';
 
   static final ValueNotifier<String> currentRouteNotifier =
       ValueNotifier<String>('/');
@@ -173,6 +176,15 @@ class AppRouter {
         return _fadeRoute(const HotelListScreen(), settings);
       case busLayouts:
         return _fadeRoute(const BusLayoutListScreen(), settings);
+      case saldosPendientes:
+        return _fadeRoute(
+          BlocProvider(
+            create: (_) =>
+                sl<SaldoPendienteBloc>()..add(const LoadSaldosPendientes()),
+            child: const SaldoPendienteScreen(),
+          ),
+          settings,
+        );
       case profile:
         return _fadeRoute(const ProfileScreen(), settings);
       case auditoria:

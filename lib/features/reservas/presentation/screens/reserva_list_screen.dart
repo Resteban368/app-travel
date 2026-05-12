@@ -33,6 +33,7 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
   String _searchQuery = '';
   Timer? _debounce;
   int _currentPage = 1;
+  bool _isProcessingDelete = false;
 
   DateTime? _startDate;
   DateTime? _endDate;
@@ -163,7 +164,42 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
       backgroundColor: SaasPalette.bgApp,
       body: BlocConsumer<ReservaBloc, ReservaState>(
         listener: (context, state) {
-          if (state is ReservaError) {
+          if (state is ReservaSaving && _isProcessingDelete) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => const DialogLoadingNetwork(titel: 'Eliminando reserva...'),
+            );
+          } else if (state is ReservaActionSuccess && _isProcessingDelete) {
+            _isProcessingDelete = false;
+            Navigator.of(context, rootNavigator: true).pop();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.check_circle_rounded,
+                        color: Colors.white, size: 18),
+                    SizedBox(width: 10),
+                    Text(
+                      'Reserva eliminada correctamente',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                backgroundColor: SaasPalette.success,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                margin: const EdgeInsets.all(16),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          } else if (state is ReservaError) {
+            if (_isProcessingDelete) {
+              _isProcessingDelete = false;
+              Navigator.of(context, rootNavigator: true).pop();
+            }
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -241,7 +277,7 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
           padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
-              (_, __) => const SaasListSkeleton(),
+              (_, _) => const SaasListSkeleton(),
               childCount: 4,
             ),
           ),
@@ -275,7 +311,11 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
           delegate: SliverChildBuilderDelegate(
             (context, index) {
               final reserva = reservas[index];
-              return _ReservaCard(reserva: reserva, canWrite: canWrite);
+              return _ReservaCard(
+                reserva: reserva,
+                canWrite: canWrite,
+                onDelete: () => _confirmDelete(reserva),
+              );
             },
             childCount: reservas.length,
           ),
@@ -294,6 +334,23 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
           ),
         ),
     ];
+  }
+
+  void _confirmDelete(Reserva reserva) {
+    showDialog(
+      context: context,
+      builder: (ctx) => SaasConfirmDialog(
+        title: '¿Eliminar Reserva?',
+        body: 'Esta acción borrará la reserva #${reserva.idReserva ?? reserva.id} permanentemente del sistema.',
+        onConfirm: () {
+          Navigator.pop(ctx);
+          if (reserva.id != null) {
+            _isProcessingDelete = true;
+            context.read<ReservaBloc>().add(DeleteReserva(int.parse(reserva.id!)));
+          }
+        },
+      ),
+    );
   }
 }
 
@@ -417,7 +474,7 @@ class _ReservaFilters extends StatelessWidget {
                   boxShadow: hasDates
                       ? [
                           BoxShadow(
-                            color: SaasPalette.brand600.withOpacity(0.08),
+                            color: SaasPalette.brand600.withValues(alpha: 0.08),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -452,7 +509,7 @@ class _ReservaFilters extends StatelessWidget {
                                         'Rango seleccionado',
                                         style: TextStyle(
                                           color: SaasPalette.brand600
-                                              .withOpacity(0.7),
+                                              .withValues(alpha: 0.7),
                                           fontSize: 10,
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -490,7 +547,7 @@ class _ReservaFilters extends StatelessWidget {
                             child: Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: SaasPalette.brand600.withOpacity(0.1),
+                                color: SaasPalette.brand600.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(
@@ -618,7 +675,8 @@ class _StatusChip extends StatelessWidget {
 class _ReservaCard extends StatefulWidget {
   final Reserva reserva;
   final bool canWrite;
-  const _ReservaCard({required this.reserva, required this.canWrite});
+  final VoidCallback onDelete;
+  const _ReservaCard({required this.reserva, required this.canWrite, required this.onDelete});
 
   @override
   State<_ReservaCard> createState() => _ReservaCardState();
@@ -871,6 +929,17 @@ class _ReservaCardState extends State<_ReservaCard> {
                             ),
                             const SizedBox(width: 8),
                             _StatusBadge(status: r.estado),
+                            if (widget.canWrite) ...[
+                              const SizedBox(width: 16),
+                              _ReservaActionMenu(
+                                onEdit: () => Navigator.pushNamed(
+                                  context,
+                                  AppRouter.reservaEdit,
+                                  arguments: r,
+                                ),
+                                onDelete: widget.onDelete,
+                              ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -1107,3 +1176,60 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
+class _ReservaActionMenu extends StatelessWidget {
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _ReservaActionMenu({required this.onEdit, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      icon: const Icon(
+        Icons.more_vert_rounded,
+        color: SaasPalette.textTertiary,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: SaasPalette.bgCanvas,
+      elevation: 4,
+      onSelected: (value) {
+        if (value == 'edit') onEdit();
+        if (value == 'delete') onDelete();
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'edit',
+          child: Row(
+            children: const [
+              Icon(
+                Icons.edit_outlined,
+                size: 18,
+                color: SaasPalette.textPrimary,
+              ),
+              SizedBox(width: 12),
+              Text('Editar reserva', style: TextStyle(fontSize: 13)),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: const [
+              Icon(
+                Icons.delete_outline_rounded,
+                size: 18,
+                color: SaasPalette.danger,
+              ),
+              SizedBox(width: 12),
+              Text(
+                'Eliminar',
+                style: TextStyle(color: SaasPalette.danger, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}

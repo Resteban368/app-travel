@@ -17,6 +17,7 @@ import 'package:agente_viajes/features/agentes/presentation/bloc/agente_bloc.dar
 import 'package:agente_viajes/features/agentes/presentation/bloc/agente_event.dart';
 import 'package:agente_viajes/features/reservas/presentation/bloc/reserva_bloc.dart';
 import 'package:agente_viajes/features/reservas/presentation/bloc/reserva_event.dart';
+import 'package:agente_viajes/features/saldos_pendientes/presentation/bloc/saldo_pendiente_bloc.dart';
 import 'package:agente_viajes/features/cotizaciones/presentation/bloc/cotizacion_bloc.dart';
 import 'package:agente_viajes/features/cotizaciones/presentation/bloc/cotizacion_event.dart';
 import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_bloc.dart';
@@ -144,6 +145,12 @@ class _AdminShellState extends State<AdminShell> {
       permission: 'reservas',
     ),
     _NavItem(
+      icon: Icons.account_balance_wallet_rounded,
+      label: 'Saldos\nPendientes',
+      route: AppRouter.saldosPendientes,
+      permission: 'saldo_pendiente',
+    ),
+    _NavItem(
       icon: Icons.request_quote_rounded,
       label: 'Cotizaciones',
       route: AppRouter.cotizaciones,
@@ -208,6 +215,8 @@ class _AdminShellState extends State<AdminShell> {
         context.read<AgenteBloc>().add(LoadAgentes());
       case AppRouter.reservas:
         context.read<ReservaBloc>().add(const LoadReservas());
+      case AppRouter.saldosPendientes:
+        context.read<SaldoPendienteBloc>().add(const LoadSaldosPendientes());
       case AppRouter.cotizaciones:
         context.read<CotizacionBloc>().add(const LoadAllData());
       case AppRouter.clientes:
