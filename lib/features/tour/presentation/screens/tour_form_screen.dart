@@ -20,7 +20,8 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 
 class TourFormScreen extends StatefulWidget {
   final Tour? tour;
-  const TourFormScreen({super.key, this.tour});
+  final bool duplicateMode;
+  const TourFormScreen({super.key, this.tour, this.duplicateMode = false});
 
   @override
   State<TourFormScreen> createState() => _TourFormScreenState();
@@ -65,7 +66,9 @@ class _TourFormScreenState extends State<TourFormScreen>
     final t = widget.tour;
     _nameCtrl = TextEditingController(text: t?.name ?? '');
     _agencyCtrl = TextEditingController(text: t?.agency ?? 'Agente Viajes');
-    _priceCtrl = TextEditingController(text: t?.price.toInt().toString() ?? '');
+    _priceCtrl = TextEditingController(
+      text: t?.price?.toInt().toString() ?? '',
+    );
     _departurePointCtrl = TextEditingController(text: t?.departurePoint ?? '');
     _departureTimeCtrl = TextEditingController(text: t?.departureTime ?? '');
     _arrivalCtrl = TextEditingController(text: t?.arrival ?? '');
@@ -73,16 +76,19 @@ class _TourFormScreenState extends State<TourFormScreen>
     _idTourCtrl = TextEditingController(text: t?.idTour.toString() ?? '');
     _cuposCtrl = TextEditingController(text: t?.cupos?.toString() ?? '');
     if (t != null) {
-      _dateRange = DateTimeRange(start: t.startDate, end: t.endDate);
+      _dateRange = DateTimeRange(
+        start: t.startDate ?? DateTime.now(),
+        end: t.endDate ?? DateTime.now(),
+      );
       _selectedSedeId = t.sedeId;
-      _selectedBusLayoutIds = List<int>.from(t.busLayoutIds);
-      _isPromotion = t.isPromotion;
-      _isActive = t.isActive;
-      _precioPorPareja = t.precioPorPareja;
-      _inclusions = List.from(t.inclusions);
-      _exclusions = List.from(t.exclusions);
-      _itinerary = List.from(t.itinerary);
-      _precios = List.from(t.precios);
+      _selectedBusLayoutIds = List<int>.from(t.busLayoutIds ?? []);
+      _isPromotion = t.isPromotion ?? false;
+      _isActive = t.isActive ?? false;
+      _precioPorPareja = t.precioPorPareja ?? false;
+      _inclusions = List.from(t.inclusions ?? []);
+      _exclusions = List.from(t.exclusions ?? []);
+      _itinerary = List.from(t.itinerary ?? []);
+      _precios = List.from(t.precios ?? []);
     }
 
     _entryCtrl = AnimationController(
@@ -95,7 +101,7 @@ class _TourFormScreenState extends State<TourFormScreen>
     ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut));
     _entryCtrl.forward();
 
-    if (_isEditing) {
+    if (_isEditing && !widget.duplicateMode) {
       _isLoadingFullData = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showDialog(
@@ -111,26 +117,29 @@ class _TourFormScreenState extends State<TourFormScreen>
   }
 
   void _updateFieldsFromTour(Tour t) {
-    _nameCtrl.text = t.name;
-    _agencyCtrl.text = t.agency;
-    _priceCtrl.text = t.price.toInt().toString();
-    _departurePointCtrl.text = t.departurePoint;
-    _departureTimeCtrl.text = t.departureTime;
-    _arrivalCtrl.text = t.arrival;
-    _pdfLinkCtrl.text = t.pdfLink;
-    _idTourCtrl.text = t.idTour.toString();
+    _nameCtrl.text = t.name ?? '';
+    _agencyCtrl.text = t.agency ?? '';
+    _priceCtrl.text = t.price?.toInt().toString() ?? '';
+    _departurePointCtrl.text = t.departurePoint ?? '';
+    _departureTimeCtrl.text = t.departureTime ?? '';
+    _arrivalCtrl.text = t.arrival ?? '';
+    _pdfLinkCtrl.text = t.pdfLink ?? '';
+    _idTourCtrl.text = t.idTour?.toString() ?? '';
     _cuposCtrl.text = t.cupos?.toString() ?? '';
 
-    _dateRange = DateTimeRange(start: t.startDate, end: t.endDate);
+    _dateRange = DateTimeRange(
+      start: t.startDate ?? DateTime.now(),
+      end: t.endDate ?? DateTime.now(),
+    );
     _selectedSedeId = t.sedeId;
-    _selectedBusLayoutIds = List<int>.from(t.busLayoutIds);
-    _isPromotion = t.isPromotion;
-    _isActive = t.isActive;
-    _precioPorPareja = t.precioPorPareja;
-    _inclusions = List.from(t.inclusions);
-    _exclusions = List.from(t.exclusions);
-    _itinerary = List.from(t.itinerary);
-    _precios = List.from(t.precios);
+    _selectedBusLayoutIds = List<int>.from(t.busLayoutIds ?? []);
+    _isPromotion = t.isPromotion ?? false;
+    _isActive = t.isActive ?? false;
+    _precioPorPareja = t.precioPorPareja ?? false;
+    _inclusions = List.from(t.inclusions ?? []);
+    _exclusions = List.from(t.exclusions ?? []);
+    _itinerary = List.from(t.itinerary ?? []);
+    _precios = List.from(t.precios ?? []);
     _isLoadingFullData = false;
   }
 
@@ -304,9 +313,11 @@ class _TourFormScreenState extends State<TourFormScreen>
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
-    final canWrite = authState is AuthAuthenticated
-        ? authState.user.canWrite('tours')
-        : true;
+    final canWrite = widget.duplicateMode
+        ? false
+        : (authState is AuthAuthenticated
+            ? authState.user.canWrite('tours')
+            : true);
 
     return BlocListener<TourBloc, TourState>(
       listener: (context, state) {
@@ -315,7 +326,8 @@ class _TourFormScreenState extends State<TourFormScreen>
           setState(() => _updateFieldsFromTour(state.tour));
           final now = DateTime.now();
           final end = state.tour.endDate;
-          if (end.isBefore(now) && state.tour.startDate.isBefore(now)) {
+          final start = state.tour.startDate;
+          if (end != null && start != null && end.isBefore(now) && start.isBefore(now)) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) _showFinalizarDialog(context, state.tour.id);
             });
@@ -329,18 +341,24 @@ class _TourFormScreenState extends State<TourFormScreen>
           );
         }
 
-        if (state is TourSaved) {
+        if (state is TourDuplicado) {
+          SaasSnackBar.showSuccess(context, 'Tour duplicado exitosamente');
+          if (mounted) Navigator.pop(context);
+        } else if (state is TourSaved) {
           SaasSnackBar.showSuccess(
             context,
             'Experiencia guardada exitosamente',
           );
-          Navigator.pop(context);
+          if (mounted) Navigator.pop(context);
         } else if (state is TourError && !_isLoadingFullData) {
-          SaasSnackBar.showError(context, state.message);
+          if (mounted) SaasSnackBar.showError(context, state.message);
         }
       },
       child: PopScope(
-        canPop: !_isLoadingFullData && (context.watch<TourBloc>().state is! TourSaving),
+        canPop:
+            !_isLoadingFullData &&
+            (context.watch<TourBloc>().state is! TourSaving) &&
+            (context.watch<TourBloc>().state is! TourDuplicando),
         onPopInvokedWithResult: (didPop, result) {
           if (!didPop) {
             SaasSnackBar.showWarning(
@@ -350,221 +368,231 @@ class _TourFormScreenState extends State<TourFormScreen>
           }
         },
         child: Scaffold(
-        body: Stack(
-          children: [
-            CustomScrollView(
-              slivers: [
-                PremiumSliverAppBar(
-                  title: _isEditing && !canWrite
-                      ? 'Ver Experiencia'
-                      : (_isEditing
-                            ? 'Configurar Experiencia'
-                            : 'Nueva Aventura'),
-                  actions: IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back_rounded,
-                      color: Colors.white,
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: FadeTransition(
-                    opacity: _fade,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
+          body: Stack(
+            children: [
+              CustomScrollView(
+                slivers: [
+                  PremiumSliverAppBar(
+                    title: widget.duplicateMode
+                        ? 'Detalle Histórico'
+                        : (_isEditing && !canWrite
+                            ? 'Ver Experiencia'
+                            : (_isEditing
+                                ? 'Configurar Experiencia'
+                                : 'Nueva Aventura')),
+                    actions: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Colors.white,
                       ),
-                      child: Center(
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              PremiumSectionCard(
-                                title: 'GENERAL',
-                                icon: Icons.dashboard_rounded,
-                                children: [
-                                  PremiumTextField(
-                                    controller: _idTourCtrl,
-                                    label: 'Código de Operación *',
-                                    icon: Icons.vpn_key_rounded,
-                                    isNumeric: true,
-                                    readOnly: !canWrite,
-                                  ),
-                                  const SizedBox(height: 20),
-                                  PremiumTextField(
-                                    controller: _nameCtrl,
-                                    label: 'Título de la Experiencia *',
-                                    icon: Icons.tour_rounded,
-                                    readOnly: !canWrite,
-                                  ),
-                                  const SizedBox(height: 20),
-                                  _buildSedeDropdown(canWrite: canWrite),
-                                  const SizedBox(height: 20),
-                                  _buildBusLayoutDropdown(canWrite: canWrite),
-                                ],
-                              ),
-                              const SizedBox(height: 20),
-                              PremiumSectionCard(
-                                title: 'DETALLES DE VIAJE',
-                                icon: Icons.flight_takeoff_rounded,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: PremiumTextField(
-                                          controller: _priceCtrl,
-                                          label: 'Precio (COP) *',
-                                          icon: Icons.attach_money_rounded,
-                                          isNumeric: true,
-                                          readOnly: !canWrite,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: _DateRangeSelector(
-                                          range: _dateRange,
-                                          onTap: canWrite
-                                              ? _pickDateRange
-                                              : () {},
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: PremiumTextField(
-                                          controller: _cuposCtrl,
-                                          label: 'Cupos totales *',
-                                          icon: Icons.people_alt_rounded,
-                                          isNumeric: true,
-                                          readOnly: !canWrite,
-                                        ),
-                                      ),
-                                      if (_isEditing &&
-                                          widget.tour?.cupos != null) ...[
-                                        const SizedBox(width: 16),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: FadeTransition(
+                      opacity: _fade,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        child: Center(
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                PremiumSectionCard(
+                                  title: 'GENERAL',
+                                  icon: Icons.dashboard_rounded,
+                                  children: [
+                                    PremiumTextField(
+                                      controller: _idTourCtrl,
+                                      label: 'Código de Operación *',
+                                      icon: Icons.vpn_key_rounded,
+                                      isNumeric: true,
+                                      readOnly: !canWrite,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _nameCtrl,
+                                      label: 'Título de la Experiencia *',
+                                      icon: Icons.tour_rounded,
+                                      readOnly: !canWrite,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    _buildSedeDropdown(canWrite: canWrite),
+                                    const SizedBox(height: 20),
+                                    _buildBusLayoutDropdown(canWrite: canWrite),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                PremiumSectionCard(
+                                  title: 'DETALLES DE VIAJE',
+                                  icon: Icons.flight_takeoff_rounded,
+                                  children: [
+                                    Row(
+                                      children: [
                                         Expanded(
-                                          child: _CuposDisponiblesInfo(
-                                            cuposDisponibles:
-                                                widget.tour!.cuposDisponibles,
-                                            cuposTotales: widget.tour!.cupos!,
+                                          child: PremiumTextField(
+                                            controller: _priceCtrl,
+                                            label: 'Precio (COP) *',
+                                            icon: Icons.attach_money_rounded,
+                                            isNumeric: true,
+                                            readOnly: !canWrite,
                                           ),
                                         ),
-                                      ] else
-                                        const Expanded(child: SizedBox()),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: PremiumTextField(
-                                          controller: _departurePointCtrl,
-                                          label: 'Lugar Salida *',
-                                          icon: Icons.place_rounded,
-                                          readOnly: !canWrite,
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: _DateRangeSelector(
+                                            range: _dateRange,
+                                            onTap: canWrite
+                                                ? _pickDateRange
+                                                : () {},
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: PremiumTextField(
-                                          controller: _departureTimeCtrl,
-                                          label: 'Hora Estimada *',
-                                          icon: Icons.access_time_rounded,
-                                          readOnly: !canWrite,
+                                      ],
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: PremiumTextField(
+                                            controller: _cuposCtrl,
+                                            label: 'Cupos totales *',
+                                            icon: Icons.people_alt_rounded,
+                                            isNumeric: true,
+                                            readOnly: !canWrite,
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 20),
-                                  PremiumTextField(
-                                    controller: _arrivalCtrl,
-                                    label: 'Destino Final *',
-                                    icon: Icons.flag_rounded,
-                                    readOnly: !canWrite,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 20),
-                              PremiumSectionCard(
-                                title: 'CONTENIDO MULTIMEDIA',
-                                icon: Icons.perm_media_rounded,
-                                children: [
-                                  PremiumTextField(
-                                    controller: _pdfLinkCtrl,
-                                    label: 'Link Catálogo (Google Drive) *',
-                                    icon: Icons.picture_as_pdf_rounded,
-                                    readOnly: !canWrite,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 20),
-                              PremiumSectionCard(
-                                title: 'LOGÍSTICA',
-                                icon: Icons.inventory_2_rounded,
-                                children: [
-                                  _buildDynamicList(
-                                    'Inclusiones *',
-                                    _inclusionCtrl,
-                                    _inclusions,
-                                    Icons.check_circle_rounded,
-                                    SaasPalette.success,
-                                    canWrite: canWrite,
-                                  ),
-                                  const SizedBox(height: 28),
-                                  _buildDynamicList(
-                                    'Exclusiones *',
-                                    _exclusionCtrl,
-                                    _exclusions,
-                                    Icons.cancel_rounded,
-                                    SaasPalette.danger,
-                                    canWrite: canWrite,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 20),
-                              _buildItinerarySection(canWrite: canWrite),
-                              const SizedBox(height: 20),
-                              _buildPreciosSection(canWrite: canWrite),
-                              const SizedBox(height: 20),
-                              _buildStatusCard(canWrite: canWrite),
-                              if (_isEditing) ...[
+                                        if (_isEditing &&
+                                            widget.tour?.cupos != null) ...[
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: _CuposDisponiblesInfo(
+                                              cuposDisponibles:
+                                                  widget.tour!.cuposDisponibles,
+                                              cuposTotales: widget.tour!.cupos!,
+                                            ),
+                                          ),
+                                        ] else
+                                          const Expanded(child: SizedBox()),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: PremiumTextField(
+                                            controller: _departurePointCtrl,
+                                            label: 'Lugar Salida *',
+                                            icon: Icons.place_rounded,
+                                            readOnly: !canWrite,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: PremiumTextField(
+                                            controller: _departureTimeCtrl,
+                                            label: 'Hora Estimada *',
+                                            icon: Icons.access_time_rounded,
+                                            readOnly: !canWrite,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _arrivalCtrl,
+                                      label: 'Destino Final *',
+                                      icon: Icons.flag_rounded,
+                                      readOnly: !canWrite,
+                                    ),
+                                  ],
+                                ),
                                 const SizedBox(height: 20),
-                                _buildPasajerosBtn(context),
+                                PremiumSectionCard(
+                                  title: 'CONTENIDO MULTIMEDIA',
+                                  icon: Icons.perm_media_rounded,
+                                  children: [
+                                    PremiumTextField(
+                                      controller: _pdfLinkCtrl,
+                                      label: 'Link Catálogo (Google Drive) *',
+                                      icon: Icons.picture_as_pdf_rounded,
+                                      readOnly: !canWrite,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                PremiumSectionCard(
+                                  title: 'LOGÍSTICA',
+                                  icon: Icons.inventory_2_rounded,
+                                  children: [
+                                    _buildDynamicList(
+                                      'Inclusiones *',
+                                      _inclusionCtrl,
+                                      _inclusions,
+                                      Icons.check_circle_rounded,
+                                      SaasPalette.success,
+                                      canWrite: canWrite,
+                                    ),
+                                    const SizedBox(height: 28),
+                                    _buildDynamicList(
+                                      'Exclusiones *',
+                                      _exclusionCtrl,
+                                      _exclusions,
+                                      Icons.cancel_rounded,
+                                      SaasPalette.danger,
+                                      canWrite: canWrite,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                _buildItinerarySection(canWrite: canWrite),
+                                const SizedBox(height: 20),
+                                _buildPreciosSection(canWrite: canWrite),
+                                const SizedBox(height: 20),
+                                _buildStatusCard(canWrite: canWrite),
+                                if (_isEditing) ...[
+                                  const SizedBox(height: 20),
+                                  _buildPasajerosBtn(context),
+                                ],
+                                const SizedBox(height: 40),
+                                if (widget.duplicateMode)
+                                  _buildDuplicateAction()
+                                else if (canWrite)
+                                  _buildBottomActions(),
+                                const SizedBox(height: 80),
                               ],
-                              const SizedBox(height: 40),
-                              if (canWrite) _buildBottomActions(),
-                              const SizedBox(height: 80),
-                            ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            BlocBuilder<TourBloc, TourState>(
-              builder: (context, state) {
-                if (state is TourSaving) {
-                  return const DialogLoadingNetwork(
-                    titel: 'Guardando cambios...',
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-          ],
+                ],
+              ),
+              BlocBuilder<TourBloc, TourState>(
+                builder: (context, state) {
+                  if (state is TourSaving) {
+                    return const DialogLoadingNetwork(
+                      titel: 'Guardando cambios...',
+                    );
+                  }
+                  if (state is TourDuplicando) {
+                    return const DialogLoadingNetwork(
+                      titel: 'Duplicando tour...',
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildPreciosSection({required bool canWrite}) {
     final fmt = NumberFormat.currency(
@@ -1195,6 +1223,22 @@ class _TourFormScreenState extends State<TourFormScreen>
     );
   }
 
+  Widget _buildDuplicateAction() {
+    return BlocBuilder<TourBloc, TourState>(
+      builder: (context, state) {
+        final isDuplicating = state is TourDuplicando;
+        return PremiumActionButton(
+          label: 'DUPLICAR TOUR',
+          icon: Icons.content_copy_rounded,
+          isLoading: isDuplicating,
+          onTap: () => context.read<TourBloc>().add(
+            DuplicarTour(widget.tour!.id),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildBottomActions() {
     return BlocBuilder<TourBloc, TourState>(
       builder: (context, state) {
@@ -1707,7 +1751,11 @@ class _FinalizarTourDialogState extends State<_FinalizarTourDialog> {
                 color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.flag_rounded, color: Colors.orange, size: 22),
+              child: const Icon(
+                Icons.flag_rounded,
+                color: Colors.orange,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             const Text(
@@ -1727,7 +1775,10 @@ class _FinalizarTourDialogState extends State<_FinalizarTourDialog> {
         actions: [
           TextButton(
             onPressed: _loading ? null : () => Navigator.of(context).pop(),
-            child: const Text('Cancelar', style: TextStyle(color: SaasPalette.textSecondary)),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: SaasPalette.textSecondary),
+            ),
           ),
           ElevatedButton(
             onPressed: _loading
@@ -1738,13 +1789,18 @@ class _FinalizarTourDialogState extends State<_FinalizarTourDialog> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: _loading
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 : const Text('Finalizar'),
           ),

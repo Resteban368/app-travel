@@ -81,6 +81,13 @@ class FinalizarTour extends TourEvent {
   List<Object?> get props => [id];
 }
 
+class DuplicarTour extends TourEvent {
+  final String id;
+  const DuplicarTour(this.id);
+  @override
+  List<Object?> get props => [id];
+}
+
 // ─── States ──────────────────────────────────────────────
 
 abstract class TourState extends Equatable {
@@ -158,6 +165,15 @@ class TourFinalizado extends TourState {
   List<Object?> get props => [id];
 }
 
+class TourDuplicando extends TourState {}
+
+class TourDuplicado extends TourState {
+  final String id;
+  const TourDuplicado(this.id);
+  @override
+  List<Object?> get props => [id];
+}
+
 // ─── BLoC ────────────────────────────────────────────────
 
 class TourBloc extends Bloc<TourEvent, TourState> {
@@ -175,6 +191,7 @@ class TourBloc extends Bloc<TourEvent, TourState> {
     on<PublishTour>(_onPublishTour);
     on<GetTourDetail>(_onGetTourDetail);
     on<FinalizarTour>(_onFinalizarTour);
+    on<DuplicarTour>(_onDuplicarTour);
   }
 
   Future<void> _onLoadTours(LoadTours event, Emitter<TourState> emit) async {
@@ -210,7 +227,10 @@ class TourBloc extends Bloc<TourEvent, TourState> {
         : null;
     emit(TourSaving(tours: currentTours));
     try {
-      await _tourRepository.updateTour(event.tour, preciosPayload: event.preciosPayload);
+      await _tourRepository.updateTour(
+        event.tour,
+        preciosPayload: event.preciosPayload,
+      );
       final tours = await _tourRepository.getTours();
       emit(TourSaved(tours: tours));
       emit(ToursLoaded(tours: tours, filteredTours: tours));
@@ -245,12 +265,12 @@ class TourBloc extends Bloc<TourEvent, TourState> {
 
       if (event.startDate != null) {
         filtered = filtered
-            .where((t) => !t.endDate.isBefore(event.startDate!))
+            .where((t) => t.endDate != null && !t.endDate!.isBefore(event.startDate!))
             .toList();
       }
       if (event.endDate != null) {
         filtered = filtered
-            .where((t) => !t.startDate.isAfter(event.endDate!))
+            .where((t) => t.startDate != null && !t.startDate!.isAfter(event.endDate!))
             .toList();
       }
       if (event.minPrice != null) {
@@ -290,7 +310,7 @@ class TourBloc extends Bloc<TourEvent, TourState> {
         emit(TourSaving(tours: currentTours));
         try {
           final tour = currentTours.firstWhere((t) => t.id == event.id);
-          await _tourRepository.toggleActive(event.id, !tour.isActive);
+          await _tourRepository.toggleActive(event.id, !tour.isActive!);
           final updatedList = await _tourRepository.getTours();
           emit(TourSaved(tours: updatedList));
           emit(ToursLoaded(tours: updatedList, filteredTours: updatedList));
@@ -351,6 +371,19 @@ class TourBloc extends Bloc<TourEvent, TourState> {
     try {
       await _tourRepository.finalizarTour(event.id);
       emit(TourFinalizado(event.id));
+    } catch (e) {
+      emit(TourError(e.toString()));
+    }
+  }
+
+  Future<void> _onDuplicarTour(
+    DuplicarTour event,
+    Emitter<TourState> emit,
+  ) async {
+    emit(TourDuplicando());
+    try {
+      await _tourRepository.duplicarTour(event.id);
+      emit(TourDuplicado(event.id));
     } catch (e) {
       emit(TourError(e.toString()));
     }

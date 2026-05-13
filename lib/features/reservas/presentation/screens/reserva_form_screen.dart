@@ -1944,7 +1944,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   icon: Icons.date_range_rounded,
                   label: 'Fechas',
                   value:
-                      '${dateFmt.format(tour.startDate)} → ${dateFmt.format(tour.endDate)}',
+                      '${dateFmt.format(tour.startDate ?? DateTime.now())} → ${dateFmt.format(tour.endDate ?? DateTime.now())}',
                 ),
                 const SizedBox(height: 10),
                 _TourInfoRow(

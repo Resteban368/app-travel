@@ -31,6 +31,28 @@ class ApiTourRepository implements TourRepository {
   }
 
   @override
+  Future<List<Tour>> getToursHistoricos() async {
+    final url = '$_baseUrl/historico';
+    debugPrint('📤 [Historico] GET $url');
+    final response = await client.get(Uri.parse(url), headers: _headers);
+    debugPrint(
+      '📥 [Historico] status=${response.statusCode} body=${response.body}',
+    );
+    if (response.statusCode != 200) {
+      final ex = ApiException.fromResponse(response);
+      throw ApiException(
+        message: '[${response.statusCode}] ${ex.message}\nURL: $url',
+        statusCode: ex.statusCode,
+      );
+    }
+    final decoded = json.decode(response.body);
+    final List<dynamic> data = decoded is List
+        ? decoded
+        : (decoded['data'] ?? decoded['tours'] ?? decoded['items'] ?? []);
+    return data.map((item) => _fromJson(item)).toList();
+  }
+
+  @override
   Future<Tour> getTourById(String id) async {
     final response = await client.get(
       Uri.parse('$_baseUrl/$id'),
@@ -45,7 +67,7 @@ class ApiTourRepository implements TourRepository {
   @override
   Future<void> createTour(Tour tour) async {
     final payload = _toJson(tour);
-    payload['precios'] = tour.precios.map((p) => p.toJson()).toList();
+    payload['precios'] = tour.precios!.map((p) => p.toJson()).toList();
     final body = json.encode(payload);
     debugPrint('📤 [ApiTourRepository] Creating tour: $body');
     final response = await client.post(
@@ -122,21 +144,40 @@ class ApiTourRepository implements TourRepository {
     }
   }
 
+  @override
+  Future<void> duplicarTour(String id) async {
+    final url = '$_baseUrl/$id/duplicar';
+    debugPrint('📤 [ApiTourRepository] POST $url');
+    final response = await client.post(Uri.parse(url), headers: _headers);
+    debugPrint('📥 [ApiTourRepository] ${response.statusCode} $url → ${response.body}');
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw ApiException.fromResponse(response);
+    }
+  }
+
   Tour _fromJson(Map<String, dynamic> json) {
     return Tour(
       id: (json['id'] ?? '').toString(),
       idTour: int.tryParse(json['id_tour']?.toString() ?? '0') ?? 0,
       name: json['nombre_tour'] ?? '',
       agency: json['agencia'] ?? '',
-      startDate: DateTime.parse(json['fecha_inicio']),
-      endDate: DateTime.parse(json['fecha_fin']),
+      startDate: json['fecha_inicio'] != null
+          ? DateTime.parse(json['fecha_inicio'].toString())
+          : null,
+      endDate: json['fecha_fin'] != null
+          ? DateTime.parse(json['fecha_fin'].toString())
+          : null,
       price: double.tryParse(json['precio']?.toString() ?? '0') ?? 0,
       departurePoint: json['punto_partida'] ?? '',
       departureTime: json['hora_partida'] ?? '',
       arrival: json['llegada'] ?? '',
       pdfLink: json['link_pdf'] ?? '',
-      inclusions: List<String>.from(json['inclusions'] ?? []),
-      exclusions: List<String>.from(json['exclusions'] ?? []),
+      inclusions: (json['inclusions'] as List? ?? [])
+          .whereType<String>()
+          .toList(),
+      exclusions: (json['exclusions'] as List? ?? [])
+          .whereType<String>()
+          .toList(),
       itinerary: (json['itinerary'] as List? ?? [])
           .map(
             (i) => ItineraryDay(
@@ -173,8 +214,8 @@ class ApiTourRepository implements TourRepository {
       'id_tour': tour.idTour,
       'nombre_tour': tour.name,
       'agencia': tour.agency,
-      'fecha_inicio': tour.startDate.toIso8601String(),
-      'fecha_fin': tour.endDate.toIso8601String(),
+      'fecha_inicio': tour.startDate!.toIso8601String(),
+      'fecha_fin': tour.endDate!.toIso8601String(),
       'precio': tour.price,
       'punto_partida': tour.departurePoint,
       'hora_partida': tour.departureTime,
@@ -182,7 +223,7 @@ class ApiTourRepository implements TourRepository {
       'link_pdf': tour.pdfLink,
       'inclusions': tour.inclusions,
       'exclusions': tour.exclusions,
-      'itinerary': tour.itinerary
+      'itinerary': tour.itinerary!
           .map(
             (i) => {
               'dia_numero': i.dayNumber,

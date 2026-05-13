@@ -28,11 +28,11 @@ class ItineraryDay extends Equatable {
 /// Represents a tour/excursion plan.
 class Tour extends Equatable {
   final String id;
-  final int idTour;
+  final int? idTour;
   final String name;
   final String agency;
-  final DateTime startDate;
-  final DateTime endDate;
+  final DateTime? startDate;
+  final DateTime? endDate;
   final double price;
   final String departurePoint;
   final String departureTime;

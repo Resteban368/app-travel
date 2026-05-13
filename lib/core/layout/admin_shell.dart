@@ -2,6 +2,7 @@ import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:agente_viajes/features/settings/presentation/bloc/payment_method_bloc.dart';
 import 'package:agente_viajes/features/settings/presentation/bloc/sede_bloc.dart';
 import 'package:agente_viajes/features/tour/presentation/bloc/tour_bloc.dart';
+import 'package:agente_viajes/features/tour/presentation/bloc/tour_historico_bloc.dart';
 import 'package:agente_viajes/features/catalogue/presentation/bloc/catalogue_bloc.dart';
 import 'package:agente_viajes/features/catalogue/presentation/bloc/catalogue_event.dart';
 import 'package:agente_viajes/features/faq/presentation/bloc/faq_bloc.dart';
@@ -82,6 +83,12 @@ class _AdminShellState extends State<AdminShell> {
       icon: Icons.tour_rounded,
       label: 'Tours\nPromociones',
       route: AppRouter.tours,
+      permission: 'tours',
+    ),
+    _NavItem(
+      icon: Icons.history_rounded,
+      label: 'Histórico\nde Tours',
+      route: AppRouter.toursHistorico,
       permission: 'tours',
     ),
     _NavItem(
@@ -195,6 +202,8 @@ class _AdminShellState extends State<AdminShell> {
     switch (item.route) {
       case AppRouter.tours:
         context.read<TourBloc>().add(LoadTours());
+      case AppRouter.toursHistorico:
+        context.read<TourHistoricoBloc>().add(LoadToursHistoricos());
       case AppRouter.sedes:
         context.read<SedeBloc>().add(LoadSedes());
       case AppRouter.paymentMethods:

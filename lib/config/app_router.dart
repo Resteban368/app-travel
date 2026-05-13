@@ -9,6 +9,7 @@ import '../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../features/tour/presentation/screens/tour_list_screen.dart';
 import '../features/tour/presentation/screens/tour_form_screen.dart';
 import '../features/tour/presentation/screens/tour_detalle_screen.dart';
+import '../features/tour/presentation/screens/tour_historico_screen.dart';
 import '../features/settings/presentation/screens/sede_list_screen.dart';
 import '../features/settings/presentation/screens/sede_form_screen.dart';
 import '../features/settings/presentation/screens/payment_method_list_screen.dart';
@@ -79,6 +80,8 @@ class AppRouter {
   static const String tourCreate = '/tours/create';
   static const String tourEdit = '/tours/edit';
   static const String tourDetalle = '/tours/detalle';
+  static const String toursHistorico = '/tours/historico';
+  static const String tourHistoricoDetalle = '/tours/historico/detalle';
   static const String sedes = '/settings/sedes';
   static const String sedeForm = '/settings/sedes/form';
   static const String paymentMethods = '/settings/payment-methods';
@@ -161,6 +164,8 @@ class AppRouter {
         return _fadeRoute(const DashboardScreen(), settings);
       case tours:
         return _fadeRoute(const TourListScreen(), settings);
+      case toursHistorico:
+        return _fadeRoute(const TourHistoricoScreen(), settings);
       case sedes:
         return _fadeRoute(const SedeListScreen(), settings);
       case paymentMethods:
@@ -228,6 +233,9 @@ class AppRouter {
         );
 
       // -- Formularios y Detalles --
+      case tourHistoricoDetalle:
+        final tour = settings.arguments as Tour;
+        return _fadeRoute(TourFormScreen(tour: tour, duplicateMode: true), settings);
       case tourCreate:
         return _fadeRoute(const TourFormScreen(), settings);
       case tourEdit:

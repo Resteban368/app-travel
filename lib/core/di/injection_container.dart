@@ -11,6 +11,7 @@ import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/tour/data/repositories/api_tour_repository.dart';
 import '../../features/tour/domain/repositories/tour_repository.dart';
 import '../../features/tour/presentation/bloc/tour_bloc.dart';
+import '../../features/tour/presentation/bloc/tour_historico_bloc.dart';
 
 import '../../features/settings/data/repositories/api_sede_repository.dart';
 import '../../features/settings/domain/repositories/sede_repository.dart';
@@ -164,6 +165,7 @@ void initDependencies() {
   // ─── BLoCs ────────────────────────────────────────────
   sl.registerFactory(() => AuthBloc(authRepository: sl()));
   sl.registerLazySingleton(() => TourBloc(tourRepository: sl()));
+  sl.registerFactory(() => TourHistoricoBloc(tourRepository: sl()));
   sl.registerFactory(() => SedeBloc(sedeRepository: sl()));
   sl.registerFactory(() => PaymentMethodBloc(paymentMethodRepository: sl()));
   sl.registerLazySingleton(() => CatalogueBloc(catalogueRepository: sl()));

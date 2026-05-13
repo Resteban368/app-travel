@@ -340,7 +340,7 @@ class _InfoGrid extends StatelessWidget {
       (
         Icons.calendar_today_rounded,
         'Periodo',
-        '${dateFormat.format(tour.startDate)} - ${dateFormat.format(tour.endDate)}',
+        '${dateFormat.format(tour.startDate ?? DateTime.now())} - ${dateFormat.format(tour.endDate ?? DateTime.now())}',
       ),
       (Icons.alarm_rounded, 'Hora Salida', tour.departureTime),
       (Icons.flight_land_rounded, 'Llegada', tour.arrival),

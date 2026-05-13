@@ -117,7 +117,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             sliver: SliverToBoxAdapter(child: _buildCuposHeader()),
           ),
-          if (widget.tour.precios.isNotEmpty)
+          if (widget.tour.precios != null && widget.tour.precios!.isNotEmpty)
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
               sliver: SliverToBoxAdapter(child: _buildTablaPreciosTour()),
@@ -246,7 +246,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          ...widget.tour.precios.map((p) {
+          ...widget.tour.precios!.map((p) {
             final edadStr = (p.edadMin != null || p.edadMax != null)
                 ? '${p.edadMin ?? 0}-${p.edadMax ?? '∞'} años'
                 : null;
@@ -300,7 +300,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
 
   Widget _buildAppBar() {
     return PremiumSliverAppBar(
-      title: widget.tour.name,
+      title: widget.tour.name ?? "",
       actions: IconButton(
         icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
         onPressed: () => Navigator.pop(context),
@@ -365,7 +365,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
               minHeight: 8,
             ),
           ),
-          if (widget.tour.busLayoutIds.isNotEmpty) ...[
+          if (widget.tour.busLayoutIds!.isNotEmpty) ...[
             const SizedBox(height: 16),
             GestureDetector(
               onTap: () => Navigator.pushNamed(

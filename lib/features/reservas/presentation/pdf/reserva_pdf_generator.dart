@@ -610,13 +610,19 @@ class ReservaPdfGenerator {
               _infoRow('Agencia:', tour.agency, bold, regular),
               _infoRow(
                 'Fecha inicio:',
-                DateFormat('dd MMMM yyyy', 'es').format(tour.startDate),
+                DateFormat(
+                  'dd MMMM yyyy',
+                  'es',
+                ).format(tour.startDate ?? DateTime.now()),
                 bold,
                 regular,
               ),
               _infoRow(
                 'Fecha fin:',
-                DateFormat('dd MMMM yyyy', 'es').format(tour.endDate),
+                DateFormat(
+                  'dd MMMM yyyy',
+                  'es',
+                ).format(tour.endDate ?? DateTime.now()),
                 bold,
                 regular,
               ),
@@ -796,10 +802,7 @@ class ReservaPdfGenerator {
                           borderRadius: const pw.BorderRadius.all(
                             pw.Radius.circular(6),
                           ),
-                          border: pw.Border.all(
-                            color: _brand,
-                            width: 0.8,
-                          ),
+                          border: pw.Border.all(color: _brand, width: 0.8),
                         ),
                         child: pw.Center(
                           child: pw.Text(
@@ -1197,20 +1200,20 @@ class ReservaPdfGenerator {
                     travellers.add({
                       'name': reserva.responsable?.nombre ?? 'Responsable',
                       'catId': reserva.precioResponsableId,
-                      'price': reserva.precioResponsableId == null 
-                          ? basePrice 
+                      'price': reserva.precioResponsableId == null
+                          ? basePrice
                           : (reserva.precioResponsableAplicado ?? 0.0),
                     });
 
                     for (int i = 0; i < reserva.integrantes.length; i++) {
                       final integrante = reserva.integrantes[i];
                       travellers.add({
-                        'name': integrante.nombre.isNotEmpty 
-                            ? integrante.nombre 
+                        'name': integrante.nombre.isNotEmpty
+                            ? integrante.nombre
                             : 'Integrante ${i + 1}',
                         'catId': integrante.tourPrecioId,
-                        'price': integrante.tourPrecioId == null 
-                            ? basePrice 
+                        'price': integrante.tourPrecioId == null
+                            ? basePrice
                             : (integrante.precioAplicado ?? 0.0),
                       });
                     }

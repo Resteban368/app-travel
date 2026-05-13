@@ -28,6 +28,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/premium_palette.dart';
 import 'config/app_router.dart';
 import 'features/tour/presentation/bloc/tour_bloc.dart';
+import 'features/tour/presentation/bloc/tour_historico_bloc.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -175,6 +176,7 @@ class _TravelToursAppState extends State<TravelToursApp> {
     return MultiBlocProvider(
       providers: [
         BlocProvider<TourBloc>(create: (_) => sl<TourBloc>()..add(LoadTours())),
+        BlocProvider<TourHistoricoBloc>(create: (_) => sl<TourHistoricoBloc>()),
         BlocProvider<SedeBloc>(create: (_) => sl<SedeBloc>()),
         BlocProvider<CatalogueBloc>(create: (_) => sl<CatalogueBloc>()),
         BlocProvider<PaymentMethodBloc>(create: (_) => sl<PaymentMethodBloc>()),
