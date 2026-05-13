@@ -90,14 +90,18 @@ class TourSaldo {
 class TourConSaldo {
   final int tourId;
   final String tourNombre;
-  final double saldoTotalTour;
+  final String? fechaTour;
+  final double totalSaldoPendiente;
+  final double totalPorValidar;
   final int totalReservas;
   final List<SaldoPendiente> reservas;
 
   const TourConSaldo({
     required this.tourId,
     required this.tourNombre,
-    required this.saldoTotalTour,
+    this.fechaTour,
+    required this.totalSaldoPendiente,
+    required this.totalPorValidar,
     required this.totalReservas,
     required this.reservas,
   });
@@ -105,7 +109,9 @@ class TourConSaldo {
   factory TourConSaldo.fromJson(Map<String, dynamic> j) => TourConSaldo(
         tourId: j['tour_id'] as int? ?? 0,
         tourNombre: j['tour_nombre'] as String? ?? '',
-        saldoTotalTour: (j['saldo_total_tour'] as num?)?.toDouble() ?? 0,
+        fechaTour: j['fecha_tour'] as String?,
+        totalSaldoPendiente: (j['total_saldo_pendiente'] as num?)?.toDouble() ?? 0,
+        totalPorValidar: (j['total_por_validar'] as num?)?.toDouble() ?? 0,
         totalReservas: j['total_reservas'] as int? ?? 0,
         reservas: (j['reservas'] as List<dynamic>? ?? [])
             .map((r) => SaldoPendiente.fromJson(r as Map<String, dynamic>))
@@ -125,7 +131,7 @@ class SaldoPendiente {
   final String? ultimaFechaPago;
   final String? ultimoRecordatorio;
   final int totalRecordatorios;
-  final TourSaldo tour;
+  final TourSaldo? tour;
   final ResponsableSaldo responsable;
   final List<PagoSaldo> pagos;
 
@@ -141,7 +147,7 @@ class SaldoPendiente {
     this.ultimaFechaPago,
     this.ultimoRecordatorio,
     required this.totalRecordatorios,
-    required this.tour,
+    this.tour,
     required this.responsable,
     required this.pagos,
   });
@@ -158,7 +164,9 @@ class SaldoPendiente {
         ultimaFechaPago: j['ultima_fecha_pago'] as String?,
         ultimoRecordatorio: j['ultimo_recordatorio'] as String?,
         totalRecordatorios: j['total_recordatorios'] as int? ?? 0,
-        tour: TourSaldo.fromJson(j['tour'] as Map<String, dynamic>? ?? {}),
+        tour: j['tour'] != null
+            ? TourSaldo.fromJson(j['tour'] as Map<String, dynamic>)
+            : null,
         responsable: ResponsableSaldo.fromJson(
             j['responsable'] as Map<String, dynamic>? ?? {}),
         pagos: (j['pagos'] as List<dynamic>? ?? [])

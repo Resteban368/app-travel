@@ -62,7 +62,7 @@ class _SaldoPendienteScreenState extends State<SaldoPendienteScreen> {
 
     context.read<SaldoPendienteBloc>().add(
       LoadSaldosPendientes(
-        responsable: value.trim().isEmpty ? null : value.trim(),
+        tourNombre: value.trim().isEmpty ? null : value.trim(),
         sinRecordatorioReciente: sinRec,
       ),
     );
@@ -85,74 +85,7 @@ class _SaldoPendienteScreenState extends State<SaldoPendienteScreen> {
             onRefresh: _refresh,
           ),
           Expanded(
-            child: BlocConsumer<SaldoPendienteBloc, SaldoPendienteState>(
-              listenWhen: (_, s) =>
-                  s is RecordatorioEnviado || s is RecordatorioFallido,
-              listener: (context, state) {
-                if (state is RecordatorioEnviado) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
-                        children: [
-                          const Icon(
-                            Icons.check_circle_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Recordatorio enviado a ${state.result.responsable} (${state.result.telefono})',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      backgroundColor: SaasPalette.success,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      margin: const EdgeInsets.all(16),
-                      duration: const Duration(seconds: 4),
-                    ),
-                  );
-                } else if (state is RecordatorioFallido) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
-                        children: [
-                          const Icon(
-                            Icons.error_outline_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              state.message,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      backgroundColor: SaasPalette.danger,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      margin: const EdgeInsets.all(16),
-                      duration: const Duration(seconds: 5),
-                    ),
-                  );
-                }
-              },
+            child: BlocBuilder<SaldoPendienteBloc, SaldoPendienteState>(
               builder: (context, state) {
                 if (state is SaldoPendienteLoading) {
                   return const Center(
@@ -173,10 +106,7 @@ class _SaldoPendienteScreenState extends State<SaldoPendienteScreen> {
                   loaded = state.previous;
                   isLoadingMore = true;
                 }
-                if (state is RecordatorioEnviando) loaded = state.previous;
-                if (state is RecordatorioEnviado) loaded = state.previous;
-                if (state is RecordatorioFallido) loaded = state.previous;
-
+                
                 if (loaded == null) return const SizedBox();
 
                 if (loaded.tours.isEmpty) {
@@ -197,8 +127,6 @@ class _SaldoPendienteScreenState extends State<SaldoPendienteScreen> {
     );
   }
 }
-
-// ── Header ────────────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
   final TextEditingController searchController;
@@ -243,36 +171,6 @@ class _Header extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              BlocBuilder<SaldoPendienteBloc, SaldoPendienteState>(
-                builder: (context, state) {
-                  int totalTours = 0;
-                  if (state is SaldoPendienteLoaded) {
-                    totalTours = state.totalTours;
-                  } else if (state is SaldoPendienteLoadingMore) {
-                    totalTours = state.previous.totalTours;
-                  }
-                  if (totalTours == 0) return const SizedBox();
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: SaasPalette.warning.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '$totalTours tour${totalTours != 1 ? 's' : ''}',
-                      style: const TextStyle(
-                        color: SaasPalette.warning,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
               IconButton(
                 onPressed: onRefresh,
                 icon: const Icon(Icons.refresh_rounded),
@@ -282,7 +180,6 @@ class _Header extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          // Search bar
           Container(
             height: 40,
             decoration: BoxDecoration(
@@ -305,7 +202,7 @@ class _Header extends StatelessWidget {
                     controller: searchController,
                     onChanged: onSearch,
                     decoration: const InputDecoration(
-                      hintText: 'Buscar por responsable o documento…',
+                      hintText: 'Buscar por nombre de tour…',
                       hintStyle: TextStyle(
                         color: SaasPalette.textTertiary,
                         fontSize: 13,
@@ -323,87 +220,11 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          // Filters row
-          BlocBuilder<SaldoPendienteBloc, SaldoPendienteState>(
-            builder: (context, state) {
-              bool active = false;
-              if (state is SaldoPendienteLoaded) {
-                active = state.sinRecordatorioReciente;
-              } else if (state is SaldoPendienteLoadingMore) {
-                active = state.previous.sinRecordatorioReciente;
-              } else if (state is RecordatorioEnviando) {
-                active = state.previous.sinRecordatorioReciente;
-              } else if (state is RecordatorioEnviado) {
-                active = state.previous.sinRecordatorioReciente;
-              } else if (state is RecordatorioFallido) {
-                active = state.previous.sinRecordatorioReciente;
-              }
-
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    FilterChip(
-                      label: const Text(
-                        'Sin recordatorio reciente',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                      selected: active,
-                      onSelected: (val) {
-                        final bloc = context.read<SaldoPendienteBloc>();
-                        String? tourId;
-                        String? resp;
-                        String? idRes;
-
-                        if (state is SaldoPendienteLoaded) {
-                          tourId = state.filterTourId;
-                          resp = state.filterResponsable;
-                          idRes = state.filterIdReserva;
-                        }
-
-                        bloc.add(
-                          LoadSaldosPendientes(
-                            tourId: tourId,
-                            responsable: resp,
-                            idReserva: idRes,
-                            sinRecordatorioReciente: val,
-                          ),
-                        );
-                      },
-                      selectedColor: SaasPalette.warning.withValues(alpha: 0.2),
-                      checkmarkColor: SaasPalette.warning,
-                      labelStyle: TextStyle(
-                        color: active
-                            ? SaasPalette.warning
-                            : SaasPalette.textSecondary,
-                        fontWeight: active
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
-                      backgroundColor: SaasPalette.bgApp,
-                      side: BorderSide(
-                        color: active
-                            ? SaasPalette.warning
-                            : SaasPalette.border,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
         ],
       ),
     );
   }
 }
-
-// ── Body ─────────────────────────────────────────────────────────────────────
 
 class _Body extends StatelessWidget {
   final SaldoPendienteLoaded loaded;
@@ -433,7 +254,7 @@ class _Body extends StatelessWidget {
             ),
           );
         }
-        return _TourGroup(
+        return _TourCard(
           tour: loaded.tours[index],
           currFmt: currFmt,
         );
@@ -442,29 +263,17 @@ class _Body extends StatelessWidget {
   }
 }
 
-// ── Grupo por Tour ────────────────────────────────────────────────────────────
-
-class _TourGroup extends StatefulWidget {
+class _TourCard extends StatelessWidget {
   final TourConSaldo tour;
   final NumberFormat currFmt;
 
-  const _TourGroup({
+  const _TourCard({
     required this.tour,
     required this.currFmt,
   });
 
   @override
-  State<_TourGroup> createState() => _TourGroupState();
-}
-
-class _TourGroupState extends State<_TourGroup> {
-  bool _expanded = false;
-
-  @override
   Widget build(BuildContext context) {
-    final fmt = widget.currFmt;
-    final tour = widget.tour;
-
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -472,930 +281,128 @@ class _TourGroupState extends State<_TourGroup> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: SaasPalette.border),
       ),
-      child: Column(
-        children: [
-          // ── Tour header ────────────────────────────────────────────────
-          InkWell(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: SaasPalette.brand600.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.tour_rounded,
-                      color: SaasPalette.brand600,
-                      size: 16,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            '/saldos-pendientes/detalle',
+            arguments: tour,
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: SaasPalette.brand600.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.tour_rounded,
+                  color: SaasPalette.brand600,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
                       tour.tourNombre,
                       style: const TextStyle(
                         color: SaasPalette.textPrimary,
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ),
-                  // Total saldo del tour (from API)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        fmt.format(tour.saldoTotalTour),
-                        style: const TextStyle(
-                          color: SaasPalette.danger,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        '${tour.totalReservas} reserva${tour.totalReservas != 1 ? 's' : ''}',
-                        style: const TextStyle(
-                          color: SaasPalette.textTertiary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    _expanded
-                        ? Icons.keyboard_arrow_up_rounded
-                        : Icons.keyboard_arrow_down_rounded,
-                    color: SaasPalette.textTertiary,
-                    size: 20,
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          if (_expanded) ...[
-            const Divider(color: SaasPalette.border, height: 1),
-            ...tour.reservas.asMap().entries.map((entry) {
-              final i = entry.key;
-              final reserva = entry.value;
-              return Column(
-                children: [
-                  _ReservaCard(reserva: reserva, currFmt: fmt),
-                  if (i < tour.reservas.length - 1)
-                    const Divider(
-                      color: SaasPalette.border,
-                      height: 1,
-                      indent: 16,
-                      endIndent: 16,
-                    ),
-                ],
-              );
-            }),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-// ── Tarjeta de Reserva ────────────────────────────────────────────────────────
-
-class _ReservaCard extends StatefulWidget {
-  final SaldoPendiente reserva;
-  final NumberFormat currFmt;
-
-  const _ReservaCard({required this.reserva, required this.currFmt});
-
-  @override
-  State<_ReservaCard> createState() => _ReservaCardState();
-}
-
-class _ReservaCardState extends State<_ReservaCard> {
-  bool _pagosExpanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final reserva = widget.reserva;
-    final currFmt = widget.currFmt;
-    final pct = reserva.valorTotal > 0
-        ? (reserva.totalPagado / reserva.valorTotal).clamp(0.0, 1.0)
-        : 0.0;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Top row: ID + estado ─────────────────────────────────────
-            Row(
-              children: [
-                Text(
-                  reserva.idReserva,
-                  style: const TextStyle(
-                    color: SaasPalette.brand600,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _EstadoBadge(estado: reserva.estado),
-                const Spacer(),
-                _WhatsAppReminderButton(reserva: reserva),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // ── Responsable ──────────────────────────────────────────────
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(
-                  Icons.person_rounded,
-                  size: 14,
-                  color: SaasPalette.textTertiary,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        reserva.responsable.nombre,
-                        style: const TextStyle(
-                          color: SaasPalette.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        '${reserva.responsable.tipoDocumento} ${reserva.responsable.documento}',
-                        style: const TextStyle(
-                          color: SaasPalette.textTertiary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (reserva.responsable.telefono.isNotEmpty)
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.phone_rounded,
-                        size: 13,
-                        color: SaasPalette.textTertiary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        reserva.responsable.telefono,
-                        style: const TextStyle(
-                          color: SaasPalette.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // ── Montos ───────────────────────────────────────────────────
-            Row(
-              children: [
-                _MontoChip(
-                  label: 'Total',
-                  value: currFmt.format(reserva.valorTotal),
-                  color: SaasPalette.textSecondary,
-                ),
-                const SizedBox(width: 8),
-                _MontoChip(
-                  label: 'Pagado',
-                  value: currFmt.format(reserva.totalPagado),
-                  color: SaasPalette.success,
-                ),
-                const SizedBox(width: 8),
-                _MontoChip(
-                  label: 'Saldo',
-                  value: currFmt.format(reserva.saldoPendiente),
-                  color: SaasPalette.danger,
-                  highlighted: true,
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // ── Barra de progreso ────────────────────────────────────────
-            Row(
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: pct,
-                      backgroundColor: SaasPalette.bgSubtle,
-                      color: pct >= 1.0
-                          ? SaasPalette.success
-                          : pct >= 0.5
-                          ? SaasPalette.warning
-                          : SaasPalette.danger,
-                      minHeight: 6,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${(pct * 100).toStringAsFixed(0)}%',
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-
-            // ── Recordatorios ────────────────────────────────────────────
-            if (reserva.totalRecordatorios > 0) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.notifications_rounded,
-                    size: 13,
-                    color: _kWhatsApp.withValues(alpha: 0.8),
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    '${reserva.totalRecordatorios} recordatorio${reserva.totalRecordatorios != 1 ? 's' : ''} enviado${reserva.totalRecordatorios != 1 ? 's' : ''}',
-                    style: const TextStyle(
-                      color: SaasPalette.textTertiary,
-                      fontSize: 11,
-                    ),
-                  ),
-                  if (reserva.ultimoRecordatorio != null) ...[
-                    const SizedBox(width: 6),
-                    const Text(
-                      '·',
-                      style: TextStyle(
-                        color: SaasPalette.textTertiary,
-                        fontSize: 11,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Icon(
-                      Icons.access_time_rounded,
-                      size: 11,
-                      color: SaasPalette.textTertiary,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      _formatFecha(reserva.ultimoRecordatorio),
-                      style: const TextStyle(
-                        color: SaasPalette.textTertiary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-
-            // ── Pagos realizados (expandible) ─────────────────────────────
-            if (reserva.pagos.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              InkWell(
-                onTap: () => setState(() => _pagosExpanded = !_pagosExpanded),
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: SaasPalette.bgSubtle,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: SaasPalette.border),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.receipt_long_rounded,
-                        size: 14,
-                        color: SaasPalette.textSecondary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${reserva.pagos.length} pago${reserva.pagos.length != 1 ? 's' : ''} registrado${reserva.pagos.length != 1 ? 's' : ''}',
-                        style: const TextStyle(
-                          color: SaasPalette.textSecondary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Icon(
-                        _pagosExpanded
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.keyboard_arrow_down_rounded,
-                        size: 16,
-                        color: SaasPalette.textTertiary,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (_pagosExpanded) ...[
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: SaasPalette.bgApp,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: SaasPalette.border),
-                  ),
-                  child: Column(
-                    children: reserva.pagos.asMap().entries.map((entry) {
-                      final i = entry.key;
-                      final pago = entry.value;
-                      return Column(
-                        children: [
-                          _PagoRow(pago: pago, currFmt: currFmt),
-                          if (i < reserva.pagos.length - 1)
-                            const Divider(
-                              color: SaasPalette.border,
-                              height: 1,
-                              indent: 12,
-                              endIndent: 12,
-                            ),
-                        ],
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Botón WhatsApp Recordatorio ───────────────────────────────────────────────
-
-const _kWhatsApp = SaasPalette.success;
-
-class _WhatsAppReminderButton extends StatelessWidget {
-  final SaldoPendiente reserva;
-  const _WhatsAppReminderButton({required this.reserva});
-
-  void _confirm(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => _RecordatorioDialog(
-        reserva: reserva,
-        bloc: context.read<SaldoPendienteBloc>(),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: () => _confirm(context),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _kWhatsApp,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        minimumSize: Size(100, 30),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset('assets/images/whatsapp.png', width: 14, height: 14),
-          const SizedBox(width: 6),
-          const Text(
-            'Recordatorio',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Diálogo de confirmación de recordatorio ───────────────────────────────────
-
-class _RecordatorioDialog extends StatefulWidget {
-  final SaldoPendiente reserva;
-  final SaldoPendienteBloc bloc;
-
-  const _RecordatorioDialog({required this.reserva, required this.bloc});
-
-  @override
-  State<_RecordatorioDialog> createState() => _RecordatorioDialogState();
-}
-
-class _RecordatorioDialogState extends State<_RecordatorioDialog> {
-  bool _sending = false;
-
-  Future<void> _send() async {
-    setState(() => _sending = true);
-    widget.bloc.add(EnviarRecordatorio(reservaId: widget.reserva.reservaId));
-    // Espera el resultado escuchando el bloc
-    await for (final state in widget.bloc.stream) {
-      if (state is RecordatorioEnviado || state is RecordatorioFallido) {
-        if (mounted) Navigator.of(context).pop();
-        break;
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final reserva = widget.reserva;
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 380),
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _kWhatsApp.withValues(alpha: 0.25)),
-          boxShadow: [
-            BoxShadow(
-              color: _kWhatsApp.withValues(alpha: 0.08),
-              blurRadius: 32,
-              spreadRadius: -4,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Ícono
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: _kWhatsApp.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Image.asset(
-                'assets/images/whatsapp.png',
-                width: 32,
-                height: 32,
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Enviar recordatorio',
-              style: TextStyle(
-                color: SaasPalette.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              '¿Deseas enviar un recordatorio de pago por WhatsApp a '
-              '${reserva.responsable.nombre}?',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: SaasPalette.textSecondary,
-                fontSize: 13,
-                height: 1.5,
-              ),
-            ),
-            if (reserva.responsable.telefono.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.phone_rounded,
-                    size: 13,
-                    color: SaasPalette.textTertiary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    reserva.responsable.telefono,
-                    style: const TextStyle(
-                      color: SaasPalette.textTertiary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _sending
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: SaasPalette.textSecondary,
-                      side: const BorderSide(color: SaasPalette.border),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Cancelar',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _sending ? null : _send,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _kWhatsApp,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _sending
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                'assets/images/whatsapp.png',
-                                width: 16,
-                                height: 16,
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Enviar',
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Fila de Pago ──────────────────────────────────────────────────────────────
-
-class _PagoRow extends StatelessWidget {
-  final PagoSaldo pago;
-  final NumberFormat currFmt;
-
-  const _PagoRow({required this.pago, required this.currFmt});
-
-  @override
-  Widget build(BuildContext context) {
-    final Color statusColor;
-    final IconData statusIcon;
-    final String statusLabel;
-
-    if (pago.isRechazado) {
-      statusColor = SaasPalette.danger;
-      statusIcon = Icons.cancel_rounded;
-      statusLabel = 'Rechazado';
-    } else if (pago.isValidated) {
-      statusColor = SaasPalette.success;
-      statusIcon = Icons.check_circle_rounded;
-      statusLabel = 'Validado';
-    } else {
-      statusColor = SaasPalette.warning;
-      statusIcon = Icons.schedule_rounded;
-      statusLabel = 'Pendiente';
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Status icon
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Icon(statusIcon, size: 16, color: statusColor),
-          ),
-          const SizedBox(width: 10),
-
-          // Main info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Monto
-                Text(
-                  currFmt.format(pago.monto),
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                // Método + proveedor
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.payment_rounded,
-                      size: 11,
-                      color: SaasPalette.textTertiary,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      pago.metodoPago,
-                      style: const TextStyle(
-                        color: SaasPalette.textTertiary,
-                        fontSize: 11,
-                      ),
-                    ),
-                    if (pago.proveedorComercio.isNotEmpty) ...[
-                      const SizedBox(width: 10),
-                      const Icon(
-                        Icons.store_rounded,
-                        size: 11,
-                        color: SaasPalette.textTertiary,
-                      ),
-                      const SizedBox(width: 3),
-                      Flexible(
-                        child: Text(
-                          pago.proveedorComercio,
-                          style: const TextStyle(
-                            color: SaasPalette.textTertiary,
-                            fontSize: 11,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 4),
-                // Fecha creación + fecha documento
-                Row(
-                  children: [
-                    if (pago.fechaCreacion != null) ...[
-                      const Icon(
-                        Icons.calendar_today_rounded,
-                        size: 11,
-                        color: SaasPalette.textTertiary,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        _formatFecha(pago.fechaCreacion),
-                        style: const TextStyle(
-                          color: SaasPalette.textTertiary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                    if (pago.fechaDocumento != null) ...[
-                      if (pago.fechaCreacion != null) const SizedBox(width: 10),
-                      const Icon(
-                        Icons.insert_invitation_rounded,
-                        size: 11,
-                        color: SaasPalette.textTertiary,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        _formatFecha(pago.fechaDocumento),
-                        style: const TextStyle(
-                          color: SaasPalette.textTertiary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 4),
-                // Referencia + teléfono + chat_id
-                Row(
-                  children: [
-                    if (pago.referencia.isNotEmpty) ...[
-                      const Icon(
-                        Icons.tag_rounded,
-                        size: 11,
-                        color: SaasPalette.textTertiary,
-                      ),
-                      const SizedBox(width: 3),
-                      Flexible(
-                        child: Text(
-                          pago.referencia,
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                    ],
-                    if (pago.telefono.isNotEmpty) ...[
-                      const Icon(
-                        Icons.phone_rounded,
-                        size: 11,
-                        color: SaasPalette.textTertiary,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        pago.telefono,
-                        style: const TextStyle(
-                          color: SaasPalette.textSecondary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                    if (pago.chatId.isNotEmpty) ...[
-                      const SizedBox(width: 10),
-                      const Icon(
-                        Icons.chat_bubble_outline_rounded,
-                        size: 11,
-                        color: SaasPalette.textTertiary,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        pago.chatId,
-                        style: const TextStyle(
-                          color: SaasPalette.textSecondary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                // Motivo rechazo
-                if (pago.isRechazado && pago.motivoRechazo.isNotEmpty) ...[
-                  const SizedBox(height: 5),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: SaasPalette.danger.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
+                    const SizedBox(height: 4),
+                    Row(
                       children: [
+                        if (tour.fechaTour != null) ...[
+                          const Icon(
+                            Icons.calendar_today_rounded,
+                            size: 12,
+                            color: SaasPalette.textTertiary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _formatFecha(tour.fechaTour),
+                            style: const TextStyle(
+                              color: SaasPalette.textTertiary,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
                         const Icon(
-                          Icons.info_outline_rounded,
-                          size: 11,
-                          color: SaasPalette.danger,
+                          Icons.people_rounded,
+                          size: 12,
+                          color: SaasPalette.textTertiary,
                         ),
                         const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            pago.motivoRechazo,
-                            style: const TextStyle(
-                              color: SaasPalette.danger,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                            ),
+                        Text(
+                          '${tour.totalReservas} reserva${tour.totalReservas != 1 ? 's' : ''}',
+                          style: const TextStyle(
+                            color: SaasPalette.textTertiary,
+                            fontSize: 12,
                           ),
                         ),
                       ],
                     ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    currFmt.format(tour.totalSaldoPendiente),
+                    style: const TextStyle(
+                      color: SaasPalette.danger,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
+                  const Text(
+                    'Saldo total',
+                    style: TextStyle(
+                      color: SaasPalette.textTertiary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (tour.totalPorValidar > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      currFmt.format(tour.totalPorValidar),
+                      style: const TextStyle(
+                        color: SaasPalette.warning,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Text(
+                      'Por validar',
+                      style: TextStyle(
+                        color: SaasPalette.textTertiary,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // Status badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              statusLabel,
-              style: TextStyle(
-                color: statusColor,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-class _MontoChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-  final bool highlighted;
-
-  const _MontoChip({
-    required this.label,
-    required this.value,
-    required this.color,
-    this.highlighted = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        decoration: BoxDecoration(
-          color: highlighted
-              ? color.withValues(alpha: 0.08)
-              : SaasPalette.bgApp,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: highlighted
-                ? color.withValues(alpha: 0.3)
-                : SaasPalette.border,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right_rounded,
                 color: SaasPalette.textTertiary,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EstadoBadge extends StatelessWidget {
-  final String estado;
-  const _EstadoBadge({required this.estado});
-
-  @override
-  Widget build(BuildContext context) {
-    final isPendiente = estado.toLowerCase() == 'pendiente';
-    final color = isPendiente ? SaasPalette.warning : SaasPalette.textTertiary;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        estado,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
+            ],
+          ),
         ),
       ),
     );
@@ -1410,29 +417,25 @@ class _EmptyView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.check_circle_outline_rounded,
-            size: 48,
-            color: SaasPalette.success,
-          ),
+          Icon(Icons.check_circle_outline_rounded,
+              size: 64, color: SaasPalette.success.withValues(alpha: 0.2)),
           const SizedBox(height: 16),
-          const Text(
-            'Sin saldos pendientes',
-            style: TextStyle(
-              color: SaasPalette.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          const Text('No hay saldos pendientes',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: SaasPalette.textPrimary)),
           const SizedBox(height: 8),
-          const Text(
-            'Todas las reservas están al día.',
-            style: TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
-          ),
+          const Text('¡Todo está al día!',
+              style: TextStyle(color: SaasPalette.textSecondary)),
           const SizedBox(height: 24),
-          OutlinedButton(onPressed: onRefresh, child: const Text('Actualizar')),
+          ElevatedButton.icon(
+            onPressed: onRefresh,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Actualizar'),
+          ),
         ],
       ),
     );
@@ -1450,40 +453,16 @@ class _ErrorView extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              size: 40,
-              color: SaasPalette.danger,
-            ),
+            const Icon(Icons.error_outline_rounded,
+                size: 48, color: SaasPalette.danger),
             const SizedBox(height: 16),
-            const Text(
-              'Error al cargar los datos',
-              style: TextStyle(
-                color: SaasPalette.textPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: SaasPalette.textTertiary,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: onRetry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: SaasPalette.brand600,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Reintentar'),
-            ),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: SaasPalette.textPrimary)),
+            const SizedBox(height: 24),
+            ElevatedButton(onPressed: onRetry, child: const Text('Reintentar')),
           ],
         ),
       ),

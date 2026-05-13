@@ -28,6 +28,7 @@ class ApiSaldoPendienteRepository implements SaldoPendienteRepository {
     int page = 1,
     int limit = 5,
     String? tourId,
+    String? tourNombre,
     String? responsable,
     String? idReserva,
     bool sinRecordatorioReciente = false,
@@ -37,6 +38,9 @@ class ApiSaldoPendienteRepository implements SaldoPendienteRepository {
       'limit': limit.toString(),
     };
     if (tourId != null && tourId.isNotEmpty) params['tour_id'] = tourId;
+    if (tourNombre != null && tourNombre.isNotEmpty) {
+      params['tour_nombre'] = tourNombre;
+    }
     if (responsable != null && responsable.isNotEmpty) {
       params['responsable'] = responsable;
     }
@@ -67,6 +71,23 @@ class ApiSaldoPendienteRepository implements SaldoPendienteRepository {
       page: body['page'] as int? ?? page,
       limit: body['limit'] as int? ?? limit,
     );
+  }
+
+  @override
+  Future<List<SaldoPendiente>> getReservasPorTour(int tourId) async {
+    final uri = Uri.parse('$_baseUrl/$tourId/reservas');
+    debugPrint('API CALL: GET $uri');
+    final response = await client.get(uri, headers: _headers);
+    debugPrint('API RESPONSE: ${response.statusCode}');
+
+    if (response.statusCode != 200) {
+      throw ApiException.fromResponse(response);
+    }
+
+    final List<dynamic> body = json.decode(response.body);
+    return body
+        .map((j) => SaldoPendiente.fromJson(j as Map<String, dynamic>))
+        .toList();
   }
 
   @override

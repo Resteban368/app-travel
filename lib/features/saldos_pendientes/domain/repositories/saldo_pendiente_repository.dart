@@ -8,10 +8,13 @@ abstract class SaldoPendienteRepository {
     int page = 1,
     int limit = 5,
     String? tourId,
+    String? tourNombre,
     String? responsable,
     String? idReserva,
     bool sinRecordatorioReciente = false,
   });
+
+  Future<List<SaldoPendiente>> getReservasPorTour(int tourId);
 
   Future<RecordatorioResult> enviarRecordatorio(
     int reservaId, {

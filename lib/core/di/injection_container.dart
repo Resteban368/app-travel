@@ -75,6 +75,7 @@ import '../../features/auditoria/presentation/bloc/auditoria_general_bloc.dart';
 import '../../features/saldos_pendientes/data/repositories/api_saldo_pendiente_repository.dart';
 import '../../features/saldos_pendientes/domain/repositories/saldo_pendiente_repository.dart';
 import '../../features/saldos_pendientes/presentation/bloc/saldo_pendiente_bloc.dart';
+import '../../features/saldos_pendientes/presentation/bloc/saldo_pendiente_detail_bloc.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -185,4 +186,5 @@ void initDependencies() {
   sl.registerFactory(() => SesionesBloc(repository: sl()));
   sl.registerFactory(() => AuditoriaGeneralBloc(repository: sl()));
   sl.registerFactory(() => SaldoPendienteBloc(repository: sl()));
+  sl.registerFactory(() => SaldoPendienteDetailBloc(repository: sl()));
 }

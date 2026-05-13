@@ -16,12 +16,14 @@ abstract class SaldoPendienteEvent extends Equatable {
 
 class LoadSaldosPendientes extends SaldoPendienteEvent {
   final String? tourId;
+  final String? tourNombre;
   final String? responsable;
   final String? idReserva;
   final bool? sinRecordatorioReciente;
 
   const LoadSaldosPendientes({
     this.tourId,
+    this.tourNombre,
     this.responsable,
     this.idReserva,
     this.sinRecordatorioReciente,
@@ -29,7 +31,7 @@ class LoadSaldosPendientes extends SaldoPendienteEvent {
 
   @override
   List<Object?> get props =>
-      [tourId, responsable, idReserva, sinRecordatorioReciente];
+      [tourId, tourNombre, responsable, idReserva, sinRecordatorioReciente];
 }
 
 class LoadMoreSaldosPendientes extends SaldoPendienteEvent {
@@ -65,6 +67,7 @@ class SaldoPendienteLoaded extends SaldoPendienteState {
   final int limit;
   final bool hasMore;
   final String? filterTourId;
+  final String? filterTourNombre;
   final String? filterResponsable;
   final String? filterIdReserva;
   final bool sinRecordatorioReciente;
@@ -76,6 +79,7 @@ class SaldoPendienteLoaded extends SaldoPendienteState {
     required this.limit,
     required this.hasMore,
     this.filterTourId,
+    this.filterTourNombre,
     this.filterResponsable,
     this.filterIdReserva,
     this.sinRecordatorioReciente = false,
@@ -90,6 +94,7 @@ class SaldoPendienteLoaded extends SaldoPendienteState {
         currentPage,
         hasMore,
         filterTourId,
+        filterTourNombre,
         filterResponsable,
         filterIdReserva,
         sinRecordatorioReciente,
@@ -143,7 +148,7 @@ class RecordatorioFallido extends SaldoPendienteState {
 class SaldoPendienteBloc
     extends Bloc<SaldoPendienteEvent, SaldoPendienteState> {
   final SaldoPendienteRepository _repository;
-  static const int _limit = 5; // tours per page
+  static const int _limit = 20; // tours per page
 
   SaldoPendienteBloc({required SaldoPendienteRepository repository})
       : _repository = repository,
@@ -163,6 +168,7 @@ class SaldoPendienteBloc
         page: 1,
         limit: _limit,
         tourId: event.tourId,
+        tourNombre: event.tourNombre,
         responsable: event.responsable,
         idReserva: event.idReserva,
         sinRecordatorioReciente: event.sinRecordatorioReciente ?? false,
@@ -175,6 +181,7 @@ class SaldoPendienteBloc
         limit: result.limit,
         hasMore: hasMore,
         filterTourId: event.tourId,
+        filterTourNombre: event.tourNombre,
         filterResponsable: event.responsable,
         filterIdReserva: event.idReserva,
         sinRecordatorioReciente: event.sinRecordatorioReciente ?? false,
@@ -201,6 +208,7 @@ class SaldoPendienteBloc
         page: nextPage,
         limit: _limit,
         tourId: loaded.filterTourId,
+        tourNombre: loaded.filterTourNombre,
         responsable: loaded.filterResponsable,
         idReserva: loaded.filterIdReserva,
         sinRecordatorioReciente: loaded.sinRecordatorioReciente,
@@ -214,6 +222,7 @@ class SaldoPendienteBloc
         limit: result.limit,
         hasMore: hasMore,
         filterTourId: loaded.filterTourId,
+        filterTourNombre: loaded.filterTourNombre,
         filterResponsable: loaded.filterResponsable,
         filterIdReserva: loaded.filterIdReserva,
         sinRecordatorioReciente: loaded.sinRecordatorioReciente,
