@@ -228,11 +228,6 @@ class _AdminShellState extends State<AdminShell> {
     }
 
     widget.onItemTapped(item.route);
-
-    final isDesktop = MediaQuery.of(context).size.width >= 800;
-    if (!isDesktop) {
-      Navigator.pop(context); // Close drawer on mobile
-    }
   }
 
   void _onLogout() {
@@ -397,7 +392,7 @@ class _AdminShellState extends State<AdminShell> {
                     label: item.label,
                     isActive: item.route == currentRoute,
                     onTap: () {
-                      Navigator.pop(context);
+                      Navigator.of(context).pop(); // Cierra el Drawer
                       _onItemTapped(item);
                     },
                   );
