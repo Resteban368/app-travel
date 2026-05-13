@@ -9,7 +9,7 @@ import '../bloc/bus_layout_bloc.dart';
 import '../bloc/bus_layout_event.dart';
 import '../bloc/bus_layout_state.dart';
 
-enum _PaintMode { normal, agente, bano }
+enum _PaintMode { normal, agente, bano, vacio, conductor, entrada }
 
 enum _ColumnaConfig {
   unoMasUno, // 1+1 → 2 asientos/fila (minibus)
@@ -39,6 +39,9 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
   _ColumnaConfig _columnaConfig = _ColumnaConfig.dosMasDos;
   Set<String> _agenteSeatNumbers = {'1A', '1B'};
   Set<String> _banoSeatNumbers = {};
+  Set<String> _vazioSeatNumbers = {};
+  Set<String> _entradaSeatNumbers = {};
+  String? _conductorSeatNumber; // solo uno
   _PaintMode _paintMode = _PaintMode.agente;
 
   late final AnimationController _entryCtrl;
@@ -109,6 +112,23 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
         .where((a) => a.tipo == TipoAsiento.bano && a.numero.isNotEmpty)
         .map((a) => a.numero)
         .toSet();
+
+    _vazioSeatNumbers = cfg.asientos
+        .where((a) => a.tipo == TipoAsiento.vacio && a.numero.isNotEmpty)
+        .map((a) => a.numero)
+        .toSet();
+
+    _entradaSeatNumbers = cfg.asientos
+        .where((a) => a.tipo == TipoAsiento.entrada && a.numero.isNotEmpty)
+        .map((a) => a.numero)
+        .toSet();
+
+    final conductorSeat = cfg.asientos
+        .where((a) => a.tipo == TipoAsiento.conductor)
+        .firstOrNull;
+    _conductorSeatNumber = conductorSeat?.numero.isNotEmpty == true
+        ? conductorSeat!.numero
+        : null;
   }
 
   // ── Configuración de columnas ────────────────────────────────────────────────
@@ -166,74 +186,53 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
     final def = _colDef;
     final asientos = <AsientoLayout>[];
 
-    // Fila 0: conductor en col 0, resto vacíos
-    asientos.add(
-      const AsientoLayout(
-        fila: 0,
-        columna: 0,
-        numero: 'C',
-        tipo: TipoAsiento.conductor,
-      ),
-    );
-    for (int c = 1; c < def.totalCols; c++) {
-      asientos.add(
-        AsientoLayout(fila: 0, columna: c, numero: '', tipo: TipoAsiento.vacio),
-      );
+    // Fila 0: toda la fila empieza como normal, luego se aplican overrides
+    for (int c = 0; c < def.totalCols; c++) {
+      if (c == def.aisle) {
+        asientos.add(AsientoLayout(
+          fila: 0, columna: c, numero: '', tipo: TipoAsiento.vacio));
+      } else {
+        final num = '0${_letraForCol(c, def)}'; // etiqueta de fila 0
+        asientos.add(AsientoLayout(
+          fila: 0, columna: c, numero: num, tipo: TipoAsiento.normal));
+      }
     }
 
-    // Filas de pasajeros
+    // Filas de pasajeros: todas las celdas de asiento como 'normal', pasillo como vacio
     for (int row = 1; row <= _filasPassajeros; row++) {
-      // Asientos izquierda
-      for (final (col, letra) in def.left) {
-        asientos.add(
-          AsientoLayout(
+      for (int c = 0; c < def.totalCols; c++) {
+        if (c == def.aisle) {
+          asientos.add(AsientoLayout(
+            fila: row, columna: c, numero: '', tipo: TipoAsiento.vacio));
+        } else {
+          final letra = _letraForCol(c, def);
+          asientos.add(AsientoLayout(
             fila: row,
-            columna: col,
+            columna: c,
             numero: '$row$letra',
             tipo: TipoAsiento.normal,
-          ),
-        );
-      }
-      // Pasillo (vacio)
-      asientos.add(
-        AsientoLayout(
-          fila: row,
-          columna: def.aisle,
-          numero: '',
-          tipo: TipoAsiento.vacio,
-        ),
-      );
-      // Asientos derecha
-      for (final (col, letra) in def.right) {
-        asientos.add(
-          AsientoLayout(
-            fila: row,
-            columna: col,
-            numero: '$row$letra',
-            tipo: TipoAsiento.normal,
-          ),
-        );
+          ));
+        }
       }
     }
 
-    // Aplicar overrides de agente y baño (baño tiene prioridad)
+    // Aplicar overrides: baño > agente > vacio > entrada > conductor
     final resultado = asientos.map((a) {
-      if (a.tipo == TipoAsiento.normal && a.numero.isNotEmpty) {
+      if (a.numero.isNotEmpty) {
         if (_banoSeatNumbers.contains(a.numero)) {
-          return AsientoLayout(
-            fila: a.fila,
-            columna: a.columna,
-            numero: a.numero,
-            tipo: TipoAsiento.bano,
-          );
+          return AsientoLayout(fila: a.fila, columna: a.columna, numero: a.numero, tipo: TipoAsiento.bano);
         }
         if (_agenteSeatNumbers.contains(a.numero)) {
-          return AsientoLayout(
-            fila: a.fila,
-            columna: a.columna,
-            numero: a.numero,
-            tipo: TipoAsiento.agente,
-          );
+          return AsientoLayout(fila: a.fila, columna: a.columna, numero: a.numero, tipo: TipoAsiento.agente);
+        }
+        if (_vazioSeatNumbers.contains(a.numero)) {
+          return AsientoLayout(fila: a.fila, columna: a.columna, numero: a.numero, tipo: TipoAsiento.vacio);
+        }
+        if (_entradaSeatNumbers.contains(a.numero)) {
+          return AsientoLayout(fila: a.fila, columna: a.columna, numero: a.numero, tipo: TipoAsiento.entrada);
+        }
+        if (_conductorSeatNumber == a.numero) {
+          return AsientoLayout(fila: a.fila, columna: a.columna, numero: a.numero, tipo: TipoAsiento.conductor);
         }
       }
       return a;
@@ -246,26 +245,113 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
     );
   }
 
-  void _toggleSeat(String numero) {
+  String _letraForCol(int col, ({int totalCols, int aisle, List<(int, String)> left, List<(int, String)> right}) def) {
+    for (final (c, l) in def.left) { if (c == col) return l; }
+    for (final (c, l) in def.right) { if (c == col) return l; }
+    return '?';
+  }
+
+  void _toggleSeat(String numero, int fila, int columna, BuildContext ctx) {
     setState(() {
+      final totalCols = _colDef.totalCols;
+      final isLeftEdge = columna == 0;
+      final isRightEdge = columna == totalCols - 1;
+
       switch (_paintMode) {
         case _PaintMode.agente:
           if (_agenteSeatNumbers.contains(numero)) {
             _agenteSeatNumbers.remove(numero);
           } else {
             _banoSeatNumbers.remove(numero);
+            _vazioSeatNumbers.remove(numero);
+            _entradaSeatNumbers.remove(numero);
+            if (_conductorSeatNumber == numero) _conductorSeatNumber = null;
             _agenteSeatNumbers.add(numero);
           }
+
         case _PaintMode.bano:
           if (_banoSeatNumbers.contains(numero)) {
             _banoSeatNumbers.remove(numero);
           } else {
             _agenteSeatNumbers.remove(numero);
+            _vazioSeatNumbers.remove(numero);
+            _entradaSeatNumbers.remove(numero);
+            if (_conductorSeatNumber == numero) _conductorSeatNumber = null;
             _banoSeatNumbers.add(numero);
           }
+
+        case _PaintMode.vacio:
+          if (_vazioSeatNumbers.contains(numero)) {
+            _vazioSeatNumbers.remove(numero);
+          } else {
+            _agenteSeatNumbers.remove(numero);
+            _banoSeatNumbers.remove(numero);
+            _entradaSeatNumbers.remove(numero);
+            if (_conductorSeatNumber == numero) _conductorSeatNumber = null;
+            _vazioSeatNumbers.add(numero);
+          }
+
+        case _PaintMode.entrada:
+          if (!isLeftEdge && !isRightEdge) {
+            // Mostrar SnackBar sin llamar a setState (lo llamamos después)
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                const SnackBar(
+                  content: Text('Las entradas solo pueden colocarse en los laterales del bus'),
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            });
+            return;
+          }
+          if (_entradaSeatNumbers.contains(numero)) {
+            _entradaSeatNumbers.remove(numero);
+          } else {
+            _agenteSeatNumbers.remove(numero);
+            _banoSeatNumbers.remove(numero);
+            _vazioSeatNumbers.remove(numero);
+            if (_conductorSeatNumber == numero) _conductorSeatNumber = null;
+            _entradaSeatNumbers.add(numero);
+          }
+
+        case _PaintMode.conductor:
+          if (fila != 0 || (!isLeftEdge && !isRightEdge)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                const SnackBar(
+                  content: Text('El conductor solo puede ir en una esquina del frente del bus'),
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            });
+            return;
+          }
+          if (_conductorSeatNumber == numero) {
+            _conductorSeatNumber = null;
+          } else if (_conductorSeatNumber != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                const SnackBar(
+                  content: Text('Ya existe un conductor en el bus'),
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            });
+            return;
+          } else {
+            _agenteSeatNumbers.remove(numero);
+            _banoSeatNumbers.remove(numero);
+            _vazioSeatNumbers.remove(numero);
+            _entradaSeatNumbers.remove(numero);
+            _conductorSeatNumber = numero;
+          }
+
         case _PaintMode.normal:
           _agenteSeatNumbers.remove(numero);
           _banoSeatNumbers.remove(numero);
+          _vazioSeatNumbers.remove(numero);
+          _entradaSeatNumbers.remove(numero);
+          if (_conductorSeatNumber == numero) _conductorSeatNumber = null;
       }
     });
   }
@@ -551,13 +637,19 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
                                       color: SaasPalette.textTertiary,
                                     ),
                                     const SizedBox(width: 6),
-                                    Expanded(
+                                                                    Expanded(
                                       child: Text(
                                         _paintMode == _PaintMode.agente
                                             ? 'Toca un asiento para marcarlo como asiento de agente (ámbar)'
                                             : _paintMode == _PaintMode.bano
                                             ? 'Toca un asiento para marcarlo como baño (verde)'
-                                            : 'Toca un asiento para quitarle el tipo especial',
+                                            : _paintMode == _PaintMode.vacio
+                                            ? 'Toca un asiento para marcarlo como vacío (negro)'
+                                            : _paintMode == _PaintMode.entrada
+                                            ? 'Toca una celda lateral para marcarla como entrada (gris)'
+                                            : _paintMode == _PaintMode.conductor
+                                            ? 'Toca una esquina del frente del bus para el conductor'
+                                            : 'Toca un asiento para restaurarlo como normal',
                                         style: const TextStyle(
                                           color: SaasPalette.textTertiary,
                                           fontSize: 12,
@@ -568,10 +660,15 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
                                 ),
                                 const SizedBox(height: 12),
                               ],
-                              _BusPreview(
-                                configuracion: _generarLayout(),
-                                aisleIndex: _colDef.aisle,
-                                onSeatTap: canWrite ? _toggleSeat : null,
+                              Builder(
+                                builder: (ctx) => _BusPreview(
+                                  configuracion: _generarLayout(),
+                                  aisleIndex: _colDef.aisle,
+                                  onSeatTap: canWrite
+                                      ? (num, fila, col) =>
+                                          _toggleSeat(num, fila, col, ctx)
+                                      : null,
+                                ),
                               ),
                             ],
                           ),
@@ -624,28 +721,58 @@ class _PaintModeSelector extends StatelessWidget {
         border: Border.all(color: SaasPalette.border),
       ),
       padding: const EdgeInsets.all(4),
-      child: Row(
+      child: Column(
         children: [
-          _ModeTab(
-            label: 'Normal',
-            icon: Icons.event_seat_rounded,
-            color: SaasPalette.brand600,
-            selected: mode == _PaintMode.normal,
-            onTap: () => onChanged(_PaintMode.normal),
+          Row(
+            children: [
+              _ModeTab(
+                label: 'Normal',
+                icon: Icons.event_seat_rounded,
+                color: SaasPalette.brand600,
+                selected: mode == _PaintMode.normal,
+                onTap: () => onChanged(_PaintMode.normal),
+              ),
+              _ModeTab(
+                label: 'Agente',
+                icon: Icons.person_pin_rounded,
+                color: const Color(0xFFF59E0B),
+                selected: mode == _PaintMode.agente,
+                onTap: () => onChanged(_PaintMode.agente),
+              ),
+              _ModeTab(
+                label: 'Baño',
+                icon: Icons.wc_rounded,
+                color: const Color(0xFF10B981),
+                selected: mode == _PaintMode.bano,
+                onTap: () => onChanged(_PaintMode.bano),
+              ),
+            ],
           ),
-          _ModeTab(
-            label: 'Agente',
-            icon: Icons.person_pin_rounded,
-            color: const Color(0xFFF59E0B),
-            selected: mode == _PaintMode.agente,
-            onTap: () => onChanged(_PaintMode.agente),
-          ),
-          _ModeTab(
-            label: 'Baño',
-            icon: Icons.wc_rounded,
-            color: const Color(0xFF10B981),
-            selected: mode == _PaintMode.bano,
-            onTap: () => onChanged(_PaintMode.bano),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              _ModeTab(
+                label: 'Vacío',
+                icon: Icons.block_rounded,
+                color: Colors.grey.shade800,
+                selected: mode == _PaintMode.vacio,
+                onTap: () => onChanged(_PaintMode.vacio),
+              ),
+              _ModeTab(
+                label: 'Conductor',
+                icon: Icons.drive_eta_rounded,
+                color: const Color(0xFF1E3A5F),
+                selected: mode == _PaintMode.conductor,
+                onTap: () => onChanged(_PaintMode.conductor),
+              ),
+              _ModeTab(
+                label: 'Entrada',
+                icon: Icons.door_sliding_rounded,
+                color: Colors.grey.shade600,
+                selected: mode == _PaintMode.entrada,
+                onTap: () => onChanged(_PaintMode.entrada),
+              ),
+            ],
           ),
         ],
       ),
@@ -1132,7 +1259,8 @@ class _ResumenCard extends StatelessWidget {
 class _BusPreview extends StatelessWidget {
   final BusConfiguracion configuracion;
   final int? aisleIndex;
-  final void Function(String numero)? onSeatTap;
+  /// Called with (numero, fila, columna)
+  final void Function(String numero, int fila, int columna)? onSeatTap;
   const _BusPreview({
     required this.configuracion,
     this.aisleIndex,
@@ -1154,14 +1282,12 @@ class _BusPreview extends StatelessWidget {
       case TipoAsiento.bano:
         return const Color(0xFF10B981);
       case TipoAsiento.vacio:
-        return Colors.transparent;
+        return Colors.grey.shade900;
+      case TipoAsiento.entrada:
+        return Colors.grey.shade400;
     }
   }
 
-  bool _isTappable(TipoAsiento tipo) =>
-      tipo == TipoAsiento.normal ||
-      tipo == TipoAsiento.agente ||
-      tipo == TipoAsiento.bano;
 
   String _tooltipForTipo(TipoAsiento tipo, String numero) {
     switch (tipo) {
@@ -1174,7 +1300,9 @@ class _BusPreview extends StatelessWidget {
       case TipoAsiento.conductor:
         return 'Conductor';
       case TipoAsiento.vacio:
-        return '';
+        return '$numero — Vacío';
+      case TipoAsiento.entrada:
+        return '$numero — Entrada';
     }
   }
 
@@ -1198,11 +1326,13 @@ class _BusPreview extends StatelessWidget {
         Wrap(
           spacing: 12,
           runSpacing: 6,
-          children: const [
-            _LeyendaItem(color: Color(0xFF3B82F6), label: 'Normal'),
-            _LeyendaItem(color: Color(0xFFF59E0B), label: 'Agente'),
-            _LeyendaItem(color: Color(0xFF1E3A5F), label: 'Conductor'),
-            _LeyendaItem(color: Color(0xFF10B981), label: 'Baño'),
+          children: [
+            const _LeyendaItem(color: Color(0xFF3B82F6), label: 'Normal'),
+            const _LeyendaItem(color: Color(0xFFF59E0B), label: 'Agente'),
+            const _LeyendaItem(color: Color(0xFF1E3A5F), label: 'Conductor'),
+            const _LeyendaItem(color: Color(0xFF10B981), label: 'Baño'),
+            _LeyendaItem(color: Colors.grey.shade900, label: 'Vacío'),
+            _LeyendaItem(color: Colors.grey.shade400, label: 'Entrada'),
           ],
         ),
         const SizedBox(height: 16),
@@ -1225,19 +1355,57 @@ class _BusPreview extends StatelessWidget {
                       return const SizedBox(width: _aisleWidth);
                     }
 
+                    // Always show a cell for non-aisle columns (no skipping vacio)
                     final asiento = asientosFila
                         .where((a) => a.columna == col)
                         .firstOrNull;
 
-                    if (asiento == null || asiento.tipo == TipoAsiento.vacio) {
+                    // If no asiento data, show empty grey placeholder
+                    if (asiento == null) {
                       return const SizedBox(
                         width: _cellSize + _gap,
                         height: _cellSize,
                       );
                     }
 
-                    final tappable =
-                        onSeatTap != null && _isTappable(asiento.tipo);
+                    final tappable = onSeatTap != null;
+
+                    // Build cell content based on tipo
+                    Widget? cellChild;
+                    if (asiento.tipo == TipoAsiento.bano) {
+                      cellChild = const Icon(Icons.wc_rounded, size: 11, color: Colors.white);
+                    } else if (asiento.tipo == TipoAsiento.entrada) {
+                      cellChild = const Center(
+                        child: Text(
+                          'E',
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    } else if (asiento.tipo == TipoAsiento.vacio) {
+                      // black cell, no text
+                      cellChild = null;
+                    } else if (asiento.numero.isNotEmpty) {
+                      cellChild = FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Padding(
+                          padding: const EdgeInsets.all(2),
+                          child: Text(
+                            asiento.tipo == TipoAsiento.conductor
+                                ? 'C'
+                                : asiento.numero,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 7,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
 
                     final cell = Container(
                       width: _cellSize,
@@ -1247,44 +1415,25 @@ class _BusPreview extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                         border: tappable
                             ? Border.all(
-                                color: Colors.white.withValues(alpha: 0.4),
+                                color: Colors.white.withValues(alpha: 0.3),
                                 width: 1,
                               )
                             : null,
                       ),
-                      child: asiento.tipo == TipoAsiento.bano
-                          ? const Icon(
-                              Icons.wc_rounded,
-                              size: 11,
-                              color: Colors.white,
-                            )
-                          : asiento.numero.isNotEmpty
-                          ? FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Padding(
-                                padding: const EdgeInsets.all(2),
-                                child: Text(
-                                  asiento.numero,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 7,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            )
-                          : null,
+                      child: cellChild,
                     );
 
                     return Padding(
                       padding: const EdgeInsets.only(right: _gap),
                       child: Tooltip(
-                        message: asiento.numero.isNotEmpty
-                            ? _tooltipForTipo(asiento.tipo, asiento.numero)
-                            : asiento.tipo.name,
+                        message: _tooltipForTipo(asiento.tipo, asiento.numero),
                         child: tappable
                             ? GestureDetector(
-                                onTap: () => onSeatTap!(asiento.numero),
+                                onTap: () => onSeatTap!(
+                                  asiento.numero,
+                                  asiento.fila,
+                                  asiento.columna,
+                                ),
                                 child: MouseRegion(
                                   cursor: SystemMouseCursors.click,
                                   child: cell,

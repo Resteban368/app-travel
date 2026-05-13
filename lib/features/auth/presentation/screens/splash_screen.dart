@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,6 +16,8 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
   late final AnimationController _textController;
+  Timer? _safetyTimer;
+  bool _navigated = false;
 
   late final Animation<double> _textOpacity;
   late final Animation<Offset> _textSlide;
@@ -55,10 +58,19 @@ class _SplashScreenState extends State<SplashScreen>
 
     _textController.forward();
     context.read<AuthBloc>().add(const AppStarted());
+
+    // Safety net: if auth never resolves in 8 s, go straight to profile.
+    _safetyTimer = Timer(const Duration(seconds: 8), () {
+      if (mounted && !_navigated) {
+        _navigated = true;
+        Navigator.pushReplacementNamed(context, AppRouter.profile);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _safetyTimer?.cancel();
     _textController.dispose();
     super.dispose();
   }
@@ -67,9 +79,14 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
+        if (_navigated) return;
         if (state is AuthAuthenticated) {
+          _navigated = true;
+          _safetyTimer?.cancel();
           Navigator.pushReplacementNamed(context, AppRouter.profile);
         } else if (state is AuthInitial) {
+          _navigated = true;
+          _safetyTimer?.cancel();
           Navigator.pushReplacementNamed(context, AppRouter.login);
         }
       },

@@ -168,10 +168,12 @@ class _HotelHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 450;
+        
+        if (isNarrow) {
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -189,44 +191,104 @@ class _HotelHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Hoteles',
-                    style: TextStyle(
-                      color: SaasPalette.textPrimary,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
+                  const Expanded(
+                    child: Text(
+                      'Hoteles',
+                      style: TextStyle(
+                        color: SaasPalette.textPrimary,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              const Text(
-                'Gestión de hoteles disponibles',
-                style: TextStyle(
-                  color: SaasPalette.textSecondary,
-                  fontSize: 13,
+              const SizedBox(height: 12),
+              if (canWrite)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () =>
+                        Navigator.pushNamed(context, AppRouter.hotelCreate),
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('Nuevo Hotel'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SaasPalette.brand600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: SaasPalette.brand50,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.hotel_rounded,
+                          color: SaasPalette.brand600,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Hoteles',
+                        style: TextStyle(
+                          color: SaasPalette.textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Gestión de hoteles disponibles',
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (canWrite)
+              ElevatedButton.icon(
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRouter.hotelCreate),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Nuevo Hotel'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SaasPalette.brand600,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
                 ),
               ),
-            ],
-          ),
-        ),
-        if (canWrite)
-          ElevatedButton.icon(
-            onPressed: () =>
-                Navigator.pushNamed(context, AppRouter.hotelCreate),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Nuevo Hotel'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: SaasPalette.brand600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
-            ),
-          ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
@@ -345,34 +407,45 @@ class _HotelCardState extends State<_HotelCard> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Row(
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
                       children: [
-                        const Icon(
-                          Icons.location_city_rounded,
-                          size: 12,
-                          color: SaasPalette.textTertiary,
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.location_city_rounded,
+                              size: 12,
+                              color: SaasPalette.textTertiary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              hotel.ciudad,
+                              style: const TextStyle(
+                                color: SaasPalette.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          hotel.ciudad,
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Icon(
-                          Icons.phone_rounded,
-                          size: 12,
-                          color: SaasPalette.textTertiary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          hotel.telefono,
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
-                            fontSize: 12,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.phone_rounded,
+                              size: 12,
+                              color: SaasPalette.textTertiary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              hotel.telefono,
+                              style: const TextStyle(
+                                color: SaasPalette.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

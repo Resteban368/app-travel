@@ -197,13 +197,19 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: SaasEmptyState(
-                      icon: (_searchQuery.isNotEmpty || _selectedDateRange != null)
+                      icon:
+                          (_searchQuery.isNotEmpty ||
+                              _selectedDateRange != null)
                           ? Icons.search_off_rounded
                           : Icons.payments_rounded,
-                      title: (_searchQuery.isNotEmpty || _selectedDateRange != null)
+                      title:
+                          (_searchQuery.isNotEmpty ||
+                              _selectedDateRange != null)
                           ? 'Sin coincidencias'
                           : 'Historial vacío',
-                      subtitle: (_searchQuery.isNotEmpty || _selectedDateRange != null)
+                      subtitle:
+                          (_searchQuery.isNotEmpty ||
+                              _selectedDateRange != null)
                           ? 'No encontramos pagos con los criterios actuales.'
                           : 'Los reportes de pagos registrados aparecerán aquí.',
                     ),
@@ -502,7 +508,7 @@ class _ChatGroupCardState extends State<_ChatGroupCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Chat: ${widget.chatId}',
+                            widget.chatId,
                             style: const TextStyle(
                               color: SaasPalette.textPrimary,
                               fontWeight: FontWeight.w700,
@@ -703,4 +709,3 @@ class _StatusBadge extends StatelessWidget {
     );
   }
 }
-

@@ -167,10 +167,12 @@ class _BusLayoutHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 450;
+        
+        if (isNarrow) {
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -188,44 +190,104 @@ class _BusLayoutHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Diseños de Bus',
-                    style: TextStyle(
-                      color: SaasPalette.textPrimary,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
+                  const Expanded(
+                    child: Text(
+                      'Diseños de Bus',
+                      style: TextStyle(
+                        color: SaasPalette.textPrimary,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              const Text(
-                'Configuraciones de distribución de asientos',
-                style: TextStyle(
-                  color: SaasPalette.textSecondary,
-                  fontSize: 13,
+              const SizedBox(height: 12),
+              if (canWrite)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () =>
+                        Navigator.pushNamed(context, AppRouter.busLayoutCreate),
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('Nuevo Diseño'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SaasPalette.brand600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: SaasPalette.brand50,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.directions_bus_rounded,
+                          color: SaasPalette.brand600,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Diseños de Bus',
+                        style: TextStyle(
+                          color: SaasPalette.textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Configuraciones de distribución de asientos',
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (canWrite)
+              ElevatedButton.icon(
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRouter.busLayoutCreate),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Nuevo Diseño'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SaasPalette.brand600,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
                 ),
               ),
-            ],
-          ),
-        ),
-        if (canWrite)
-          ElevatedButton.icon(
-            onPressed: () =>
-                Navigator.pushNamed(context, AppRouter.busLayoutCreate),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Nuevo Diseño'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: SaasPalette.brand600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
-            ),
-          ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
@@ -366,7 +428,10 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
                         ),
                       ],
                       const SizedBox(height: 6),
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -402,8 +467,7 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
                               ],
                             ),
                           ),
-                          if (layout.configuracion != null) ...[
-                            const SizedBox(width: 8),
+                          if (layout.configuracion != null)
                             Text(
                               '${layout.configuracion!.filas} filas × ${layout.configuracion!.columnas} col.',
                               style: const TextStyle(
@@ -411,7 +475,6 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
                                 fontSize: 11,
                               ),
                             ),
-                          ],
                         ],
                       ),
                     ],

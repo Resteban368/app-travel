@@ -37,7 +37,7 @@ class DashStatsGrid extends StatelessWidget {
           crossAxisCount: crossAxisCount,
           mainAxisSpacing: 16,
           crossAxisSpacing: 16,
-          childAspectRatio: width < 600 ? 3.5 : 2.2,
+          childAspectRatio: width < 600 ? 2.6 : 2.2,
           children: [
             _InkStatWrapper(
               onTap: onPagosTap,

@@ -97,6 +97,7 @@ class BusManifiestoData extends Equatable {
   final int totalAsientosCliente;
   final int asientosOcupados;
   final int asientosDisponibles;
+  final String? entrada;
   final BusConfiguracion configuracion;
   final List<AsientoManifiesto> asientos;
 
@@ -106,6 +107,7 @@ class BusManifiestoData extends Equatable {
     required this.totalAsientosCliente,
     required this.asientosOcupados,
     required this.asientosDisponibles,
+    this.entrada,
     required this.configuracion,
     required this.asientos,
   });

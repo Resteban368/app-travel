@@ -96,22 +96,50 @@ class _ClienteHistorialScreenState extends State<ClienteHistorialScreen> {
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
       sliver: SliverToBoxAdapter(
-        child: Row(
-          children: [
-            _StatCard(
-              label: 'Total Viajes',
-              value: historial.totalViajes.toString(),
-              icon: Icons.flight_takeoff_rounded,
-              color: SaasPalette.brand600,
-            ),
-            const SizedBox(width: 16),
-            _StatCard(
-              label: 'Inversión Total',
-              value: NumberFormat.currency(symbol: '\$', decimalDigits: 0).format(totalInversion),
-              icon: Icons.payments_outlined,
-              color: SaasPalette.success,
-            ),
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < 500;
+            if (isMobile) {
+              return Column(
+                children: [
+                  Row(children: [
+                    _StatCard(
+                      label: 'Total Viajes',
+                      value: historial.totalViajes.toString(),
+                      icon: Icons.flight_takeoff_rounded,
+                      color: SaasPalette.brand600,
+                    ),
+                  ]),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    _StatCard(
+                      label: 'Inversión Total',
+                      value: NumberFormat.currency(symbol: '\$', decimalDigits: 0).format(totalInversion),
+                      icon: Icons.payments_outlined,
+                      color: SaasPalette.success,
+                    ),
+                  ]),
+                ],
+              );
+            }
+            return Row(
+              children: [
+                _StatCard(
+                  label: 'Total Viajes',
+                  value: historial.totalViajes.toString(),
+                  icon: Icons.flight_takeoff_rounded,
+                  color: SaasPalette.brand600,
+                ),
+                const SizedBox(width: 16),
+                _StatCard(
+                  label: 'Inversión Total',
+                  value: NumberFormat.currency(symbol: '\$', decimalDigits: 0).format(totalInversion),
+                  icon: Icons.payments_outlined,
+                  color: SaasPalette.success,
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -182,26 +210,32 @@ class _StatCard extends StatelessWidget {
               child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: SaasPalette.textTertiary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -436,12 +470,16 @@ class _HistorialCardState extends State<_HistorialCard> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      widget.reserva.idReserva ?? 'ID: ${widget.reserva.id}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: SaasPalette.textPrimary,
-                        fontSize: 15,
+                    Flexible(
+                      child: Text(
+                        widget.reserva.idReserva ?? 'ID: ${widget.reserva.id}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: SaasPalette.textPrimary,
+                          fontSize: 15,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 12),

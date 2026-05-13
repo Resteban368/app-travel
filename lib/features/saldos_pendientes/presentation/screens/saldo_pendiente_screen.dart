@@ -179,7 +179,7 @@ class _SaldoPendienteScreenState extends State<SaldoPendienteScreen> {
 
                 if (loaded == null) return const SizedBox();
 
-                if (loaded.items.isEmpty) {
+                if (loaded.tours.isEmpty) {
                   return _EmptyView(onRefresh: _refresh);
                 }
 
@@ -245,12 +245,13 @@ class _Header extends StatelessWidget {
               const Spacer(),
               BlocBuilder<SaldoPendienteBloc, SaldoPendienteState>(
                 builder: (context, state) {
-                  int total = 0;
-                  if (state is SaldoPendienteLoaded) total = state.total;
-                  if (state is SaldoPendienteLoadingMore) {
-                    total = state.previous.total;
+                  int totalTours = 0;
+                  if (state is SaldoPendienteLoaded) {
+                    totalTours = state.totalTours;
+                  } else if (state is SaldoPendienteLoadingMore) {
+                    totalTours = state.previous.totalTours;
                   }
-                  if (total == 0) return const SizedBox();
+                  if (totalTours == 0) return const SizedBox();
                   return Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -261,7 +262,7 @@ class _Header extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '$total reservas',
+                      '$totalTours tour${totalTours != 1 ? 's' : ''}',
                       style: const TextStyle(
                         color: SaasPalette.warning,
                         fontSize: 12,
@@ -419,14 +420,12 @@ class _Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tourNames = loaded.byTour.keys.toList();
-
     return ListView.builder(
       controller: scrollController,
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-      itemCount: tourNames.length + (isLoadingMore ? 1 : 0),
+      itemCount: loaded.tours.length + (isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
-        if (index == tourNames.length) {
+        if (index == loaded.tours.length) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
             child: Center(
@@ -434,11 +433,8 @@ class _Body extends StatelessWidget {
             ),
           );
         }
-        final tourName = tourNames[index];
-        final reservas = loaded.byTour[tourName]!;
         return _TourGroup(
-          tourName: tourName,
-          reservas: reservas,
+          tour: loaded.tours[index],
           currFmt: currFmt,
         );
       },
@@ -449,13 +445,11 @@ class _Body extends StatelessWidget {
 // ── Grupo por Tour ────────────────────────────────────────────────────────────
 
 class _TourGroup extends StatefulWidget {
-  final String tourName;
-  final List<SaldoPendiente> reservas;
+  final TourConSaldo tour;
   final NumberFormat currFmt;
 
   const _TourGroup({
-    required this.tourName,
-    required this.reservas,
+    required this.tour,
     required this.currFmt,
   });
 
@@ -464,14 +458,12 @@ class _TourGroup extends StatefulWidget {
 }
 
 class _TourGroupState extends State<_TourGroup> {
-  bool _expanded = true;
-
-  double get _totalSaldo =>
-      widget.reservas.fold(0.0, (sum, r) => sum + r.saldoPendiente);
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
     final fmt = widget.currFmt;
+    final tour = widget.tour;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -505,7 +497,7 @@ class _TourGroupState extends State<_TourGroup> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      widget.tourName,
+                      tour.tourNombre,
                       style: const TextStyle(
                         color: SaasPalette.textPrimary,
                         fontSize: 14,
@@ -513,12 +505,12 @@ class _TourGroupState extends State<_TourGroup> {
                       ),
                     ),
                   ),
-                  // Total saldo del tour
+                  // Total saldo del tour (from API)
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        fmt.format(_totalSaldo),
+                        fmt.format(tour.saldoTotalTour),
                         style: const TextStyle(
                           color: SaasPalette.danger,
                           fontSize: 13,
@@ -526,7 +518,7 @@ class _TourGroupState extends State<_TourGroup> {
                         ),
                       ),
                       Text(
-                        '${widget.reservas.length} reserva${widget.reservas.length != 1 ? 's' : ''}',
+                        '${tour.totalReservas} reserva${tour.totalReservas != 1 ? 's' : ''}',
                         style: const TextStyle(
                           color: SaasPalette.textTertiary,
                           fontSize: 11,
@@ -549,13 +541,13 @@ class _TourGroupState extends State<_TourGroup> {
 
           if (_expanded) ...[
             const Divider(color: SaasPalette.border, height: 1),
-            ...widget.reservas.asMap().entries.map((entry) {
+            ...tour.reservas.asMap().entries.map((entry) {
               final i = entry.key;
               final reserva = entry.value;
               return Column(
                 children: [
                   _ReservaCard(reserva: reserva, currFmt: fmt),
-                  if (i < widget.reservas.length - 1)
+                  if (i < tour.reservas.length - 1)
                     const Divider(
                       color: SaasPalette.border,
                       height: 1,
@@ -596,9 +588,6 @@ class _ReservaCardState extends State<_ReservaCard> {
         : 0.0;
 
     return Card(
-      color: reserva.ultimaFechaPago == null
-          ? SaasPalette.bgCanvas
-          : SaasPalette.brand600.withValues(alpha: 0.1),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

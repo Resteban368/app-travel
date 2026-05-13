@@ -87,6 +87,59 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
     throw Exception('Error al cargar analítica: ${response.statusCode}');
   }
 
+  Widget _buildPeriodSelector() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: SaasPalette.border.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: _periodos.map((p) {
+          final selected = _periodo == p.$1;
+          return GestureDetector(
+            onTap: () {
+              if (_periodo != p.$1) {
+                _periodo = p.$1;
+                _fetch();
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              decoration: BoxDecoration(
+                color: selected ? SaasPalette.bgCanvas : Colors.transparent,
+                borderRadius: BorderRadius.circular(11),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Text(
+                p.$2,
+                style: TextStyle(
+                  color: selected
+                      ? SaasPalette.textPrimary
+                      : SaasPalette.textTertiary,
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currFmt = NumberFormat.currency(
@@ -96,91 +149,74 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
     );
     final dateFmt = DateFormat('dd MMM · HH:mm', 'es');
 
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // ── Header ────────────────────────────────────────────────────────────
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: SaasPalette.brand600.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.bar_chart_rounded,
-                color: SaasPalette.brand600,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'Rendimiento y Analítica',
-              style: TextStyle(
-                color: SaasPalette.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const Spacer(),
-            // Período selector
-            Container(
-              decoration: BoxDecoration(
-                color: SaasPalette.bgSubtle,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: _periodos.map((p) {
-                  final selected = _periodo == p.$1;
-                  return GestureDetector(
-                    onTap: () {
-                      if (_periodo != p.$1) {
-                        _periodo = p.$1;
-                        _fetch();
-                      }
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? SaasPalette.bgCanvas
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(9),
-                        boxShadow: selected
-                            ? [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Text(
-                        p.$2,
-                        style: TextStyle(
-                          color: selected
-                              ? SaasPalette.textPrimary
-                              : SaasPalette.textTertiary,
-                          fontSize: 12,
-                          fontWeight: selected
-                              ? FontWeight.w600
-                              : FontWeight.w500,
+        isMobile
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: SaasPalette.brand600.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.bar_chart_rounded,
+                          color: SaasPalette.brand600,
+                          size: 20,
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Rendimiento y Analítica',
+                          style: TextStyle(
+                            color: SaasPalette.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildPeriodSelector(),
+                ],
+              )
+            : Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: SaasPalette.brand600.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                  );
-                }).toList(),
+                    child: const Icon(
+                      Icons.bar_chart_rounded,
+                      color: SaasPalette.brand600,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Rendimiento y Analítica',
+                    style: TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  _buildPeriodSelector(),
+                ],
               ),
-            ),
-          ],
-        ),
         const SizedBox(height: 20),
 
         // ── Content ───────────────────────────────────────────────────────────
@@ -247,37 +283,77 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
             return Column(
               children: [
                 // ── Summary cards ──────────────────────────────────────────
-                Row(
-                  children: [
-                    Expanded(
-                      child: SummaryCard(
-                        icon: Icons.check_circle_rounded,
-                        color: SaasPalette.success,
-                        label: 'Pagos validados',
-                        value: '${data.pagosTotal}',
-                        sub: currFmt.format(data.pagosMontoTotal),
+                if (isMobile)
+                  Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: SummaryCard(
+                          icon: Icons.check_circle_rounded,
+                          color: SaasPalette.success,
+                          label: 'Pagos validados',
+                          value: '${data.pagosTotal}',
+                          sub: currFmt.format(data.pagosMontoTotal),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: SummaryCard(
-                        icon: Icons.tour_rounded,
-                        color: SaasPalette.brand600,
-                        label: 'Reservas tour',
-                        value: '${data.reservasTourTotal}',
+                      const SizedBox(height: 12),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: SummaryCard(
+                              icon: Icons.tour_rounded,
+                              color: SaasPalette.brand600,
+                              label: 'Reservas tour',
+                              value: '${data.reservasTourTotal}',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: SummaryCard(
+                              icon: Icons.request_quote_rounded,
+                              color: SaasPalette.warning,
+                              label: 'Cotizaciones',
+                              value: '${data.cotizacionesTotal}',
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: SummaryCard(
-                        icon: Icons.request_quote_rounded,
-                        color: SaasPalette.warning,
-                        label: 'Cotizaciones',
-                        value: '${data.cotizacionesTotal}',
+                    ],
+                  )
+                else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: SummaryCard(
+                          icon: Icons.check_circle_rounded,
+                          color: SaasPalette.success,
+                          label: 'Pagos validados',
+                          value: '${data.pagosTotal}',
+                          sub: currFmt.format(data.pagosMontoTotal),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: SummaryCard(
+                          icon: Icons.tour_rounded,
+                          color: SaasPalette.brand600,
+                          label: 'Reservas tour',
+                          value: '${data.reservasTourTotal}',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: SummaryCard(
+                          icon: Icons.request_quote_rounded,
+                          color: SaasPalette.warning,
+                          label: 'Cotizaciones',
+                          value: '${data.cotizacionesTotal}',
+                        ),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 20),
 
                 // ── Pagos validados ────────────────────────────────────────

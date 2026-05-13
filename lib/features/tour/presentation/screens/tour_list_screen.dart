@@ -505,189 +505,254 @@ class _TourRowState extends State<_TourRow> {
             bloc.add(LoadTours());
           },
           borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Left icon
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: typeColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    isPromo ? Icons.local_offer_rounded : Icons.map_outlined,
-                    color: typeText,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 14),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 450;
 
-                // Main info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Name + badges
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              tour.name,
-                              style: const TextStyle(
-                                color: SaasPalette.textPrimary,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: typeColor,
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            child: Text(
-                              isPromo ? 'PROMO' : 'TOUR',
-                              style: TextStyle(
-                                color: typeText,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: SaasPalette.bgSubtle,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              '#TT-${tour.idTour}',
-                              style: const TextStyle(
-                                color: SaasPalette.textTertiary,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      // Dates + location
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.calendar_today_outlined,
-                            size: 12,
-                            color: SaasPalette.textTertiary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${DateFormat('dd MMM').format(tour.startDate)} — ${DateFormat('dd MMM yyyy').format(tour.endDate)}',
-                            style: const TextStyle(
-                              color: SaasPalette.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          const Icon(
-                            Icons.location_on_outlined,
-                            size: 12,
-                            color: SaasPalette.textTertiary,
-                          ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              tour.departurePoint,
-                              style: const TextStyle(
-                                color: SaasPalette.textSecondary,
-                                fontSize: 12,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      // Progress bar
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value: progress,
-                                minHeight: 5,
-                                backgroundColor: SaasPalette.bgSubtle,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  progress > 0.8
-                                      ? SaasPalette.warning
-                                      : SaasPalette.brand600,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '$ocupados/$total cupos',
-                            style: const TextStyle(
-                              color: SaasPalette.textTertiary,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+              return Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
                 ),
-                const SizedBox(width: 16),
-
-                // Price
-                Text(
-                  widget.currencyFormat.format(tour.price),
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // Actions
-                if (widget.canWrite)
-                  InkWell(
-                    onTap: () => _confirmDelete(context),
-                    borderRadius: BorderRadius.circular(8),
-                    child: const Padding(
-                      padding: EdgeInsets.all(6),
+                child: Row(
+                  crossAxisAlignment: isNarrow
+                      ? CrossAxisAlignment.start
+                      : CrossAxisAlignment.center,
+                  children: [
+                    // Left icon
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: typeColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Icon(
-                        Icons.delete_outline_rounded,
-                        color: SaasPalette.danger,
-                        size: 18,
+                        isPromo
+                            ? Icons.local_offer_rounded
+                            : Icons.map_outlined,
+                        color: typeText,
+                        size: 22,
                       ),
                     ),
-                  ),
-                const SizedBox(width: 4),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: SaasPalette.textTertiary,
-                  size: 20,
+                    const SizedBox(width: 14),
+
+                    // Main content area
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Main info (Name, Dates, Progress)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Name + badges
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      tour.name,
+                                      style: const TextStyle(
+                                        color: SaasPalette.textPrimary,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 7,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: typeColor,
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                    child: Text(
+                                      isPromo ? 'PROMO' : 'TOUR',
+                                      style: TextStyle(
+                                        color: typeText,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              // Dates + location
+                              Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 12,
+                                runSpacing: 4,
+                                children: [
+                                  Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        WidgetSpan(
+                                          alignment:
+                                              PlaceholderAlignment.middle,
+                                          child: Icon(
+                                            Icons.calendar_today_outlined,
+                                            size: 12,
+                                            color: SaasPalette.textTertiary,
+                                          ),
+                                        ),
+                                        const WidgetSpan(
+                                          child: SizedBox(width: 4),
+                                        ),
+                                        TextSpan(
+                                          text:
+                                              '${DateFormat('dd MMM').format(tour.startDate)} — ${DateFormat('dd MMM yyyy').format(tour.endDate)}',
+                                          style: const TextStyle(
+                                            color: SaasPalette.textSecondary,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        WidgetSpan(
+                                          alignment:
+                                              PlaceholderAlignment.middle,
+                                          child: Icon(
+                                            Icons.location_on_outlined,
+                                            size: 12,
+                                            color: SaasPalette.textTertiary,
+                                          ),
+                                        ),
+                                        const WidgetSpan(
+                                          child: SizedBox(width: 4),
+                                        ),
+                                        TextSpan(
+                                          text: tour.departurePoint,
+                                          style: const TextStyle(
+                                            color: SaasPalette.textSecondary,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+
+                          if (isNarrow) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  widget.currencyFormat.format(tour.price),
+                                  style: const TextStyle(
+                                    color: SaasPalette.brand600,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    if (widget.canWrite)
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete_outline_rounded,
+                                          size: 20,
+                                        ),
+                                        color: SaasPalette.danger,
+                                        onPressed: () =>
+                                            _confirmDelete(context),
+                                        constraints: const BoxConstraints(),
+                                        padding: const EdgeInsets.all(4),
+                                      ),
+                                    const Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: SaasPalette.textTertiary,
+                                      size: 20,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+
+                          const SizedBox(height: 8),
+                          // Progress bar
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: LinearProgressIndicator(
+                                    value: progress,
+                                    minHeight: 5,
+                                    backgroundColor: SaasPalette.bgSubtle,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      progress > 0.8
+                                          ? SaasPalette.warning
+                                          : SaasPalette.brand600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '$ocupados/$total cupos',
+                                style: const TextStyle(
+                                  color: SaasPalette.textTertiary,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    if (!isNarrow) ...[
+                      const SizedBox(width: 16),
+                      // Price
+                      Text(
+                        widget.currencyFormat.format(tour.price),
+                        style: const TextStyle(
+                          color: SaasPalette.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Actions
+                      if (widget.canWrite)
+                        InkWell(
+                          onTap: () => _confirmDelete(context),
+                          borderRadius: BorderRadius.circular(8),
+                          child: const Padding(
+                            padding: EdgeInsets.all(6),
+                            child: Icon(
+                              Icons.delete_outline_rounded,
+                              color: SaasPalette.danger,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: SaasPalette.textTertiary,
+                        size: 20,
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),

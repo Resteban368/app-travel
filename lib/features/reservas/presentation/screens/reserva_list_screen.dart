@@ -952,36 +952,48 @@ class _ReservaCardState extends State<_ReservaCard> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Row(
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             // Agent
-                            const Icon(
-                              Icons.person_outline_rounded,
-                              size: 14,
-                              color: SaasPalette.textTertiary,
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.person_outline_rounded,
+                                  size: 14,
+                                  color: SaasPalette.textTertiary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Agente: ${r.agente?.nombre ?? "N/A"}',
+                                  style: const TextStyle(
+                                    color: SaasPalette.textTertiary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Agente: ${r.agente?.nombre ?? "N/A"}',
-                              style: const TextStyle(
-                                color: SaasPalette.textTertiary,
-                                fontSize: 11,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
                             // Update Date
-                            const Icon(
-                              Icons.history_rounded,
-                              size: 14,
-                              color: SaasPalette.textTertiary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Actualizado: ${DateFormat('dd/MM/yyyy HH:mm').format(r.fechaActualizacion)}',
-                              style: const TextStyle(
-                                color: SaasPalette.textTertiary,
-                                fontSize: 11,
-                              ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.history_rounded,
+                                  size: 14,
+                                  color: SaasPalette.textTertiary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Actualizado: ${DateFormat('dd/MM/yyyy HH:mm').format(r.fechaActualizacion)}',
+                                  style: const TextStyle(
+                                    color: SaasPalette.textTertiary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),

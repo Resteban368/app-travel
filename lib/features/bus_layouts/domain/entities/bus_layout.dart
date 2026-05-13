@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-enum TipoAsiento { normal, agente, conductor, vacio, bano }
+enum TipoAsiento { normal, agente, conductor, vacio, bano, entrada }
 
 class AsientoLayout extends Equatable {
   final int fila;

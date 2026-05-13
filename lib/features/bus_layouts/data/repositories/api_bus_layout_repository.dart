@@ -138,7 +138,7 @@ class ApiBusLayoutRepository implements BusLayoutRepository {
         'filas': cfg.filas,
         'columnas': cfg.columnas,
         'asientos': cfg.asientos
-            .where((a) => a.tipo != TipoAsiento.vacio)
+            .where((a) => a.numero.isNotEmpty)
             .map((a) => {
               'fila': a.fila,
               'columna': a.columna,
@@ -162,6 +162,8 @@ class ApiBusLayoutRepository implements BusLayoutRepository {
       case 'baño':
       case 'bano':
         return TipoAsiento.bano;
+      case 'entrada':
+        return TipoAsiento.entrada;
       default:
         return TipoAsiento.normal;
     }
@@ -179,6 +181,8 @@ class ApiBusLayoutRepository implements BusLayoutRepository {
         return 'baño';
       case TipoAsiento.normal:
         return 'normal';
+      case TipoAsiento.entrada:
+        return 'entrada';
     }
   }
 }

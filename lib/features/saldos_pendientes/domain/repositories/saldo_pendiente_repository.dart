@@ -1,10 +1,12 @@
 import '../entities/saldo_pendiente.dart';
 
 abstract class SaldoPendienteRepository {
-  Future<({List<SaldoPendiente> items, int total, int page, int limit})>
+  /// Returns tours paginated. [limit] = tours per page.
+  /// Total pages = (totalTours / limit).ceil()
+  Future<({List<TourConSaldo> tours, int totalTours, int page, int limit})>
       getSaldosPendientes({
     int page = 1,
-    int limit = 20,
+    int limit = 5,
     String? tourId,
     String? responsable,
     String? idReserva,

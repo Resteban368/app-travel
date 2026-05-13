@@ -11,4 +11,5 @@ abstract class TourRepository {
   Future<void> deleteTour(String id);
   Future<void> toggleActive(String id, bool isActive);
   Future<TourDetalle> getTourDetalle(String id);
+  Future<void> finalizarTour(String id);
 }

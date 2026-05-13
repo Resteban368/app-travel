@@ -240,10 +240,11 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
                                       readOnly: !canWrite,
                                     ),
                                     const SizedBox(height: 20),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: _buildDropdown(
+                                    LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        final isNarrow = constraints.maxWidth < 450;
+                                        final dropdowns = [
+                                          _buildDropdown(
                                             value: _paymentType,
                                             label: 'Tipo de Pago',
                                             icon: Icons.payments_rounded,
@@ -254,10 +255,8 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
                                                   )
                                                 : null,
                                           ),
-                                        ),
-                                        const SizedBox(width: 20),
-                                        Expanded(
-                                          child: _buildDropdown(
+                                          if (isNarrow) const SizedBox(height: 20),
+                                          _buildDropdown(
                                             value: _accountType,
                                             label: 'Tipo de Cuenta',
                                             icon: Icons.credit_card_rounded,
@@ -268,8 +267,20 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
                                                   )
                                                 : null,
                                           ),
-                                        ),
-                                      ],
+                                        ];
+
+                                        if (isNarrow) {
+                                          return Column(children: dropdowns);
+                                        }
+
+                                        return Row(
+                                          children: [
+                                            Expanded(child: dropdowns[0]),
+                                            const SizedBox(width: 20),
+                                            Expanded(child: dropdowns[2]),
+                                          ],
+                                        );
+                                      },
                                     ),
                                     const SizedBox(height: 20),
                                     PremiumTextField(
@@ -375,6 +386,7 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
           )
         else
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: items.contains(value) ? value : items.first,
             dropdownColor: Colors.white,
             style: const TextStyle(color: Colors.black, fontSize: 14),

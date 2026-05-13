@@ -74,6 +74,13 @@ class GetTourDetail extends TourEvent {
   List<Object?> get props => [id];
 }
 
+class FinalizarTour extends TourEvent {
+  final String id;
+  const FinalizarTour(this.id);
+  @override
+  List<Object?> get props => [id];
+}
+
 // ─── States ──────────────────────────────────────────────
 
 abstract class TourState extends Equatable {
@@ -142,6 +149,15 @@ class TourDetailLoaded extends TourState {
   List<Object?> get props => [tour];
 }
 
+class TourFinalizando extends TourState {}
+
+class TourFinalizado extends TourState {
+  final String id;
+  const TourFinalizado(this.id);
+  @override
+  List<Object?> get props => [id];
+}
+
 // ─── BLoC ────────────────────────────────────────────────
 
 class TourBloc extends Bloc<TourEvent, TourState> {
@@ -158,6 +174,7 @@ class TourBloc extends Bloc<TourEvent, TourState> {
     on<ToggleTourActive>(_onToggleTourActive);
     on<PublishTour>(_onPublishTour);
     on<GetTourDetail>(_onGetTourDetail);
+    on<FinalizarTour>(_onFinalizarTour);
   }
 
   Future<void> _onLoadTours(LoadTours event, Emitter<TourState> emit) async {
@@ -321,6 +338,19 @@ class TourBloc extends Bloc<TourEvent, TourState> {
     try {
       final tour = await _tourRepository.getTourById(event.id);
       emit(TourDetailLoaded(tour));
+    } catch (e) {
+      emit(TourError(e.toString()));
+    }
+  }
+
+  Future<void> _onFinalizarTour(
+    FinalizarTour event,
+    Emitter<TourState> emit,
+  ) async {
+    emit(TourFinalizando());
+    try {
+      await _tourRepository.finalizarTour(event.id);
+      emit(TourFinalizado(event.id));
     } catch (e) {
       emit(TourError(e.toString()));
     }

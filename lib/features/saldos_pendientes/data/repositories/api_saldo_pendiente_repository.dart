@@ -23,10 +23,10 @@ class ApiSaldoPendienteRepository implements SaldoPendienteRepository {
       };
 
   @override
-  Future<({List<SaldoPendiente> items, int total, int page, int limit})>
+  Future<({List<TourConSaldo> tours, int totalTours, int page, int limit})>
       getSaldosPendientes({
     int page = 1,
-    int limit = 20,
+    int limit = 5,
     String? tourId,
     String? responsable,
     String? idReserva,
@@ -57,13 +57,13 @@ class ApiSaldoPendienteRepository implements SaldoPendienteRepository {
     }
 
     final body = json.decode(response.body) as Map<String, dynamic>;
-    final items = (body['items'] as List<dynamic>? ?? [])
-        .map((j) => SaldoPendiente.fromJson(j as Map<String, dynamic>))
+    final tours = (body['tours'] as List<dynamic>? ?? [])
+        .map((j) => TourConSaldo.fromJson(j as Map<String, dynamic>))
         .toList();
 
     return (
-      items: items,
-      total: body['total'] as int? ?? 0,
+      tours: tours,
+      totalTours: body['total_tours'] as int? ?? 0,
       page: body['page'] as int? ?? page,
       limit: body['limit'] as int? ?? limit,
     );

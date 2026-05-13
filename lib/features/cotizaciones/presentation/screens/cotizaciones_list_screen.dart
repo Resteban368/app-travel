@@ -121,7 +121,7 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
   Future<void> _onDuplicarRespuesta(RespuestaCotizacion r) async {
     // Duplicar sin ID (para que sea nueva) y sin cotizacionId (requerimiento user)
     final duplicated = r.copyWith(id: null, clearCotizacionId: true);
-    
+
     await Navigator.pushNamed(
       context,
       AppRouter.cotizacionResponder,
@@ -151,92 +151,109 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        backgroundColor: SaasPalette.bgApp,
-        body: BlocBuilder<CotizacionBloc, CotizacionState>(
-          builder: (context, state) {
-            List<Cotizacion> pendingList = [];
-            int pendingPage = 1;
-            int pendingTotalPages = 1;
-            int pendingTotal = 0;
+      child: BlocBuilder<CotizacionBloc, CotizacionState>(
+        builder: (context, state) {
+          // ... (same logic for pendingList, etc.)
+          List<Cotizacion> pendingList = [];
+          int pendingPage = 1;
+          int pendingTotalPages = 1;
+          int pendingTotal = 0;
 
-            List<dynamic> attendedUnifiedList = [];
-            Map<int, Cotizacion> cotizacionesMap = {};
+          List<dynamic> attendedUnifiedList = [];
+          Map<int, Cotizacion> cotizacionesMap = {};
 
-            if (state is CotizacionLoaded) {
-              pendingList = state.pendingCotizaciones;
-              pendingPage = state.pendingPage;
-              pendingTotalPages = state.pendingTotalPages;
-              pendingTotal = state.pendingTotal;
+          if (state is CotizacionLoaded) {
+            pendingList = state.pendingCotizaciones;
+            pendingPage = state.pendingPage;
+            pendingTotalPages = state.pendingTotalPages;
+            pendingTotal = state.pendingTotal;
 
-              attendedUnifiedList = [...state.allRespuestas];
-              attendedUnifiedList.sort((a, b) {
-                final ra = a as RespuestaCotizacion;
-                final rb = b as RespuestaCotizacion;
-                // Ancladas primero, luego por fecha DESC
-                if (ra.anclada != rb.anclada) {
-                  return ra.anclada ? -1 : 1;
-                }
-                return rb.createdAt.compareTo(ra.createdAt);
-              });
+            attendedUnifiedList = [...state.allRespuestas];
+            attendedUnifiedList.sort((a, b) {
+              final ra = a as RespuestaCotizacion;
+              final rb = b as RespuestaCotizacion;
+              if (ra.anclada != rb.anclada) return ra.anclada ? -1 : 1;
+              return rb.createdAt.compareTo(ra.createdAt);
+            });
 
-              cotizacionesMap = {
-                for (var c in state.attendedCotizaciones) c.id: c,
-                for (var c in state.pendingCotizaciones) c.id: c,
-              };
+            cotizacionesMap = {
+              for (var c in state.attendedCotizaciones) c.id: c,
+              for (var c in state.pendingCotizaciones) c.id: c,
+            };
 
-              if (_searchQuery.isNotEmpty) {
-                final q = _searchQuery.toLowerCase();
-                pendingList = pendingList.where((c) {
-                  return c.nombreCompleto.toLowerCase().contains(q) ||
-                      c.detallesPlan.toLowerCase().contains(q) ||
-                      c.chatId.toLowerCase().contains(q);
-                }).toList();
+            if (_searchQuery.isNotEmpty) {
+              final q = _searchQuery.toLowerCase();
+              pendingList = pendingList.where((c) {
+                return c.nombreCompleto.toLowerCase().contains(q) ||
+                    c.detallesPlan.toLowerCase().contains(q) ||
+                    c.chatId.toLowerCase().contains(q);
+              }).toList();
 
-                attendedUnifiedList = attendedUnifiedList.where((item) {
-                  final resp = item as RespuestaCotizacion;
-                  final basicMatch =
-                      resp.tituloViaje.toLowerCase().contains(q) ||
-                      resp.condicionesGenerales.toLowerCase().contains(q);
-
-                  if (basicMatch) return true;
-
-                  if (resp.cotizacionId != null) {
-                    final cot = cotizacionesMap[resp.cotizacionId];
-                    if (cot != null) {
-                      return cot.nombreCompleto.toLowerCase().contains(q) ||
-                          cot.chatId.toLowerCase().contains(q);
-                    }
+              attendedUnifiedList = attendedUnifiedList.where((item) {
+                final resp = item as RespuestaCotizacion;
+                final basicMatch =
+                    resp.tituloViaje.toLowerCase().contains(q) ||
+                    resp.condicionesGenerales.toLowerCase().contains(q);
+                if (basicMatch) return true;
+                if (resp.cotizacionId != null) {
+                  final cot = cotizacionesMap[resp.cotizacionId];
+                  if (cot != null) {
+                    return cot.nombreCompleto.toLowerCase().contains(q) ||
+                        cot.chatId.toLowerCase().contains(q);
                   }
-                  return false;
-                }).toList();
-              }
+                }
+                return false;
+              }).toList();
             }
+          }
 
-            return Column(
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(32, 24, 32, 16),
-                  child: FadeTransition(
-                    opacity: _headerOpacity,
-                    child: SlideTransition(
-                      position: _headerSlide,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SaasBreadcrumbs(
-                            items: ['Inicio', 'Operaciones', 'Cotizaciones'],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    Text(
+          return Column(
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                child: FadeTransition(
+                  opacity: _headerOpacity,
+                  child: SlideTransition(
+                    position: _headerSlide,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isMobile = constraints.maxWidth < 600;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SaasBreadcrumbs(
+                              items: ['Inicio', 'Operaciones', 'Cotizaciones'],
+                            ),
+                            const SizedBox(height: 16),
+                            if (isMobile)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Gestión de Cotizaciones',
+                                    style: TextStyle(
+                                      color: SaasPalette.textPrimary,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [_buildHeaderActions(context)],
+                                  ),
+                                ],
+                              )
+                            else
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Expanded(
+                                    child: Text(
                                       'Gestión de Cotizaciones',
                                       style: TextStyle(
                                         color: SaasPalette.textPrimary,
@@ -245,140 +262,147 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                                         letterSpacing: -0.5,
                                       ),
                                     ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'Administra las propuestas de viaje de tus clientes.',
-                                      style: TextStyle(
-                                        color: SaasPalette.textSecondary,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SaasButton(
-                                    label: 'Nueva Propuesta',
-                                    icon: Icons.send_rounded,
-                                    isPrimary: false,
-                                    onPressed: () async {
-                                      await Navigator.pushNamed(
-                                        context,
-                                        AppRouter.cotizacionResponder,
-                                      );
-                                      if (context.mounted) {
-                                        context.read<CotizacionBloc>().add(
-                                          const LoadAllData(),
-                                        );
-                                      }
-                                    },
                                   ),
-                                  const SizedBox(width: 10),
-                                  SaasButton(
-                                    label: 'Nueva Cotización',
-                                    icon: Icons.add_rounded,
-                                    onPressed: () async {
-                                      await Navigator.pushNamed(
-                                        context,
-                                        AppRouter.cotizacionCreate,
-                                      );
-                                      if (context.mounted) {
-                                        context.read<CotizacionBloc>().add(
-                                          const LoadAllData(),
-                                        );
-                                      }
-                                    },
-                                  ),
+                                  _buildHeaderActions(context),
                                 ],
                               ),
-                            ],
-                          ),
-                        ],
-                      ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
+              ),
 
-                // Search & Tabs
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(32, 0, 32, 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: SaasSearchField(
-                          controller: _searchCtrl,
-                          hintText: 'Buscar por nombre o detalle...',
-                          onChanged: (v) => setState(() => _searchQuery = v),
-                          onClear: () {
-                            _searchCtrl.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Container(
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: SaasPalette.bgCanvas,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: SaasPalette.border),
-                        ),
-                        child: TabBar(
-                          isScrollable: true,
-                          indicator: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            color: SaasPalette.brand600.withOpacity(0.1),
+              // Search & Tabs
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isMobile = constraints.maxWidth < 500;
+                    if (isMobile) {
+                      return Column(
+                        children: [
+                          SaasSearchField(
+                            controller: _searchCtrl,
+                            hintText: 'Buscar...',
+                            onChanged: (v) => setState(() => _searchQuery = v),
+                            onClear: () {
+                              _searchCtrl.clear();
+                              setState(() => _searchQuery = '');
+                            },
                           ),
-                          indicatorPadding: const EdgeInsets.all(4),
-                          labelColor: SaasPalette.brand600,
-                          unselectedLabelColor: SaasPalette.textSecondary,
-                          labelStyle: const TextStyle(
-                            fontWeight: FontWeight.bold,
+                          const SizedBox(height: 12),
+                          _buildTabBar(),
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: SaasSearchField(
+                            controller: _searchCtrl,
+                            hintText: 'Buscar por nombre o detalle...',
+                            onChanged: (v) => setState(() => _searchQuery = v),
+                            onClear: () {
+                              _searchCtrl.clear();
+                              setState(() => _searchQuery = '');
+                            },
                           ),
-                          tabs: const [
-                            Tab(text: 'Sin Respuesta'),
-                            Tab(text: 'Respuestas'),
-                          ],
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 16),
+                        _buildTabBar(),
+                      ],
+                    );
+                  },
                 ),
+              ),
 
-                // TabBarView
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      // Tab 1
-                      _buildListTab(
-                        state: state,
-                        list: pendingList,
-                        currentPage: pendingPage,
-                        totalPages: pendingTotalPages,
-                        totalResults: pendingTotal,
-                        onPageChanged: _goToPendingPage,
-                        emptyText: 'No hay cotizaciones pendientes.',
-                      ),
-                      // Tab 2
-                      _buildListTab(
-                        state: state,
-                        list: attendedUnifiedList,
-                        currentPage: 1,
-                        totalPages: 1,
-                        totalResults: attendedUnifiedList.length,
-                        onPageChanged: (_) {},
-                        emptyText: 'No hay respuestas registradas.',
-                        cotizacionesMap: cotizacionesMap,
-                      ),
-                    ],
-                  ),
+              // TabBarView
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _buildListTab(
+                      state: state,
+                      list: pendingList,
+                      currentPage: pendingPage,
+                      totalPages: pendingTotalPages,
+                      totalResults: pendingTotal,
+                      onPageChanged: _goToPendingPage,
+                      emptyText: 'No hay cotizaciones pendientes.',
+                    ),
+                    _buildListTab(
+                      state: state,
+                      list: attendedUnifiedList,
+                      currentPage: 1,
+                      totalPages: 1,
+                      totalResults: attendedUnifiedList.length,
+                      onPageChanged: (_) {},
+                      emptyText: 'No hay respuestas registradas.',
+                      cotizacionesMap: cotizacionesMap,
+                    ),
+                  ],
                 ),
-              ],
-            );
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHeaderActions(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SaasButton(
+          label: 'Nueva Propuesta',
+          icon: Icons.send_rounded,
+          isPrimary: false,
+          onPressed: () async {
+            await Navigator.pushNamed(context, AppRouter.cotizacionResponder);
+            if (context.mounted) {
+              context.read<CotizacionBloc>().add(const LoadAllData());
+            }
           },
         ),
+        const SizedBox(width: 10),
+        SaasButton(
+          label: 'Nueva Cotización',
+          icon: Icons.add_rounded,
+          onPressed: () async {
+            await Navigator.pushNamed(context, AppRouter.cotizacionCreate);
+            if (context.mounted) {
+              context.read<CotizacionBloc>().add(const LoadAllData());
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SaasPalette.border),
+      ),
+      child: TabBar(
+        isScrollable: true,
+        indicator: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: SaasPalette.brand600.withOpacity(0.1),
+        ),
+        indicatorPadding: const EdgeInsets.all(4),
+        labelColor: SaasPalette.brand600,
+        unselectedLabelColor: SaasPalette.textSecondary,
+        labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        tabs: const [
+          Tab(text: 'Sin Respuesta'),
+          Tab(text: 'Respuestas'),
+        ],
       ),
     );
   }
@@ -775,181 +799,199 @@ class _RespuestaCardState extends State<_RespuestaCard> {
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: SaasPalette.warning.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.forward_to_inbox_rounded,
-                      color: SaasPalette.warning,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isNarrow = constraints.maxWidth < 450;
+
+                  final content = Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: SaasPalette.warning.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.forward_to_inbox_rounded,
+                          color: SaasPalette.warning,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                r.tituloViaje,
-                                style: const TextStyle(
-                                  color: SaasPalette.textPrimary,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    r.tituloViaje,
+                                    style: const TextStyle(
+                                      color: SaasPalette.textPrimary,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                                const SizedBox(width: 8),
+                                SaasStatusBadge(
+                                  active: true,
+                                  activeLabel: r.cotizacionId != null
+                                      ? 'RESPUESTA'
+                                      : 'DIRECTA',
+                                  inactiveLabel: '',
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            SaasStatusBadge(
-                              active: true,
-                              activeLabel: r.cotizacionId != null
-                                  ? 'RESPUESTA'
-                                  : 'DIRECTA',
-                              inactiveLabel: '',
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.clientName != null
+                                  ? 'Cotización #${widget.linkedCotId} • ${widget.clientName} (${widget.clientPhone})'
+                                  : r.cotizacionId != null
+                                  ? 'Respuesta a Cotización #${r.cotizacionId}'
+                                  : 'Propuesta Independiente',
+                              style: const TextStyle(
+                                color: SaasPalette.textSecondary,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 6),
+                            if (r.creadoPorNombre != null) ...[
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.person_rounded,
+                                    color: SaasPalette.brand900,
+                                    size: 13,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      "${r.creadoPorNombre}",
+                                      style: const TextStyle(
+                                        color: SaasPalette.textSecondary,
+                                        fontSize: 13,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                            ],
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.access_time_rounded,
+                                  color: SaasPalette.textTertiary,
+                                  size: 13,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  DateFormat(
+                                    'dd MMM, hh:mm a',
+                                  ).format(r.createdAt.toLocal()),
+                                  style: const TextStyle(
+                                    color: SaasPalette.textTertiary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.clientName != null
-                              ? 'Cotización #${widget.linkedCotId} • ${widget.clientName} (${widget.clientPhone})'
-                              : r.cotizacionId != null
-                              ? 'Respuesta a Cotización #${r.cotizacionId}'
-                              : 'Propuesta Independiente',
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
-                            fontSize: 13,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      ),
+                      if (!isNarrow) ...[
+                        const SizedBox(width: 12),
+                        _buildActions(context, r),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: SaasPalette.textTertiary,
                         ),
-                        const SizedBox(height: 6),
+                      ],
+                    ],
+                  );
 
-                        //vamos a poner el usuario que creo la cotizacion
-                        if (r.creadoPorNombre != null) ...[
-                          const SizedBox(height: 4),
-                          //icono de nomre
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.person_rounded,
-                                color: SaasPalette.brand900,
-                                size: 13,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                "${r.creadoPorNombre}",
-                                style: const TextStyle(
-                                  color: SaasPalette.textSecondary,
-                                  fontSize: 13,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ],
-
+                  if (isNarrow) {
+                    return Column(
+                      children: [
+                        content,
+                        const SizedBox(height: 12),
+                        const Divider(height: 1, color: SaasPalette.border),
+                        const SizedBox(height: 12),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
+                            _buildActions(context, r),
                             const Icon(
-                              Icons.access_time_rounded,
+                              Icons.chevron_right_rounded,
                               color: SaasPalette.textTertiary,
-                              size: 13,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              DateFormat(
-                                'dd MMM, hh:mm a',
-                              ).format(r.createdAt.toLocal()),
-                              style: const TextStyle(
-                                color: SaasPalette.textTertiary,
-                                fontSize: 12,
-                              ),
                             ),
                           ],
                         ),
                       ],
-                    ),
-                  ),
-
-                  IconButton(
-                    onPressed: widget.onToggleAnclada,
-                    icon: Icon(
-                      r.anclada
-                          ? Icons.push_pin_rounded
-                          : Icons.push_pin_outlined,
-                      color: r.anclada
-                          ? SaasPalette.brand600
-                          : SaasPalette.textTertiary,
-                    ),
-                    tooltip: r.anclada ? 'Desanclar' : 'Anclar',
-                    style: IconButton.styleFrom(
-                      backgroundColor: r.anclada
-                          ? SaasPalette.brand600.withValues(alpha: 0.1)
-                          : Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: TextButton.icon(
-                      onPressed: widget.onDuplicate,
-                      style: TextButton.styleFrom(
-                        foregroundColor: SaasPalette.brand600,
-                        backgroundColor: SaasPalette.brand600,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      icon: const Icon(Icons.copy_rounded, color: Colors.white),
-                      label: const Text(
-                        'Duplicar',
-                        style: TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    onPressed: () => _confirmDelete(context),
-                    icon: const Icon(
-                      Icons.delete_outline_rounded,
-                      color: SaasPalette.danger,
-                    ),
-                    tooltip: 'Eliminar',
-                    style: IconButton.styleFrom(
-                      backgroundColor: SaasPalette.danger.withValues(
-                        alpha: 0.08,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: SaasPalette.textTertiary,
-                  ),
-                ],
+                    );
+                  }
+                  return content;
+                },
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildActions(BuildContext context, RespuestaCotizacion r) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: widget.onToggleAnclada,
+          icon: Icon(
+            r.anclada ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+            color: r.anclada ? SaasPalette.brand600 : SaasPalette.textTertiary,
+          ),
+          tooltip: r.anclada ? 'Desanclar' : 'Anclar',
+          style: IconButton.styleFrom(
+            backgroundColor: r.anclada
+                ? SaasPalette.brand600.withValues(alpha: 0.1)
+                : Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        SaasButton(
+          label: 'Duplicar',
+          icon: Icons.copy_rounded,
+          onPressed: widget.onDuplicate,
+          isPrimary: true,
+        ),
+        const SizedBox(width: 4),
+        IconButton(
+          onPressed: () => _confirmDelete(context),
+          icon: const Icon(
+            Icons.delete_outline_rounded,
+            color: SaasPalette.danger,
+          ),
+          tooltip: 'Eliminar',
+          style: IconButton.styleFrom(
+            backgroundColor: SaasPalette.danger.withValues(alpha: 0.08),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

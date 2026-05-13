@@ -112,6 +112,16 @@ class ApiTourRepository implements TourRepository {
     }
   }
 
+  @override
+  Future<void> finalizarTour(String id) async {
+    final url = '$_baseUrl/$id/finalizar';
+    debugPrint('📤 [ApiTourRepository] PATCH $url');
+    final response = await client.patch(Uri.parse(url), headers: _headers);
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw ApiException.fromResponse(response);
+    }
+  }
+
   Tour _fromJson(Map<String, dynamic> json) {
     return Tour(
       id: (json['id'] ?? '').toString(),

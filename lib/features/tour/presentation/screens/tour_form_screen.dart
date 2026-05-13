@@ -293,6 +293,14 @@ class _TourFormScreenState extends State<TourFormScreen>
     }
   }
 
+  void _showFinalizarDialog(BuildContext context, String tourId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _FinalizarTourDialog(tourId: tourId),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
@@ -305,6 +313,13 @@ class _TourFormScreenState extends State<TourFormScreen>
         if (state is TourDetailLoaded) {
           Navigator.of(context, rootNavigator: true).pop();
           setState(() => _updateFieldsFromTour(state.tour));
+          final now = DateTime.now();
+          final end = state.tour.endDate;
+          if (end.isBefore(now) && state.tour.startDate.isBefore(now)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _showFinalizarDialog(context, state.tour.id);
+            });
+          }
         } else if (state is TourError && _isLoadingFullData) {
           Navigator.of(context, rootNavigator: true).pop();
           setState(() => _isLoadingFullData = false);
@@ -1649,6 +1664,92 @@ class _CuposDisponiblesInfo extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FinalizarTourDialog extends StatefulWidget {
+  final String tourId;
+  const _FinalizarTourDialog({required this.tourId});
+
+  @override
+  State<_FinalizarTourDialog> createState() => _FinalizarTourDialogState();
+}
+
+class _FinalizarTourDialogState extends State<_FinalizarTourDialog> {
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<TourBloc, TourState>(
+      listener: (context, state) {
+        if (state is TourFinalizando) {
+          if (mounted) setState(() => _loading = true);
+        } else if (state is TourFinalizado) {
+          // Reload tour list, close dialog and then form screen
+          context.read<TourBloc>().add(LoadTours());
+          final nav = Navigator.of(context);
+          nav.pop(); // close dialog
+          nav.pop(); // close form screen → back to tour list
+          SaasSnackBar.showSuccess(context, 'Tour finalizado correctamente');
+        } else if (state is TourError) {
+          if (mounted) setState(() => _loading = false);
+        }
+      },
+      child: AlertDialog(
+        backgroundColor: SaasPalette.bgCanvas,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.flag_rounded, color: Colors.orange, size: 22),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Finalizar tour',
+              style: TextStyle(
+                color: SaasPalette.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Las fechas de este tour ya han pasado. ¿Deseas marcarlo como finalizado?\n\nEl tour dejará de aparecer en la lista activa pero sus datos y registros se conservarán.',
+          style: TextStyle(color: SaasPalette.textSecondary, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _loading ? null : () => Navigator.of(context).pop(),
+            child: const Text('Cancelar', style: TextStyle(color: SaasPalette.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: _loading
+                ? null
+                : () {
+                    context.read<TourBloc>().add(FinalizarTour(widget.tourId));
+                  },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: _loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Finalizar'),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -68,41 +68,49 @@ class SaasStatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: SaasPalette.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: const TextStyle(
-              color: SaasPalette.textTertiary,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              color: color ?? SaasPalette.textPrimary,
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          if (trend != null) ...[
-            const SizedBox(height: 4),
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
             Text(
-              trend!,
+              label.toUpperCase(),
+              style: const TextStyle(
+                color: SaasPalette.textTertiary,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
               style: TextStyle(
-                color: isPositiveTrend
-                    ? SaasPalette.textTertiary
-                    : SaasPalette.danger,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+                color: color ?? SaasPalette.textPrimary,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
               ),
             ),
+            if (trend != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                trend!,
+                style: TextStyle(
+                  color: isPositiveTrend
+                      ? SaasPalette.textTertiary
+                      : SaasPalette.danger,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

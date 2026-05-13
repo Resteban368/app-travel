@@ -4079,19 +4079,7 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                           ),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.person_add_rounded,
-                          color: SaasPalette.brand600,
-                          size: 20,
-                        ),
-                        onPressed: () {
-                          final nav = Navigator.of(context);
-                          nav.pop();
-                          nav.pushNamed(AppRouter.clienteCreate);
-                        },
-                        tooltip: 'Nuevo Cliente',
-                      ),
+
                       IconButton(
                         icon: const Icon(
                           Icons.close_rounded,

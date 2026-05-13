@@ -59,33 +59,34 @@ class SaldoPendienteInitial extends SaldoPendienteState {}
 class SaldoPendienteLoading extends SaldoPendienteState {}
 
 class SaldoPendienteLoaded extends SaldoPendienteState {
-  final List<SaldoPendiente> items;
-  final int total;
+  final List<TourConSaldo> tours;
+  final int totalTours;
   final int currentPage;
+  final int limit;
   final bool hasMore;
-  // Agrupados por nombre de tour para la UI
-  final Map<String, List<SaldoPendiente>> byTour;
   final String? filterTourId;
   final String? filterResponsable;
   final String? filterIdReserva;
   final bool sinRecordatorioReciente;
 
   const SaldoPendienteLoaded({
-    required this.items,
-    required this.total,
+    required this.tours,
+    required this.totalTours,
     required this.currentPage,
+    required this.limit,
     required this.hasMore,
-    required this.byTour,
     this.filterTourId,
     this.filterResponsable,
     this.filterIdReserva,
     this.sinRecordatorioReciente = false,
   });
 
+  int get totalPages => (totalTours / limit).ceil();
+
   @override
   List<Object?> get props => [
-        items,
-        total,
+        tours,
+        totalTours,
         currentPage,
         hasMore,
         filterTourId,
@@ -142,7 +143,7 @@ class RecordatorioFallido extends SaldoPendienteState {
 class SaldoPendienteBloc
     extends Bloc<SaldoPendienteEvent, SaldoPendienteState> {
   final SaldoPendienteRepository _repository;
-  static const int _limit = 20;
+  static const int _limit = 5; // tours per page
 
   SaldoPendienteBloc({required SaldoPendienteRepository repository})
       : _repository = repository,
@@ -166,14 +167,13 @@ class SaldoPendienteBloc
         idReserva: event.idReserva,
         sinRecordatorioReciente: event.sinRecordatorioReciente ?? false,
       );
-      final hasMore = result.items.length >= _limit &&
-          result.items.length < result.total;
+      final hasMore = result.tours.length < result.totalTours;
       emit(SaldoPendienteLoaded(
-        items: result.items,
-        total: result.total,
+        tours: result.tours,
+        totalTours: result.totalTours,
         currentPage: 1,
+        limit: result.limit,
         hasMore: hasMore,
-        byTour: _groupByTour(result.items),
         filterTourId: event.tourId,
         filterResponsable: event.responsable,
         filterIdReserva: event.idReserva,
@@ -205,15 +205,14 @@ class SaldoPendienteBloc
         idReserva: loaded.filterIdReserva,
         sinRecordatorioReciente: loaded.sinRecordatorioReciente,
       );
-      final allItems = [...loaded.items, ...result.items];
-      final hasMore =
-          allItems.length < result.total && result.items.isNotEmpty;
+      final allTours = [...loaded.tours, ...result.tours];
+      final hasMore = allTours.length < result.totalTours;
       emit(SaldoPendienteLoaded(
-        items: allItems,
-        total: result.total,
+        tours: allTours,
+        totalTours: result.totalTours,
         currentPage: nextPage,
+        limit: result.limit,
         hasMore: hasMore,
-        byTour: _groupByTour(allItems),
         filterTourId: loaded.filterTourId,
         filterResponsable: loaded.filterResponsable,
         filterIdReserva: loaded.filterIdReserva,
@@ -250,14 +249,4 @@ class SaldoPendienteBloc
     }
   }
 
-  Map<String, List<SaldoPendiente>> _groupByTour(List<SaldoPendiente> items) {
-    final map = <String, List<SaldoPendiente>>{};
-    for (final item in items) {
-      final key = item.tour.nombre.isNotEmpty
-          ? item.tour.nombre
-          : 'Sin tour';
-      map.putIfAbsent(key, () => []).add(item);
-    }
-    return map;
-  }
 }

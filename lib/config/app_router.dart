@@ -143,6 +143,15 @@ class AppRouter {
   }
 
   static Route<dynamic> onGenerateNestedRoute(RouteSettings settings) {
+    try {
+      return _buildNestedRoute(settings);
+    } catch (e, st) {
+      debugPrint('⚠️ [AppRouter] Error building route "${settings.name}": $e\n$st');
+      return _fadeRoute(const ProfileScreen(), settings);
+    }
+  }
+
+  static Route<dynamic> _buildNestedRoute(RouteSettings settings) {
     switch (settings.name) {
       case dashboard:
         return _fadeRoute(const DashboardScreen(), settings);
@@ -307,7 +316,7 @@ class AppRouter {
         );
 
       default:
-        return _fadeRoute(const DashboardScreen(), settings);
+        return _fadeRoute(const ProfileScreen(), settings);
     }
   }
 

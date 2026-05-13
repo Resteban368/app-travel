@@ -85,6 +85,34 @@ class TourSaldo {
       );
 }
 
+/// Represents a tour group returned by the paginated API.
+/// The API paginates by tour (limit = tours per page).
+class TourConSaldo {
+  final int tourId;
+  final String tourNombre;
+  final double saldoTotalTour;
+  final int totalReservas;
+  final List<SaldoPendiente> reservas;
+
+  const TourConSaldo({
+    required this.tourId,
+    required this.tourNombre,
+    required this.saldoTotalTour,
+    required this.totalReservas,
+    required this.reservas,
+  });
+
+  factory TourConSaldo.fromJson(Map<String, dynamic> j) => TourConSaldo(
+        tourId: j['tour_id'] as int? ?? 0,
+        tourNombre: j['tour_nombre'] as String? ?? '',
+        saldoTotalTour: (j['saldo_total_tour'] as num?)?.toDouble() ?? 0,
+        totalReservas: j['total_reservas'] as int? ?? 0,
+        reservas: (j['reservas'] as List<dynamic>? ?? [])
+            .map((r) => SaldoPendiente.fromJson(r as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
 class SaldoPendiente {
   final int reservaId;
   final String idReserva;

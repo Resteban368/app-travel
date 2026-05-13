@@ -153,6 +153,7 @@ class ApiBusManifiestoRepository implements BusManifiestoRepository {
       totalAsientosCliente: json['total_asientos_cliente'] as int? ?? 0,
       asientosOcupados: json['asientos_ocupados'] as int? ?? 0,
       asientosDisponibles: json['asientos_disponibles'] as int? ?? 0,
+      entrada: json['entrada'] as String?,
       configuracion: configuracion,
       asientos: asientos,
     );
@@ -192,6 +193,7 @@ class ApiBusManifiestoRepository implements BusManifiestoRepository {
       case 'vacio': return TipoAsiento.vacio;
       case 'baño':
       case 'bano': return TipoAsiento.bano;
+      case 'entrada': return TipoAsiento.entrada;
       default: return TipoAsiento.normal;
     }
   }

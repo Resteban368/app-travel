@@ -139,13 +139,17 @@ class PremiumSectionHeader extends StatelessWidget {
           child: Icon(icon, color: SaasPalette.brand600, size: 18),
         ),
         const SizedBox(width: 10),
-        Text(
-          title,
-          style: const TextStyle(
-            color: SaasPalette.textPrimary,
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.8,
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: SaasPalette.textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

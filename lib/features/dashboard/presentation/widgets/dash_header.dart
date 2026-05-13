@@ -14,41 +14,59 @@ class DashHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SaasBreadcrumbs(items: ['Inicio', 'Dashboard']),
-        const SizedBox(height: 16),
+        if (!isMobile) ...[
+          const SaasBreadcrumbs(items: ['Inicio', 'Dashboard']),
+          const SizedBox(height: 16),
+        ],
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${_greeting()}, Administrador',
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${_greeting()}, Administrador',
+                    style: TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: isMobile ? 20 : 26,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Bienvenido al centro de operaciones de Agente Viajes.',
-                  style: TextStyle(
-                    color: SaasPalette.textSecondary,
-                    fontSize: 14,
+                  const SizedBox(height: 6),
+                  Text(
+                    'Bienvenido al centro de operaciones de Agente Viajes.',
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: isMobile ? 12 : 14,
+                      height: 1.4,
+                    ),
                   ),
+                ],
+              ),
+            ),
+            if (!isMobile) ...[
+              const SizedBox(width: 24),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: SaasPalette.bgSubtle,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: SaasPalette.border.withValues(alpha: 0.5)),
                 ),
-              ],
-            ),
-            const Spacer(),
-            // Optional: User Avatar or Quick Action
-            const CircleAvatar(
-              radius: 20,
-              backgroundColor: SaasPalette.bgSubtle,
-              child: Icon(Icons.person_outline, color: SaasPalette.brand600),
-            ),
+                child: const Icon(
+                  Icons.person_outline_rounded,
+                  color: SaasPalette.brand600,
+                  size: 24,
+                ),
+              ),
+            ],
           ],
         ),
       ],

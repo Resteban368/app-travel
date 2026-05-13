@@ -400,14 +400,25 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
         labelColor: Colors.white,
         unselectedLabelColor: Colors.white54,
         indicatorColor: SaasPalette.brand600,
-        tabs: buses
-            .map(
-              (b) => Tab(
-                text: b.nombre,
-                icon: const Icon(Icons.directions_bus_rounded, size: 16),
-              ),
-            )
-            .toList(),
+        tabs: buses.map((b) {
+          return Tab(
+            icon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.directions_bus_rounded, size: 16),
+                if (b.entrada != null && b.entrada!.isNotEmpty) ...[
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.confirmation_num_rounded,
+                    size: 14,
+                    color: Color(0xFFFBBF24),
+                  ),
+                ],
+              ],
+            ),
+            text: b.nombre,
+          );
+        }).toList(),
       ),
     );
   }
@@ -522,21 +533,13 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
   ) {
     if (asientosFila.isEmpty) return const SizedBox.shrink();
 
-    // Detectar baños en lado derecho (columna > mitad)
     final mitad = (bus.configuracion.columnas / 2).floor();
-    final tieneBano = asientosFila.any(
-      (a) => a.columna >= mitad && a.tipo == TipoAsiento.bano,
-    );
-
     final izquierda = asientosFila.where((a) => a.columna < mitad).toList();
-    final derecha = asientosFila
-        .where((a) => a.columna >= mitad && a.tipo != TipoAsiento.bano)
-        .toList();
+    final derecha = asientosFila.where((a) => a.columna >= mitad).toList();
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Número de fila
         SizedBox(
           width: 24,
           child: Text(
@@ -546,23 +549,39 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
           ),
         ),
         const SizedBox(width: 4),
-        // Asientos izquierda
-        ...izquierda.map(
-          (a) => _buildAsiento(a, asientosPorNumero[a.numero], bus),
-        ),
-        // Pasillo
+        ..._buildSeccion(izquierda, asientosPorNumero, bus),
         const SizedBox(width: 20),
-        // Asientos derecha o baño
-        if (tieneBano)
-          _buildBanoCell()
-        else
-          ...derecha.map(
-            (a) => _buildAsiento(a, asientosPorNumero[a.numero], bus),
-          ),
+        ..._buildSeccion(derecha, asientosPorNumero, bus),
         const SizedBox(width: 4),
         const SizedBox(width: 24),
       ],
     );
+  }
+
+  /// Agrupa baños consecutivos: 2+ → un container doble; 1 → container pequeño.
+  List<Widget> _buildSeccion(
+    List<AsientoLayout> asientos,
+    Map<String, AsientoManifiesto> asientosPorNumero,
+    BusManifiestoData bus,
+  ) {
+    final widgets = <Widget>[];
+    int i = 0;
+    while (i < asientos.length) {
+      final a = asientos[i];
+      if (a.tipo == TipoAsiento.bano) {
+        int count = 1;
+        while (i + count < asientos.length &&
+            asientos[i + count].tipo == TipoAsiento.bano) {
+          count++;
+        }
+        widgets.add(count >= 2 ? _buildBanoCellDoble() : _buildBanoCellSimple());
+        i += count;
+      } else {
+        widgets.add(_buildAsiento(a, asientosPorNumero[a.numero], bus));
+        i++;
+      }
+    }
+    return widgets;
   }
 
   Widget _buildAsiento(
@@ -578,6 +597,9 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
     }
     if (layout.tipo == TipoAsiento.agente) {
       return _AsientoAgente(numero: layout.numero);
+    }
+    if (layout.tipo == TipoAsiento.entrada) {
+      return _AsientoEntrada(numero: layout.numero);
     }
 
     final reserva = asiento?.reserva;
@@ -627,13 +649,13 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
           border: Border.all(
             color: isSeleccionado || isResaltado
                 ? Colors.white
-                : color.withOpacity(0.5),
+                : color.withValues(alpha: 0.5),
             width: isSeleccionado || isResaltado ? 2.5 : 1,
           ),
           boxShadow: isResaltado || isSeleccionado
               ? [
                   BoxShadow(
-                    color: color.withOpacity(0.5),
+                    color: color.withValues(alpha: 0.5),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),
@@ -662,7 +684,30 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
     );
   }
 
-  Widget _buildBanoCell() {
+  /// Un solo baño: container compacto que no deforma la fila.
+  Widget _buildBanoCellSimple() {
+    return Container(
+      width: 44,
+      height: 40,
+      margin: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF86EFAC)),
+      ),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text('🚽', style: TextStyle(fontSize: 13)),
+          Text('Baño',
+              style: TextStyle(fontSize: 7, color: Color(0xFF16A34A))),
+        ],
+      ),
+    );
+  }
+
+  /// Dos baños seguidos: un único container ancho centrado.
+  Widget _buildBanoCellDoble() {
     return Container(
       width: 100,
       height: 48,
@@ -676,7 +721,8 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text('🚽', style: TextStyle(fontSize: 16)),
-          Text('Baño', style: TextStyle(fontSize: 9, color: Color(0xFF16A34A))),
+          Text('Baño',
+              style: TextStyle(fontSize: 9, color: Color(0xFF16A34A))),
         ],
       ),
     );
@@ -789,7 +835,7 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
               child: ListView.separated(
                 padding: const EdgeInsets.all(12),
                 itemCount: reservasUnicas.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                separatorBuilder: (_, i) => const SizedBox(height: 8),
                 itemBuilder: (context, idx) {
                   final reserva = reservasUnicas.values.elementAt(idx);
                   final color = _colorParaReserva(
@@ -1008,6 +1054,41 @@ class _BusStatsBar extends StatelessWidget {
                   fontSize: 13,
                 ),
               ),
+              if (bus.entrada != null && bus.entrada!.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: 'Entrada: ${bus.entrada}',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.confirmation_num_rounded,
+                          size: 12,
+                          color: Color(0xFFD97706),
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Entrada',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFFD97706),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               const Spacer(),
               _StatPill(
                 label: '${bus.asientosOcupados} ocupados',
@@ -1057,9 +1138,9 @@ class _StatPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         label,
@@ -1169,9 +1250,9 @@ class _AsientoAgente extends StatelessWidget {
       height: 48,
       margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: const Color(0xFFF59E0B).withOpacity(0.15),
+        color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.4)),
+        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
       ),
       child: const Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1180,6 +1261,36 @@ class _AsientoAgente extends StatelessWidget {
           Text(
             'Agente',
             style: TextStyle(fontSize: 8, color: Color(0xFFF59E0B)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AsientoEntrada extends StatelessWidget {
+  final String numero;
+  const _AsientoEntrada({required this.numero});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      margin: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: const Color(0xFF7C3AED).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.4)),
+      ),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.confirmation_num_rounded,
+              color: Color(0xFF7C3AED), size: 18),
+          Text(
+            'Entrada',
+            style: TextStyle(fontSize: 8, color: Color(0xFF7C3AED)),
           ),
         ],
       ),
@@ -1244,7 +1355,7 @@ class _ReservaCard extends StatelessWidget {
           width: isExpanded ? 1.5 : 1,
         ),
         boxShadow: isExpanded
-            ? [BoxShadow(color: color.withOpacity(0.15), blurRadius: 8)]
+            ? [BoxShadow(color: color.withValues(alpha: 0.15), blurRadius: 8)]
             : null,
       ),
       child: Column(
@@ -1298,7 +1409,7 @@ class _ReservaCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: color.withOpacity(0.1),
+                            color: color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -1435,9 +1546,9 @@ class _EstadoBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         label,
