@@ -282,6 +282,7 @@ class ApiReservaRepository implements ReservaRepository {
             'documento': i.documento.isNotEmpty ? i.documento : null,
             if (i.tourPrecioId != null) 'tour_precio_id': i.tourPrecioId,
             if (i.precioAplicado != null) 'precio_aplicado': i.precioAplicado,
+            'ocupa_asiento': i.ocupaAsiento,
           },
         )
         .toList();
@@ -331,6 +332,7 @@ class ApiReservaRepository implements ReservaRepository {
           precioAplicado: double.tryParse(
             i['precio_aplicado']?.toString() ?? '',
           ),
+          ocupaAsiento: i['ocupa_asiento'] as bool? ?? true,
         );
       }).toList();
     }

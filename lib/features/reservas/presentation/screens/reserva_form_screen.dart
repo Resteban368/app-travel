@@ -244,6 +244,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     if (r.tour != null) _tourSearchCtrl.text = r.tour!.name;
     if (r.responsable != null) _selectedCliente = r.responsable;
 
+    // Initialize prices from the embedded tour directly — no TourBloc dependency
+    if (r.tour != null && r.tour!.precios.isNotEmpty) {
+      _buildPreciosMap(r.tour!);
+    }
+
     final tourIdInt = int.tryParse(r.idTour ?? '');
     if (tourIdInt != null && !skipBuses) {
       Future.microtask(() => _loadBusesDisponibilidad(tourIdInt));
@@ -260,10 +265,39 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryInitPrecios());
   }
 
+  void _buildPreciosMap(Tour tour) {
+    final newMap = <int, TourPrecio?>{};
+    if (_precioResponsableId != null) {
+      newMap[-1] = tour.precios.cast<TourPrecio?>().firstWhere(
+        (p) => p?.id == _precioResponsableId,
+        orElse: () => null,
+      );
+    }
+    for (int i = 0; i < _integrantes.length; i++) {
+      final precioId = _integrantes[i].tourPrecioId;
+      if (precioId != null) {
+        newMap[i] = tour.precios.cast<TourPrecio?>().firstWhere(
+          (p) => p?.id == precioId,
+          orElse: () => null,
+        );
+      }
+    }
+    _preciosPorPersona = newMap;
+    _preciosInitialized = true;
+  }
+
   void _tryInitPrecios() {
     if (_preciosInitialized || !_isEditing) return;
     if (_selectedTourId == null) return;
 
+    // Priority 1: use the tour already embedded in the loaded reserva
+    final embeddedTour = _currentReserva?.tour;
+    if (embeddedTour != null && embeddedTour.precios.isNotEmpty) {
+      setState(() => _buildPreciosMap(embeddedTour));
+      return;
+    }
+
+    // Priority 2: fall back to TourBloc if it already has tours loaded
     final tourState = context.read<TourBloc>().state;
     List<Tour> tours = [];
     if (tourState is ToursLoaded) {
@@ -280,37 +314,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       orElse: () => null,
     );
     if (tour == null || tour.precios.isEmpty) {
-      _preciosInitialized = true;
+      setState(() => _preciosInitialized = true);
       return;
     }
 
-    final Map<int, TourPrecio?> newMap = {};
-
-    // Responsable
-    if (_precioResponsableId != null) {
-      final precio = tour.precios.cast<TourPrecio?>().firstWhere(
-        (p) => p?.id == _precioResponsableId,
-        orElse: () => null,
-      );
-      if (precio != null) newMap[-1] = precio;
-    }
-
-    // Integrantes
-    for (int i = 0; i < _integrantes.length; i++) {
-      final precioId = _integrantes[i].tourPrecioId;
-      if (precioId != null) {
-        final precio = tour.precios.cast<TourPrecio?>().firstWhere(
-          (p) => p?.id == precioId,
-          orElse: () => null,
-        );
-        if (precio != null) newMap[i] = precio;
-      }
-    }
-
-    setState(() {
-      _preciosPorPersona = newMap;
-      _preciosInitialized = true;
-    });
+    setState(() => _buildPreciosMap(tour));
   }
 
   @override
@@ -3622,6 +3630,7 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
   late TextEditingController _documentoCtrl;
   DateTime? _dob;
   late String _tipoDocumento;
+  late bool _ocupaAsiento;
 
   static const _tiposDocumento = ['CC', 'TI', 'Pasaporte'];
 
@@ -3635,6 +3644,7 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
     _tipoDocumento = widget.integrante.tipoDocumento.isNotEmpty
         ? widget.integrante.tipoDocumento
         : 'CC';
+    _ocupaAsiento = widget.integrante.ocupaAsiento;
   }
 
   // static String _normalizeTipoDocumento(String raw) {
@@ -3671,6 +3681,7 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
       _tipoDocumento = widget.integrante.tipoDocumento.isNotEmpty
           ? widget.integrante.tipoDocumento
           : 'CC';
+      _ocupaAsiento = widget.integrante.ocupaAsiento;
     }
   }
 
@@ -3691,6 +3702,9 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
         esResponsable: widget.isResponsable,
         tipoDocumento: _tipoDocumento,
         documento: _documentoCtrl.text,
+        tourPrecioId: widget.integrante.tourPrecioId,
+        precioAplicado: widget.integrante.precioAplicado,
+        ocupaAsiento: _ocupaAsiento,
       ),
     );
   }
@@ -3929,6 +3943,44 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
               _buildPrecioSelector(),
             ],
             const SizedBox(height: 20),
+            // ── Ocupa asiento ──────────────────────────────────────
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'OCUPA ASIENTO',
+                  style: TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    _AsientoChip(
+                      label: 'Sí',
+                      selected: _ocupaAsiento,
+                      onTap: () {
+                        setState(() => _ocupaAsiento = true);
+                        _notifyChange();
+                      },
+                    ),
+                    _AsientoChip(
+                      label: 'No',
+                      selected: !_ocupaAsiento,
+                      onTap: () {
+                        setState(() => _ocupaAsiento = false);
+                        _notifyChange();
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -3994,6 +4046,48 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _AsientoChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _AsientoChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? SaasPalette.brand50 : SaasPalette.bgSubtle,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected
+                ? SaasPalette.brand600.withValues(alpha: 0.6)
+                : SaasPalette.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected
+                ? SaasPalette.brand600
+                : SaasPalette.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }

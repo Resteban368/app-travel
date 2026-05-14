@@ -9,6 +9,7 @@ class Integrante extends Equatable {
   final String documento;
   final int? tourPrecioId;
   final double? precioAplicado;
+  final bool ocupaAsiento;
 
   const Integrante({
     required this.nombre,
@@ -19,6 +20,7 @@ class Integrante extends Equatable {
     this.documento = '',
     this.tourPrecioId,
     this.precioAplicado,
+    this.ocupaAsiento = true,
   });
 
   Integrante copyWith({
@@ -30,6 +32,7 @@ class Integrante extends Equatable {
     String? documento,
     int? tourPrecioId,
     double? precioAplicado,
+    bool? ocupaAsiento,
   }) {
     return Integrante(
       nombre: nombre ?? this.nombre,
@@ -40,6 +43,7 @@ class Integrante extends Equatable {
       documento: documento ?? this.documento,
       tourPrecioId: tourPrecioId ?? this.tourPrecioId,
       precioAplicado: precioAplicado ?? this.precioAplicado,
+      ocupaAsiento: ocupaAsiento ?? this.ocupaAsiento,
     );
   }
 
@@ -53,5 +57,6 @@ class Integrante extends Equatable {
     documento,
     tourPrecioId,
     precioAplicado,
+    ocupaAsiento,
   ];
 }
