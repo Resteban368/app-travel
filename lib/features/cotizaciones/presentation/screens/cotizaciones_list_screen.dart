@@ -1,11 +1,11 @@
 import 'package:agente_viajes/core/theme/saas_palette.dart';
-import 'package:agente_viajes/core/widgets/premium_form_widgets.dart';
 import 'package:agente_viajes/core/widgets/saas_ui_components.dart';
+import 'package:agente_viajes/core/widgets/dialog_loading_widget.dart';
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../config/app_router.dart';
-import '../../../../core/permissions/permission_helper.dart';
 import '../../domain/entities/cotizacion.dart';
 import '../../domain/entities/respuesta_cotizacion.dart';
 import '../bloc/cotizacion_bloc.dart';
@@ -31,11 +31,15 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
     with TickerProviderStateMixin {
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
+  bool _showingLoadingDialog = false;
 
   late final AnimationController _entryCtrl;
   late final Animation<double> _headerOpacity;
   late final Animation<Offset> _headerSlide;
   late final Animation<double> _listOpacity;
+
+  final _misRespuestasScrollCtrl = ScrollController();
+  final _plantillasScrollCtrl = ScrollController();
 
   @override
   void initState() {
@@ -68,12 +72,31 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
     );
 
     _entryCtrl.forward();
+
+    _misRespuestasScrollCtrl.addListener(_onMisRespuestasScroll);
+    _plantillasScrollCtrl.addListener(_onPlantillasScroll);
+  }
+
+  void _onMisRespuestasScroll() {
+    if (_misRespuestasScrollCtrl.position.pixels >=
+        _misRespuestasScrollCtrl.position.maxScrollExtent - 200) {
+      context.read<CotizacionBloc>().add(const LoadMoreMisRespuestas());
+    }
+  }
+
+  void _onPlantillasScroll() {
+    if (_plantillasScrollCtrl.position.pixels >=
+        _plantillasScrollCtrl.position.maxScrollExtent - 200) {
+      context.read<CotizacionBloc>().add(const LoadMorePlantillas());
+    }
   }
 
   @override
   void dispose() {
     _entryCtrl.dispose();
     _searchCtrl.dispose();
+    _misRespuestasScrollCtrl.dispose();
+    _plantillasScrollCtrl.dispose();
     super.dispose();
   }
 
@@ -147,11 +170,57 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
     context.read<CotizacionBloc>().add(LoadPendingCotizaciones(page: page));
   }
 
+  void _showLoadingDialog(String message) {
+    if (_showingLoadingDialog) return;
+    _showingLoadingDialog = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => DialogLoadingNetwork(titel: message),
+    ).then((_) {
+      if (mounted) {
+        setState(() {
+          _showingLoadingDialog = false;
+        });
+      }
+    });
+  }
+
+  void _closeLoadingDialog() {
+    if (_showingLoadingDialog && mounted) {
+      _showingLoadingDialog = false;
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
-      child: BlocBuilder<CotizacionBloc, CotizacionState>(
+      length: 3,
+      child: BlocListener<CotizacionBloc, CotizacionState>(
+        listener: (context, state) {
+          if (state is CotizacionDeleting) {
+            _showLoadingDialog('Eliminando...');
+          } else if (state is CotizacionDeleteSuccess) {
+            _closeLoadingDialog();
+            SaasSnackBar.showSuccess(context, state.message);
+          } else if (state is CotizacionError) {
+            _closeLoadingDialog();
+            SaasSnackBar.showError(context, state.message);
+          }
+        },
+        child: PopScope(
+          canPop: !_showingLoadingDialog,
+          onPopInvokedWithResult: (didPop, result) {
+            if (!didPop && _showingLoadingDialog) {
+              SaasSnackBar.showWarning(
+                context,
+                'Espera a que termine el proceso',
+              );
+            }
+          },
+          child: BlocBuilder<CotizacionBloc, CotizacionState>(
         builder: (context, state) {
           // ... (same logic for pendingList, etc.)
           List<Cotizacion> pendingList = [];
@@ -159,7 +228,10 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
           int pendingTotalPages = 1;
           int pendingTotal = 0;
 
-          List<dynamic> attendedUnifiedList = [];
+          List<RespuestaCotizacion> misRespuestas = [];
+          bool misRespuestasLoading = false;
+          List<RespuestaCotizacion> plantillas = [];
+          bool plantillasLoading = false;
           Map<int, Cotizacion> cotizacionesMap = {};
 
           if (state is CotizacionLoaded) {
@@ -168,18 +240,15 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
             pendingTotalPages = state.pendingTotalPages;
             pendingTotal = state.pendingTotal;
 
-            attendedUnifiedList = [...state.allRespuestas];
-            attendedUnifiedList.sort((a, b) {
-              final ra = a as RespuestaCotizacion;
-              final rb = b as RespuestaCotizacion;
-              if (ra.anclada != rb.anclada) return ra.anclada ? -1 : 1;
-              return rb.createdAt.compareTo(ra.createdAt);
-            });
-
             cotizacionesMap = {
               for (var c in state.attendedCotizaciones) c.id: c,
               for (var c in state.pendingCotizaciones) c.id: c,
             };
+
+            misRespuestas = state.misRespuestas;
+            misRespuestasLoading = state.misRespuestasLoading;
+            plantillas = state.plantillas;
+            plantillasLoading = state.plantillasLoading;
 
             if (_searchQuery.isNotEmpty) {
               final q = _searchQuery.toLowerCase();
@@ -189,12 +258,9 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                     c.chatId.toLowerCase().contains(q);
               }).toList();
 
-              attendedUnifiedList = attendedUnifiedList.where((item) {
-                final resp = item as RespuestaCotizacion;
-                final basicMatch =
-                    resp.tituloViaje.toLowerCase().contains(q) ||
-                    resp.condicionesGenerales.toLowerCase().contains(q);
-                if (basicMatch) return true;
+              bool matchRespuesta(RespuestaCotizacion resp) {
+                if (resp.tituloViaje.toLowerCase().contains(q)) return true;
+                if (resp.condicionesGenerales.toLowerCase().contains(q)) return true;
                 if (resp.cotizacionId != null) {
                   final cot = cotizacionesMap[resp.cotizacionId];
                   if (cot != null) {
@@ -203,7 +269,10 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                   }
                 }
                 return false;
-              }).toList();
+              }
+
+              misRespuestas = misRespuestas.where(matchRespuesta).toList();
+              plantillas = plantillas.where(matchRespuesta).toList();
             }
           }
 
@@ -333,13 +402,19 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                     ),
                     _buildListTab(
                       state: state,
-                      list: attendedUnifiedList,
-                      currentPage: 1,
-                      totalPages: 1,
-                      totalResults: attendedUnifiedList.length,
-                      onPageChanged: (_) {},
-                      emptyText: 'No hay respuestas registradas.',
+                      list: misRespuestas,
+                      emptyText: 'Aún no tienes respuestas creadas.',
                       cotizacionesMap: cotizacionesMap,
+                      scrollController: _misRespuestasScrollCtrl,
+                      isLoadingMore: misRespuestasLoading,
+                    ),
+                    _buildListTab(
+                      state: state,
+                      list: plantillas,
+                      emptyText: 'No hay plantillas públicas disponibles.',
+                      cotizacionesMap: cotizacionesMap,
+                      scrollController: _plantillasScrollCtrl,
+                      isLoadingMore: plantillasLoading,
                     ),
                   ],
                 ),
@@ -348,8 +423,10 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
           );
         },
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 
   Widget _buildHeaderActions(BuildContext context) {
     return Row(
@@ -401,7 +478,8 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
         labelStyle: const TextStyle(fontWeight: FontWeight.bold),
         tabs: const [
           Tab(text: 'Sin Respuesta'),
-          Tab(text: 'Respuestas'),
+          Tab(text: 'Mis Respuestas'),
+          Tab(text: 'Plantillas'),
         ],
       ),
     );
@@ -410,18 +488,21 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
   Widget _buildListTab({
     required CotizacionState state,
     required List<dynamic> list,
-    required int currentPage,
-    required int totalPages,
-    required int totalResults,
-    required Function(int) onPageChanged,
     required String emptyText,
+    int currentPage = 1,
+    int totalPages = 1,
+    int totalResults = 0,
+    Function(int)? onPageChanged,
     Map<int, Cotizacion>? cotizacionesMap,
+    ScrollController? scrollController,
+    bool isLoadingMore = false,
   }) {
     return RefreshIndicator(
       onRefresh: () async =>
           context.read<CotizacionBloc>().add(const LoadAllData()),
       color: SaasPalette.brand600,
       child: CustomScrollView(
+        controller: scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           if (state is CotizacionLoading)
@@ -507,13 +588,26 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                 }, childCount: list.length),
               ),
             ),
-          if (state is CotizacionLoaded && totalPages > 1)
+          if (onPageChanged != null && state is CotizacionLoaded && totalPages > 1)
             SliverToBoxAdapter(
               child: _PaginationBar(
                 page: currentPage,
                 totalPages: totalPages,
                 total: totalResults,
                 onPageChanged: onPageChanged,
+              ),
+            ),
+          if (isLoadingMore)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
               ),
             ),
           const SliverPadding(padding: EdgeInsets.only(bottom: 40)),
@@ -655,6 +749,45 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                                 ),
                               ),
                             ],
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.phone_rounded,
+                              size: 12,
+                              color: SaasPalette.textSecondary,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              c.telefono ?? '',
+                              style: const TextStyle(
+                                color: SaasPalette.textSecondary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const Spacer(),
+                            //eliminar
+                            IconButton(
+                              onPressed: () => _confirmDelete(context, c),
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: SaasPalette.danger,
+                              ),
+                              tooltip: 'Eliminar',
+                              style: IconButton.styleFrom(
+                                backgroundColor: SaasPalette.danger.withValues(
+                                  alpha: 0.08,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 4),

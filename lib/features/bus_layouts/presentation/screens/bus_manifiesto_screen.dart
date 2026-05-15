@@ -1,6 +1,9 @@
+import 'dart:js_interop';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:web/web.dart' as webLib;
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/widgets/dialog_loading_widget.dart';
@@ -9,6 +12,7 @@ import '../../domain/entities/bus_layout.dart';
 import '../bloc/bus_manifiesto_bloc.dart';
 import '../bloc/bus_manifiesto_event.dart';
 import '../bloc/bus_manifiesto_state.dart';
+import '../pdf/bus_manifiesto_pdf_generator.dart';
 
 // Paleta de colores para reservas (igual al HTML)
 const List<Color> _kReservaColors = [
@@ -116,6 +120,11 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_rounded),
+            tooltip: 'Exportar PDF',
+            onPressed: () => _exportPdf(context),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () {
@@ -898,6 +907,172 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
             );
           });
         },
+      ),
+    );
+  }
+
+  Future<void> _exportPdf(BuildContext context) async {
+    final bloc = context.read<BusManifiestoBloc>();
+    final state = bloc.state;
+    BusManifiesto? manifiesto;
+    if (state is BusManifiestoLoaded) manifiesto = state.manifiesto;
+    if (state is BusManifiestoOperacionExito) manifiesto = state.manifiesto;
+    if (state is BusManifiestoOperando) manifiesto = state.manifiesto;
+    if (manifiesto == null) return;
+
+    bool dialogOpen = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => const DialogLoadingNetwork(titel: 'Generando PDF...'),
+    ).then((_) => dialogOpen = false);
+
+    try {
+      final bytes = await BusManifestoPdfGenerator.generate(manifiesto);
+      if (context.mounted && dialogOpen) {
+        dialogOpen = false;
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      if (!context.mounted) return;
+
+      final dateStr = DateFormat('dd-MM-yyyy').format(DateTime.now());
+      final tourName = manifiesto.tour.nombreTour
+          .replaceAll(RegExp(r'[^\w\s]'), '')
+          .replaceAll(' ', '_');
+      final filename = 'Manifiesto_${tourName}_$dateStr.pdf';
+
+      await _showPdfDialog(context, Uint8List.fromList(bytes), filename);
+    } catch (e) {
+      if (context.mounted && dialogOpen) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al generar PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showPdfDialog(
+    BuildContext context,
+    Uint8List bytes,
+    String filename,
+  ) async {
+    void openInNewTab() {
+      final blob = webLib.Blob(
+        <JSAny>[bytes.buffer.toJS].toJS,
+        webLib.BlobPropertyBag(type: 'application/pdf'),
+      );
+      final url = webLib.URL.createObjectURL(blob);
+      webLib.window.open(url, '_blank', '');
+    }
+
+    void download() {
+      final blob = webLib.Blob(
+        <JSAny>[bytes.buffer.toJS].toJS,
+        webLib.BlobPropertyBag(type: 'application/pdf'),
+      );
+      final url = webLib.URL.createObjectURL(blob);
+      final anchor =
+          webLib.document.createElement('a') as webLib.HTMLAnchorElement;
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      webLib.URL.revokeObjectURL(url);
+    }
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: SaasPalette.bgCanvas,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: SaasPalette.brand600.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.picture_as_pdf_rounded,
+                  color: SaasPalette.brand600,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'PDF Listo',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: SaasPalette.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                filename,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: SaasPalette.textTertiary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                      label: const Text('Ver PDF'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: SaasPalette.brand600,
+                        side: const BorderSide(color: SaasPalette.brand600),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: openInNewTab,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.download_rounded, size: 18),
+                      label: const Text('Descargar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: SaasPalette.brand600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: download,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'Cerrar',
+                  style: TextStyle(color: SaasPalette.textTertiary),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

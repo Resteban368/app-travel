@@ -88,3 +88,11 @@ class ToggleAncladaRespuesta extends CotizacionEvent {
   @override
   List<Object?> get props => [id, anclada];
 }
+
+class LoadMoreMisRespuestas extends CotizacionEvent {
+  const LoadMoreMisRespuestas();
+}
+
+class LoadMorePlantillas extends CotizacionEvent {
+  const LoadMorePlantillas();
+}

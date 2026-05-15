@@ -40,24 +40,58 @@ class ApiRespuestaCotizacionRepository
     throw UnimplementedError();
   }
 
-  // ── LIST ALL ──────────────────────────────────────────────────────────────
+  // ── LIST (paginated, agent sees only theirs) ──────────────────────────────
   @override
-  Future<List<RespuestaCotizacion>> getRespuestas({
-    bool sinCotizacion = false,
-  }) async {
-    final url = sinCotizacion ? '$_baseUrl?sinCotizacion=true' : _baseUrl;
+  Future<RespuestaPage> getRespuestas({int page = 1, int limit = 20}) async {
+    final url = '$_baseUrl?page=$page&limit=$limit';
     debugPrint('🌎 [RespuestaCotizacion] GET $url');
     final response = await client.get(Uri.parse(url), headers: _headers);
 
     if (response.statusCode == 200) {
-      final decoded = json.decode(response.body);
-      final List<dynamic> list = decoded is List
-          ? decoded
-          : (decoded['data'] ?? []);
-      return list.map((e) => _fromJson(e as Map<String, dynamic>)).toList();
+      return _parsePage(response.body, 'listar respuestas de cotización');
     }
     _throw(response, 'listar respuestas de cotización');
     throw UnimplementedError();
+  }
+
+  // ── PLANTILLAS (paginated, es_publica=true) ───────────────────────────────
+  @override
+  Future<RespuestaPage> getPlantillas({int page = 1, int limit = 20}) async {
+    final url = '$_baseUrl/plantillas?page=$page&limit=$limit';
+    debugPrint('🌎 [RespuestaCotizacion] GET $url');
+    final response = await client.get(Uri.parse(url), headers: _headers);
+
+    if (response.statusCode == 200) {
+      return _parsePage(response.body, 'listar plantillas');
+    }
+    _throw(response, 'listar plantillas');
+    throw UnimplementedError();
+  }
+
+  RespuestaPage _parsePage(String body, String action) {
+    final decoded = json.decode(body);
+    final List<dynamic> list;
+    int total = 0;
+    int totalPages = 1;
+    int page = 1;
+
+    if (decoded is List) {
+      list = decoded;
+      total = decoded.length;
+    } else {
+      list = (decoded['data'] ?? []) as List<dynamic>;
+      total = (decoded['total'] as num?)?.toInt() ?? list.length;
+      totalPages = (decoded['totalPages'] as num?)?.toInt() ??
+          (decoded['total_pages'] as num?)?.toInt() ?? 1;
+      page = (decoded['page'] as num?)?.toInt() ?? 1;
+    }
+
+    return (
+      data: list.map((e) => _fromJson(e as Map<String, dynamic>)).toList(),
+      total: total,
+      totalPages: totalPages,
+      page: page,
+    );
   }
 
   // ── GET BY ID ─────────────────────────────────────────────────────────────
@@ -108,6 +142,7 @@ class ApiRespuestaCotizacionRepository
     'opciones_hotel': r.opcionesHotel.map(_hotelToJson).toList(),
     'adicionales': r.adicionales.map(_adicionalToJson).toList(),
     'condiciones_generales': r.condicionesGenerales,
+    'es_publica': r.esPublica,
   };
 
   Map<String, dynamic> _vueloToJson(VueloItinerario v) => {
@@ -177,6 +212,7 @@ class ApiRespuestaCotizacionRepository
       creadoPorId: j['creado_por_id'] as int?,
       creadoPorNombre: j['creado_por_nombre'] as String?,
       anclada: j['anclada'] as bool? ?? false,
+      esPublica: j['es_publica'] as bool? ?? false,
     );
   }
 

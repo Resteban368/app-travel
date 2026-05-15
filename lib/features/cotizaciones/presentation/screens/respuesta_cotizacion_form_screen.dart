@@ -219,12 +219,10 @@ class _RespuestaCotizacionFormScreenState
   Future<void> _loadPlantillas() async {
     try {
       final repo = sl<RespuestaCotizacionRepository>();
-      final todas = await repo.getRespuestas();
+      final result = await repo.getPlantillas(page: 1, limit: 100);
       if (mounted) {
         setState(() {
-          _plantillas = todas
-              .where((r) => r.tituloViaje.toUpperCase().startsWith('PLANTILLA'))
-              .toList();
+          _plantillas = result.data;
         });
       }
     } catch (_) {}
@@ -299,13 +297,10 @@ class _RespuestaCotizacionFormScreenState
           icon: const Icon(Icons.arrow_drop_down_rounded),
           isExpanded: true,
           items: _plantillas.map((p) {
-            final displayName = p.tituloViaje
-                .replaceFirst(RegExp(r'^PLANTILLA[\s:\-]*', caseSensitive: false), '')
-                .trim();
             return DropdownMenuItem(
               value: p,
               child: Text(
-                displayName.isNotEmpty ? displayName : p.tituloViaje,
+                p.tituloViaje,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -640,7 +635,7 @@ class _RespuestaCotizacionFormScreenState
       ? ''
       : '$_countryCode${_telefonoCtrl.text.trim()}';
 
-  RespuestaCotizacion _buildCurrentRespuesta() {
+  RespuestaCotizacion _buildCurrentRespuesta({bool esPublica = false}) {
     return RespuestaCotizacion(
       id: widget.respuesta?.id,
       cotizacionId:
@@ -711,6 +706,7 @@ class _RespuestaCotizacionFormScreenState
           .toList(),
       condicionesGenerales: _condicionesCtrl.text.trim(),
       anclada: widget.respuesta?.anclada ?? false,
+      esPublica: esPublica,
       createdAt: DateTime.now(),
     );
   }
@@ -726,17 +722,17 @@ class _RespuestaCotizacionFormScreenState
     );
   }
 
-  Future<void> _save() async {
+  Future<void> _save({bool esPublica = false}) async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
 
-    //validaciones
-    if (_nombreClienteCtrl.text.trim().isEmpty) {
+    //validaciones — las de cliente no aplican para plantillas
+    if (!esPublica && _nombreClienteCtrl.text.trim().isEmpty) {
       setState(() => _saving = false);
       SaasSnackBar.showWarning(context, 'El nombre del cliente es requerido');
       return;
     }
-    if (_telefonoCtrl.text.trim().isEmpty) {
+    if (!esPublica && _telefonoCtrl.text.trim().isEmpty) {
       setState(() => _saving = false);
       SaasSnackBar.showWarning(context, 'El teléfono del cliente es requerido');
       return;
@@ -834,11 +830,11 @@ class _RespuestaCotizacionFormScreenState
       return;
     }
 
-    final respuesta = _buildCurrentRespuesta();
+    final respuesta = _buildCurrentRespuesta(esPublica: esPublica);
 
     try {
       final repo = sl<RespuestaCotizacionRepository>();
-      if (widget.respuesta != null) {
+      if (widget.respuesta != null && !esPublica) {
         await repo.updateRespuesta(respuesta);
       } else {
         await repo.createRespuesta(respuesta);
@@ -847,9 +843,11 @@ class _RespuestaCotizacionFormScreenState
 
       SaasSnackBar.showSuccess(
         context,
-        widget.respuesta != null
-            ? 'Respuesta actualizada exitosamente'
-            : 'Respuesta guardada exitosamente',
+        esPublica
+            ? 'Plantilla guardada y disponible para todos'
+            : widget.respuesta != null
+                ? 'Respuesta actualizada exitosamente'
+                : 'Respuesta guardada exitosamente',
       );
       Navigator.pop(context);
     } catch (e) {
@@ -931,6 +929,11 @@ class _RespuestaCotizacionFormScreenState
                     icon: Icons.save_rounded,
                     isLoading: _saving,
                     onTap: _save,
+                  ),
+                  const SizedBox(height: 12),
+                  _GuardarPlantillaButton(
+                    isLoading: _saving,
+                    onTap: () => _save(esPublica: true),
                   ),
                   const SizedBox(height: 12),
 
@@ -2932,6 +2935,58 @@ class _ResumenFilaSeleccionable extends StatelessWidget {
 }
 
 // ── Shared helper widgets ─────────────────────────────────────────────────────
+
+class _GuardarPlantillaButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  const _GuardarPlantillaButton({
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: AnimatedOpacity(
+        opacity: isLoading ? 0.5 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: SaasPalette.bgCanvas,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: SaasPalette.brand600.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Icon(
+                Icons.auto_awesome_rounded,
+                color: SaasPalette.brand600,
+                size: 18,
+              ),
+              SizedBox(width: 10),
+              Text(
+                'GUARDAR COMO PLANTILLA',
+                style: TextStyle(
+                  color: SaasPalette.brand600,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _CotizacionBanner extends StatelessWidget {
   final Cotizacion cotizacion;

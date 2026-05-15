@@ -98,6 +98,7 @@ class RespuestaCotizacion {
   //creado_por_nombre
   final String? creadoPorNombre;
   final bool anclada;
+  final bool esPublica;
 
   const RespuestaCotizacion({
     this.id,
@@ -117,12 +118,14 @@ class RespuestaCotizacion {
     this.creadoPorId,
     this.creadoPorNombre,
     this.anclada = false,
+    this.esPublica = false,
   });
 
   RespuestaCotizacion copyWith({
     int? id,
     int? cotizacionId,
     bool? anclada,
+    bool? esPublica,
     bool clearCotizacionId = false,
   }) {
     return RespuestaCotizacion(
@@ -143,6 +146,7 @@ class RespuestaCotizacion {
       creadoPorId: creadoPorId,
       creadoPorNombre: creadoPorNombre,
       anclada: anclada ?? this.anclada,
+      esPublica: esPublica ?? this.esPublica,
     );
   }
 }
