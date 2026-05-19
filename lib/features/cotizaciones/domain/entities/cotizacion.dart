@@ -16,6 +16,8 @@ class Cotizacion extends Equatable {
   final String? especificaciones;
   final DateTime createdAt;
   final int? respuestaCotizacionId;
+  final int? asesorId;
+  final String? asesorNombre;
 
   const Cotizacion({
     required this.id,
@@ -33,6 +35,8 @@ class Cotizacion extends Equatable {
     this.especificaciones,
     required this.createdAt,
     this.respuestaCotizacionId,
+    this.asesorId,
+    this.asesorNombre,
   });
 
   Cotizacion copyWith({
@@ -53,6 +57,8 @@ class Cotizacion extends Equatable {
     bool? isRead,
     DateTime? createdAt,
     int? respuestaCotizacionId,
+    int? asesorId,
+    String? asesorNombre,
   }) {
     return Cotizacion(
       id: id ?? this.id,
@@ -71,6 +77,8 @@ class Cotizacion extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       respuestaCotizacionId:
           respuestaCotizacionId ?? this.respuestaCotizacionId,
+      asesorId: asesorId ?? this.asesorId,
+      asesorNombre: asesorNombre ?? this.asesorNombre,
     );
   }
 
@@ -91,5 +99,7 @@ class Cotizacion extends Equatable {
     especificaciones,
     createdAt,
     respuestaCotizacionId,
+    asesorId,
+    asesorNombre,
   ];
 }

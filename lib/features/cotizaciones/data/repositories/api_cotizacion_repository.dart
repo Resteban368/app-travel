@@ -228,6 +228,8 @@ class ApiCotizacionRepository implements CotizacionRepository {
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
       respuestaCotizacionId: json['respuesta_cotizacion_id'],
+      asesorId: json['asesor_id'] as int?,
+      asesorNombre: json['asesor_nombre'] as String?,
     );
   }
 }

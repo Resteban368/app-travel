@@ -1,5 +1,7 @@
+import 'package:agente_viajes/core/constants/api_constants.dart';
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
@@ -121,6 +123,8 @@ class _ProfileBodyState extends State<_ProfileBody> {
                   _AvatarCard(user: user),
                   const SizedBox(height: 16),
                   _InfoCard(user: user),
+                  const SizedBox(height: 16),
+                  _CotizacionLinkCard(userId: user.id),
                   const SizedBox(height: 16),
                   _PermissionsCard(user: user),
                   const SizedBox(height: 16),
@@ -753,6 +757,151 @@ class _PasswordField extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  COTIZACIÓN LINK CARD
+// ─────────────────────────────────────────────────────────────────────────────
+class _CotizacionLinkCard extends StatelessWidget {
+  final String userId;
+  const _CotizacionLinkCard({required this.userId});
+
+  @override
+  Widget build(BuildContext context) {
+    final link = ApiConstants.cotizacionAsesorUrl(userId);
+
+    return _SaasCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionLabel(text: 'MI LINK DE COTIZACIÓN'),
+          const SizedBox(height: 8),
+          const Text(
+            'Comparte este enlace con tus clientes para que soliciten una cotización directamente contigo.',
+            style: TextStyle(
+              color: SaasPalette.textSecondary,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: SaasPalette.bgApp,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: SaasPalette.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.link_rounded,
+                  size: 16,
+                  color: SaasPalette.brand600,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SelectableText(
+                    link,
+                    style: const TextStyle(
+                      color: SaasPalette.brand600,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _CopyButton(link: link),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CopyButton extends StatefulWidget {
+  final String link;
+  const _CopyButton({required this.link});
+
+  @override
+  State<_CopyButton> createState() => _CopyButtonState();
+}
+
+class _CopyButtonState extends State<_CopyButton> {
+  bool _copied = false;
+
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: widget.link));
+    if (!mounted) return;
+    setState(() => _copied = true);
+    SaasSnackBar.showSuccess(context, 'Link copiado al portapapeles');
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) setState(() => _copied = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: _copied
+          ? Container(
+              key: const ValueKey('check'),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: SaasPalette.success.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: SaasPalette.success.withValues(alpha: 0.3),
+                ),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_rounded, size: 14, color: SaasPalette.success),
+                  SizedBox(width: 5),
+                  Text(
+                    'Copiado',
+                    style: TextStyle(
+                      color: SaasPalette.success,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : GestureDetector(
+              key: const ValueKey('copy'),
+              onTap: _copy,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: SaasPalette.brand600.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: SaasPalette.brand600.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.copy_rounded, size: 14, color: SaasPalette.brand600),
+                    SizedBox(width: 5),
+                    Text(
+                      'Copiar',
+                      style: TextStyle(
+                        color: SaasPalette.brand600,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 }

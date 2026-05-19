@@ -3143,6 +3143,15 @@ class _CotizacionBanner extends StatelessWidget {
                   label: 'WhatsApp',
                   value: c.chatId,
                 ),
+                if (c.asesorNombre != null && c.asesorNombre!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _BannerRow(
+                    icon: Icons.support_agent_rounded,
+                    label: 'Asesor',
+                    value: c.asesorNombre!,
+                    valueColor: SaasPalette.brand600,
+                  ),
+                ],
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
                   child: Divider(color: SaasPalette.border, height: 1),
@@ -3237,12 +3246,14 @@ class _BannerRow extends StatelessWidget {
   final String label;
   final String value;
   final int maxLines;
+  final Color? valueColor;
 
   const _BannerRow({
     required this.icon,
     required this.label,
     required this.value,
     this.maxLines = 1,
+    this.valueColor,
   });
 
   @override
@@ -3269,8 +3280,8 @@ class _BannerRow extends StatelessWidget {
               ),
               Text(
                 value,
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
+                style: TextStyle(
+                  color: valueColor ?? SaasPalette.textPrimary,
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),

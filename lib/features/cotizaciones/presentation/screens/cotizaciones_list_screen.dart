@@ -790,6 +790,27 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                             ),
                           ],
                         ),
+                        if (c.asesorNombre != null) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.support_agent_rounded,
+                                size: 12,
+                                color: SaasPalette.brand600,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                c.asesorNombre!,
+                                style: const TextStyle(
+                                  color: SaasPalette.brand600,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 4),
                         Text(
                           c.detallesPlan,
