@@ -92,7 +92,7 @@ class ApiBusManifiestoRepository implements BusManifiestoRepository {
       llegada: tourJson['llegada'] as String?,
       puntoPartida: tourJson['punto_partida'] as String?,
       cupos: tourJson['cupos'] as int?,
-      esPromocion: tourJson['es_promocion'] as bool? ?? false,
+      esPromocion: tourJson['es_promocion'] == true,
       linkPdf: tourJson['link_pdf'] as String?,
     );
 
@@ -183,6 +183,7 @@ class ApiBusManifiestoRepository implements BusManifiestoRepository {
       tipoDocumento: json['tipo_documento'] as String?,
       documento: json['documento'] as String?,
       telefono: json['telefono'] as String?,
+      ocupaAsiento: json['ocupa_asiento'] != false,
     );
   }
 

@@ -279,25 +279,25 @@ class BusManifestoPdfGenerator {
     if (tour.cupos != null) chips.add('Cupos: ${tour.cupos}');
 
     return pw.Container(
-      padding: const pw.EdgeInsets.all(12),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: pw.BoxDecoration(
         color: _brandLight,
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
         border: pw.Border.all(color: _brand, width: 0.5),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(tour.nombreTour,
-              style: pw.TextStyle(font: bold, fontSize: 13, color: _brandDark)),
+              style: pw.TextStyle(font: bold, fontSize: 11, color: _brandDark)),
           if (chips.isNotEmpty) ...[
-            pw.SizedBox(height: 6),
+            pw.SizedBox(height: 3),
             pw.Wrap(
-              spacing: 16,
-              runSpacing: 4,
+              spacing: 12,
+              runSpacing: 2,
               children: chips
                   .map((c) => pw.Text(c,
-                      style: pw.TextStyle(font: bold, fontSize: 9, color: _brandDark)))
+                      style: pw.TextStyle(font: bold, fontSize: 7.5, color: _brandDark)))
                   .toList(),
             ),
           ],
@@ -625,52 +625,47 @@ class BusManifestoPdfGenerator {
     }
 
     final rows = <pw.TableRow>[];
-    int n = 1;
 
     for (final entry in reservasUnicas.entries) {
       final reserva = entry.value;
       final asientos = (asientosPorReserva[entry.key] ?? [])..sort();
-      final asientosStr = asientos.join(', ');
       final idx = (reservaColorIdx[entry.key] ?? 0) % _seatColors.length;
       final accentColor = _seatColors[idx];
-      final bgDark = PdfColor(
-          accentColor.red, accentColor.green, accentColor.blue, 0.14);
-      final bgLight = PdfColor(
-          accentColor.red, accentColor.green, accentColor.blue, 0.07);
 
-      if (reserva.responsable != null) {
+      final people = <PersonaManifiesto>[];
+      if (reserva.responsable != null) people.add(reserva.responsable!);
+      people.addAll(reserva.integrantes);
+
+      int seatIdx = 0;
+      for (int i = 0; i < people.length; i++) {
+        final person = people[i];
+        String seatLabel = '';
+
+        final occupiesSeat = person.ocupaAsiento;
+        if (!occupiesSeat) {
+          seatLabel = 'Sin asiento';
+        } else {
+          if (seatIdx < asientos.length) {
+            seatLabel = asientos[seatIdx];
+            seatIdx++;
+          } else {
+            seatLabel = 'Sin asignar';
+          }
+        }
+
         rows.add(_passengerRow(
-          num: n++,
           reservaId: reserva.idReserva,
-          nombre: reserva.responsable!.nombre,
-          doc: reserva.responsable!.documento != null
-              ? '${reserva.responsable!.tipoDocumento ?? 'DOC'}: ${reserva.responsable!.documento}'
+          nombre: person.nombre,
+          doc: person.documento != null
+              ? '${person.tipoDocumento ?? 'DOC'}: ${person.documento}'
               : '-',
-          tel: reserva.responsable!.telefono ?? '-',
-          asientos: asientosStr,
+          tel: person.telefono ?? '-',
+          asientos: seatLabel,
           accentColor: accentColor,
-          bgColor: bgDark,
+          bgColor: accentColor,
           bold: bold,
           regular: regular,
-          isHeader: true,
-        ));
-      }
-
-      for (final p in reserva.integrantes) {
-        rows.add(_passengerRow(
-          num: n++,
-          reservaId: reserva.idReserva,
-          nombre: p.nombre,
-          doc: p.documento != null
-              ? '${p.tipoDocumento ?? 'DOC'}: ${p.documento}'
-              : '-',
-          tel: p.telefono ?? '-',
-          asientos: '',
-          accentColor: accentColor,
-          bgColor: bgLight,
-          bold: bold,
-          regular: regular,
-          isHeader: false,
+          isHeader: i == 0,
         ));
       }
     }
@@ -684,23 +679,21 @@ class BusManifestoPdfGenerator {
         pw.Table(
           border: pw.TableBorder.all(color: _border, width: 0.3),
           columnWidths: {
-            0: const pw.FixedColumnWidth(17),
-            1: const pw.FixedColumnWidth(40),
-            2: const pw.FlexColumnWidth(2.5),
-            3: const pw.FlexColumnWidth(2.0),
-            4: const pw.FlexColumnWidth(1.5),
-            5: const pw.FixedColumnWidth(36),
+            0: const pw.FixedColumnWidth(50), // ID Reserva
+            1: const pw.FlexColumnWidth(2.5), // Nombre
+            2: const pw.FlexColumnWidth(2.0), // Documento
+            3: const pw.FlexColumnWidth(1.5), // Teléfono
+            4: const pw.FixedColumnWidth(45), // Asientos
           },
           children: [
             pw.TableRow(
-              decoration: pw.BoxDecoration(color: _bgSubtle),
+              decoration: pw.BoxDecoration(color: _brandDark),
               children: [
-                _th('N°', bold),
-                _th('Reserva', bold),
-                _th('Nombre', bold),
-                _th('Documento', bold),
-                _th('Teléfono', bold),
-                _th('Asientos', bold),
+                _th('ID Reserva', bold, color: PdfColors.white),
+                _th('Nombre del Pasajero', bold, color: PdfColors.white),
+                _th('Documento', bold, color: PdfColors.white),
+                _th('Teléfono', bold, color: PdfColors.white),
+                _th('Asientos', bold, color: PdfColors.white),
               ],
             ),
             ...rows,
@@ -711,7 +704,6 @@ class BusManifestoPdfGenerator {
   }
 
   static pw.TableRow _passengerRow({
-    required int num,
     required String reservaId,
     required String nombre,
     required String doc,
@@ -723,30 +715,17 @@ class BusManifestoPdfGenerator {
     required pw.Font regular,
     required bool isHeader,
   }) {
+    final textColor = PdfColors.white;
+    final idColor = PdfColors.white;
+
     return pw.TableRow(
       decoration: pw.BoxDecoration(color: bgColor),
       children: [
-        // N°
-        pw.Container(
-          padding: const pw.EdgeInsets.all(2),
-          child: pw.Container(
-            width: 13,
-            height: 13,
-            decoration: pw.BoxDecoration(
-              color: accentColor,
-              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-            ),
-            child: pw.Center(
-              child: pw.Text('$num',
-                  style: pw.TextStyle(font: bold, fontSize: 5.5, color: PdfColors.white)),
-            ),
-          ),
-        ),
         // Reserva ID
         pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
           child: pw.Text(reservaId,
-              style: pw.TextStyle(font: bold, fontSize: 6, color: accentColor)),
+              style: pw.TextStyle(font: bold, fontSize: 6, color: idColor)),
         ),
         // Nombre
         pw.Padding(
@@ -755,26 +734,26 @@ class BusManifestoPdfGenerator {
               style: pw.TextStyle(
                 font: isHeader ? bold : regular,
                 fontSize: 7,
-                color: _textPrimary,
+                color: textColor,
               )),
         ),
         // Documento
         pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
           child: pw.Text(doc,
-              style: pw.TextStyle(font: regular, fontSize: 6.5, color: _textPrimary)),
+              style: pw.TextStyle(font: regular, fontSize: 6.5, color: textColor)),
         ),
         // Teléfono
         pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
           child: pw.Text(tel,
-              style: pw.TextStyle(font: regular, fontSize: 6.5, color: _textPrimary)),
+              style: pw.TextStyle(font: regular, fontSize: 6.5, color: textColor)),
         ),
         // Asientos
         pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
           child: pw.Text(asientos,
-              style: pw.TextStyle(font: bold, fontSize: 6.5, color: _textPrimary)),
+              style: pw.TextStyle(font: bold, fontSize: 6.5, color: textColor)),
         ),
       ],
     );
@@ -799,11 +778,11 @@ class BusManifestoPdfGenerator {
     );
   }
 
-  static pw.Widget _th(String text, pw.Font bold) {
+  static pw.Widget _th(String text, pw.Font bold, {PdfColor? color}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
       child: pw.Text(text,
-          style: pw.TextStyle(font: bold, fontSize: 8, color: _textSecondary)),
+          style: pw.TextStyle(font: bold, fontSize: 7, color: color ?? _textSecondary)),
     );
   }
 

@@ -35,16 +35,18 @@ class PersonaManifiesto extends Equatable {
   final String? tipoDocumento;
   final String? documento;
   final String? telefono;
+  final bool ocupaAsiento;
 
   const PersonaManifiesto({
     required this.nombre,
     this.tipoDocumento,
     this.documento,
     this.telefono,
+    this.ocupaAsiento = true,
   });
 
   @override
-  List<Object?> get props => [nombre, documento];
+  List<Object?> get props => [nombre, documento, ocupaAsiento];
 }
 
 class ReservaManifiesto extends Equatable {
@@ -66,7 +68,8 @@ class ReservaManifiesto extends Equatable {
     this.integrantes = const [],
   });
 
-  int get totalPersonas => 1 + integrantes.length;
+  int get totalPersonas =>
+      1 + integrantes.where((i) => i.ocupaAsiento).length;
 
   @override
   List<Object?> get props => [id, idReserva];

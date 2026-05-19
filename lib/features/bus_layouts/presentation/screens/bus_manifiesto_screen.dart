@@ -80,22 +80,39 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
   TabController? _tabController;
   _ModoMoverInfo? _modoMover;
   bool _loadingDialogOpen = false;
-  bool _initialLoadDialogOpen = false;
   int? _tourId;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initialLoadDialogOpen = true;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const DialogLoadingNetwork(
-          titel: 'Cargando manifiesto de bus...',
-        ),
-      ).then((_) => _initialLoadDialogOpen = false);
+      _showLoadingDialog('Cargando manifiesto de bus...');
     });
+  }
+
+  void _showLoadingDialog(String message) {
+    if (_loadingDialogOpen) return;
+    _loadingDialogOpen = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => DialogLoadingNetwork(titel: message),
+    ).then((_) {
+      // Only reset if _closeLoadingDialog() wasn't already called.
+      // Guards against the race where a first dialog's dismiss animation
+      // finishes after a second dialog has already been opened.
+      if (_loadingDialogOpen && mounted) {
+        setState(() => _loadingDialogOpen = false);
+      }
+    });
+  }
+
+  void _closeLoadingDialog() {
+    if (!_loadingDialogOpen || !mounted) return;
+    // Use setState so the flag is committed before any pending .then() fires.
+    setState(() => _loadingDialogOpen = false);
+    Navigator.of(context, rootNavigator: true).pop();
   }
 
   @override
@@ -131,14 +148,7 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
               final bloc = context.read<BusManifiestoBloc>();
               final state = bloc.state;
               if (state is BusManifiestoLoaded) {
-                _initialLoadDialogOpen = true;
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => const DialogLoadingNetwork(
-                    titel: 'Cargando manifiesto de bus...',
-                  ),
-                ).then((_) => _initialLoadDialogOpen = false);
+                _showLoadingDialog('Cargando manifiesto de bus...');
                 bloc.add(LoadBusManifiesto(state.manifiesto.tour.id));
               }
             },
@@ -148,39 +158,14 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
       body: BlocConsumer<BusManifiestoBloc, BusManifiestoState>(
         listener: (context, state) {
           if (state is BusManifiestoLoaded || state is BusManifiestoError) {
-            if (_initialLoadDialogOpen) {
-              _initialLoadDialogOpen = false;
-              Navigator.of(context, rootNavigator: true).pop();
-            }
-            // Cerrar diálogo de auto-asignar si estaba abierto
-            if (_loadingDialogOpen) {
-              _loadingDialogOpen = false;
-              Navigator.of(context, rootNavigator: true).pop();
-            }
+            _closeLoadingDialog();
           }
           if (state is BusManifiestoAsignando) {
-            _loadingDialogOpen = true;
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => const DialogLoadingNetwork(
-                titel: 'Asignando asientos...',
-              ),
-            ).then((_) => _loadingDialogOpen = false);
+            _showLoadingDialog('Asignando asientos...');
           } else if (state is BusManifiestoOperando) {
-            _loadingDialogOpen = true;
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => const DialogLoadingNetwork(
-                titel: 'Procesando operación...',
-              ),
-            ).then((_) => _loadingDialogOpen = false);
+            _showLoadingDialog('Procesando operación...');
           } else if (state is BusManifiestoOperacionExito) {
-            if (_loadingDialogOpen) {
-              _loadingDialogOpen = false;
-              Navigator.of(context, rootNavigator: true).pop();
-            }
+            _closeLoadingDialog();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Row(
@@ -195,10 +180,7 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
               ),
             );
           } else if (state is BusManifiestoOperacionError) {
-            if (_loadingDialogOpen) {
-              _loadingDialogOpen = false;
-              Navigator.of(context, rootNavigator: true).pop();
-            }
+            _closeLoadingDialog();
             showDialog(
               context: context,
               builder: (_) => AlertDialog(
@@ -376,16 +358,18 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
             children: sinAsientos.map((r) {
               final nombre = r.responsable?.nombre ?? r.idReserva;
               final sinBus = r.busLayoutId == null;
+              final sinAsientoCount =
+                  r.integrantes.where((i) => !i.ocupaAsiento).length;
+              final label = sinAsientoCount > 0
+                  ? '$nombre (${r.totalPersonas}p · $sinAsientoCount sin asiento)'
+                  : '$nombre (${r.totalPersonas}p)';
               return Chip(
                 avatar: Icon(
                   sinBus ? Icons.directions_bus_outlined : Icons.event_seat_outlined,
                   size: 14,
                   color: sinBus ? Colors.red : const Color(0xFF92400E),
                 ),
-                label: Text(
-                  '$nombre (${r.totalPersonas}p)',
-                  style: const TextStyle(fontSize: 11),
-                ),
+                label: Text(label, style: const TextStyle(fontSize: 11)),
                 backgroundColor: sinBus
                     ? const Color(0xFFFFE4E6)
                     : const Color(0xFFFEF3C7),
@@ -920,20 +904,13 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
     if (state is BusManifiestoOperando) manifiesto = state.manifiesto;
     if (manifiesto == null) return;
 
-    bool dialogOpen = true;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      useRootNavigator: true,
-      builder: (_) => const DialogLoadingNetwork(titel: 'Generando PDF...'),
-    ).then((_) => dialogOpen = false);
+    _showLoadingDialog('Generando PDF...');
+    // Yield so the dialog renders before PDF generation begins
+    await Future.delayed(Duration.zero);
 
     try {
       final bytes = await BusManifestoPdfGenerator.generate(manifiesto);
-      if (context.mounted && dialogOpen) {
-        dialogOpen = false;
-        Navigator.of(context, rootNavigator: true).pop();
-      }
+      _closeLoadingDialog();
       if (!context.mounted) return;
 
       final dateStr = DateFormat('dd-MM-yyyy').format(DateTime.now());
@@ -944,9 +921,7 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
 
       await _showPdfDialog(context, Uint8List.fromList(bytes), filename);
     } catch (e) {
-      if (context.mounted && dialogOpen) {
-        Navigator.of(context, rootNavigator: true).pop();
-      }
+      _closeLoadingDialog();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1663,6 +1638,7 @@ class _PersonaTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (persona == null) return const SizedBox.shrink();
+    final sinAsiento = !persona!.ocupaAsiento;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -1674,12 +1650,45 @@ class _PersonaTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '${persona!.nombre} · $label',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${persona!.nombre} · $label',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    if (sinAsiento)
+                      Container(
+                        margin: const EdgeInsets.only(left: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFFCBD5E1)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.airline_seat_recline_normal_rounded,
+                                size: 10, color: Color(0xFF64748B)),
+                            SizedBox(width: 3),
+                            Text(
+                              'Sin asiento',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
                 if (persona!.documento != null)
                   Text(
