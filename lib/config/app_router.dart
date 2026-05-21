@@ -55,6 +55,9 @@ import '../features/clientes/domain/entities/cliente.dart';
 import '../features/hoteles/presentation/screens/hotel_list_screen.dart';
 import '../features/hoteles/presentation/screens/hotel_form_screen.dart';
 import '../features/hoteles/domain/entities/hotel.dart';
+import '../features/proveedores/presentation/screens/proveedor_list_screen.dart';
+import '../features/proveedores/presentation/screens/proveedor_form_screen.dart';
+import '../features/proveedores/domain/entities/proveedor.dart';
 import '../features/bus_layouts/presentation/screens/bus_layout_list_screen.dart';
 import '../features/bus_layouts/presentation/screens/bus_layout_form_screen.dart';
 import '../features/bus_layouts/domain/entities/bus_layout.dart';
@@ -122,6 +125,9 @@ class AppRouter {
   static const String hoteles = '/hoteles';
   static const String hotelCreate = '/hoteles/create';
   static const String hotelEdit = '/hoteles/edit';
+  static const String proveedores = '/proveedores';
+  static const String proveedorCreate = '/proveedores/create';
+  static const String proveedorEdit = '/proveedores/edit';
   static const String busLayouts = '/bus-layouts';
   static const String busLayoutCreate = '/bus-layouts/create';
   static const String busLayoutEdit = '/bus-layouts/edit';
@@ -192,6 +198,8 @@ class AppRouter {
         return _fadeRoute(const ClienteListScreen(), settings);
       case hoteles:
         return _fadeRoute(const HotelListScreen(), settings);
+      case proveedores:
+        return _fadeRoute(const ProveedorListScreen(), settings);
       case busLayouts:
         return _fadeRoute(const BusLayoutListScreen(), settings);
       case saldosPendientes:
@@ -318,6 +326,11 @@ class AppRouter {
       case hotelEdit:
         final hotel = settings.arguments as Hotel;
         return _fadeRoute(HotelFormScreen(hotel: hotel), settings);
+      case proveedorCreate:
+        return _fadeRoute(const ProveedorFormScreen(), settings);
+      case proveedorEdit:
+        final proveedor = settings.arguments as Proveedor;
+        return _fadeRoute(ProveedorFormScreen(proveedor: proveedor), settings);
       case busLayoutCreate:
         return _fadeRoute(const BusLayoutFormScreen(), settings);
       case busLayoutEdit:

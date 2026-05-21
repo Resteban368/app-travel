@@ -19,6 +19,11 @@ class PagoRealizado extends Equatable {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final int? conversationId;
+  final String entidadTipo;
+  final String? clienteNombre;
+  final String? clienteIdentificacion;
+  final String? concepto;
+  final int? proveedorId;
 
   const PagoRealizado({
     required this.id,
@@ -38,6 +43,11 @@ class PagoRealizado extends Equatable {
     this.createdAt,
     this.updatedAt,
     this.conversationId,
+    this.entidadTipo = 'reserva',
+    this.clienteNombre,
+    this.clienteIdentificacion,
+    this.concepto,
+    this.proveedorId,
   });
 
   PagoRealizado copyWith({
@@ -58,6 +68,11 @@ class PagoRealizado extends Equatable {
     DateTime? createdAt,
     DateTime? updatedAt,
     int? conversationId,
+    String? entidadTipo,
+    String? clienteNombre,
+    String? clienteIdentificacion,
+    String? concepto,
+    int? proveedorId,
   }) {
     return PagoRealizado(
       id: id ?? this.id,
@@ -77,6 +92,11 @@ class PagoRealizado extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       conversationId: conversationId ?? this.conversationId,
+      entidadTipo: entidadTipo ?? this.entidadTipo,
+      clienteNombre: clienteNombre ?? this.clienteNombre,
+      clienteIdentificacion: clienteIdentificacion ?? this.clienteIdentificacion,
+      concepto: concepto ?? this.concepto,
+      proveedorId: proveedorId ?? this.proveedorId,
     );
   }
 
@@ -99,5 +119,10 @@ class PagoRealizado extends Equatable {
     createdAt,
     updatedAt,
     conversationId,
+    entidadTipo,
+    clienteNombre,
+    clienteIdentificacion,
+    concepto,
+    proveedorId,
   ];
 }

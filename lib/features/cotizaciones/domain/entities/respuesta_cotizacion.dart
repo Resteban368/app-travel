@@ -76,6 +76,22 @@ class AdicionalViaje {
   });
 }
 
+class VistaRespuesta {
+  final int id;
+  final int respuestaId;
+  final String ip;
+  final String userAgent;
+  final DateTime createdAt;
+
+  const VistaRespuesta({
+    required this.id,
+    required this.respuestaId,
+    required this.ip,
+    required this.userAgent,
+    required this.createdAt,
+  });
+}
+
 class RespuestaCotizacion {
   final int? id;
   final int? cotizacionId;
@@ -93,12 +109,17 @@ class RespuestaCotizacion {
   final String? nombreCliente;
   final String? telefonoCliente;
 
-  //creado_por_id
   final int? creadoPorId;
-  //creado_por_nombre
   final String? creadoPorNombre;
   final bool anclada;
   final bool esPublica;
+
+  // Estadísticas de vistas
+  final int? totalVistas;
+  final double? precioTotal;
+  final DateTime? primeraVista;
+  final DateTime? ultimaVista;
+  final List<VistaRespuesta> vistas;
 
   const RespuestaCotizacion({
     this.id,
@@ -119,6 +140,11 @@ class RespuestaCotizacion {
     this.creadoPorNombre,
     this.anclada = false,
     this.esPublica = false,
+    this.totalVistas,
+    this.precioTotal,
+    this.primeraVista,
+    this.ultimaVista,
+    this.vistas = const [],
   });
 
   RespuestaCotizacion copyWith({
@@ -127,6 +153,11 @@ class RespuestaCotizacion {
     bool? anclada,
     bool? esPublica,
     bool clearCotizacionId = false,
+    List<VistaRespuesta>? vistas,
+    int? totalVistas,
+    double? precioTotal,
+    DateTime? primeraVista,
+    DateTime? ultimaVista,
   }) {
     return RespuestaCotizacion(
       id: id ?? this.id,
@@ -147,6 +178,11 @@ class RespuestaCotizacion {
       creadoPorNombre: creadoPorNombre,
       anclada: anclada ?? this.anclada,
       esPublica: esPublica ?? this.esPublica,
+      totalVistas: totalVistas ?? this.totalVistas,
+      precioTotal: precioTotal ?? this.precioTotal,
+      primeraVista: primeraVista ?? this.primeraVista,
+      ultimaVista: ultimaVista ?? this.ultimaVista,
+      vistas: vistas ?? this.vistas,
     );
   }
 }

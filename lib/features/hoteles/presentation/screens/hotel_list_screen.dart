@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
-import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/hotel.dart';
 import '../bloc/hotel_bloc.dart';
 import '../bloc/hotel_event.dart';
@@ -37,11 +36,6 @@ class _HotelListBodyState extends State<_HotelListBody> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthBloc>().state;
-    final canWrite = authState is AuthAuthenticated
-        ? authState.user.canWrite('hoteles')
-        : false;
-
     return BlocConsumer<HotelBloc, HotelState>(
       listener: (context, state) {
         if (state is HotelError) {
@@ -82,7 +76,7 @@ class _HotelListBodyState extends State<_HotelListBody> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                  child: _HotelHeader(canWrite: canWrite),
+                  child: const _HotelHeader(),
                 ),
               ),
               SliverToBoxAdapter(
@@ -143,10 +137,7 @@ class _HotelListBodyState extends State<_HotelListBody> {
                     delegate: SliverChildBuilderDelegate(
                       (context, index) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
-                        child: _HotelCard(
-                          hotel: filtered[index],
-                          canWrite: canWrite,
-                        ),
+                        child: _HotelCard(hotel: filtered[index]),
                       ),
                       childCount: filtered.length,
                     ),
@@ -163,8 +154,7 @@ class _HotelListBodyState extends State<_HotelListBody> {
 // ── Header ────────────────────────────────────────────────────────────────────
 
 class _HotelHeader extends StatelessWidget {
-  final bool canWrite;
-  const _HotelHeader({required this.canWrite});
+  const _HotelHeader();
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +194,6 @@ class _HotelHeader extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              if (canWrite)
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -269,7 +258,6 @@ class _HotelHeader extends StatelessWidget {
                 ],
               ),
             ),
-            if (canWrite)
               ElevatedButton.icon(
                 onPressed: () =>
                     Navigator.pushNamed(context, AppRouter.hotelCreate),
@@ -297,8 +285,7 @@ class _HotelHeader extends StatelessWidget {
 
 class _HotelCard extends StatefulWidget {
   final Hotel hotel;
-  final bool canWrite;
-  const _HotelCard({required this.hotel, required this.canWrite});
+  const _HotelCard({required this.hotel});
 
   @override
   State<_HotelCard> createState() => _HotelCardState();
@@ -475,9 +462,8 @@ class _HotelCardState extends State<_HotelCard> {
               ),
               const SizedBox(width: 12),
               SaasStatusBadge(active: hotel.isActive),
-              if (widget.canWrite) ...[
-                const SizedBox(width: 8),
-                PopupMenuButton<String>(
+              const SizedBox(width: 8),
+              PopupMenuButton<String>(
                   icon: const Icon(
                     Icons.more_vert_rounded,
                     color: SaasPalette.textTertiary,
@@ -535,7 +521,6 @@ class _HotelCardState extends State<_HotelCard> {
                     ),
                   ],
                 ),
-              ],
             ],
           ),
         ),

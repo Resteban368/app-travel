@@ -4,6 +4,7 @@ import 'dart:typed_data';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
+import 'package:agente_viajes/core/widgets/saas_ui_components.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:agente_viajes/core/theme/saas_palette.dart';
@@ -32,6 +33,10 @@ import '../../../reservas/domain/entities/reserva.dart';
 import '../../../reservas/domain/entities/integrante.dart';
 import '../../../clientes/domain/entities/cliente.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../proveedores/presentation/bloc/proveedor_bloc.dart';
+import '../../../proveedores/presentation/bloc/proveedor_event.dart';
+import '../../../proveedores/presentation/bloc/proveedor_state.dart';
+import '../../../proveedores/domain/entities/proveedor.dart';
 
 class PagoRealizadoFormScreen extends StatefulWidget {
   final PagoRealizado? pago;
@@ -48,19 +53,23 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   late final TextEditingController _chatIdCtrl;
   String _countryCode = '+57';
   late final TextEditingController _montoCtrl;
-  late final TextEditingController _proveedorCtrl;
-  late final TextEditingController _nitCtrl;
-  late final TextEditingController _metodoPagoCtrl;
+  String _metodoPago = 'transferencia';
   late final TextEditingController _referenciaCtrl;
+  late final TextEditingController _clienteNombreCtrl;
+  late final TextEditingController _clienteIdentificacionCtrl;
+  late final TextEditingController _conceptoCtrl;
+  int? _selectedProveedorId;
   late final TextEditingController _fechaDocumentoCtrl;
   late final TextEditingController _urlImagenCtrl;
   DateTime? _fechaDocumento;
   String _tipoDocumento = 'Factura';
+  String _entidadTipo = 'reserva';
   late bool _isValidated;
   bool _wasWhatsappSent = false;
   bool _waitingForUploadToSave = false;
   bool _showingLoadingDialog = false;
   bool _isResetting = false;
+  bool _isDeleting = false;
   // Imagen pendiente (seleccionada pero aún no subida)
   Uint8List? _pendingImageBytes;
   String? _pendingImageMimeType;
@@ -89,16 +98,19 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     _countryCode = parsedPhone.$1;
     _chatIdCtrl = TextEditingController(text: parsedPhone.$2);
     _montoCtrl = TextEditingController(text: p?.monto.toString() ?? '');
-    _proveedorCtrl = TextEditingController(text: p?.proveedorComercio ?? '');
-    _nitCtrl = TextEditingController(text: p?.nit ?? '');
-    _metodoPagoCtrl = TextEditingController(text: p?.metodoPago ?? '');
+    _metodoPago = (p?.metodoPago != null && p!.metodoPago.isNotEmpty) ? p.metodoPago : 'transferencia';
     _referenciaCtrl = TextEditingController(text: p?.referencia ?? '');
+    _clienteNombreCtrl = TextEditingController(text: p?.clienteNombre ?? '');
+    _clienteIdentificacionCtrl = TextEditingController(text: p?.clienteIdentificacion ?? '');
+    _conceptoCtrl = TextEditingController(text: p?.concepto ?? '');
+    _selectedProveedorId = p?.proveedorId;
     _fechaDocumentoCtrl = TextEditingController(text: p?.fechaDocumento ?? '');
     _fechaDocumento = p?.fechaDocumento != null && p!.fechaDocumento.isNotEmpty
         ? DateTime.tryParse(p.fechaDocumento)
         : null;
     _urlImagenCtrl = TextEditingController(text: p?.urlImagen ?? '');
     _tipoDocumento = p?.tipoDocumento ?? 'Factura';
+    _entidadTipo = p?.entidadTipo ?? 'reserva';
     _isValidated = p?.isValidated ?? false;
     // _isValidated solo se usa al crear un pago nuevo o al guardar cambios de detalle.
     _selectedReservaId = p?.reservaId;
@@ -113,6 +125,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         );
       }
       context.read<ReservaBloc>().add(const LoadReservas(limit: 20));
+      context.read<ProveedorBloc>().add(const LoadProveedores());
     });
 
     _entryCtrl = AnimationController(
@@ -139,10 +152,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     _entryCtrl.dispose();
     _chatIdCtrl.dispose();
     _montoCtrl.dispose();
-    _proveedorCtrl.dispose();
-    _nitCtrl.dispose();
-    _metodoPagoCtrl.dispose();
     _referenciaCtrl.dispose();
+    _clienteNombreCtrl.dispose();
+    _clienteIdentificacionCtrl.dispose();
+    _conceptoCtrl.dispose();
     _fechaDocumentoCtrl.dispose();
     _urlImagenCtrl.dispose();
     _reservaSearchCtrl.dispose();
@@ -151,44 +164,29 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   }
 
   void _save(BuildContext context) {
-    //VALIDAMOS QUE EL PAGO TENGA UNA RESERVA VINCULADA
-    if (_selectedReservaId == null) {
+    if (_entidadTipo == 'reserva' && _selectedReservaId == null) {
       SaasSnackBar.showWarning(context, 'Debes seleccionar una reserva');
       return;
     }
-
-    if (_chatIdCtrl.text.trim().isEmpty) {
+    if (_entidadTipo == 'reserva' && _chatIdCtrl.text.trim().isEmpty) {
       SaasSnackBar.showWarning(context, 'El número de WhatsApp es requerido');
       return;
     }
-    //VALIDAMOS QUE TENGA EL COMERCIO
-    if (_proveedorCtrl.text.trim().isEmpty) {
-      SaasSnackBar.showWarning(context, 'El comercio es requerido');
-      return;
-    }
-    //VALIDAMOS QUE TENGA EL MONTO
     if (_montoCtrl.text.trim().isEmpty) {
       SaasSnackBar.showWarning(context, 'El monto es requerido');
       return;
     }
-
-    //REFERENCIA
-    if (_referenciaCtrl.text.trim().isEmpty) {
+    if (_metodoPago != 'efectivo' && _referenciaCtrl.text.trim().isEmpty) {
       SaasSnackBar.showWarning(context, 'La referencia es requerida');
       return;
     }
-    //FECHA DOCUMENTO
     if (_fechaDocumento == null) {
       SaasSnackBar.showWarning(context, 'La fecha del documento es requerida');
       return;
     }
-    //METODO DE PAGO
-    if (_metodoPagoCtrl.text.trim().isEmpty) {
-      SaasSnackBar.showWarning(context, 'El metodo de pago es requerido');
-      return;
-    }
-
     if (_isValidated &&
+        _entidadTipo == 'reserva' &&
+        widget.pago?.conversationId != null &&
         (!_isEditing || !(widget.pago?.isValidated ?? false)) &&
         !_wasWhatsappSent) {
       _showWhatsAppConfirmation();
@@ -332,20 +330,31 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   void _executeSave() {
     final pago = PagoRealizado(
       id: _isEditing ? widget.pago!.id : 0,
-      chatId: _fullChatId,
+      chatId: _entidadTipo == 'reserva' ? _fullChatId : '',
       tipoDocumento: _tipoDocumento,
       monto: double.tryParse(_montoCtrl.text) ?? 0.0,
-      proveedorComercio: _proveedorCtrl.text.trim(),
-      nit: _nitCtrl.text.trim(),
-      metodoPago: _metodoPagoCtrl.text.trim(),
+      proveedorComercio: '',
+      nit: '',
+      metodoPago: _metodoPago,
       referencia: _referenciaCtrl.text.trim(),
       fechaDocumento: _fechaDocumento != null
           ? DateFormat('yyyy-MM-dd').format(_fechaDocumento!)
           : '',
       isValidated: _isValidated,
       urlImagen: _urlImagenCtrl.text.trim(),
-      reservaId: _selectedReservaId,
+      reservaId: _entidadTipo == 'reserva' ? _selectedReservaId : null,
       createdAt: _isEditing ? widget.pago!.createdAt : DateTime.now(),
+      entidadTipo: _entidadTipo,
+      clienteNombre: _clienteNombreCtrl.text.trim().isEmpty
+          ? null
+          : _clienteNombreCtrl.text.trim(),
+      clienteIdentificacion: _clienteIdentificacionCtrl.text.trim().isEmpty
+          ? null
+          : _clienteIdentificacionCtrl.text.trim(),
+      concepto: _conceptoCtrl.text.trim().isEmpty
+          ? null
+          : _conceptoCtrl.text.trim(),
+      proveedorId: _selectedProveedorId,
     );
     if (_isEditing) {
       context.read<PagoRealizadoBloc>().add(UpdatePago(pago));
@@ -433,13 +442,16 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               _closeLoadingDialog();
               SaasSnackBar.showSuccess(
                 context,
-                _isResetting
-                    ? 'Pago reseteado exitosamente'
-                    : (_wasWhatsappSent
-                          ? 'Validado y Notificado'
-                          : 'Pago procesado'),
+                _isDeleting
+                    ? 'Pago eliminado exitosamente'
+                    : _isResetting
+                        ? 'Pago reseteado exitosamente'
+                        : (_wasWhatsappSent
+                              ? 'Validado y Notificado'
+                              : 'Pago procesado'),
               );
               _wasWhatsappSent = false;
+              _isDeleting = false;
 
               if (_isResetting) {
                 _isResetting = false;
@@ -511,72 +523,116 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                                     const SizedBox(height: 24),
 
                                   PremiumSectionCard(
-                                    title: 'INFORMACIÓN DEL PAGO',
+                                    title: 'TIPO DE PAGO',
                                     icon: Icons.receipt_long_rounded,
                                     children: [
-                                      _buildReservaSelector(canWrite: canWrite),
-                                      const SizedBox(height: 20),
-                                      PhoneFormField(
-                                        controller: _chatIdCtrl,
-                                        countryCode: _countryCode,
-                                        onCountryCodeChanged: (v) =>
-                                            setState(() => _countryCode = v),
-                                        label: 'Chat - WhatsApp *',
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      _buildTypeDropdown(canWrite: canWrite),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _proveedorCtrl,
-                                        label: 'Comercio / Proveedor *',
-                                        icon: Icons.store_rounded,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _nitCtrl,
-                                        label: 'NIT / ID Fiscal (opcional)',
-                                        icon: Icons.badge_outlined,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
+                                      _buildEntidadTipoDropdown(canWrite: canWrite),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // ── Campos específicos por tipo ──────────
+                                  if (_entidadTipo == 'reserva')
+                                    PremiumSectionCard(
+                                      title: 'DATOS DE LA RESERVA',
+                                      icon: Icons.airplane_ticket_rounded,
+                                      children: [
+                                        _buildReservaSelector(canWrite: canWrite),
+                                        const SizedBox(height: 20),
+                                        PhoneFormField(
+                                          controller: _chatIdCtrl,
+                                          countryCode: _countryCode,
+                                          onCountryCodeChanged: (v) =>
+                                              setState(() => _countryCode = v),
+                                          label: 'WhatsApp del cliente *',
+                                          readOnly: !canWrite,
+                                        ),
+                                      ],
+                                    ),
+
+                                  if (_entidadTipo == 'servicio')
+                                    PremiumSectionCard(
+                                      title: 'DATOS DEL SERVICIO',
+                                      icon: Icons.room_service_rounded,
+                                      children: [
+                                        PremiumTextField(
+                                          controller: _conceptoCtrl,
+                                          label: 'Concepto del servicio',
+                                          icon: Icons.description_rounded,
+                                          readOnly: !canWrite,
+                                        ),
+                                        const SizedBox(height: 20),
+                                        PremiumTextField(
+                                          controller: _clienteNombreCtrl,
+                                          label: 'Nombre del cliente',
+                                          icon: Icons.person_rounded,
+                                          readOnly: !canWrite,
+                                        ),
+                                        const SizedBox(height: 20),
+                                        PremiumTextField(
+                                          controller: _clienteIdentificacionCtrl,
+                                          label: 'Identificación del cliente',
+                                          icon: Icons.badge_rounded,
+                                          readOnly: !canWrite,
+                                        ),
+                                      ],
+                                    ),
+
+                                  if (_entidadTipo == 'proveedor')
+                                    PremiumSectionCard(
+                                      title: 'DATOS DEL PROVEEDOR',
+                                      icon: Icons.store_rounded,
+                                      children: [
+                                        _buildProveedorSelector(canWrite: canWrite),
+                                        const SizedBox(height: 20),
+                                        PremiumTextField(
+                                          controller: _conceptoCtrl,
+                                          label: 'Concepto / descripción',
+                                          icon: Icons.description_rounded,
+                                          readOnly: !canWrite,
+                                        ),
+                                      ],
+                                    ),
+
+                                  const SizedBox(height: 16),
+
+                                  // ── Documento común ──────────────────────
+                                  PremiumSectionCard(
+                                    title: 'DOCUMENTO Y MONTO',
+                                    icon: Icons.attach_money_rounded,
+                                    children: [
                                       PremiumTextField(
                                         controller: _montoCtrl,
-                                        label: 'Monto Recibido *',
+                                        label: 'Monto *',
                                         icon: Icons.attach_money_rounded,
                                         isNumeric: true,
                                         readOnly: !canWrite,
                                       ),
                                       const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _metodoPagoCtrl,
-                                        label: 'Método de Pago *',
-                                        icon: Icons
-                                            .account_balance_wallet_outlined,
-                                        readOnly: !canWrite,
-                                      ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _referenciaCtrl,
-                                        label: 'No. Referencia *',
-                                        icon: Icons.tag_rounded,
-                                        readOnly: !canWrite,
-                                      ),
+                                      _buildMetodoPagoDropdown(canWrite: canWrite),
                                       const SizedBox(height: 20),
                                       _buildFechaDocumentoPicker(
                                         canWrite: canWrite,
                                       ),
-                                      const SizedBox(height: 20),
-                                      PremiumTextField(
-                                        controller: _urlImagenCtrl,
-                                        label: 'URL del Comprobante',
-                                        icon: Icons.link_rounded,
-                                        readOnly: !canWrite,
-                                      ),
-                                      if (canWrite && kIsWeb) ...[
-                                        const SizedBox(height: 8),
-                                        _buildUploadBtn(),
+                                      if (_metodoPago != 'efectivo') ...[
+                                        const SizedBox(height: 20),
+                                        PremiumTextField(
+                                          controller: _referenciaCtrl,
+                                          label: 'No. Referencia *',
+                                          icon: Icons.tag_rounded,
+                                          readOnly: !canWrite,
+                                        ),
+                                        const SizedBox(height: 20),
+                                        PremiumTextField(
+                                          controller: _urlImagenCtrl,
+                                          label: 'URL del Comprobante',
+                                          icon: Icons.link_rounded,
+                                          readOnly: !canWrite,
+                                        ),
+                                        if (canWrite && kIsWeb) ...[
+                                          const SizedBox(height: 8),
+                                          _buildUploadBtn(),
+                                        ],
                                       ],
                                     ],
                                   ),
@@ -613,6 +669,51 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                                             },
                                           ),
                                     ),
+                                  if (_isEditing) ...[
+                                    const SizedBox(height: 16),
+                                    BlocBuilder<PagoRealizadoBloc,
+                                        PagoRealizadoState>(
+                                      builder: (context, state) {
+                                        return SizedBox(
+                                          width: double.infinity,
+                                          child: OutlinedButton.icon(
+                                            onPressed: state
+                                                    is PagoRealizadoSaving
+                                                ? null
+                                                : _confirmDelete,
+                                            icon: const Icon(
+                                              Icons.delete_outline_rounded,
+                                              size: 18,
+                                              color: SaasPalette.danger,
+                                            ),
+                                            label: const Text(
+                                              'ELIMINAR PAGO',
+                                              style: TextStyle(
+                                                color: SaasPalette.danger,
+                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor:
+                                                  SaasPalette.danger,
+                                              side: const BorderSide(
+                                                color: SaasPalette.danger,
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                vertical: 14,
+                                              ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(14),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
                                   const SizedBox(height: 100),
                                 ],
                               ),
@@ -1000,14 +1101,19 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     );
   }
 
-  Widget _buildTypeDropdown({required bool canWrite}) {
-    final docTypes = ['Factura', 'Recibo', 'Transferencia', 'Ticket', 'Otro'];
-    if (!docTypes.contains(_tipoDocumento)) docTypes.add(_tipoDocumento);
+  static const _kMetodosPago = [
+    ('transferencia', 'Transferencia', Icons.swap_horiz_rounded),
+    ('consignacion', 'Consignación', Icons.account_balance_rounded),
+    ('cuenta_ahorro', 'Cuenta de ahorro', Icons.savings_rounded),
+    ('efectivo', 'Efectivo', Icons.payments_rounded),
+  ];
+
+  Widget _buildMetodoPagoDropdown({required bool canWrite}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'TIPO DOCUMENTO *',
+          'MÉTODO DE PAGO *',
           style: TextStyle(
             color: SaasPalette.textSecondary,
             fontSize: 12,
@@ -1017,46 +1123,300 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          initialValue: _tipoDocumento,
+          value: _metodosPagoValues.contains(_metodoPago) ? _metodoPago : 'transferencia',
           dropdownColor: SaasPalette.bgCanvas,
           isExpanded: true,
           style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
           decoration: InputDecoration(
             filled: true,
             fillColor: SaasPalette.bgCanvas,
-            prefixIcon: const Icon(
-              Icons.description_rounded,
-              color: SaasPalette.brand600,
-              size: 18,
-            ),
-            hintStyle: const TextStyle(color: SaasPalette.textTertiary),
+            
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: const BorderSide(color: SaasPalette.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                color: SaasPalette.brand600,
-                width: 1.5,
+              borderSide: const BorderSide(color: SaasPalette.brand600, width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+          items: _kMetodosPago
+              .map((m) => DropdownMenuItem(
+                    value: m.$1,
+                    child: Row(
+                      children: [
+                        Icon(m.$3, size: 16, color: SaasPalette.brand600),
+                        const SizedBox(width: 10),
+                        Text(m.$2),
+                      ],
+                    ),
+                  ))
+              .toList(),
+          onChanged: canWrite ? (v) => setState(() => _metodoPago = v!) : null,
+        ),
+      ],
+    );
+  }
+
+  static List<String> get _metodosPagoValues =>
+      _kMetodosPago.map((m) => m.$1).toList();
+
+  Widget _buildProveedorSelector({required bool canWrite}) {
+    return BlocBuilder<ProveedorBloc, ProveedorState>(
+      builder: (context, state) {
+        final isLoading = state is ProveedorLoading;
+        List<Proveedor> proveedores = [];
+        if (state is ProveedorLoaded) proveedores = state.proveedores;
+
+        Proveedor? selected;
+        if (_selectedProveedorId != null && proveedores.isNotEmpty) {
+          try {
+            selected = proveedores.firstWhere((p) => p.id == _selectedProveedorId);
+          } catch (_) {}
+        }
+
+        Future<void> openPicker() async {
+          final result = await showDialog<Proveedor>(
+            context: context,
+            builder: (_) => const _ProveedorPickerDialog(),
+          );
+          if (result != null) {
+            setState(() => _selectedProveedorId = result.id);
+          }
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'PROVEEDOR *',
+              style: TextStyle(
+                color: SaasPalette.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
               ),
             ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
-          ),
-          items: docTypes
-              .map(
-                (t) => DropdownMenuItem(
-                  value: t,
-                  child: Text(t, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 8),
+            if (_selectedProveedorId != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: SaasPalette.brand50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: SaasPalette.brand600.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: SaasPalette.brand600.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.store_rounded,
+                        color: SaasPalette.brand600,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            selected?.nombre ?? 'Proveedor #$_selectedProveedorId',
+                            style: const TextStyle(
+                              color: SaasPalette.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (selected != null)
+                            Text(
+                              '${selected.tipo.toUpperCase()}${selected.nit != null ? ' · ${selected.nit}' : ''}',
+                              style: const TextStyle(
+                                color: SaasPalette.brand600,
+                                fontSize: 11,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (canWrite) ...[
+                      const SizedBox(width: 8),
+                      TextButton(
+                        onPressed: openPicker,
+                        style: TextButton.styleFrom(
+                          foregroundColor: SaasPalette.brand600,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4,
+                          ),
+                        ),
+                        child: const Text(
+                          'Cambiar',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => setState(() => _selectedProveedorId = null),
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: SaasPalette.textTertiary,
+                          size: 16,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ],
                 ),
               )
-              .toList(),
-          onChanged: canWrite
-              ? (v) => setState(() => _tipoDocumento = v!)
-              : null,
+            else
+              InkWell(
+                onTap: (isLoading || !canWrite) ? null : openPicker,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: SaasPalette.bgCanvas,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: SaasPalette.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.search_rounded,
+                        color: SaasPalette.textTertiary,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Buscar y seleccionar proveedor...',
+                          style: TextStyle(
+                            color: SaasPalette.textTertiary,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      if (isLoading)
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: SaasPalette.brand600,
+                          ),
+                        )
+                      else
+                        const Icon(
+                          Icons.unfold_more_rounded,
+                          color: SaasPalette.textTertiary,
+                          size: 18,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildEntidadTipoDropdown({required bool canWrite}) {
+    const options = [
+      ('reserva', 'Reserva', Icons.airplane_ticket_rounded),
+      ('proveedor', 'Proveedor', Icons.store_rounded),
+      ('servicio', 'Servicio', Icons.room_service_rounded),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'TIPO DE PAGO *',
+          style: TextStyle(
+            color: SaasPalette.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: options.map((opt) {
+            final (value, label, icon) = opt;
+            final selected = _entidadTipo == value;
+            return Expanded(
+              child: GestureDetector(
+                onTap: canWrite
+                    ? () => setState(() {
+                          _entidadTipo = value;
+                          if (value != 'reserva') {
+                            _selectedReservaId = null;
+                            _reservaSearchCtrl.clear();
+                          }
+                        })
+                    : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  margin: EdgeInsets.only(
+                    right: value != 'servicio' ? 8 : 0,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? SaasPalette.brand600
+                        : SaasPalette.bgSubtle,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: selected
+                          ? SaasPalette.brand600
+                          : SaasPalette.border,
+                      width: selected ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        icon,
+                        size: 20,
+                        color: selected
+                            ? Colors.white
+                            : SaasPalette.textSecondary,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          color: selected
+                              ? Colors.white
+                              : SaasPalette.textSecondary,
+                          fontSize: 12,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
@@ -1276,6 +1636,26 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       _isValidated = true;
     });
     _save(context);
+  }
+
+  void _confirmDelete() {
+    showDialog(
+      context: context,
+      builder: (ctx) => SaasConfirmDialog(
+        title: 'Eliminar Pago',
+        body:
+            '¿Deseas eliminar este pago? Esta acción no se puede deshacer.',
+        confirmLabel: 'Eliminar',
+        onConfirm: () {
+          Navigator.pop(ctx);
+          _isDeleting = true;
+          _showLoadingDialog('Eliminando pago...');
+          context
+              .read<PagoRealizadoBloc>()
+              .add(DeletePago(widget.pago!.id));
+        },
+      ),
+    );
   }
 
   void _showRejectionDialog() {
@@ -1524,15 +1904,6 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
             final tipo = data['tipo_documento'].toString();
             _tipoDocumento = docTypes.contains(tipo) ? tipo : 'Otro';
           }
-          if (data['proveedor_comercio'] != null) {
-            _proveedorCtrl.text = data['proveedor_comercio'].toString();
-          }
-          if (data['nit'] != null) {
-            _nitCtrl.text = data['nit'].toString();
-          }
-          if (data['metodo_pago'] != null) {
-            _metodoPagoCtrl.text = data['metodo_pago'].toString();
-          }
           if (data['referencia'] != null) {
             _referenciaCtrl.text = data['referencia'].toString();
           }
@@ -1700,6 +2071,321 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+// ─── Proveedor Picker Dialog ─────────────────────────────────────────────────
+
+class _ProveedorPickerDialog extends StatefulWidget {
+  const _ProveedorPickerDialog();
+
+  @override
+  State<_ProveedorPickerDialog> createState() => _ProveedorPickerDialogState();
+}
+
+class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
+  final _searchCtrl = TextEditingController();
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl.addListener(_onSearchChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProveedorBloc>().add(const LoadProveedores());
+    });
+  }
+
+  void _onSearchChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      context.read<ProveedorBloc>().add(
+        LoadProveedores(search: _searchCtrl.text.trim()),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  Color _tipoColor(String tipo) {
+    switch (tipo.toLowerCase()) {
+      case 'hotel':
+        return SaasPalette.brand600;
+      case 'aerolinea':
+        return const Color(0xFF6366F1);
+      case 'seguro':
+        return SaasPalette.success;
+      case 'transporte':
+      case 'transfer':
+      case 'alquiler_vehiculo':
+        return const Color(0xFFF59E0B);
+      case 'restaurante':
+        return const Color(0xFFEF4444);
+      case 'agencia':
+      case 'tours_operador':
+        return const Color(0xFF8B5CF6);
+      case 'crucero':
+        return const Color(0xFF0EA5E9);
+      case 'visa':
+      case 'pasaporte':
+        return const Color(0xFF10B981);
+      case 'guia_turismo':
+        return const Color(0xFFF97316);
+      case 'parque_atraccion':
+        return const Color(0xFFEC4899);
+      default:
+        return SaasPalette.textSecondary;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ProveedorBloc, ProveedorState>(
+      builder: (context, state) {
+        List<Proveedor> proveedores = [];
+        final isLoading = state is ProveedorLoading;
+        if (state is ProveedorLoaded) proveedores = state.proveedores;
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 580),
+            decoration: BoxDecoration(
+              color: SaasPalette.bgCanvas,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: SaasPalette.border),
+            ),
+            child: Column(
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [SaasPalette.brand600, SaasPalette.brand900],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.store_rounded, color: Colors.white, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Seleccionar Proveedor',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              isLoading
+                                  ? 'Buscando...'
+                                  : '${proveedores.length} proveedores',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded,
+                            color: Colors.white70, size: 20),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+                // Search
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: TextField(
+                    controller: _searchCtrl,
+                    autofocus: true,
+                    style: const TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 14,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por nombre, tipo o NIT...',
+                      hintStyle: const TextStyle(
+                        color: SaasPalette.textTertiary,
+                        fontSize: 13,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        color: SaasPalette.textTertiary,
+                        size: 18,
+                      ),
+                      suffixIcon: isLoading
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: SaasPalette.brand600,
+                                ),
+                              ),
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: SaasPalette.bgSubtle,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: SaasPalette.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: SaasPalette.brand600),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                // Count
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${proveedores.length} resultado${proveedores.length != 1 ? 's' : ''}',
+                      style: const TextStyle(
+                        color: SaasPalette.textTertiary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ),
+                // List
+                Expanded(
+                  child: (proveedores.isEmpty && !isLoading)
+                      ? const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.store_rounded,
+                                  color: SaasPalette.textTertiary, size: 40),
+                              SizedBox(height: 8),
+                              Text(
+                                'Sin resultados',
+                                style: TextStyle(
+                                  color: SaasPalette.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4,
+                          ),
+                          itemCount: proveedores.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 6),
+                          itemBuilder: (_, index) {
+                            final p = proveedores[index];
+                            final tipoColor = _tipoColor(p.tipo);
+                            return Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(10),
+                                onTap: () => Navigator.pop(context, p),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: SaasPalette.bgSubtle,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: SaasPalette.border),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: tipoColor.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          p.tipo.toUpperCase(),
+                                          style: TextStyle(
+                                            color: tipoColor,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              p.nombre,
+                                              style: const TextStyle(
+                                                color: SaasPalette.textPrimary,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            if (p.nit != null)
+                                              Text(
+                                                'NIT: ${p.nit}',
+                                                style: const TextStyle(
+                                                  color: SaasPalette.textSecondary,
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (p.email != null)
+                                        const Icon(
+                                          Icons.email_rounded,
+                                          size: 14,
+                                          color: SaasPalette.textTertiary,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

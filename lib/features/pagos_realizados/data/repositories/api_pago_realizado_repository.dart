@@ -177,30 +177,59 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
       conversationId: json['conversation_id'] is int
           ? json['conversation_id']
           : int.tryParse(json['conversation_id']?.toString() ?? ''),
+      entidadTipo: json['entidad_tipo']?.toString() ?? 'reserva',
+      clienteNombre: json['cliente_nombre']?.toString(),
+      clienteIdentificacion: json['cliente_identificacion']?.toString(),
+      concepto: json['concepto']?.toString(),
+      proveedorId: json['proveedor_id'] is int
+          ? json['proveedor_id']
+          : int.tryParse(json['proveedor_id']?.toString() ?? ''),
     );
   }
 
   Map<String, dynamic> _toJson(PagoRealizado pago) {
-    final map = <String, dynamic>{
-      'chat_id': pago.chatId,
+    final base = <String, dynamic>{
+      'entidad_tipo': pago.entidadTipo,
       'tipo_documento': pago.tipoDocumento,
       'monto': pago.monto,
-      'proveedor_comercio': pago.proveedorComercio,
-      if (pago.nit.isNotEmpty) 'nit': pago.nit,
       'metodo_pago': pago.metodoPago,
       'referencia': pago.referencia,
       'fecha_documento': pago.fechaDocumento,
+      'url_imagen': pago.urlImagen,
       'is_validated': pago.isValidated,
       'is_rechazado': pago.isRechazado,
-      if (pago.conversationId != null) 'conversation_id': pago.conversationId,
       if (pago.motivoRechazo != null) 'motivo_rechazo': pago.motivoRechazo,
-      'url_imagen': pago.urlImagen,
     };
-    // Only include reserva_id if it's not null — sending null would overwrite
-    // the existing FK value in the DB since the backend treats null as a valid value.
-    if (pago.reservaId != null) {
-      map['reserva_id'] = pago.reservaId;
+
+    switch (pago.entidadTipo) {
+      case 'reserva':
+        return {
+          ...base,
+          if (pago.reservaId != null) 'reserva_id': pago.reservaId,
+          'chat_id': pago.chatId,
+          if (pago.clienteNombre?.isNotEmpty == true)
+            'cliente_nombre': pago.clienteNombre,
+          if (pago.clienteIdentificacion?.isNotEmpty == true)
+            'cliente_identificacion': pago.clienteIdentificacion,
+          if (pago.conversationId != null) 'conversation_id': pago.conversationId,
+        };
+      case 'servicio':
+        return {
+          ...base,
+          if (pago.concepto?.isNotEmpty == true) 'concepto': pago.concepto,
+          if (pago.clienteNombre?.isNotEmpty == true)
+            'cliente_nombre': pago.clienteNombre,
+          if (pago.clienteIdentificacion?.isNotEmpty == true)
+            'cliente_identificacion': pago.clienteIdentificacion,
+        };
+      case 'proveedor':
+        return {
+          ...base,
+          if (pago.proveedorId != null) 'proveedor_id': pago.proveedorId,
+          if (pago.concepto?.isNotEmpty == true) 'concepto': pago.concepto,
+        };
+      default:
+        return base;
     }
-    return map;
   }
 }

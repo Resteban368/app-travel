@@ -15,6 +15,7 @@ import '../../../reservas/domain/entities/reserva.dart';
 import '../../../reservas/domain/repositories/reserva_repository.dart';
 import '../../../reservas/presentation/pdf/reserva_pdf_generator.dart';
 import '../../../service/domain/repositories/service_repository.dart';
+import '../../../pagos_realizados/domain/entities/pago_realizado.dart';
 import '../bloc/historial/cliente_historial_bloc.dart';
 import '../bloc/historial/cliente_historial_event.dart';
 import '../bloc/historial/cliente_historial_state.dart';
@@ -80,6 +81,9 @@ class _ClienteHistorialScreenState extends State<ClienteHistorialScreen> {
                 ...[
                   _buildStats(state.historial),
                   _buildReservas(state.historial.reservas),
+                  if (state.historial.pagos.isNotEmpty)
+                    _buildPagos(state.historial.pagos),
+                  const SliverPadding(padding: EdgeInsets.only(bottom: 40)),
                 ]
               else
                 const SliverToBoxAdapter(child: SizedBox()),
@@ -91,38 +95,14 @@ class _ClienteHistorialScreenState extends State<ClienteHistorialScreen> {
   }
 
   Widget _buildStats(ClienteHistorial historial) {
-    final totalInversion = historial.reservas.fold<double>(0, (sum, r) => sum + (r.valorTotal ?? 0));
-    
+    final currency = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
       sliver: SliverToBoxAdapter(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isMobile = constraints.maxWidth < 500;
-            if (isMobile) {
-              return Column(
-                children: [
-                  Row(children: [
-                    _StatCard(
-                      label: 'Total Viajes',
-                      value: historial.totalViajes.toString(),
-                      icon: Icons.flight_takeoff_rounded,
-                      color: SaasPalette.brand600,
-                    ),
-                  ]),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    _StatCard(
-                      label: 'Inversión Total',
-                      value: NumberFormat.currency(symbol: '\$', decimalDigits: 0).format(totalInversion),
-                      icon: Icons.payments_outlined,
-                      color: SaasPalette.success,
-                    ),
-                  ]),
-                ],
-              );
-            }
-            return Row(
+        child: Column(
+          children: [
+            Row(
               children: [
                 _StatCard(
                   label: 'Total Viajes',
@@ -130,16 +110,36 @@ class _ClienteHistorialScreenState extends State<ClienteHistorialScreen> {
                   icon: Icons.flight_takeoff_rounded,
                   color: SaasPalette.brand600,
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 _StatCard(
-                  label: 'Inversión Total',
-                  value: NumberFormat.currency(symbol: '\$', decimalDigits: 0).format(totalInversion),
-                  icon: Icons.payments_outlined,
-                  color: SaasPalette.success,
+                  label: 'Total Pagos',
+                  value: historial.totalPagos.toString(),
+                  icon: Icons.receipt_long_rounded,
+                  color: const Color(0xFF6366F1),
                 ),
               ],
-            );
-          },
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _StatCard(
+                  label: 'Total Pagado',
+                  value: currency.format(historial.totalPagado),
+                  icon: Icons.payments_rounded,
+                  color: SaasPalette.success,
+                ),
+                const SizedBox(width: 12),
+                _StatCard(
+                  label: 'Saldo Pendiente',
+                  value: currency.format(
+                    historial.reservas.fold<double>(0, (s, r) => s + (r.saldoPendiente ?? 0)),
+                  ),
+                  icon: Icons.pending_actions_rounded,
+                  color: SaasPalette.warning,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -158,11 +158,67 @@ class _ClienteHistorialScreenState extends State<ClienteHistorialScreen> {
     }
 
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
+      padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) => _HistorialCard(reserva: reservas[index]),
           childCount: reservas.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPagos(List<PagoRealizado> pagos) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+      sliver: SliverToBoxAdapter(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.receipt_long_rounded,
+                    color: Color(0xFF6366F1),
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Historial de Pagos',
+                  style: TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${pagos.length}',
+                    style: const TextStyle(
+                      color: Color(0xFF6366F1),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...pagos.map((p) => _PagoHistorialCard(pago: p)),
+          ],
         ),
       ),
     );
@@ -577,5 +633,180 @@ class _HistorialCardState extends State<_HistorialCard> {
         ],
       ),
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PAGO HISTORIAL CARD
+// ─────────────────────────────────────────────────────────────────────────────
+class _PagoHistorialCard extends StatelessWidget {
+  final PagoRealizado pago;
+  const _PagoHistorialCard({required this.pago});
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    final dateStr = pago.fechaDocumento.isNotEmpty
+        ? pago.fechaDocumento
+        : pago.createdAt != null
+            ? DateFormat('yyyy-MM-dd').format(pago.createdAt!)
+            : '';
+
+    Color statusColor;
+    String statusLabel;
+    IconData statusIcon;
+    if (pago.isValidated) {
+      statusColor = SaasPalette.success;
+      statusLabel = 'Validado';
+      statusIcon = Icons.check_circle_rounded;
+    } else if (pago.isRechazado) {
+      statusColor = SaasPalette.danger;
+      statusLabel = 'Rechazado';
+      statusIcon = Icons.cancel_rounded;
+    } else {
+      statusColor = SaasPalette.warning;
+      statusLabel = 'Pendiente';
+      statusIcon = Icons.hourglass_empty_rounded;
+    }
+
+    IconData metodoIcon;
+    switch (pago.metodoPago.toLowerCase()) {
+      case 'efectivo':
+        metodoIcon = Icons.payments_rounded;
+        break;
+      case 'consignacion':
+        metodoIcon = Icons.account_balance_rounded;
+        break;
+      case 'cuenta_ahorro':
+        metodoIcon = Icons.savings_rounded;
+        break;
+      default:
+        metodoIcon = Icons.swap_horiz_rounded;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: SaasPalette.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(metodoIcon, color: statusColor, size: 18),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        pago.metodoPago.isNotEmpty
+                            ? _metodoLabel(pago.metodoPago)
+                            : 'Pago',
+                        style: const TextStyle(
+                          color: SaasPalette.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: statusColor.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(statusIcon, color: statusColor, size: 10),
+                          const SizedBox(width: 4),
+                          Text(
+                            statusLabel,
+                            style: TextStyle(
+                              color: statusColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                if (pago.referencia.isNotEmpty)
+                  Text(
+                    'Ref: ${pago.referencia}',
+                    style: const TextStyle(
+                      color: SaasPalette.textTertiary,
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                if (dateStr.isNotEmpty)
+                  Text(
+                    dateStr,
+                    style: const TextStyle(
+                      color: SaasPalette.textTertiary,
+                      fontSize: 11,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            currency.format(pago.monto),
+            style: const TextStyle(
+              color: SaasPalette.textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _metodoLabel(String metodo) {
+    switch (metodo.toLowerCase()) {
+      case 'transferencia':
+        return 'Transferencia';
+      case 'consignacion':
+        return 'Consignación';
+      case 'cuenta_ahorro':
+        return 'Cuenta Ahorro';
+      case 'efectivo':
+        return 'Efectivo';
+      default:
+        return metodo;
+    }
   }
 }

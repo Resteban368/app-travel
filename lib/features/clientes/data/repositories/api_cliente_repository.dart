@@ -8,6 +8,7 @@ import 'package:agente_viajes/core/constants/api_constants.dart';
 import 'package:agente_viajes/core/network/api_exception.dart';
 import 'package:agente_viajes/features/reservas/domain/entities/reserva.dart';
 import 'package:agente_viajes/features/tour/domain/entities/tour.dart';
+import 'package:agente_viajes/features/pagos_realizados/domain/entities/pago_realizado.dart';
 
 class ApiClienteRepository implements ClienteRepository {
   final http.Client client;
@@ -127,6 +128,42 @@ class ApiClienteRepository implements ClienteRepository {
       reservas: (json['reservas'] as List? ?? [])
           .map((r) => _parseReserva(r as Map<String, dynamic>))
           .toList(),
+      pagos: (json['pagos'] as List? ?? [])
+          .map((p) => _parsePago(p as Map<String, dynamic>))
+          .toList(),
+      totalPagos: (json['total_pagos'] as num?)?.toInt() ?? 0,
+      totalPagado: double.tryParse(json['total_pagado']?.toString() ?? '0') ?? 0,
+    );
+  }
+
+  PagoRealizado _parsePago(Map<String, dynamic> j) {
+    return PagoRealizado(
+      id: j['id_pago'] ?? 0,
+      chatId: j['chat_id'] ?? '',
+      tipoDocumento: j['tipo_documento'] ?? '',
+      monto: double.tryParse(j['monto']?.toString() ?? '0') ?? 0,
+      proveedorComercio: j['proveedor_comercio'] ?? '',
+      nit: j['nit'] ?? '',
+      metodoPago: j['metodo_pago'] ?? '',
+      referencia: j['referencia'] ?? '',
+      fechaDocumento: j['fecha_documento'] ?? '',
+      isValidated: j['is_validated'] == true || j['is_validated'] == 1,
+      isRechazado: j['is_rechazado'] == true || j['is_rechazado'] == 1,
+      motivoRechazo: j['motivo_rechazo']?.toString(),
+      urlImagen: j['url_imagen'] ?? '',
+      reservaId: j['reserva_id'] is int
+          ? j['reserva_id']
+          : int.tryParse(j['reserva_id']?.toString() ?? ''),
+      createdAt: j['fecha_creacion'] != null
+          ? DateTime.tryParse(j['fecha_creacion'])
+          : null,
+      entidadTipo: j['entidad_tipo']?.toString() ?? 'reserva',
+      clienteNombre: j['cliente_nombre']?.toString(),
+      clienteIdentificacion: j['cliente_identificacion']?.toString(),
+      concepto: j['concepto']?.toString(),
+      proveedorId: j['proveedor_id'] is int
+          ? j['proveedor_id']
+          : int.tryParse(j['proveedor_id']?.toString() ?? ''),
     );
   }
 

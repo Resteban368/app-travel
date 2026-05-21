@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../config/app_router.dart';
+import '../../../../core/widgets/saas_snackbar.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../domain/entities/pago_realizado.dart';
 import '../bloc/pago_realizado_bloc.dart';
@@ -31,6 +32,7 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
   Timer? _debounce;
   DateTimeRange? _selectedDateRange;
   int _currentPage = 1;
+  int? _deletingId;
 
   @override
   void initState() {
@@ -116,11 +118,39 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
     _loadFirstPage();
   }
 
+  void _deletePressed(PagoRealizado pago) {
+    showDialog(
+      context: context,
+      builder: (ctx) => SaasConfirmDialog(
+        title: 'Eliminar Pago',
+        body:
+            '¿Deseas eliminar el pago de ${pago.proveedorComercio}? Esta acción no se puede deshacer.',
+        confirmLabel: 'Eliminar',
+        onConfirm: () {
+          Navigator.pop(ctx);
+          setState(() => _deletingId = pago.id);
+          context.read<PagoRealizadoBloc>().add(DeletePago(pago.id));
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: SaasPalette.bgApp,
-      body: BlocBuilder<PagoRealizadoBloc, PagoRealizadoState>(
+      body: BlocConsumer<PagoRealizadoBloc, PagoRealizadoState>(
+        listener: (context, state) {
+          if (_deletingId != null) {
+            if (state is PagoRealizadoSaved) {
+              setState(() => _deletingId = null);
+              SaasSnackBar.showSuccess(context, 'Pago eliminado exitosamente');
+            } else if (state is PagoRealizadoError) {
+              setState(() => _deletingId = null);
+              SaasSnackBar.showError(context, state.message);
+            }
+          }
+        },
         builder: (context, state) {
           List<PagoRealizado> pagos = [];
           if (state is PagosRealizadosLoaded) {
@@ -225,6 +255,7 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
                           chatId: chatId,
                           pagos: chatPagos,
                           index: index,
+                          onDelete: _deletePressed,
                         );
                       }, childCount: chatIds.length),
                     ),
@@ -414,10 +445,12 @@ class _ChatGroupCard extends StatefulWidget {
   final String chatId;
   final List<PagoRealizado> pagos;
   final int index;
+  final void Function(PagoRealizado) onDelete;
   const _ChatGroupCard({
     required this.chatId,
     required this.pagos,
     required this.index,
+    required this.onDelete,
   });
 
   @override
@@ -564,7 +597,7 @@ class _ChatGroupCardState extends State<_ChatGroupCard> {
               secondChild: Column(
                 children: [
                   const Divider(height: 1, color: SaasPalette.border),
-                  ...widget.pagos.map((p) => _PagoItem(pago: p)),
+                  ...widget.pagos.map((p) => _PagoItem(pago: p, onDelete: widget.onDelete)),
                   const SizedBox(height: 8),
                 ],
               ),
@@ -585,7 +618,8 @@ class _ChatGroupCardState extends State<_ChatGroupCard> {
 // ─────────────────────────────────────────────────────────────────────────────
 class _PagoItem extends StatelessWidget {
   final PagoRealizado pago;
-  const _PagoItem({required this.pago});
+  final void Function(PagoRealizado) onDelete;
+  const _PagoItem({required this.pago, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -661,7 +695,19 @@ class _PagoItem extends StatelessWidget {
                 _StatusBadge(pago: pago),
               ],
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: () => onDelete(pago),
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                color: SaasPalette.danger,
+                size: 20,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              tooltip: 'Eliminar pago',
+            ),
+            const SizedBox(width: 8),
             const Icon(
               Icons.chevron_right_rounded,
               color: SaasPalette.textTertiary,

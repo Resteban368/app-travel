@@ -1057,8 +1057,46 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                                     fontSize: 12,
                                   ),
                                 ),
+                                if (r.totalVistas != null && r.totalVistas! > 0) ...[
+                                  const SizedBox(width: 10),
+                                  const Icon(
+                                    Icons.visibility_rounded,
+                                    color: SaasPalette.brand600,
+                                    size: 13,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    '${r.totalVistas} vista${r.totalVistas! != 1 ? 's' : ''}',
+                                    style: const TextStyle(
+                                      color: SaasPalette.brand600,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
+                            if (r.ultimaVista != null) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.remove_red_eye_outlined,
+                                    color: SaasPalette.success,
+                                    size: 13,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Última vista: ${DateFormat('dd MMM, hh:mm a').format(r.ultimaVista!.toLocal())}',
+                                    style: const TextStyle(
+                                      color: SaasPalette.success,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),

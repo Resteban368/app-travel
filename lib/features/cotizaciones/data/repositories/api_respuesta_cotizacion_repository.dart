@@ -154,7 +154,7 @@ class ApiRespuestaCotizacionRepository
     'fecha': v.fecha,
     'hora_salida': v.horaSalida,
     'hora_llegada': v.horaLlegada,
-    'costo': v.costo,
+    if (v.costo > 0) 'costo': v.costo,
     'numero_pasajeros': v.numeroPasajeros,
     'tiene_escala': v.tieneEscala,
     'ciudad_escala': v.ciudadEscala,
@@ -169,8 +169,8 @@ class ApiRespuestaCotizacionRepository
     'hora_entrada': h.horaEntrada,
     'fecha_salida': h.fechaSalida,
     'hora_salida': h.horaSalida,
-    'precio_adulto': h.precioAdulto,
-    'precio_menor': h.precioMenor,
+    if (h.precioAdulto > 0) 'precio_adulto': h.precioAdulto,
+    if (h.precioMenor > 0) 'precio_menor': h.precioMenor,
     'precio_total': h.precioTotal,
     'fotos': h.fotos,
     'notas': h.notas,
@@ -213,8 +213,29 @@ class ApiRespuestaCotizacionRepository
       creadoPorNombre: j['creado_por_nombre'] as String?,
       anclada: j['anclada'] as bool? ?? false,
       esPublica: j['es_publica'] as bool? ?? false,
+      totalVistas: (j['total_vistas'] as num?)?.toInt(),
+      precioTotal: (j['precio_total'] as num?)?.toDouble(),
+      primeraVista: j['primera_vista'] != null
+          ? DateTime.tryParse(j['primera_vista'] as String)
+          : null,
+      ultimaVista: j['ultima_vista'] != null
+          ? DateTime.tryParse(j['ultima_vista'] as String)
+          : null,
+      vistas: asList(j['vistas'])
+          .map((e) => _vistaFromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
+
+  VistaRespuesta _vistaFromJson(Map<String, dynamic> j) => VistaRespuesta(
+    id: (j['id'] as num).toInt(),
+    respuestaId: (j['respuesta_id'] as num).toInt(),
+    ip: j['ip'] as String? ?? '',
+    userAgent: j['user_agent'] as String? ?? '',
+    createdAt: j['created_at'] != null
+        ? DateTime.parse(j['created_at'] as String)
+        : DateTime.now(),
+  );
 
   VueloItinerario _vueloFromJson(Map<String, dynamic> j) => VueloItinerario(
     tipo: j['tipo'] as String? ?? 'ida',

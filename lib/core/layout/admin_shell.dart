@@ -25,6 +25,8 @@ import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_bloc.d
 import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_event.dart';
 import 'package:agente_viajes/features/hoteles/presentation/bloc/hotel_bloc.dart';
 import 'package:agente_viajes/features/hoteles/presentation/bloc/hotel_event.dart';
+import 'package:agente_viajes/features/proveedores/presentation/bloc/proveedor_bloc.dart';
+import 'package:agente_viajes/features/proveedores/presentation/bloc/proveedor_event.dart';
 import 'package:agente_viajes/features/bus_layouts/presentation/bloc/bus_layout_bloc.dart';
 import 'package:agente_viajes/features/bus_layouts/presentation/bloc/bus_layout_event.dart';
 import 'package:flutter/material.dart';
@@ -176,6 +178,12 @@ class _AdminShellState extends State<AdminShell> {
       permission: '',
     ),
     _NavItem(
+      icon: Icons.business_rounded,
+      label: 'Proveedores',
+      route: AppRouter.proveedores,
+      permission: '',
+    ),
+    _NavItem(
       icon: Icons.directions_bus_rounded,
       label: 'Buses',
       route: AppRouter.busLayouts,
@@ -232,6 +240,8 @@ class _AdminShellState extends State<AdminShell> {
         context.read<ClienteBloc>().add(LoadClientes());
       case AppRouter.hoteles:
         context.read<HotelBloc>().add(const LoadHoteles());
+      case AppRouter.proveedores:
+        context.read<ProveedorBloc>().add(const LoadProveedores());
       case AppRouter.busLayouts:
         context.read<BusLayoutBloc>().add(const LoadBusLayouts());
     }

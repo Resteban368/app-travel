@@ -4,42 +4,90 @@ import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
-import '../../domain/entities/hotel.dart';
-import '../bloc/hotel_bloc.dart';
-import '../bloc/hotel_event.dart';
-import '../bloc/hotel_state.dart';
+import '../../domain/entities/proveedor.dart';
+import '../bloc/proveedor_bloc.dart';
+import '../bloc/proveedor_event.dart';
+import '../bloc/proveedor_state.dart';
 
-class HotelFormScreen extends StatefulWidget {
-  final Hotel? hotel;
-  const HotelFormScreen({super.key, this.hotel});
+const _kTipos = [
+  'hotel',
+  'aerolinea',
+  'seguro',
+  'transporte',
+  'restaurante',
+  'agencia',
+  'crucero',
+  'tours_operador',
+  'visa',
+  'pasaporte',
+  'transfer',
+  'guia_turismo',
+  'parque_atraccion',
+  'alquiler_vehiculo',
+  'otro',
+];
+
+const _kTipoLabels = {
+  'hotel': 'Hotel',
+  'aerolinea': 'Aerolínea',
+  'seguro': 'Seguro',
+  'transporte': 'Transporte',
+  'restaurante': 'Restaurante',
+  'agencia': 'Agencia de viajes',
+  'crucero': 'Crucero',
+  'tours_operador': 'Tour operador',
+  'visa': 'Visa / Trámites',
+  'pasaporte': 'Pasaporte',
+  'transfer': 'Transfer',
+  'guia_turismo': 'Guía de turismo',
+  'parque_atraccion': 'Parque / Atracción',
+  'alquiler_vehiculo': 'Alquiler de vehículo',
+  'otro': 'Otro',
+};
+
+class ProveedorFormScreen extends StatefulWidget {
+  final Proveedor? proveedor;
+  const ProveedorFormScreen({super.key, this.proveedor});
 
   @override
-  State<HotelFormScreen> createState() => _HotelFormScreenState();
+  State<ProveedorFormScreen> createState() => _ProveedorFormScreenState();
 }
 
-class _HotelFormScreenState extends State<HotelFormScreen>
+class _ProveedorFormScreenState extends State<ProveedorFormScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _nombreCtrl;
-  late final TextEditingController _ciudadCtrl;
+  late final TextEditingController _nitCtrl;
   late final TextEditingController _telefonoCtrl;
   String _countryCode = '+57';
-  late final TextEditingController _direccionCtrl;
+  late final TextEditingController _emailCtrl;
+  late final TextEditingController _bancoCtrl;
+  late final TextEditingController _numeroCuentaCtrl;
+  late final TextEditingController _notasCtrl;
+  late String _tipo;
   late bool _isActive;
 
   late final AnimationController _entryCtrl;
   late final Animation<double> _fade;
   late final Animation<Offset> _slide;
 
-  bool get _isEditing => widget.hotel != null;
+  bool get _isEditing => widget.proveedor != null;
 
   @override
   void initState() {
     super.initState();
-    _nombreCtrl = TextEditingController(text: widget.hotel?.nombre ?? '');
-    _ciudadCtrl = TextEditingController(text: widget.hotel?.ciudad ?? '');
-    final rawPhone = widget.hotel?.telefono ?? '';
+    final p = widget.proveedor;
+    _nombreCtrl = TextEditingController(text: p?.nombre ?? '');
+    _nitCtrl = TextEditingController(text: p?.nit ?? '');
+    _emailCtrl = TextEditingController(text: p?.email ?? '');
+    _bancoCtrl = TextEditingController(text: p?.banco ?? '');
+    _numeroCuentaCtrl = TextEditingController(text: p?.numeroCuenta ?? '');
+    _notasCtrl = TextEditingController(text: p?.notas ?? '');
+    _tipo = p?.tipo ?? 'hotel';
+    _isActive = p?.isActive ?? true;
+
+    final rawPhone = p?.telefono ?? '';
     if (rawPhone.isNotEmpty) {
       final parsed = parsePhone(rawPhone);
       _countryCode = parsed.$1;
@@ -47,17 +95,14 @@ class _HotelFormScreenState extends State<HotelFormScreen>
     } else {
       _telefonoCtrl = TextEditingController();
     }
-    _direccionCtrl = TextEditingController(text: widget.hotel?.direccion ?? '');
-    _isActive = widget.hotel?.isActive ?? true;
 
     _entryCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    _fade = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut));
+    _fade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut),
+    );
     _slide = Tween<Offset>(
       begin: const Offset(0, 0.05),
       end: Offset.zero,
@@ -69,54 +114,56 @@ class _HotelFormScreenState extends State<HotelFormScreen>
   void dispose() {
     _entryCtrl.dispose();
     _nombreCtrl.dispose();
-    _ciudadCtrl.dispose();
+    _nitCtrl.dispose();
     _telefonoCtrl.dispose();
-    _direccionCtrl.dispose();
+    _emailCtrl.dispose();
+    _bancoCtrl.dispose();
+    _numeroCuentaCtrl.dispose();
+    _notasCtrl.dispose();
     super.dispose();
   }
 
   void _onSave(BuildContext context) {
-    //validamos el nombre del hotel
-
-    if (_nombreCtrl.text.isEmpty) {
-      SaasSnackBar.showWarning(context, 'Debe ingresar el nombre del hotel');
-      return;
-    }
-    //validamos la ciudad
-    if (_ciudadCtrl.text.isEmpty) {
-      SaasSnackBar.showWarning(context, 'Debe ingresar la ciudad');
+    if (_nombreCtrl.text.trim().isEmpty) {
+      SaasSnackBar.showWarning(context, 'Debe ingresar el nombre del proveedor');
       return;
     }
 
-    final hotel = Hotel(
-      id: widget.hotel?.id,
+    final proveedor = Proveedor(
+      id: widget.proveedor?.id,
       nombre: _nombreCtrl.text.trim(),
-      ciudad: _ciudadCtrl.text.trim(),
+      tipo: _tipo,
+      nit: _nitCtrl.text.trim().isEmpty ? null : _nitCtrl.text.trim(),
       telefono: _telefonoCtrl.text.trim().isEmpty
-          ? ''
+          ? null
           : '$_countryCode${_telefonoCtrl.text.trim()}',
-      direccion: _direccionCtrl.text.trim(),
+      email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
+      banco: _bancoCtrl.text.trim().isEmpty ? null : _bancoCtrl.text.trim(),
+      numeroCuenta: _numeroCuentaCtrl.text.trim().isEmpty
+          ? null
+          : _numeroCuentaCtrl.text.trim(),
+      notas: _notasCtrl.text.trim().isEmpty ? null : _notasCtrl.text.trim(),
       isActive: _isActive,
     );
 
     if (_isEditing) {
-      context.read<HotelBloc>().add(UpdateHotel(hotel));
+      context.read<ProveedorBloc>().add(UpdateProveedor(proveedor));
     } else {
-      context.read<HotelBloc>().add(CreateHotel(hotel));
+      context.read<ProveedorBloc>().add(CreateProveedor(proveedor));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<HotelBloc, HotelState>(
+    return BlocListener<ProveedorBloc, ProveedorState>(
       listener: (context, state) {
-        if (state is HotelSaved) {
+        if (state is ProveedorSaved) {
           SaasSnackBar.showSuccess(
             context,
-            _isEditing ? 'Hotel actualizado' : 'Hotel creado',
+            _isEditing ? 'Proveedor actualizado' : 'Proveedor creado',
           );
           Navigator.pop(context);
-        } else if (state is HotelError) {
+        } else if (state is ProveedorError) {
           SaasSnackBar.showError(context, state.message);
         }
       },
@@ -124,7 +171,7 @@ class _HotelFormScreenState extends State<HotelFormScreen>
         body: CustomScrollView(
           slivers: [
             PremiumSliverAppBar(
-              title: _isEditing ? 'Editar Hotel' : 'Nuevo Hotel',
+              title: _isEditing ? 'Editar Proveedor' : 'Nuevo Proveedor',
               actions: IconButton(
                 icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
                 onPressed: () => Navigator.pop(context),
@@ -146,7 +193,7 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Etiqueta
+                            // Etiqueta de sección
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
@@ -165,13 +212,13 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                    Icons.hotel_rounded,
+                                    Icons.business_rounded,
                                     color: SaasPalette.brand600,
                                     size: 16,
                                   ),
                                   SizedBox(width: 8),
                                   Text(
-                                    'DATOS DEL HOTEL',
+                                    'DATOS DEL PROVEEDOR',
                                     style: TextStyle(
                                       color: SaasPalette.brand600,
                                       fontSize: 12,
@@ -183,28 +230,27 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                             ),
                             const SizedBox(height: 24),
 
+                            // ── Sección: Información del proveedor ──────────
                             PremiumSectionCard(
-                              title: 'INFORMACIÓN GENERAL',
-                              icon: Icons.hotel_rounded,
+                              title: 'INFORMACIÓN DEL PROVEEDOR',
+                              icon: Icons.business_rounded,
                               children: [
                                 PremiumTextField(
                                   controller: _nombreCtrl,
-                                  label: 'Nombre del Hotel *',
-                                  icon: Icons.hotel_rounded,
+                                  label: 'Nombre *',
+                                  icon: Icons.business_rounded,
                                   validator: (v) =>
                                       (v == null || v.trim().isEmpty)
                                       ? 'El nombre es requerido'
                                       : null,
                                 ),
                                 const SizedBox(height: 20),
+                                _buildTipoDropdown(),
+                                const SizedBox(height: 20),
                                 PremiumTextField(
-                                  controller: _ciudadCtrl,
-                                  label: 'Ciudad *',
-                                  icon: Icons.location_city_rounded,
-                                  validator: (v) =>
-                                      (v == null || v.trim().isEmpty)
-                                      ? 'La ciudad es requerida'
-                                      : null,
+                                  controller: _nitCtrl,
+                                  label: 'NIT (opcional)',
+                                  icon: Icons.badge_outlined,
                                 ),
                                 const SizedBox(height: 20),
                                 PhoneFormField(
@@ -217,14 +263,41 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                                 ),
                                 const SizedBox(height: 20),
                                 PremiumTextField(
-                                  controller: _direccionCtrl,
-                                  label: 'Dirección (opcional)',
-                                  icon: Icons.location_on_rounded,
+                                  controller: _emailCtrl,
+                                  label: 'Correo electrónico (opcional)',
+                                  icon: Icons.email_rounded,
                                 ),
                               ],
                             ),
                             const SizedBox(height: 24),
 
+                            // ── Sección: Datos bancarios ────────────────────
+                            PremiumSectionCard(
+                              title: 'DATOS BANCARIOS',
+                              icon: Icons.account_balance_rounded,
+                              children: [
+                                PremiumTextField(
+                                  controller: _bancoCtrl,
+                                  label: 'Banco (opcional)',
+                                  icon: Icons.account_balance_rounded,
+                                ),
+                                const SizedBox(height: 20),
+                                PremiumTextField(
+                                  controller: _numeroCuentaCtrl,
+                                  label: 'Número de cuenta (opcional)',
+                                  icon: Icons.credit_card_rounded,
+                                ),
+                                const SizedBox(height: 20),
+                                PremiumTextField(
+                                  controller: _notasCtrl,
+                                  label: 'Notas (opcional)',
+                                  icon: Icons.notes_rounded,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+
+                            // ── Sección: Estado (solo edición) ──────────────
                             if (_isEditing)
                               PremiumSectionCard(
                                 title: 'ESTADO',
@@ -240,7 +313,7 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                                     ),
                                     child: SwitchListTile(
                                       title: const Text(
-                                        'Hotel Activo',
+                                        'Proveedor Activo',
                                         style: TextStyle(
                                           color: SaasPalette.textPrimary,
                                           fontSize: 14,
@@ -248,7 +321,7 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                                         ),
                                       ),
                                       subtitle: const Text(
-                                        'Disponible para asignar a reservas',
+                                        'Disponible para asignar a servicios',
                                         style: TextStyle(
                                           color: SaasPalette.textTertiary,
                                           fontSize: 12,
@@ -270,16 +343,17 @@ class _HotelFormScreenState extends State<HotelFormScreen>
 
                             const SizedBox(height: 48),
 
+                            // ── Botón guardar ───────────────────────────────
                             Builder(
                               builder: (ctx) =>
-                                  BlocBuilder<HotelBloc, HotelState>(
+                                  BlocBuilder<ProveedorBloc, ProveedorState>(
                                     builder: (context, state) =>
                                         PremiumActionButton(
                                           label: _isEditing
                                               ? 'GUARDAR CAMBIOS'
-                                              : 'CREAR HOTEL',
+                                              : 'CREAR PROVEEDOR',
                                           icon: Icons.save_rounded,
-                                          isLoading: state is HotelSaving,
+                                          isLoading: state is ProveedorSaving,
                                           onTap: () => _onSave(ctx),
                                         ),
                                   ),
@@ -296,6 +370,72 @@ class _HotelFormScreenState extends State<HotelFormScreen>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildTipoDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'TIPO DE PROVEEDOR *',
+          style: TextStyle(
+            color: SaasPalette.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          initialValue: _tipo,
+          dropdownColor: SaasPalette.bgCanvas,
+          isExpanded: true,
+          style: const TextStyle(
+            color: SaasPalette.textPrimary,
+            fontSize: 14,
+          ),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: SaasPalette.bgCanvas,
+            prefixIcon: const Icon(
+              Icons.category_rounded,
+              color: SaasPalette.brand600,
+              size: 18,
+            ),
+            hintStyle: const TextStyle(color: SaasPalette.textTertiary),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: SaasPalette.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(
+                color: SaasPalette.brand600,
+                width: 1.5,
+              ),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+          ),
+          items: _kTipos
+              .map(
+                (t) => DropdownMenuItem(
+                  value: t,
+                  child: Text(
+                    _kTipoLabels[t] ?? t,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (v) => setState(() => _tipo = v!),
+          validator: (v) =>
+              (v == null || v.isEmpty) ? 'El tipo es requerido' : null,
+        ),
+      ],
     );
   }
 }

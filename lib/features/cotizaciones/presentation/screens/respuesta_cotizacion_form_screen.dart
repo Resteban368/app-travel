@@ -11,7 +11,7 @@ import 'package:agente_viajes/features/reservas/domain/repositories/reserva_repo
 import 'package:flutter/material.dart';
 import 'package:agente_viajes/core/widgets/phone_form_field.dart';
 import 'package:flutter/services.dart'
-    show Clipboard, ClipboardData, FilteringTextInputFormatter;
+    show Clipboard, ClipboardData;
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../domain/entities/cotizacion.dart';
@@ -66,6 +66,7 @@ class _HotelData {
   final precioMenorCtrl = TextEditingController();
   final precioTotalCtrl = TextEditingController();
   final notasCtrl = TextEditingController();
+  bool mostrarDetalle = false;
   // Multi-foto
   final List<String> fotos = [];
   final fotoUrlCtrl = TextEditingController();
@@ -135,6 +136,13 @@ class _RespuestaCotizacionFormScreenState
   Cotizacion? _loadedCotizacion;
   bool _loadingCotizacion = false;
 
+  // Vistas de la respuesta (cargadas via /cotizacion/:id)
+  List<VistaRespuesta> _vistas = [];
+  int? _totalVistas;
+  DateTime? _primeraVista;
+  DateTime? _ultimaVista;
+  bool _loadingVistas = false;
+
   // Cliente
   final _nombreClienteCtrl = TextEditingController();
   final _telefonoCtrl = TextEditingController();
@@ -196,6 +204,7 @@ class _RespuestaCotizacionFormScreenState
       if (widget.respuesta!.cotizacionId != null && widget.cotizacion == null) {
         _loadLinkedCotizacion(widget.respuesta!.cotizacionId!);
       }
+      _loadVistas();
     } else if (widget.duplicarDe != null) {
       _populateFromRespuesta(widget.duplicarDe!);
     } else {
@@ -325,6 +334,36 @@ class _RespuestaCotizacionFormScreenState
       // silencioso
     } finally {
       if (mounted) setState(() => _loadingCotizacion = false);
+    }
+  }
+
+  Future<void> _loadVistas() async {
+    final r = widget.respuesta;
+    if (r == null) return;
+    setState(() => _loadingVistas = true);
+    try {
+      final repo = sl<RespuestaCotizacionRepository>();
+      RespuestaCotizacion? enriched;
+      if (r.cotizacionId != null) {
+        final list = await repo.getRespuestasByCotizacion(r.cotizacionId!);
+        try {
+          enriched = list.firstWhere((e) => e.id == r.id);
+        } catch (_) {}
+      } else if (r.id != null) {
+        enriched = await repo.getRespuestaById(r.id!);
+      }
+      if (enriched != null && mounted) {
+        setState(() {
+          _vistas = enriched!.vistas;
+          _totalVistas = enriched.totalVistas;
+          _primeraVista = enriched.primeraVista;
+          _ultimaVista = enriched.ultimaVista;
+        });
+      }
+    } catch (_) {
+      // silencioso
+    } finally {
+      if (mounted) setState(() => _loadingVistas = false);
     }
   }
 
@@ -816,11 +855,6 @@ class _RespuestaCotizacionFormScreenState
       SaasSnackBar.showWarning(context, 'La aerolinea del vuelo es requerida');
       return;
     }
-    if (_vuelos.any((v) => v.costoCtrl.text.trim().isEmpty)) {
-      setState(() => _saving = false);
-      SaasSnackBar.showWarning(context, 'El costo del vuelo es requerido');
-      return;
-    }
     if (_vuelos.any((v) => v.numeroPasajerosCtrl.text.trim().isEmpty)) {
       setState(() => _saving = false);
       SaasSnackBar.showWarning(
@@ -920,6 +954,10 @@ class _RespuestaCotizacionFormScreenState
                   if (widget.respuesta?.token != null) ...[
                     const SizedBox(height: 20),
                     _buildLinkCard(widget.respuesta!.token!),
+                  ],
+                  if (widget.respuesta != null) ...[
+                    const SizedBox(height: 20),
+                    _buildVistasSection(),
                   ],
                   const SizedBox(height: 32),
                   PremiumActionButton(
@@ -1533,7 +1571,7 @@ class _RespuestaCotizacionFormScreenState
               final wide = constraints.maxWidth > 400;
               final costoField = PremiumTextField(
                 controller: data.costoCtrl,
-                label: 'Costo del vuelo',
+                label: 'Costo del vuelo (opcional)',
                 icon: Icons.attach_money_rounded,
                 inputFormatters: [ThousandsSeparatorInputFormatter()],
                 keyboardType: const TextInputType.numberWithOptions(
@@ -1914,106 +1952,92 @@ class _RespuestaCotizacionFormScreenState
                 const SizedBox(height: 12),
 
                 // Precios
-                LayoutBuilder(
-                  builder: (ctx, constraints) {
-                    final wide = constraints.maxWidth > 500;
-                    return wide
-                        ? Row(
-                            children: [
-                              Expanded(
-                                child: PremiumTextField(
-                                  controller: data.precioAdultoCtrl,
-                                  label: 'Precio por Adulto *',
-                                  icon: Icons.person_rounded,
-                                  inputFormatters: [
-                                    ThousandsSeparatorInputFormatter(),
-                                  ],
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
-                                      ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: PremiumTextField(
-                                  controller: data.precioMenorCtrl,
-                                  label: 'Precio por Menor',
-                                  icon: Icons.child_care_rounded,
-                                  inputFormatters: [
-                                    ThousandsSeparatorInputFormatter(),
-                                  ],
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
-                                      ),
-                                  validator: (_) => null,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: PremiumTextField(
-                                  controller: data.precioTotalCtrl,
-                                  label: 'Precio Total',
-                                  icon: Icons.attach_money_rounded,
-                                  inputFormatters: [
-                                    ThousandsSeparatorInputFormatter(),
-                                  ],
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
-                                      ),
-                                  validator: (_) => null,
-                                ),
-                              ),
-                            ],
-                          )
-                        : Column(
-                            children: [
-                              PremiumTextField(
-                                controller: data.precioAdultoCtrl,
-                                label: 'Precio por Adulto *',
-                                icon: Icons.person_rounded,
-                                inputFormatters: [
-                                  ThousandsSeparatorInputFormatter(),
-                                ],
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                              ),
-                              const SizedBox(height: 12),
-                              PremiumTextField(
-                                controller: data.precioMenorCtrl,
-                                label: 'Precio por Menor',
-                                icon: Icons.child_care_rounded,
-                                inputFormatters: [
-                                  ThousandsSeparatorInputFormatter(),
-                                ],
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                validator: (_) => null,
-                              ),
-                              const SizedBox(height: 12),
-                              PremiumTextField(
-                                controller: data.precioTotalCtrl,
-                                label: 'Precio Total',
-                                icon: Icons.attach_money_rounded,
-                                inputFormatters: [
-                                  ThousandsSeparatorInputFormatter(),
-                                ],
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                validator: (_) => null,
-                              ),
-                            ],
-                          );
-                  },
+                PremiumTextField(
+                  controller: data.precioTotalCtrl,
+                  label: 'Precio total del paquete *',
+                  icon: Icons.attach_money_rounded,
+                  inputFormatters: [ThousandsSeparatorInputFormatter()],
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
+                const SizedBox(height: 8),
+                // Toggle modo detallado
+                GestureDetector(
+                  onTap: () => setState(() {
+                    data.mostrarDetalle = !data.mostrarDetalle;
+                    if (!data.mostrarDetalle) {
+                      data.precioAdultoCtrl.clear();
+                      data.precioMenorCtrl.clear();
+                    }
+                  }),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        data.mostrarDetalle
+                            ? Icons.expand_less_rounded
+                            : Icons.expand_more_rounded,
+                        size: 16,
+                        color: SaasPalette.brand600,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        data.mostrarDetalle
+                            ? 'Ocultar desglose por tipo de pasajero'
+                            : 'Desglosar por tipo de pasajero (opcional)',
+                        style: const TextStyle(
+                          color: SaasPalette.brand600,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (data.mostrarDetalle) ...[
+                  const SizedBox(height: 12),
+                  LayoutBuilder(
+                    builder: (ctx, constraints) {
+                      final wide = constraints.maxWidth > 400;
+                      final adultoField = PremiumTextField(
+                        controller: data.precioAdultoCtrl,
+                        label: 'Precio por Adulto',
+                        icon: Icons.person_rounded,
+                        inputFormatters: [ThousandsSeparatorInputFormatter()],
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: (_) => null,
+                      );
+                      final menorField = PremiumTextField(
+                        controller: data.precioMenorCtrl,
+                        label: 'Precio por Menor',
+                        icon: Icons.child_care_rounded,
+                        inputFormatters: [ThousandsSeparatorInputFormatter()],
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: (_) => null,
+                      );
+                      return wide
+                          ? Row(
+                              children: [
+                                Expanded(child: adultoField),
+                                const SizedBox(width: 12),
+                                Expanded(child: menorField),
+                              ],
+                            )
+                          : Column(
+                              children: [
+                                adultoField,
+                                const SizedBox(height: 12),
+                                menorField,
+                              ],
+                            );
+                    },
+                  ),
+                ],
                 const SizedBox(height: 12),
 
                 PremiumTextField(
@@ -2337,9 +2361,7 @@ class _RespuestaCotizacionFormScreenState
 
     // Hoteles con costo
     final hotelesConCosto = _hoteles.where((h) {
-      final total = _parsePrice(h.precioTotalCtrl.text.trim());
-      final adulto = _parsePrice(h.precioAdultoCtrl.text.trim());
-      return total > 0 || adulto > 0;
+      return _parsePrice(h.precioTotalCtrl.text.trim()) > 0;
     }).toList();
 
     // Filas de adicionales con precio (siempre incluidas)
@@ -2369,9 +2391,7 @@ class _RespuestaCotizacionFormScreenState
     }
     for (final h in hotelesConCosto) {
       if (_selectedHoteles.contains(h)) {
-        final t = _parsePrice(h.precioTotalCtrl.text.trim());
-        final a = _parsePrice(h.precioAdultoCtrl.text.trim());
-        total += t > 0 ? t : a;
+        total += _parsePrice(h.precioTotalCtrl.text.trim());
       }
     }
     for (final f in adicionalRows) {
@@ -2511,9 +2531,7 @@ class _RespuestaCotizacionFormScreenState
                     ),
                     const SizedBox(height: 8),
                     ...hotelesConCosto.map((h) {
-                      final t = _parsePrice(h.precioTotalCtrl.text.trim());
-                      final a = _parsePrice(h.precioAdultoCtrl.text.trim());
-                      final valor = t > 0 ? t : a;
+                      final valor = _parsePrice(h.precioTotalCtrl.text.trim());
                       final nombre = h.nombreCtrl.text.trim();
                       final selected = _selectedHoteles.contains(h);
                       return _ResumenFilaSeleccionable(
@@ -2595,6 +2613,224 @@ class _RespuestaCotizacionFormScreenState
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  // ── Vistas de la propuesta ────────────────────────────────────────────────
+  Widget _buildVistasSection() {
+    final dateFmt = DateFormat('dd MMM yyyy, hh:mm a', 'es_CO');
+
+    return Container(
+      decoration: BoxDecoration(
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: SaasPalette.bgSubtle,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              border: const Border(bottom: BorderSide(color: SaasPalette.border)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: SaasPalette.brand600.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.visibility_rounded,
+                    color: SaasPalette.brand600,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'VISTAS DE LA PROPUESTA',
+                    style: TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.7,
+                    ),
+                  ),
+                ),
+                if (_loadingVistas)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: SaasPalette.brand600,
+                    ),
+                  )
+                else if (_totalVistas != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: SaasPalette.brand600.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '$_totalVistas vista${_totalVistas != 1 ? 's' : ''}',
+                      style: const TextStyle(
+                        color: SaasPalette.brand600,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: _loadingVistas
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: SaasPalette.brand600,
+                      ),
+                    ),
+                  )
+                : _vistas.isEmpty
+                    ? Column(
+                        children: [
+                          if (_ultimaVista != null || _primeraVista != null) ...[
+                            _buildVistasStats(dateFmt),
+                            const SizedBox(height: 16),
+                          ],
+                          const PremiumEmptyIndicator(
+                            msg: 'Esta propuesta aún no ha sido vista por el cliente.',
+                            icon: Icons.visibility_off_outlined,
+                          ),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          _buildVistasStats(dateFmt),
+                          const SizedBox(height: 16),
+                          ..._vistas.map((v) => _buildVistaRow(v, dateFmt)),
+                        ],
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVistasStats(DateFormat dateFmt) {
+    return Row(
+      children: [
+        if (_primeraVista != null)
+          Expanded(
+            child: _VistaStatChip(
+              icon: Icons.first_page_rounded,
+              label: 'Primera vista',
+              value: dateFmt.format(_primeraVista!.toLocal()),
+              color: SaasPalette.textSecondary,
+            ),
+          ),
+        if (_primeraVista != null && _ultimaVista != null)
+          const SizedBox(width: 12),
+        if (_ultimaVista != null)
+          Expanded(
+            child: _VistaStatChip(
+              icon: Icons.access_time_rounded,
+              label: 'Última vista',
+              value: dateFmt.format(_ultimaVista!.toLocal()),
+              color: SaasPalette.success,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildVistaRow(VistaRespuesta v, DateFormat dateFmt) {
+    final ua = v.userAgent.toLowerCase();
+    final isPhone = ua.contains('iphone') || ua.contains('android') || ua.contains('mobile');
+    final deviceIcon = isPhone ? Icons.phone_android_rounded : Icons.computer_rounded;
+    final deviceLabel = isPhone ? 'Móvil' : 'Escritorio';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: SaasPalette.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: SaasPalette.brand600.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(deviceIcon, color: SaasPalette.brand600, size: 14),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  dateFmt.format(v.createdAt.toLocal()),
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    const Icon(Icons.location_on_outlined, size: 11, color: SaasPalette.textTertiary),
+                    const SizedBox(width: 3),
+                    Text(
+                      v.ip,
+                      style: const TextStyle(
+                        color: SaasPalette.textTertiary,
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.devices_rounded, size: 11, color: SaasPalette.textTertiary),
+                    const SizedBox(width: 3),
+                    Text(
+                      deviceLabel,
+                      style: const TextStyle(
+                        color: SaasPalette.textTertiary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -2983,6 +3219,64 @@ class _GuardarPlantillaButton extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _VistaStatChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _VistaStatChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: SaasPalette.border),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

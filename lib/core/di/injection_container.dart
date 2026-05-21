@@ -62,6 +62,9 @@ import '../../features/clientes/presentation/bloc/cliente_bloc.dart';
 import '../../features/hoteles/data/repositories/api_hotel_repository.dart';
 import '../../features/hoteles/domain/repositories/hotel_repository.dart';
 import '../../features/hoteles/presentation/bloc/hotel_bloc.dart';
+import '../../features/proveedores/data/repositories/api_proveedor_repository.dart';
+import '../../features/proveedores/domain/repositories/proveedor_repository.dart';
+import '../../features/proveedores/presentation/bloc/proveedor_bloc.dart';
 import '../../features/bus_layouts/data/repositories/api_bus_layout_repository.dart';
 import '../../features/bus_layouts/domain/repositories/bus_layout_repository.dart';
 import '../../features/bus_layouts/presentation/bloc/bus_layout_bloc.dart';
@@ -143,6 +146,9 @@ void initDependencies() {
   sl.registerLazySingleton<HotelRepository>(
     () => ApiHotelRepository(client: sl()),
   );
+  sl.registerLazySingleton<ProveedorRepository>(
+    () => ApiProveedorRepository(client: sl()),
+  );
   sl.registerLazySingleton<BusLayoutRepository>(
     () => ApiBusLayoutRepository(client: sl()),
   );
@@ -181,6 +187,7 @@ void initDependencies() {
   sl.registerFactory(() => ReservaBloc(repository: sl()));
   sl.registerFactory(() => ClienteBloc(repository: sl()));
   sl.registerLazySingleton(() => HotelBloc(repository: sl()));
+  sl.registerLazySingleton(() => ProveedorBloc(repository: sl()));
   sl.registerFactory(() => BusLayoutBloc(repository: sl()));
   sl.registerFactory(() => BusManifiestoBloc(repository: sl()));
   sl.registerFactory(() => UploadBloc(repository: sl()));
