@@ -469,6 +469,30 @@ class _HotelCardState extends State<_HotelCard> {
                           ),
                         ],
                       ),
+                      if (hotel.habitaciones.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            _InfoChip(
+                              icon: Icons.bed_rounded,
+                              label:
+                                  '${hotel.habitaciones.length} habitación${hotel.habitaciones.length != 1 ? 'es' : ''}',
+                            ),
+                            _InfoChip(
+                              icon: Icons.room_service_rounded,
+                              label: () {
+                                final total = hotel.habitaciones
+                                    .expand((h) => h.servicios)
+                                    .toSet()
+                                    .length;
+                                return '$total servicio${total != 1 ? 's' : ''}';
+                              }(),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -541,6 +565,41 @@ class _HotelCardState extends State<_HotelCard> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _InfoChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: SaasPalette.brand600.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: SaasPalette.brand600.withValues(alpha: 0.15),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: SaasPalette.brand600),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: SaasPalette.brand600,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
