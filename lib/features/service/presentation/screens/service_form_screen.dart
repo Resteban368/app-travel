@@ -28,6 +28,8 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
   late final TextEditingController _descriptionCtrl;
   int? _selectedSedeId;
   bool _isActive = true;
+  List<String> _imagenes = [];
+  final _imagenCtrl = TextEditingController();
 
   late final AnimationController _entryCtrl;
   late final Animation<double> _fade;
@@ -47,6 +49,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
     );
     _selectedSedeId = widget.service?.idSede;
     _isActive = widget.service?.isActive ?? true;
+    _imagenes = List.from(widget.service?.imagenes ?? []);
 
     _entryCtrl = AnimationController(
       vsync: this,
@@ -73,6 +76,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
     _nameCtrl.dispose();
     _costCtrl.dispose();
     _descriptionCtrl.dispose();
+    _imagenCtrl.dispose();
     super.dispose();
   }
 
@@ -112,6 +116,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
       idSede: _selectedSedeId ?? 0,
       isActive: _isActive,
       createdAt: _isEditing ? widget.service!.createdAt : DateTime.now(),
+      imagenes: List.from(_imagenes),
     );
 
     if (_isEditing) {
@@ -251,6 +256,9 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
                                     ),
                                   ],
                                 ),
+                                const SizedBox(height: 24),
+
+                                _buildImagenesSection(canWrite: canWrite),
                                 const SizedBox(height: 24),
 
                                 PremiumSectionCard(
@@ -418,6 +426,236 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
     );
   }
 
+  Widget _buildImagenesSection({required bool canWrite}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: D.surfaceHigh.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.07)),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: D.skyBlue.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.photo_library_rounded,
+                  color: D.skyBlue,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'GALERÍA DE IMÁGENES',
+                style: TextStyle(
+                  color: D.slate400,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: D.skyBlue.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${_imagenes.length}',
+                  style: const TextStyle(
+                    color: D.skyBlue,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (canWrite) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _imagenCtrl,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'https://ejemplo.com/imagen.jpg',
+                      hintStyle: TextStyle(
+                        color: Colors.white.withOpacity(0.3),
+                        fontSize: 13,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.link_rounded,
+                        color: D.skyBlue,
+                        size: 18,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: D.skyBlue, width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    onSubmitted: (_) => _agregarImagen(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: D.skyBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: _agregarImagen,
+                  child: const Icon(Icons.add_rounded, size: 20),
+                ),
+              ],
+            ),
+          ],
+          if (_imagenes.isEmpty) ...[
+            const SizedBox(height: 16),
+            Center(
+              child: Text(
+                'Sin imágenes agregadas',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.3),
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: List.generate(
+                _imagenes.length,
+                (i) => _ServiceImagenThumbnail(
+                  url: _imagenes[i],
+                  canDelete: canWrite,
+                  onDelete: () => _confirmDeleteImagen(i),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _agregarImagen() {
+    final url = _imagenCtrl.text.trim();
+    if (url.isEmpty) return;
+    setState(() => _imagenes.add(url));
+    _imagenCtrl.clear();
+  }
+
+  void _confirmDeleteImagen(int index) {
+    _showDeleteDialog(
+      title: 'Eliminar imagen',
+      body: '¿Seguro que deseas eliminar esta imagen de la galería?',
+      onConfirm: () => setState(() => _imagenes.removeAt(index)),
+    );
+  }
+
+  void _showDeleteDialog({
+    required String title,
+    required String body,
+    required VoidCallback onConfirm,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: SaasPalette.bgCanvas,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: SaasPalette.danger.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.delete_rounded,
+                color: SaasPalette.danger,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          body,
+          style: const TextStyle(
+            color: SaasPalette.textSecondary,
+            fontSize: 14,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: SaasPalette.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SaasPalette.danger,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              onConfirm();
+            },
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildVisibilitySwitch({required bool canWrite}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
@@ -451,6 +689,80 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ServiceImagenThumbnail extends StatelessWidget {
+  final String url;
+  final bool canDelete;
+  final VoidCallback onDelete;
+
+  const _ServiceImagenThumbnail({
+    required this.url,
+    required this.canDelete,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              url,
+              fit: BoxFit.cover,
+              loadingBuilder: (_, child, progress) => progress == null
+                  ? child
+                  : Container(
+                      color: Colors.white.withOpacity(0.05),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: D.skyBlue,
+                        ),
+                      ),
+                    ),
+              errorBuilder: (ctx2, err, stack) => Container(
+                color: Colors.white.withOpacity(0.05),
+                child: const Icon(
+                  Icons.broken_image_rounded,
+                  color: D.slate400,
+                  size: 32,
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (canDelete)
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: onDelete,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: SaasPalette.danger,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(
+                  Icons.close_rounded,
+                  color: Colors.white,
+                  size: 14,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

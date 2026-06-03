@@ -76,6 +76,7 @@ class ApiServiceRepository implements ServiceRepository {
       createdAt: json['fecha_creacion'] != null
           ? DateTime.parse(json['fecha_creacion'])
           : null,
+      imagenes: (json['imagenes'] as List? ?? []).whereType<String>().toList(),
     );
   }
 
@@ -86,6 +87,7 @@ class ApiServiceRepository implements ServiceRepository {
       'descripcion': service.description,
       'id_sede': service.idSede,
       'activo': service.isActive,
+      'imagenes': service.imagenes,
     };
   }
 }

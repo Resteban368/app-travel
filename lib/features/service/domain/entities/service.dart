@@ -8,6 +8,7 @@ class Service extends Equatable {
   final int idSede;
   final bool isActive;
   final DateTime? createdAt;
+  final List<String> imagenes;
 
   const Service({
     required this.id,
@@ -17,6 +18,7 @@ class Service extends Equatable {
     required this.idSede,
     this.isActive = true,
     this.createdAt,
+    this.imagenes = const [],
   });
 
   Service copyWith({
@@ -27,6 +29,7 @@ class Service extends Equatable {
     int? idSede,
     bool? isActive,
     DateTime? createdAt,
+    List<String>? imagenes,
   }) {
     return Service(
       id: id ?? this.id,
@@ -36,6 +39,7 @@ class Service extends Equatable {
       idSede: idSede ?? this.idSede,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
+      imagenes: imagenes ?? this.imagenes,
     );
   }
 
@@ -48,5 +52,6 @@ class Service extends Equatable {
     idSede,
     isActive,
     createdAt,
+    imagenes,
   ];
 }
