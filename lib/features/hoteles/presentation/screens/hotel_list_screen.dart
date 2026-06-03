@@ -51,6 +51,7 @@ class _HotelListBodyState extends State<_HotelListBody> {
       builder: (context, state) {
         List<Hotel> hoteles = [];
         if (state is HotelLoaded) hoteles = state.hoteles;
+        if (state is HotelDetailLoaded) hoteles = state.hoteles;
         if (state is HotelSaving && state.hoteles != null) {
           hoteles = state.hoteles!;
         }
@@ -350,7 +351,11 @@ class _HotelCardState extends State<_HotelCard> {
           context,
           AppRouter.hotelEdit,
           arguments: hotel,
-        ),
+        ).then((_) {
+          if (context.mounted) {
+            context.read<HotelBloc>().add(const LoadHoteles());
+          }
+        }),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           decoration: BoxDecoration(
@@ -486,7 +491,11 @@ class _HotelCardState extends State<_HotelCard> {
                         context,
                         AppRouter.hotelEdit,
                         arguments: hotel,
-                      );
+                      ).then((_) {
+                        if (context.mounted) {
+                          context.read<HotelBloc>().add(const LoadHoteles());
+                        }
+                      });
                     } else if (value == 'delete') {
                       _confirmDelete(context);
                     }
