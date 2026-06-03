@@ -19,6 +19,7 @@ import '../../../../features/hoteles/presentation/bloc/hotel_bloc.dart';
 import '../../../../features/hoteles/presentation/bloc/hotel_event.dart';
 import '../../../../features/hoteles/presentation/bloc/hotel_state.dart';
 import '../../../../features/hoteles/domain/entities/hotel.dart';
+import '../../../../features/hoteles/domain/repositories/hotel_repository.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/widgets/platform_network_image.dart';
 import '../bloc/reserva_bloc.dart';
@@ -5680,27 +5681,57 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
   late final TextEditingController _valorCtrl;
   int? _selectedHotelId;
 
+  // Habitaciones
+  Hotel? _fullHotel;
+  bool _loadingHotel = false;
+  // tipoCama → cantidad seleccionada
+  final Map<String, int> _cantidades = {};
+
+  static final _currFmt = NumberFormat.currency(
+    locale: 'es_CO',
+    symbol: '\$',
+    decimalDigits: 0,
+  );
+
+  double get _precioCalculado {
+    if (_fullHotel == null) return 0;
+    return _fullHotel!.habitaciones.fold(0.0, (sum, h) {
+      return sum + (_cantidades[h.tipoCama] ?? 0) * h.precio;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-    _numeroCtrl = TextEditingController(
-      text: widget.hotelReserva.numeroReserva,
-    );
-    _checkinCtrl = TextEditingController(
-      text: widget.hotelReserva.fechaCheckin,
-    );
-    _checkoutCtrl = TextEditingController(
-      text: widget.hotelReserva.fechaCheckout,
-    );
+    _numeroCtrl = TextEditingController(text: widget.hotelReserva.numeroReserva);
+    _checkinCtrl = TextEditingController(text: widget.hotelReserva.fechaCheckin);
+    _checkoutCtrl = TextEditingController(text: widget.hotelReserva.fechaCheckout);
     _valorCtrl = TextEditingController(
       text: widget.hotelReserva.valor != null
-          ? NumberFormat.decimalPattern(
-              'es_CO',
-            ).format(widget.hotelReserva.valor)
+          ? NumberFormat.decimalPattern('es_CO').format(widget.hotelReserva.valor)
           : '',
     );
-    _selectedHotelId =
-        widget.hotelReserva.hotelId ?? widget.hotelReserva.hotel?.id;
+    _selectedHotelId = widget.hotelReserva.hotelId ?? widget.hotelReserva.hotel?.id;
+
+    // Restore cantidades from existing habitaciones
+    for (final h in widget.hotelReserva.habitaciones) {
+      _cantidades[h.tipoCama] = h.cantidad;
+    }
+
+    // Load full hotel detail if already selected
+    if (_selectedHotelId != null) {
+      final hotelFromList = widget.hoteles.cast<Hotel?>().firstWhere(
+        (h) => h?.id == _selectedHotelId,
+        orElse: () => null,
+      );
+      if (hotelFromList != null && hotelFromList.habitaciones.isNotEmpty) {
+        _fullHotel = hotelFromList;
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _loadFullHotel(_selectedHotelId!);
+        });
+      }
+    }
   }
 
   @override
@@ -5712,15 +5743,48 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
     super.dispose();
   }
 
+  Future<void> _loadFullHotel(int id) async {
+    if (!mounted) return;
+    setState(() => _loadingHotel = true);
+    try {
+      final full = await sl<HotelRepository>().getHotelById(id);
+      if (mounted) setState(() => _fullHotel = full);
+    } catch (_) {
+      // silencioso — no hay habitaciones para mostrar
+    } finally {
+      if (mounted) setState(() => _loadingHotel = false);
+    }
+  }
+
   Future<void> _openHotelPicker(BuildContext ctx) async {
     final result = await showDialog<Hotel>(
       context: ctx,
       builder: (_) => _HotelPickerDialog(hoteles: widget.hoteles),
     );
-    if (result != null) {
-      setState(() => _selectedHotelId = result.id);
-      _notify();
+    if (result == null) return;
+    setState(() {
+      _selectedHotelId = result.id;
+      _fullHotel = null;
+      _cantidades.clear();
+    });
+    _notify();
+    await _loadFullHotel(result.id!);
+  }
+
+  void _setCantidad(String tipoCama, int value) {
+    setState(() {
+      if (value <= 0) {
+        _cantidades.remove(tipoCama);
+      } else {
+        _cantidades[tipoCama] = value;
+      }
+    });
+    // Auto-fill valor con precio calculado si no hay valor manual
+    final calc = _precioCalculado;
+    if (calc > 0) {
+      _valorCtrl.text = NumberFormat.decimalPattern('es_CO').format(calc);
     }
+    _notify();
   }
 
   void _notify() {
@@ -5728,6 +5792,15 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
       (h) => h?.id == _selectedHotelId,
       orElse: () => null,
     );
+    final habitacionesSeleccionadas = (_fullHotel?.habitaciones ?? [])
+        .where((h) => (_cantidades[h.tipoCama] ?? 0) > 0)
+        .map((h) => HabitacionReserva(
+              tipoCama: h.tipoCama,
+              cantidad: _cantidades[h.tipoCama]!,
+              precioUnitario: h.precio,
+            ))
+        .toList();
+
     widget.onChanged(
       HotelReserva(
         id: widget.hotelReserva.id,
@@ -5739,6 +5812,7 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
         valor: double.tryParse(
           _valorCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.'),
         ),
+        habitaciones: habitacionesSeleccionadas,
       ),
     );
   }
@@ -5758,29 +5832,296 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
   }
 
   InputDecoration _dec(String hint, IconData icon) => InputDecoration(
-    prefixIcon: Icon(icon, color: SaasPalette.brand600, size: 18),
-    hintText: hint,
-    hintStyle: const TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
-    filled: true,
-    fillColor: SaasPalette.bgSubtle,
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: SaasPalette.border),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: SaasPalette.brand600),
-    ),
-    errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: SaasPalette.danger),
-    ),
-    focusedErrorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: SaasPalette.danger),
-    ),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-  );
+        prefixIcon: Icon(icon, color: SaasPalette.brand600, size: 18),
+        hintText: hint,
+        hintStyle: const TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
+        filled: true,
+        fillColor: SaasPalette.bgSubtle,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: SaasPalette.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: SaasPalette.brand600),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: SaasPalette.danger),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: SaasPalette.danger),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      );
+
+  Widget _buildHabitacionesSection() {
+    if (_loadingHotel) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: SaasPalette.brand600,
+                ),
+              ),
+              SizedBox(width: 10),
+              Text(
+                'Cargando habitaciones...',
+                style: TextStyle(
+                  color: SaasPalette.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_fullHotel == null || _fullHotel!.habitaciones.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final habitaciones = _fullHotel!.habitaciones;
+    final tipoLabels = {
+      'sencilla': 'Sencilla',
+      'doble': 'Doble',
+      'matrimonial': 'Matrimonial',
+      'triple': 'Triple',
+      'suite': 'Suite',
+      'familiar': 'Familiar',
+    };
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: SaasPalette.bgSubtle,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: SaasPalette.border),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header sección
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: SaasPalette.brand600.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: const Icon(
+                      Icons.bed_rounded,
+                      color: SaasPalette.brand600,
+                      size: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'HABITACIONES',
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Lista de tipos de habitación
+              ...habitaciones.map((hab) {
+                final cant = _cantidades[hab.tipoCama] ?? 0;
+                final label = tipoLabels[hab.tipoCama] ?? hab.tipoCama;
+                final isSelected = cant > 0;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? SaasPalette.brand600.withValues(alpha: 0.06)
+                        : SaasPalette.bgCanvas,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected
+                          ? SaasPalette.brand600.withValues(alpha: 0.3)
+                          : SaasPalette.border,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Icono + info
+                      Icon(
+                        Icons.bed_rounded,
+                        size: 16,
+                        color: isSelected
+                            ? SaasPalette.brand600
+                            : SaasPalette.textTertiary,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              label,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? SaasPalette.textPrimary
+                                    : SaasPalette.textSecondary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              _currFmt.format(hab.precio),
+                              style: TextStyle(
+                                color: isSelected
+                                    ? SaasPalette.brand600
+                                    : SaasPalette.textTertiary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Servicios chips (compactos)
+                      if (hab.servicios.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: Wrap(
+                            spacing: 4,
+                            children: hab.servicios.take(3).map((s) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: SaasPalette.bgSubtle,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: SaasPalette.border,
+                                  ),
+                                ),
+                                child: Text(
+                                  s,
+                                  style: const TextStyle(
+                                    color: SaasPalette.textTertiary,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      // Stepper
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _StepperBtn(
+                            icon: Icons.remove,
+                            enabled: cant > 0,
+                            onTap: () =>
+                                _setCantidad(hab.tipoCama, cant - 1),
+                          ),
+                          SizedBox(
+                            width: 28,
+                            child: Text(
+                              '$cant',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: cant > 0
+                                    ? SaasPalette.textPrimary
+                                    : SaasPalette.textTertiary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          _StepperBtn(
+                            icon: Icons.add,
+                            enabled: cant < hab.cantidad,
+                            onTap: () =>
+                                _setCantidad(hab.tipoCama, cant + 1),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+              // Resumen precio calculado
+              if (_precioCalculado > 0) ...[
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: SaasPalette.success.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: SaasPalette.success.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.calculate_rounded,
+                        color: SaasPalette.success,
+                        size: 15,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Precio calculado:',
+                        style: TextStyle(
+                          color: SaasPalette.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        _currFmt.format(_precioCalculado),
+                        style: const TextStyle(
+                          color: SaasPalette.success,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -5857,12 +6198,10 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                           ),
                           child: Row(
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.hotel_rounded,
                                 size: 18,
-                                color: selectedHotel != null
-                                    ? SaasPalette.brand600
-                                    : SaasPalette.brand600,
+                                color: SaasPalette.brand600,
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -5922,6 +6261,9 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                   );
                 },
               ),
+
+              // Sección de habitaciones
+              _buildHabitacionesSection(),
               const SizedBox(height: 12),
 
               // Número de reserva
@@ -5942,25 +6284,12 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
               ),
               const SizedBox(height: 12),
 
-              // Valor
-              // TextField(
-              //   controller: _valorCtrl,
-              //   keyboardType: const TextInputType.numberWithOptions(
-              //     decimal: true,
-              //   ),
-              //   inputFormatters: [
-              //     FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-              //   ],
-              //   style: const TextStyle(
-              //     color: SaasPalette.textPrimary,
-              //     fontSize: 14,
-              //   ),
-              //   decoration: _dec('Valor del hotel', Icons.attach_money_rounded),
-              //   onChanged: (_) => _notify(),
-              // ),
+              // Precio ajustado
               PremiumTextField(
                 controller: _valorCtrl,
-                label: 'Valor del hotel',
+                label: _precioCalculado > 0
+                    ? 'Precio ajustado'
+                    : 'Valor del hotel',
                 icon: Icons.attach_money_rounded,
                 inputFormatters: [ThousandsSeparatorInputFormatter()],
                 keyboardType: const TextInputType.numberWithOptions(
@@ -5969,7 +6298,6 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                 validator: (_) => null,
                 onChanged: (_) => _notify(),
               ),
-
               const SizedBox(height: 12),
 
               // Fechas check-in / check-out
@@ -6039,6 +6367,47 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Stepper button ────────────────────────────────────────────────────────────
+
+class _StepperBtn extends StatelessWidget {
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _StepperBtn({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: enabled
+              ? SaasPalette.brand600.withValues(alpha: 0.1)
+              : SaasPalette.bgSubtle,
+          borderRadius: BorderRadius.circular(7),
+          border: Border.all(
+            color: enabled
+                ? SaasPalette.brand600.withValues(alpha: 0.3)
+                : SaasPalette.border,
+          ),
+        ),
+        child: Icon(
+          icon,
+          size: 14,
+          color: enabled ? SaasPalette.brand600 : SaasPalette.textTertiary,
+        ),
+      ),
     );
   }
 }
