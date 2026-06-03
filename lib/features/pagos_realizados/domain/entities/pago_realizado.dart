@@ -24,6 +24,8 @@ class PagoRealizado extends Equatable {
   final String? clienteIdentificacion;
   final String? concepto;
   final int? proveedorId;
+  final String? sedeId;
+  final String? sedeName;
 
   const PagoRealizado({
     required this.id,
@@ -48,6 +50,8 @@ class PagoRealizado extends Equatable {
     this.clienteIdentificacion,
     this.concepto,
     this.proveedorId,
+    this.sedeId,
+    this.sedeName,
   });
 
   PagoRealizado copyWith({
@@ -73,6 +77,8 @@ class PagoRealizado extends Equatable {
     String? clienteIdentificacion,
     String? concepto,
     int? proveedorId,
+    String? sedeId,
+    String? sedeName,
   }) {
     return PagoRealizado(
       id: id ?? this.id,
@@ -97,6 +103,8 @@ class PagoRealizado extends Equatable {
       clienteIdentificacion: clienteIdentificacion ?? this.clienteIdentificacion,
       concepto: concepto ?? this.concepto,
       proveedorId: proveedorId ?? this.proveedorId,
+      sedeId: sedeId ?? this.sedeId,
+      sedeName: sedeName ?? this.sedeName,
     );
   }
 
@@ -124,5 +132,7 @@ class PagoRealizado extends Equatable {
     clienteIdentificacion,
     concepto,
     proveedorId,
+    sedeId,
+    sedeName,
   ];
 }

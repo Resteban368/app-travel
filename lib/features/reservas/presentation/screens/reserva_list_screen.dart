@@ -9,6 +9,7 @@ import 'package:web/web.dart' as webLib;
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
+import '../../../../core/widgets/saas_snackbar.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../domain/entities/reserva.dart';
 import '../../domain/repositories/reserva_repository.dart';
@@ -34,6 +35,7 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
   Timer? _debounce;
   int _currentPage = 1;
   bool _isProcessingDelete = false;
+  bool _isProcessingCancel = false;
 
   DateTime? _startDate;
   DateTime? _endDate;
@@ -164,48 +166,32 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
       backgroundColor: SaasPalette.bgApp,
       body: BlocConsumer<ReservaBloc, ReservaState>(
         listener: (context, state) {
-          if (state is ReservaSaving && _isProcessingDelete) {
+          if (state is ReservaSaving &&
+              (_isProcessingDelete || _isProcessingCancel)) {
             showDialog(
               context: context,
               barrierDismissible: false,
-              builder: (_) => const DialogLoadingNetwork(titel: 'Eliminando reserva...'),
+              builder: (_) => DialogLoadingNetwork(
+                titel: _isProcessingCancel
+                    ? 'Cancelando reserva...'
+                    : 'Eliminando reserva...',
+              ),
             );
           } else if (state is ReservaActionSuccess && _isProcessingDelete) {
             _isProcessingDelete = false;
             Navigator.of(context, rootNavigator: true).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Row(
-                  children: [
-                    Icon(Icons.check_circle_rounded,
-                        color: Colors.white, size: 18),
-                    SizedBox(width: 10),
-                    Text(
-                      'Reserva eliminada correctamente',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-                backgroundColor: SaasPalette.success,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                margin: const EdgeInsets.all(16),
-                duration: const Duration(seconds: 3),
-              ),
-            );
+            SaasSnackBar.showSuccess(context, 'Reserva eliminada correctamente');
+          } else if (state is ReservaActionSuccess && _isProcessingCancel) {
+            _isProcessingCancel = false;
+            Navigator.of(context, rootNavigator: true).pop();
+            SaasSnackBar.showSuccess(context, 'Reserva cancelada correctamente');
           } else if (state is ReservaError) {
-            if (_isProcessingDelete) {
+            if (_isProcessingDelete || _isProcessingCancel) {
               _isProcessingDelete = false;
+              _isProcessingCancel = false;
               Navigator.of(context, rootNavigator: true).pop();
             }
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: SaasPalette.danger,
-              ),
-            );
+            SaasSnackBar.showError(context, state.message);
           }
         },
         builder: (context, state) {
@@ -315,6 +301,7 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
                 reserva: reserva,
                 canWrite: canWrite,
                 onDelete: () => _confirmDelete(reserva),
+                onCancel: () => _confirmCancel(reserva),
               );
             },
             childCount: reservas.length,
@@ -347,6 +334,27 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
           if (reserva.id != null) {
             _isProcessingDelete = true;
             context.read<ReservaBloc>().add(DeleteReserva(int.parse(reserva.id!)));
+          }
+        },
+      ),
+    );
+  }
+
+  void _confirmCancel(Reserva reserva) {
+    showDialog(
+      context: context,
+      builder: (ctx) => SaasConfirmDialog(
+        title: 'Cancelar Reserva',
+        body:
+            'La reserva #${reserva.idReserva ?? reserva.id} será marcada como cancelada '
+            'y los asientos asignados quedarán liberados. '
+            'Esta acción no se puede deshacer.',
+        confirmLabel: 'Cancelar reserva',
+        onConfirm: () {
+          Navigator.pop(ctx);
+          if (reserva.id != null) {
+            _isProcessingCancel = true;
+            context.read<ReservaBloc>().add(CancelReserva(reserva.id!));
           }
         },
       ),
@@ -591,11 +599,11 @@ class _ReservaFilters extends StatelessWidget {
                 onSelected: () => onStatusChanged('pendiente'),
               ),
               _StatusChip(
-                label: 'Cancelado',
+                label: 'Cancelada',
                 icon: Icons.cancel_rounded,
-                isSelected: selectedStatus == 'cancelado',
+                isSelected: selectedStatus == 'cancelada',
                 color: SaasPalette.danger,
-                onSelected: () => onStatusChanged('cancelado'),
+                onSelected: () => onStatusChanged('cancelada'),
               ),
             ],
           ),
@@ -676,7 +684,13 @@ class _ReservaCard extends StatefulWidget {
   final Reserva reserva;
   final bool canWrite;
   final VoidCallback onDelete;
-  const _ReservaCard({required this.reserva, required this.canWrite, required this.onDelete});
+  final VoidCallback onCancel;
+  const _ReservaCard({
+    required this.reserva,
+    required this.canWrite,
+    required this.onDelete,
+    required this.onCancel,
+  });
 
   @override
   State<_ReservaCard> createState() => _ReservaCardState();
@@ -859,6 +873,8 @@ class _ReservaCardState extends State<_ReservaCard> {
                   .nombre
             : 'Sin responsable');
 
+    final isCancelled = r.estado == 'cancelada' || r.estado == 'cancelado';
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -867,10 +883,16 @@ class _ReservaCardState extends State<_ReservaCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: isCancelled
+                ? SaasPalette.danger.withValues(alpha: 0.04)
+                : SaasPalette.bgCanvas,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
+              color: isCancelled
+                  ? SaasPalette.danger.withValues(alpha: 0.25)
+                  : _hovered
+                      ? SaasPalette.brand600
+                      : SaasPalette.border,
             ),
             boxShadow: [
               BoxShadow(
@@ -885,7 +907,9 @@ class _ReservaCardState extends State<_ReservaCard> {
               Navigator.pushNamed(context, AppRouter.reservaEdit, arguments: r);
             },
             borderRadius: BorderRadius.circular(16),
-            child: Padding(
+            child: Opacity(
+              opacity: isCancelled ? 0.6 : 1.0,
+              child: Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -932,12 +956,14 @@ class _ReservaCardState extends State<_ReservaCard> {
                             if (widget.canWrite) ...[
                               const SizedBox(width: 16),
                               _ReservaActionMenu(
+                                reserva: r,
                                 onEdit: () => Navigator.pushNamed(
                                   context,
                                   AppRouter.reservaEdit,
                                   arguments: r,
                                 ),
                                 onDelete: widget.onDelete,
+                                onCancel: widget.onCancel,
                               ),
                             ],
                           ],
@@ -1100,6 +1126,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                 ],
               ),
             ),
+            ), // Opacity
           ),
         ),
       ),
@@ -1125,7 +1152,9 @@ class _StatusBadge extends StatelessWidget {
         color = SaasPalette.warning;
         break;
       case 'cancelado':
+      case 'cancelada':
         color = SaasPalette.danger;
+        label = 'CANCELADA';
         break;
       default:
         color = SaasPalette.textTertiary;
@@ -1189,13 +1218,21 @@ class _InfoRow extends StatelessWidget {
 }
 
 class _ReservaActionMenu extends StatelessWidget {
+  final Reserva reserva;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onCancel;
 
-  const _ReservaActionMenu({required this.onEdit, required this.onDelete});
+  const _ReservaActionMenu({
+    required this.reserva,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onCancel,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isCancelled = reserva.estado == 'cancelada';
     return PopupMenuButton<String>(
       icon: const Icon(
         Icons.more_vert_rounded,
@@ -1206,6 +1243,7 @@ class _ReservaActionMenu extends StatelessWidget {
       elevation: 4,
       onSelected: (value) {
         if (value == 'edit') onEdit();
+        if (value == 'cancel') onCancel();
         if (value == 'delete') onDelete();
       },
       itemBuilder: (context) => [
@@ -1223,6 +1261,26 @@ class _ReservaActionMenu extends StatelessWidget {
             ],
           ),
         ),
+        if (!isCancelled) ...[
+          const PopupMenuDivider(),
+          PopupMenuItem(
+            value: 'cancel',
+            child: Row(
+              children: const [
+                Icon(
+                  Icons.cancel_outlined,
+                  size: 18,
+                  color: SaasPalette.warning,
+                ),
+                SizedBox(width: 12),
+                Text(
+                  'Cancelar reserva',
+                  style: TextStyle(color: SaasPalette.warning, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ],
         const PopupMenuDivider(),
         PopupMenuItem(
           value: 'delete',

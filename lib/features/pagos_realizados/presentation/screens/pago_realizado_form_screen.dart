@@ -37,6 +37,8 @@ import '../../../proveedores/presentation/bloc/proveedor_bloc.dart';
 import '../../../proveedores/presentation/bloc/proveedor_event.dart';
 import '../../../proveedores/presentation/bloc/proveedor_state.dart';
 import '../../../proveedores/domain/entities/proveedor.dart';
+import '../../../settings/domain/entities/sede.dart';
+import '../../../settings/presentation/bloc/sede_bloc.dart';
 
 class PagoRealizadoFormScreen extends StatefulWidget {
   final PagoRealizado? pago;
@@ -77,6 +79,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   bool _isAnalyzing = false;
 
   int? _selectedReservaId;
+  String? _selectedSedeId;
 
   static const _pagosFolderId = '1hTu072yWKHrxTA0g2p_M6qrkzxt2OqCM';
 
@@ -114,6 +117,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     _isValidated = p?.isValidated ?? false;
     // _isValidated solo se usa al crear un pago nuevo o al guardar cambios de detalle.
     _selectedReservaId = p?.reservaId;
+    _selectedSedeId = p?.sedeId;
     if (p?.reservaId != null) {
       _reservaSearchCtrl.text = 'Reserva #${p!.reservaId}';
     }
@@ -126,6 +130,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       }
       context.read<ReservaBloc>().add(const LoadReservas(limit: 20));
       context.read<ProveedorBloc>().add(const LoadProveedores());
+      context.read<SedeBloc>().add(LoadSedes());
     });
 
     _entryCtrl = AnimationController(
@@ -164,6 +169,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   }
 
   void _save(BuildContext context) {
+    if (_selectedSedeId == null) {
+      SaasSnackBar.showWarning(context, 'La sede es requerida');
+      return;
+    }
     if (_entidadTipo == 'reserva' && _selectedReservaId == null) {
       SaasSnackBar.showWarning(context, 'Debes seleccionar una reserva');
       return;
@@ -355,6 +364,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           ? null
           : _conceptoCtrl.text.trim(),
       proveedorId: _selectedProveedorId,
+      sedeId: _selectedSedeId,
     );
     if (_isEditing) {
       context.read<PagoRealizadoBloc>().add(UpdatePago(pago));
@@ -397,6 +407,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     final canWrite = authState is AuthAuthenticated
         ? authState.user.canWrite('pagosRealizados')
         : true;
+
+    final sedeState = context.watch<SedeBloc>().state;
+    final sedes = sedeState is SedesLoaded ? sedeState.sedes : <Sede>[];
+    final sedesLoading = sedeState is SedeLoading;
 
     return MultiBlocListener(
       listeners: [
@@ -527,6 +541,8 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                                     icon: Icons.receipt_long_rounded,
                                     children: [
                                       _buildEntidadTipoDropdown(canWrite: canWrite),
+                                      const SizedBox(height: 20),
+                                      _buildSedeDropdown(canWrite: canWrite, sedes: sedes, sedesLoading: sedesLoading),
                                     ],
                                   ),
                                   const SizedBox(height: 16),
@@ -1329,6 +1345,79 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           ],
         );
       },
+    );
+  }
+
+  Widget _buildSedeDropdown({
+    required bool canWrite,
+    required List<Sede> sedes,
+    required bool sedesLoading,
+  }) {
+    final selectedSede = sedes.where((s) => s.id == _selectedSedeId).firstOrNull;
+    final sedeLabel = selectedSede?.nombreSede ??
+        (_selectedSedeId != null ? 'Sede #$_selectedSedeId' : '—');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'SEDE *',
+          style: TextStyle(
+            color: SaasPalette.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 6),
+        if (!canWrite)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: SaasPalette.bgSubtle,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: SaasPalette.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.business_rounded, color: SaasPalette.brand600, size: 18),
+                const SizedBox(width: 12),
+                Text(
+                  sedesLoading ? 'Cargando...' : sedeLabel,
+                  style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
+                ),
+              ],
+            ),
+          )
+        else
+          DropdownButtonFormField<String>(
+            value: sedes.any((s) => s.id == _selectedSedeId) ? _selectedSedeId : null,
+            dropdownColor: SaasPalette.bgCanvas,
+            style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.business_rounded, color: SaasPalette.brand600, size: 18),
+              filled: true,
+              fillColor: SaasPalette.bgCanvas,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: SaasPalette.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: SaasPalette.brand600, width: 1.5),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            ),
+            hint: Text(
+              sedesLoading ? 'Cargando...' : 'Selecciona una sede',
+              style: const TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
+            ),
+            items: sedes
+                .map((s) => DropdownMenuItem(value: s.id, child: Text(s.nombreSede)))
+                .toList(),
+            onChanged: (val) => setState(() => _selectedSedeId = val),
+          ),
+      ],
     );
   }
 

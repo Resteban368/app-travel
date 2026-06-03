@@ -9,6 +9,7 @@ import '../../../../core/widgets/premium_form_widgets.dart';
 import '../../../../config/app_router.dart';
 import '../../domain/entities/tour.dart';
 import '../../domain/entities/tour_precio.dart';
+import '../../domain/entities/precio_grupal.dart';
 import '../../../../features/settings/domain/entities/sede.dart';
 import '../../../../features/settings/presentation/bloc/sede_bloc.dart';
 import '../../../../features/bus_layouts/domain/entities/bus_layout.dart';
@@ -50,10 +51,15 @@ class _TourFormScreenState extends State<TourFormScreen>
   List<String> _exclusions = [];
   List<ItineraryDay> _itinerary = [];
   List<TourPrecio> _precios = [];
+  List<PrecioGrupal> _preciosGrupales = [];
+  List<String> _imagenes = [];
   bool _preciosModificados = false;
+  String _modoPrecio = 'individual';
   final _inclusionCtrl = TextEditingController();
   final _exclusionCtrl = TextEditingController();
+  final _imagenCtrl = TextEditingController();
   bool _isLoadingFullData = false;
+  String? _tipoTour;
 
   late final AnimationController _entryCtrl;
   late final Animation<double> _fade;
@@ -89,6 +95,10 @@ class _TourFormScreenState extends State<TourFormScreen>
       _exclusions = List.from(t.exclusions ?? []);
       _itinerary = List.from(t.itinerary ?? []);
       _precios = List.from(t.precios ?? []);
+      _preciosGrupales = List.from(t.preciosGrupales);
+      _imagenes = List.from(t.imagenes);
+      _modoPrecio = t.modoPrecio ?? 'individual';
+      _tipoTour = t.tipoTour;
     }
 
     _entryCtrl = AnimationController(
@@ -140,6 +150,9 @@ class _TourFormScreenState extends State<TourFormScreen>
     _exclusions = List.from(t.exclusions ?? []);
     _itinerary = List.from(t.itinerary ?? []);
     _precios = List.from(t.precios ?? []);
+    _preciosGrupales = List.from(t.preciosGrupales);
+    _imagenes = List.from(t.imagenes);
+    _tipoTour = t.tipoTour;
     _isLoadingFullData = false;
   }
 
@@ -157,6 +170,7 @@ class _TourFormScreenState extends State<TourFormScreen>
     _cuposCtrl.dispose();
     _inclusionCtrl.dispose();
     _exclusionCtrl.dispose();
+    _imagenCtrl.dispose();
     super.dispose();
   }
 
@@ -199,10 +213,26 @@ class _TourFormScreenState extends State<TourFormScreen>
       return;
     }
 
-    //UN PRECIO
-    if (_priceCtrl.text.trim().isEmpty) {
-      SaasSnackBar.showWarning(context, 'El precio es requerido');
+    //TIPO DE TOUR
+    if (_tipoTour == null) {
+      SaasSnackBar.showWarning(context, 'El tipo de tour es requerido');
       return;
+    }
+
+    //PRECIO
+    if (_modoPrecio == 'individual') {
+      if (_priceCtrl.text.trim().isEmpty) {
+        SaasSnackBar.showWarning(context, 'El precio es requerido');
+        return;
+      }
+    } else {
+      if (_preciosGrupales.isEmpty) {
+        SaasSnackBar.showWarning(
+          context,
+          'Debes agregar al menos un rango de precio grupal',
+        );
+        return;
+      }
     }
     //FECHAS
     if (_dateRange == null) {
@@ -258,12 +288,6 @@ class _TourFormScreenState extends State<TourFormScreen>
       return;
     }
 
-    //BUS LAYOUT
-    if (_selectedBusLayoutIds.isEmpty) {
-      SaasSnackBar.showWarning(context, 'Debes asignar al menos un bus');
-      return;
-    }
-
     final tour = Tour(
       id: _isEditing
           ? widget.tour!.id
@@ -273,9 +297,12 @@ class _TourFormScreenState extends State<TourFormScreen>
       agency: _agencyCtrl.text.trim(),
       startDate: _dateRange!.start,
       endDate: _dateRange!.end,
-      price:
-          double.tryParse(_priceCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')) ??
-          0,
+      price: _modoPrecio == 'grupal'
+          ? 0
+          : (double.tryParse(
+                _priceCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+              ) ??
+              0),
       departurePoint: _departurePointCtrl.text.trim(),
       departureTime: _departureTimeCtrl.text.trim(),
       arrival: _arrivalCtrl.text.trim(),
@@ -291,6 +318,10 @@ class _TourFormScreenState extends State<TourFormScreen>
       cupos: int.tryParse(_cuposCtrl.text.trim()),
       precios: _precios,
       busLayoutIds: _selectedBusLayoutIds,
+      tipoTour: _tipoTour,
+      modoPrecio: _modoPrecio,
+      preciosGrupales: _preciosGrupales,
+      imagenes: _imagenes,
     );
 
     if (_isEditing) {
@@ -423,6 +454,8 @@ class _TourFormScreenState extends State<TourFormScreen>
                                     const SizedBox(height: 20),
                                     _buildSedeDropdown(canWrite: canWrite),
                                     const SizedBox(height: 20),
+                                    _buildTipoTourDropdown(canWrite: canWrite),
+                                    const SizedBox(height: 20),
                                     _buildBusLayoutDropdown(canWrite: canWrite),
                                   ],
                                 ),
@@ -433,16 +466,18 @@ class _TourFormScreenState extends State<TourFormScreen>
                                   children: [
                                     Row(
                                       children: [
-                                        Expanded(
-                                          child: PremiumTextField(
-                                            controller: _priceCtrl,
-                                            label: 'Precio (COP) *',
-                                            icon: Icons.attach_money_rounded,
-                                            isNumeric: true,
-                                            readOnly: !canWrite,
+                                        if (_modoPrecio == 'individual') ...[
+                                          Expanded(
+                                            child: PremiumTextField(
+                                              controller: _priceCtrl,
+                                              label: 'Precio (COP) *',
+                                              icon: Icons.attach_money_rounded,
+                                              isNumeric: true,
+                                              readOnly: !canWrite,
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 16),
+                                          const SizedBox(width: 16),
+                                        ],
                                         Expanded(
                                           child: _DateRangeSelector(
                                             range: _dateRange,
@@ -521,6 +556,8 @@ class _TourFormScreenState extends State<TourFormScreen>
                                       icon: Icons.picture_as_pdf_rounded,
                                       readOnly: !canWrite,
                                     ),
+                                    const SizedBox(height: 24),
+                                    _buildImagenesSection(canWrite: canWrite),
                                   ],
                                 ),
                                 const SizedBox(height: 20),
@@ -621,39 +658,156 @@ class _TourFormScreenState extends State<TourFormScreen>
             children: [
               const Expanded(
                 child: PremiumSectionHeader(
-                  title: 'PRECIOS POR CATEGORÍA',
+                  title: 'PRECIOS',
                   icon: Icons.sell_rounded,
                 ),
               ),
-              if (canWrite)
-                _MiniAddButton(
-                  label: 'PRECIO',
-                  onTap: () => _showAgregarPrecioSheet(),
-                ),
+              if (canWrite) _buildModoPrecioToggle(),
             ],
           ),
-          const SizedBox(height: 16),
-          if (_precios.isEmpty)
-            const PremiumEmptyIndicator(
-              msg:
-                  'Opcional — agrega categorías de precio por edad o punto de salida.',
-              icon: Icons.local_offer_rounded,
-            )
+          const SizedBox(height: 20),
+          if (_modoPrecio == 'grupal')
+            _buildPreciosGrupalesContent(canWrite, fmt)
           else
-            ..._precios.asMap().entries.map(
-              (e) => _PrecioCard(
-                precio: e.value,
-                fmt: fmt,
-                canWrite: canWrite,
-                onRemove: () => setState(() {
-                  _precios.removeAt(e.key);
-                  _preciosModificados = true;
-                }),
-              ),
-            ),
+            _buildPreciosIndividualesContent(canWrite, fmt),
         ],
       ),
     );
+  }
+
+  Widget _buildModoPrecioToggle() {
+    return Container(
+      decoration: BoxDecoration(
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: SaasPalette.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ModePill(
+            label: 'Por persona',
+            selected: _modoPrecio == 'individual',
+            onTap: () => setState(() => _modoPrecio = 'individual'),
+          ),
+          _ModePill(
+            label: 'Grupal',
+            selected: _modoPrecio == 'grupal',
+            onTap: () => setState(() => _modoPrecio = 'grupal'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreciosIndividualesContent(bool canWrite, NumberFormat fmt) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'CATEGORÍAS DE PRECIO',
+                style: TextStyle(
+                  color: SaasPalette.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+            if (canWrite)
+              _MiniAddButton(
+                label: 'PRECIO',
+                onTap: () => _showAgregarPrecioSheet(),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (_precios.isEmpty)
+          const PremiumEmptyIndicator(
+            msg:
+                'Opcional — agrega categorías de precio por edad o punto de salida.',
+            icon: Icons.local_offer_rounded,
+          )
+        else
+          ..._precios.asMap().entries.map(
+            (e) => _PrecioCard(
+              precio: e.value,
+              fmt: fmt,
+              canWrite: canWrite,
+              onRemove: () => _confirmDeletePrecio(e.key),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPreciosGrupalesContent(bool canWrite, NumberFormat fmt) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'RANGOS DE PRECIO GRUPAL',
+                style: TextStyle(
+                  color: SaasPalette.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+            if (canWrite)
+              _MiniAddButton(
+                label: 'RANGO',
+                onTap: () => _showAgregarPrecioGrupalSheet(),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'El precio es fijo por rango. Los rangos deben cubrir todos los tamaños de grupo posibles.',
+          style: TextStyle(
+            color: SaasPalette.textTertiary,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_preciosGrupales.isEmpty)
+          const PremiumEmptyIndicator(
+            msg: 'Agrega rangos de personas con su precio fijo correspondiente.',
+            icon: Icons.groups_rounded,
+          )
+        else
+          ..._preciosGrupales.asMap().entries.map(
+            (e) => _PrecioGrupalCard(
+              precio: e.value,
+              fmt: fmt,
+              canWrite: canWrite,
+              onRemove: () => _confirmDeletePrecioGrupal(e.key),
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _showAgregarPrecioGrupalSheet() {
+    showModalBottomSheet<PrecioGrupal>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _GrupalPriceSheet(),
+    ).then((resultado) {
+      if (resultado != null && mounted) {
+        setState(() => _preciosGrupales.add(resultado));
+      }
+    });
   }
 
   void _showAgregarPrecioSheet() {
@@ -823,6 +977,190 @@ class _TourFormScreenState extends State<TourFormScreen>
     });
   }
 
+  Widget _buildImagenesSection({required bool canWrite}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'GALERÍA DE IMÁGENES',
+                style: TextStyle(
+                  color: SaasPalette.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+            if (canWrite)
+              Text(
+                '${_imagenes.length} imagen${_imagenes.length == 1 ? '' : 'es'}',
+                style: const TextStyle(
+                  color: SaasPalette.textTertiary,
+                  fontSize: 12,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (canWrite)
+          Row(
+            children: [
+              Expanded(
+                child: PremiumTextField(
+                  controller: _imagenCtrl,
+                  label: 'URL de imagen',
+                  icon: Icons.image_rounded,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Padding(
+                padding: const EdgeInsets.only(top: 20),
+                child: _CircleAddButton(
+                  color: SaasPalette.brand600,
+                  onTap: () {
+                    final url = _imagenCtrl.text.trim();
+                    if (url.isNotEmpty) {
+                      setState(() => _imagenes.add(url));
+                      _imagenCtrl.clear();
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        if (_imagenes.isEmpty) ...[
+          const SizedBox(height: 12),
+          const PremiumEmptyIndicator(
+            msg: 'Sin imágenes — agrega URLs para la galería del tour.',
+            icon: Icons.photo_library_rounded,
+          ),
+        ] else ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 130,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _imagenes.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, index) => _ImagenThumbnail(
+                url: _imagenes[index],
+                canWrite: canWrite,
+                onDelete: () => _confirmDeleteImagen(index),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _confirmDeletePrecio(int index) {
+    final precio = _precios[index];
+    _showDeleteDialog(
+      title: 'Eliminar precio',
+      body: '¿Eliminar la categoría "${precio.descripcion}"?',
+      onConfirm: () => setState(() {
+        _precios.removeAt(index);
+        _preciosModificados = true;
+      }),
+    );
+  }
+
+  void _confirmDeletePrecioGrupal(int index) {
+    final rango = _preciosGrupales[index];
+    final label = rango.descripcion?.isNotEmpty == true
+        ? rango.descripcion!
+        : '${rango.minPersonas}–${rango.maxPersonas} personas';
+    _showDeleteDialog(
+      title: 'Eliminar rango grupal',
+      body: '¿Eliminar el rango "$label"?',
+      onConfirm: () => setState(() => _preciosGrupales.removeAt(index)),
+    );
+  }
+
+  void _showDeleteDialog({
+    required String title,
+    required String body,
+    required VoidCallback onConfirm,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: SaasPalette.bgCanvas,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: SaasPalette.danger.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.delete_rounded,
+                color: SaasPalette.danger,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: SaasPalette.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          body,
+          style: const TextStyle(
+            color: SaasPalette.textSecondary,
+            fontSize: 14,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: SaasPalette.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SaasPalette.danger,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              onConfirm();
+            },
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteImagen(int index) {
+    _showDeleteDialog(
+      title: 'Eliminar imagen',
+      body: '¿Eliminar esta imagen de la galería?',
+      onConfirm: () => setState(() => _imagenes.removeAt(index)),
+    );
+  }
+
   Widget _buildSedeDropdown({required bool canWrite}) {
     return BlocProvider(
       create: (_) => sl<SedeBloc>()..add(LoadSedes()),
@@ -939,6 +1277,92 @@ class _TourFormScreenState extends State<TourFormScreen>
     );
   }
 
+  static const _tipoTourOpciones = [
+    ('terrestre', 'Terrestre'),
+    ('pasadia', 'Pasadía'),
+    ('aereo', 'Aéreo'),
+    ('combinado', 'Combinado'),
+  ];
+
+  Widget _buildTipoTourDropdown({required bool canWrite}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'TIPO DE TOUR',
+          style: TextStyle(
+            color: SaasPalette.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 6),
+        if (!canWrite)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: SaasPalette.bgSubtle,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: SaasPalette.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.category_rounded,
+                    color: SaasPalette.brand600, size: 18),
+                const SizedBox(width: 12),
+                Text(
+                  _tipoTourOpciones
+                          .where((o) => o.$1 == _tipoTour)
+                          .firstOrNull
+                          ?.$2 ??
+                      '—',
+                  style: const TextStyle(
+                      color: SaasPalette.textPrimary, fontSize: 14),
+                ),
+              ],
+            ),
+          )
+        else
+          DropdownButtonFormField<String>(
+            value: _tipoTour,
+            dropdownColor: SaasPalette.bgCanvas,
+            style: const TextStyle(
+                color: SaasPalette.textPrimary, fontSize: 14),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.category_rounded,
+                  color: SaasPalette.brand600, size: 18),
+              filled: true,
+              fillColor: SaasPalette.bgCanvas,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: SaasPalette.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(
+                    color: SaasPalette.brand600, width: 1.5),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 12),
+            ),
+            hint: const Text(
+              'Selecciona el tipo',
+              style: TextStyle(
+                  color: SaasPalette.textTertiary, fontSize: 13),
+            ),
+            items: _tipoTourOpciones
+                .map((o) => DropdownMenuItem(
+                      value: o.$1,
+                      child: Text(o.$2),
+                    ))
+                .toList(),
+            onChanged: (val) => setState(() => _tipoTour = val),
+          ),
+      ],
+    );
+  }
+
   Widget _buildBusLayoutDropdown({required bool canWrite}) {
     return BlocProvider(
       create: (_) => sl<BusLayoutBloc>()..add(const LoadBusLayouts()),
@@ -1042,14 +1466,6 @@ class _TourFormScreenState extends State<TourFormScreen>
                         ],
                       ),
               ),
-              if (_selectedBusLayoutIds.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 4, left: 4),
-                  child: Text(
-                    'Selecciona al menos un bus',
-                    style: TextStyle(color: Colors.red, fontSize: 11),
-                  ),
-                ),
             ],
           );
         },
@@ -1708,6 +2124,356 @@ class _CuposDisponiblesInfo extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ImagenThumbnail extends StatelessWidget {
+  final String url;
+  final bool canWrite;
+  final VoidCallback onDelete;
+
+  const _ImagenThumbnail({
+    required this.url,
+    required this.canWrite,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: 130,
+        height: 130,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: SaasPalette.bgSubtle,
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.broken_image_rounded,
+                      color: SaasPalette.textTertiary,
+                      size: 32,
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Sin vista previa',
+                      style: TextStyle(
+                        color: SaasPalette.textTertiary,
+                        fontSize: 10,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              loadingBuilder: (_, child, progress) => progress == null
+                  ? child
+                  : Container(
+                      color: SaasPalette.bgSubtle,
+                      child: const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    ),
+            ),
+            if (canWrite)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: GestureDetector(
+                  onTap: onDelete,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GrupalPriceSheet extends StatefulWidget {
+  const _GrupalPriceSheet();
+
+  @override
+  State<_GrupalPriceSheet> createState() => _GrupalPriceSheetState();
+}
+
+class _GrupalPriceSheetState extends State<_GrupalPriceSheet> {
+  final _minCtrl = TextEditingController();
+  final _maxCtrl = TextEditingController();
+  final _precioCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _minCtrl.dispose();
+    _maxCtrl.dispose();
+    _precioCtrl.dispose();
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: SaasPalette.bgCanvas,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Agregar rango grupal',
+                    style: TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: SaasPalette.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: PremiumTextField(
+                    controller: _minCtrl,
+                    label: 'Mín. personas *',
+                    icon: Icons.person_rounded,
+                    isNumeric: true,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: PremiumTextField(
+                    controller: _maxCtrl,
+                    label: 'Máx. personas *',
+                    icon: Icons.groups_rounded,
+                    isNumeric: true,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            PremiumTextField(
+              controller: _precioCtrl,
+              label: 'Precio fijo del rango (COP) *',
+              icon: Icons.attach_money_rounded,
+              isNumeric: true,
+            ),
+            const SizedBox(height: 14),
+            PremiumTextField(
+              controller: _descCtrl,
+              label: 'Descripción (opcional)',
+              icon: Icons.label_rounded,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SaasPalette.brand600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  final min = int.tryParse(_minCtrl.text.trim());
+                  final max = int.tryParse(_maxCtrl.text.trim());
+                  final precio = double.tryParse(
+                    _precioCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+                  );
+                  if (min == null || max == null || precio == null) return;
+                  Navigator.pop(
+                    context,
+                    PrecioGrupal(
+                      minPersonas: min,
+                      maxPersonas: max,
+                      precio: precio,
+                      descripcion: _descCtrl.text.trim().isEmpty
+                          ? null
+                          : _descCtrl.text.trim(),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'AGREGAR',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ModePill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _ModePill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(
+        color: selected ? SaasPalette.brand600 : Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: selected ? Colors.white : SaasPalette.textSecondary,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ),
+  );
+}
+
+class _PrecioGrupalCard extends StatelessWidget {
+  final PrecioGrupal precio;
+  final NumberFormat fmt;
+  final bool canWrite;
+  final VoidCallback onRemove;
+
+  const _PrecioGrupalCard({
+    required this.precio,
+    required this.fmt,
+    required this.canWrite,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SaasPalette.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: SaasPalette.brand50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: SaasPalette.brand600.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.groups_rounded,
+                  color: SaasPalette.brand600,
+                  size: 15,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '${precio.minPersonas}–${precio.maxPersonas}',
+                  style: const TextStyle(
+                    color: SaasPalette.brand600,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: precio.descripcion != null &&
+                    precio.descripcion!.isNotEmpty
+                ? Text(
+                    precio.descripcion!,
+                    style: const TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 12,
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          Text(
+            fmt.format(precio.precio),
+            style: const TextStyle(
+              color: SaasPalette.success,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (canWrite) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: onRemove,
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                color: SaasPalette.danger,
+                size: 20,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

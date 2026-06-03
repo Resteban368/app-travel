@@ -13,6 +13,7 @@ class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
     on<CreateReserva>(_onCreateReserva);
     on<UpdateReserva>(_onUpdateReserva);
     on<DeleteReserva>(_onDeleteReserva);
+    on<CancelReserva>(_onCancelReserva);
   }
 
   Future<void> _onLoadReservaById(
@@ -147,6 +148,21 @@ class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
         page: (state is ReservaLoaded) ? (state as ReservaLoaded).page : 1,
         limit: (state is ReservaLoaded) ? (state as ReservaLoaded).limit : 20,
       );
+      emit(ReservaActionSuccess(result.data));
+    } catch (e) {
+      emit(ReservaError(e.toString()));
+    }
+  }
+
+  Future<void> _onCancelReserva(
+    CancelReserva event,
+    Emitter<ReservaState> emit,
+  ) async {
+    final currentReservas = _getCurrentReservas();
+    emit(ReservaSaving(reservas: currentReservas));
+    try {
+      await repository.cancelReserva(event.id);
+      final result = await repository.getReservas(page: 1, limit: 20);
       emit(ReservaActionSuccess(result.data));
     } catch (e) {
       emit(ReservaError(e.toString()));

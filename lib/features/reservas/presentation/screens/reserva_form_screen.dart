@@ -1,4 +1,5 @@
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
+import 'package:agente_viajes/core/widgets/saas_ui_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -43,6 +44,7 @@ import '../../../../features/clientes/presentation/bloc/cliente_event.dart';
 import '../../../../features/clientes/presentation/bloc/cliente_state.dart';
 import '../../../../features/clientes/domain/entities/cliente.dart';
 import '../../../../features/clientes/domain/repositories/cliente_repository.dart';
+import '../../../../features/tour/domain/entities/precio_grupal.dart';
 
 import 'dart:ui';
 
@@ -61,8 +63,6 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   // Basic info control
   late final TextEditingController _notasCtrl;
   String _estado = 'pendiente';
-  String _tipoReserva = 'tour';
-
   // Pagos de la reserva (solo en edición)
   List<PagoRealizado> _pagos = [];
   bool _loadingPagos = false;
@@ -218,7 +218,6 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   void _populateFromReserva(Reserva r, {bool skipBuses = false}) {
     _currentReserva = r;
     _estado = r.estado;
-    _tipoReserva = r.tipoReserva;
     _selectedClienteId = r.idResponsable;
     _selectedTourId = (r.idTour != null && r.idTour!.isNotEmpty)
         ? r.idTour
@@ -548,25 +547,149 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     }
   }
 
+  Future<void> _onDeleteIntegrante(int index) async {
+    final integrante = _integrantes[index];
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => SaasConfirmDialog(
+        title: 'Eliminar integrante',
+        body:
+            '¿Deseas eliminar a ${integrante.nombre.isNotEmpty ? integrante.nombre : "este integrante"}? Esta acción no se puede deshacer.',
+        confirmLabel: 'Eliminar',
+        onConfirm: () => Navigator.pop(ctx, true),
+      ),
+    );
+    if (confirmed != true) return;
+
+    final reservaId = _currentReserva?.id ?? widget.reserva?.id;
+
+    if (_isEditing && integrante.id != null && reservaId != null) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const DialogLoadingNetwork(
+          titel: 'Eliminando integrante...',
+        ),
+      );
+      try {
+        await sl<ReservaRepository>().deleteIntegrante(
+          reservaId,
+          integrante.id!,
+        );
+        final fresh = await sl<ReservaRepository>().getReservaById(reservaId);
+        if (!mounted) return;
+        Navigator.of(context, rootNavigator: true).pop();
+        _preciosInitialized = false;
+        _populateFromReserva(fresh);
+        SaasSnackBar.showSuccess(
+          context,
+          'Integrante eliminado · Nuevo total: \$${(fresh.valorTotal ?? 0).toStringAsFixed(0)}',
+        );
+      } catch (e) {
+        if (mounted) Navigator.of(context, rootNavigator: true).pop();
+        if (mounted) SaasSnackBar.showError(context, e.toString());
+      }
+    } else {
+      setState(() {
+        _integrantes.removeAt(index);
+        final newMap = <int, TourPrecio?>{};
+        for (final entry in _preciosPorPersona.entries) {
+          if (entry.key == index) continue;
+          if (entry.key > index) {
+            newMap[entry.key - 1] = entry.value;
+          } else {
+            newMap[entry.key] = entry.value;
+          }
+        }
+        _preciosPorPersona = newMap;
+      });
+    }
+  }
+
+  Widget _buildCancelReservaButton(BuildContext ctx) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => _confirmCancelReserva(ctx),
+        icon: const Icon(
+          Icons.cancel_outlined,
+          size: 18,
+          color: SaasPalette.warning,
+        ),
+        label: const Text(
+          'CANCELAR RESERVA',
+          style: TextStyle(
+            color: SaasPalette.warning,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: SaasPalette.warning),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmCancelReserva(BuildContext ctx) async {
+    final reserva = _currentReserva ?? widget.reserva;
+    if (reserva?.id == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (dialogCtx) => SaasConfirmDialog(
+        title: 'Cancelar Reserva',
+        body:
+            'La reserva #${reserva!.idReserva ?? reserva.id} será marcada como cancelada '
+            'y los asientos asignados quedarán liberados. '
+            'Esta acción no se puede deshacer.',
+        confirmLabel: 'Cancelar reserva',
+        onConfirm: () => Navigator.pop(dialogCtx, true),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const DialogLoadingNetwork(titel: 'Cancelando reserva...'),
+    );
+
+    try {
+      await sl<ReservaRepository>().cancelReserva(reserva!.id!);
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      context.read<ReservaBloc>().add(const LoadReservas());
+      Navigator.pop(context);
+      SaasSnackBar.showSuccess(context, 'Reserva cancelada correctamente');
+    } catch (e) {
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+      if (mounted) SaasSnackBar.showError(context, e.toString());
+    }
+  }
+
   void _save() {
-    //VALIDACIONES
-    //CLIENTE
+    // Cliente requerido
     if (_selectedCliente == null) {
       SaasSnackBar.showWarning(context, 'Debe seleccionar un cliente.');
       return;
     }
 
-    //SI LA RESERVA ES TIPO TOUR
-    //DEBE TENER UN TOUR SELECIONADO
-    if (_tipoReserva == 'tour' && _selectedTourId == null) {
-      SaasSnackBar.showWarning(context, 'Debe seleccionar un tour.');
+    // Al menos un tour, vuelo u hotel
+    if (_selectedTourId == null && _vuelos.isEmpty && _hotelReservas.isEmpty) {
+      SaasSnackBar.showWarning(
+        context,
+        'Debe agregar al menos un tour, vuelo u hotel.',
+      );
       return;
     }
 
-    // Si es tipo tour y el tour tiene buses asignados, debe seleccionar uno
-    if (_tipoReserva == 'tour' &&
-        _selectedTourId != null &&
-        _busesDisponibilidad.isNotEmpty) {
+    // Bus obligatorio si el tour tiene buses asignados
+    if (_selectedTourId != null && _busesDisponibilidad.isNotEmpty) {
       if (_selectedBusLayoutId == null) {
         SaasSnackBar.showWarning(
           context,
@@ -576,189 +699,107 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       }
     }
 
-    //si la reserva es de tipo vuelos
-    // DEBE TENER AL MENOS UM VUELO
-    if (_tipoReserva == 'vuelos' && _vuelos.isEmpty) {
-      SaasSnackBar.showWarning(context, 'Debe seleccionar al menos un vuelo.');
-      return;
-    }
-
-    if (_tipoReserva == 'vuelos') {
-      //PARA TODOS LOS VUELOS AGREGADOS DEBEN DE TENER
-      for (var vuelo in _vuelos) {
-        //SELECIONAR UNA AEROLINEA
-        if (vuelo.aerolinea == null) {
-          SaasSnackBar.showWarning(context, 'Debe seleccionar una aerolínea.');
-          return;
-        }
-        //ORIGEN DEL VUELO
-        if (vuelo.origen.isEmpty) {
-          SaasSnackBar.showWarning(context, 'Debe seleccionar un origen.');
-          return;
-        }
-        //DESTINO DEL VUELO
-        if (vuelo.destino.isEmpty) {
-          SaasSnackBar.showWarning(context, 'Debe seleccionar un destino.');
-          return;
-        }
-
-        //fecha y hora de salida
-        if (vuelo.fechaSalida.isEmpty) {
-          SaasSnackBar.showWarning(
-            context,
-            'Debe seleccionar una fecha de salida.',
-          );
-          return;
-        }
-        if (vuelo.horaSalida.isEmpty) {
-          SaasSnackBar.showWarning(
-            context,
-            'Debe seleccionar una hora de salida.',
-          );
-          return;
-        }
-        //fecha y hora de llegada
-        if (vuelo.fechaLlegada.isEmpty) {
-          SaasSnackBar.showWarning(
-            context,
-            'Debe seleccionar una fecha de llegada.',
-          );
-          return;
-        }
-        if (vuelo.horaLlegada.isEmpty) {
-          SaasSnackBar.showWarning(
-            context,
-            'Debe seleccionar una hora de llegada.',
-          );
-          return;
-        }
-
-        //precio del vuelo
-        if (vuelo.precio == null) {
-          SaasSnackBar.showWarning(
-            context,
-            'Debe seleccionar un precio para el vuelo.',
-          );
-          return;
-        }
+    // Validar cada vuelo agregado
+    for (var vuelo in _vuelos) {
+      if (vuelo.aerolinea == null) {
+        SaasSnackBar.showWarning(context, 'Debe seleccionar una aerolínea.');
+        return;
+      }
+      if (vuelo.origen.isEmpty) {
+        SaasSnackBar.showWarning(context, 'Debe seleccionar un origen.');
+        return;
+      }
+      if (vuelo.destino.isEmpty) {
+        SaasSnackBar.showWarning(context, 'Debe seleccionar un destino.');
+        return;
+      }
+      if (vuelo.fechaSalida.isEmpty) {
+        SaasSnackBar.showWarning(context, 'Debe seleccionar una fecha de salida.');
+        return;
+      }
+      if (vuelo.horaSalida.isEmpty) {
+        SaasSnackBar.showWarning(context, 'Debe seleccionar una hora de salida.');
+        return;
+      }
+      if (vuelo.fechaLlegada.isEmpty) {
+        SaasSnackBar.showWarning(context, 'Debe seleccionar una fecha de llegada.');
+        return;
+      }
+      if (vuelo.horaLlegada.isEmpty) {
+        SaasSnackBar.showWarning(context, 'Debe seleccionar una hora de llegada.');
+        return;
+      }
+      if (vuelo.precio == null) {
+        SaasSnackBar.showWarning(context, 'Debe ingresar el precio del vuelo.');
+        return;
       }
     }
 
-    //si tiene un hotel seleccionado debe tener
-
-    if (_hotelReservas.isNotEmpty) {
-      for (var hotel in _hotelReservas) {
-        //seleccion un hotel
-        if (hotel.hotel == null) {
-          SaasSnackBar.showWarning(context, 'Debe seleccionar un hotel.');
-          return;
-        }
-        //numero de reserva
-        if (hotel.numeroReserva.isEmpty) {
-          SaasSnackBar.showWarning(
-            context,
-            'Debe seleccionar un numero de reserva para el hotel',
-          );
-          return;
-        }
-        //valor del hotel
-        if (hotel.valor == null) {
-          SaasSnackBar.showWarning(
-            context,
-            'Debe seleccionar un valor para el hotel.',
-          );
-          return;
-        }
-        //check-in
-        if (hotel.fechaCheckin.isEmpty) {
-          SaasSnackBar.showWarning(
-            context,
-            'Debe seleccionar una fecha de check-in.',
-          );
-          return;
-        }
-        //check-out
-        if (hotel.fechaCheckout.isEmpty) {
-          SaasSnackBar.showWarning(
-            context,
-            'Debe seleccionar una fecha de check-out.',
-          );
-          return;
-        }
+    // Validar cada hotel agregado
+    for (var hotel in _hotelReservas) {
+      if (hotel.hotel == null) {
+        SaasSnackBar.showWarning(context, 'Debe seleccionar un hotel.');
+        return;
+      }
+      if (hotel.numeroReserva.isEmpty) {
+        SaasSnackBar.showWarning(context, 'Debe ingresar el número de reserva del hotel.');
+        return;
+      }
+      if (hotel.valor == null) {
+        SaasSnackBar.showWarning(context, 'Debe ingresar el valor del hotel.');
+        return;
+      }
+      if (hotel.fechaCheckin.isEmpty) {
+        SaasSnackBar.showWarning(context, 'Debe seleccionar una fecha de check-in.');
+        return;
+      }
+      if (hotel.fechaCheckout.isEmpty) {
+        SaasSnackBar.showWarning(context, 'Debe seleccionar una fecha de check-out.');
+        return;
       }
     }
 
-    //si tiene integrantes creados debe tener
-    if (_integrantes.isNotEmpty) {
-      for (int i = 0; i < _integrantes.length; i++) {
-        final integrante = _integrantes[i];
-        final label = 'Integrante ${i + 1}';
-
-        //nombre
-        if (integrante.nombre.isEmpty) {
-          SaasSnackBar.showWarning(
-            context,
-            'Debe ingresar el nombre de $label.',
-          );
-          return;
-        }
-
-        //telefono
-        if (integrante.telefono.isEmpty) {
-          SaasSnackBar.showWarning(
-            context,
-            'Debe ingresar el teléfono de $label.',
-          );
-          return;
-        }
-
-        //documento
-        if (integrante.documento.isEmpty) {
-          SaasSnackBar.showWarning(
-            context,
-            'Debe ingresar el número de documento de $label.',
-          );
-          return;
-        }
+    // Validar integrantes
+    for (int i = 0; i < _integrantes.length; i++) {
+      final integrante = _integrantes[i];
+      final label = 'Integrante ${i + 1}';
+      if (integrante.nombre.isEmpty) {
+        SaasSnackBar.showWarning(context, 'Debe ingresar el nombre de $label.');
+        return;
+      }
+      if (integrante.telefono.isEmpty) {
+        SaasSnackBar.showWarning(context, 'Debe ingresar el teléfono de $label.');
+        return;
+      }
+      if (integrante.documento.isEmpty) {
+        SaasSnackBar.showWarning(context, 'Debe ingresar el número de documento de $label.');
+        return;
       }
     }
 
-    //SI TIENE UN VUELO CREADO DEBE TENER
-    //SELECIONAR UNA AEROLINEA
+    // ── Calcular componentes del total ──────────────────────────────────────
+    final vuelosTotal = _vuelos.fold<double>(0.0, (sum, v) => sum + (v.precio ?? 0.0));
+    final hotelesTotal = _hotelReservas.fold<double>(0.0, (sum, h) => sum + (h.valor ?? 0.0));
 
-    // Calcular valor total para reservas de tipo vuelos
-    double? calculatedVuelosTotal;
-    if (_tipoReserva == 'vuelos') {
-      final vuelosTotal = _vuelos.fold<double>(
-        0.0,
-        (sum, v) => sum + (v.precio ?? 0.0),
+    double serviciosTotal = 0.0;
+    final serviceState = context.read<ServiceBloc>().state;
+    List<Service> allServices = [];
+    if (serviceState is ServicesLoaded) {
+      allServices = serviceState.services;
+    } else if (serviceState is ServiceSaved && serviceState.services != null) {
+      allServices = serviceState.services!;
+    }
+    for (final id in _servicios) {
+      final svc = allServices.cast<Service?>().firstWhere(
+        (s) => s?.id == id,
+        orElse: () => null,
       );
-      final hotelesTotal = _hotelReservas.fold<double>(
-        0.0,
-        (sum, h) => sum + (h.valor ?? 0.0),
-      );
-      double serviciosTotal = 0.0;
-      final serviceState = context.read<ServiceBloc>().state;
-      List<Service> allServices = [];
-      if (serviceState is ServicesLoaded) {
-        allServices = serviceState.services;
-      } else if (serviceState is ServiceSaved &&
-          serviceState.services != null) {
-        allServices = serviceState.services!;
-      }
-      for (final id in _servicios) {
-        final svc = allServices.cast<Service?>().firstWhere(
-          (s) => s?.id == id,
-          orElse: () => null,
-        );
-        if (svc?.cost != null) serviciosTotal += svc!.cost!;
-      }
-      calculatedVuelosTotal = vuelosTotal + hotelesTotal + serviciosTotal;
+      if (svc?.cost != null) serviciosTotal += svc!.cost!;
     }
 
-    // Resolver tour seleccionado para precios
+    // Resolver tour si hay uno seleccionado
     Tour? selectedTour;
-    if (_tipoReserva == 'tour' && _selectedTourId != null) {
+    if (_selectedTourId != null) {
       final tourState = context.read<TourBloc>().state;
       List<Tour> allTours = [];
       if (tourState is ToursLoaded) {
@@ -774,49 +815,47 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       );
     }
 
-    // Calcular valor_total para tour
-    if (_tipoReserva == 'tour' && selectedTour != null) {
-      final serviceState = context.read<ServiceBloc>().state;
-      List<Service> allServices = [];
-      if (serviceState is ServicesLoaded) {
-        allServices = serviceState.services;
-      } else if (serviceState is ServiceSaved &&
-          serviceState.services != null) {
-        allServices = serviceState.services!;
-      }
-      double serviciosTotal = 0;
-      for (final id in _servicios) {
-        final svc = allServices.cast<Service?>().firstWhere(
-          (s) => s?.id == id,
-          orElse: () => null,
-        );
-        if (svc?.cost != null) serviciosTotal += svc!.cost!;
-      }
-
-      final allPersonKeys = [
-        -1,
-        ...List.generate(_integrantes.length, (i) => i),
-      ];
-      double tourSum = 0;
-      if (selectedTour.precioPorPareja) {
-        for (int i = 0; i < allPersonKeys.length; i += 2) {
-          tourSum +=
-              _preciosPorPersona[allPersonKeys[i]]?.precio ??
-              selectedTour.price;
-        }
-      } else {
-        for (final key in allPersonKeys) {
-          tourSum += _preciosPorPersona[key]?.precio ?? selectedTour.price;
-        }
-      }
-
+    // Calcular subtotal del tour
+    double tourSubtotal = 0.0;
+    double descuentoTotal = 0.0;
+    if (selectedTour != null) {
       final int totalPersonas = 1 + _integrantes.length;
-      final int units = selectedTour.precioPorPareja
-          ? (totalPersonas / 2).ceil()
-          : totalPersonas;
-      final double descuento = _descuentoPorPersona * units;
-      calculatedVuelosTotal = tourSum + serviciosTotal - descuento;
+
+      final tourNN = selectedTour; // variable local para usar dentro de closures
+      if (tourNN.modoPrecio == 'grupal' && tourNN.preciosGrupales.isNotEmpty) {
+        // Precio grupal: el precio del tier es POR PERSONA × total personas
+        final tier = tourNN.preciosGrupales
+            .cast<PrecioGrupal?>()
+            .firstWhere(
+              (p) => p != null && totalPersonas >= p.minPersonas && totalPersonas <= p.maxPersonas,
+              orElse: () => tourNN.preciosGrupales.isNotEmpty
+                  ? tourNN.preciosGrupales.last
+                  : null,
+            );
+        tourSubtotal = (tier?.precio ?? 0.0) * totalPersonas;
+      } else {
+        // Precio individual (por persona o por pareja)
+        final allPersonKeys = [-1, ...List.generate(_integrantes.length, (i) => i)];
+        double tourSum = 0.0;
+        if (selectedTour.precioPorPareja) {
+          for (int i = 0; i < allPersonKeys.length; i += 2) {
+            tourSum += _preciosPorPersona[allPersonKeys[i]]?.precio ?? selectedTour.price;
+          }
+        } else {
+          for (final key in allPersonKeys) {
+            tourSum += _preciosPorPersona[key]?.precio ?? selectedTour.price;
+          }
+        }
+        tourSubtotal = tourSum;
+        final int units = selectedTour.precioPorPareja
+            ? (totalPersonas / 2).ceil()
+            : totalPersonas;
+        descuentoTotal = _descuentoPorPersona * units;
+      }
     }
+
+    final double calculatedTotal =
+        tourSubtotal + vuelosTotal + hotelesTotal + serviciosTotal - descuentoTotal;
 
     // Enriquecer integrantes con precio aplicado
     final integrantesConPrecio = _integrantes.asMap().entries.map((e) {
@@ -827,29 +866,25 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       );
     }).toList();
 
-    // Precio del responsable
     final catResponsable = _preciosPorPersona[-1];
+
+    // Derivar tipo_reserva del contenido para compatibilidad con el backend
+    final derivedTipo = _selectedTourId != null ? 'tour' : 'vuelos';
 
     final reserva = Reserva(
       id: _isEditing ? (_currentReserva?.id ?? widget.reserva!.id) : null,
-      tipoReserva: _tipoReserva,
-      idTour: _tipoReserva == 'tour' ? _selectedTourId : null,
-      correo:
-          _selectedCliente?.correo ??
-          _currentReserva?.correo ??
-          widget.reserva?.correo ??
-          '',
+      tipoReserva: derivedTipo,
+      idTour: _selectedTourId,
+      correo: _selectedCliente?.correo ?? _currentReserva?.correo ?? widget.reserva?.correo ?? '',
       estado: _estado,
       notas: _notasCtrl.text.trim(),
-      descuentoPorPersona: _descuentoPorPersona,
-      valorTotal: calculatedVuelosTotal,
+      descuentoPorPersona: selectedTour != null ? _descuentoPorPersona : 0.0,
+      valorTotal: calculatedTotal,
       serviciosIds: _servicios.where((s) => s != 0).toList(),
       integrantes: integrantesConPrecio,
       vuelos: _vuelos,
-      hoteles: _tipoReserva == 'vuelos' ? _hotelReservas : const [],
-      utilidad: _tipoReserva == 'vuelos'
-          ? double.tryParse(_utilidadCtrl.text.trim())
-          : null,
+      hoteles: _hotelReservas,
+      utilidad: double.tryParse(_utilidadCtrl.text.trim()),
       idResponsable: _selectedClienteId,
       fechaCreacion: _isEditing
           ? (_currentReserva?.fechaCreacion ?? widget.reserva!.fechaCreacion)
@@ -1020,10 +1055,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                             const SizedBox(height: 24),
                             _buildVuelosSection(),
                             const SizedBox(height: 24),
-                            if (_tipoReserva == 'vuelos') ...[
-                              _buildHotelReservaSection(),
-                              const SizedBox(height: 24),
-                            ],
+                            _buildHotelReservaSection(),
+                            const SizedBox(height: 24),
                             _buildIntegrantesSection(),
                             const SizedBox(height: 24),
                             _buildServiciosSection(),
@@ -1051,7 +1084,18 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                 if (!canWrite && _isEditing) {
                                   return const SizedBox.shrink();
                                 }
-                                return _buildSubmitButton();
+                                return Column(
+                                  children: [
+                                    _buildSubmitButton(),
+                                    if (_isEditing &&
+                                        (_currentReserva ?? widget.reserva)
+                                                ?.estado !=
+                                            'cancelada') ...[
+                                      const SizedBox(height: 16),
+                                      _buildCancelReservaButton(context),
+                                    ],
+                                  ],
+                                );
                               },
                             ),
                             const SizedBox(height: 100),
@@ -1083,17 +1127,13 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           ),
           const SizedBox(height: 24),
         ],
-        _buildTipoReservaSelector(),
-        const SizedBox(height: 24),
-        if (_tipoReserva == 'tour') ...[
-          _buildTourDropdown(),
-          if (_busesDisponibilidad.isNotEmpty || _loadingBuses) ...[
-            const SizedBox(height: 24),
-            _buildBusSelector(),
-          ],
-          _buildAsientosDisplay(),
+        _buildTourDropdown(),
+        if (_busesDisponibilidad.isNotEmpty || _loadingBuses) ...[
           const SizedBox(height: 24),
+          _buildBusSelector(),
         ],
+        _buildAsientosDisplay(),
+        const SizedBox(height: 24),
         _buildStatusDropdown(),
       ],
     );
@@ -1260,52 +1300,12 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     );
   }
 
-  Widget _buildTipoReservaSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Tipo de Reserva *',
-          style: TextStyle(
-            color: SaasPalette.textPrimary,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            _TipoReservaChip(
-              label: 'Tour',
-              icon: Icons.terrain_rounded,
-              selected: _tipoReserva == 'tour',
-              onTap: () => setState(() {
-                _tipoReserva = 'tour';
-              }),
-            ),
-            const SizedBox(width: 12),
-            _TipoReservaChip(
-              label: 'Vuelos',
-              icon: Icons.flight_rounded,
-              selected: _tipoReserva == 'vuelos',
-              onTap: () => setState(() {
-                _tipoReserva = 'vuelos';
-                _selectedTourId = null;
-                _tourSearchCtrl.clear();
-              }),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
   Widget _buildTourDropdown() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Tour o Promoción *',
+          'Tour o Promoción (opcional)',
           style: TextStyle(
             color: SaasPalette.textPrimary,
             fontSize: 11,
@@ -1371,8 +1371,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               children: [
                 // Botón selector
                 FormField<String>(
-                  validator: (_) =>
-                      _selectedTourId == null ? 'Selecciona un tour' : null,
+                  validator: (_) => null,
                   builder: (field) => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1533,7 +1532,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 if (isTourFound) ...[
                   const SizedBox(height: 16),
                   _buildTourInfoCard(selectedTour),
-                  if (selectedTour.precios.isNotEmpty) ...[
+                  // Selector de categoría solo cuando hay precios individuales y no es modo grupal
+                  if (selectedTour.precios.isNotEmpty &&
+                      !(selectedTour.modoPrecio == 'grupal' && selectedTour.preciosGrupales.isNotEmpty)) ...[
                     const SizedBox(height: 12),
                     _buildPersonaPrecioSelector(
                       tour: selectedTour,
@@ -1835,111 +1836,64 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 ),
                 const SizedBox(height: 16),
 
-                // ── Precio ──────────────────────────────────
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      currencyFmt.format(tour.price),
-                      style: const TextStyle(
-                        color: SaasPalette.success,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Text(
-                      tour.precioPorPareja ? 'por pareja' : 'por persona',
-                      style: const TextStyle(
-                        color: SaasPalette.textTertiary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+                // ── Precios ──────────────────────────────────
                 const Divider(color: SaasPalette.border),
                 const SizedBox(height: 12),
 
-                // ── Tabla de precios de referencia ───────────
+                // Precio base (individual)
+                if (tour.price > 0) ...[
+                  _PrecioSectionHeader(
+                    icon: Icons.sell_rounded,
+                    label: tour.precioPorPareja ? 'PRECIO BASE (POR PAREJA)' : 'PRECIO BASE (POR PERSONA)',
+                  ),
+                  const SizedBox(height: 8),
+                  _PrecioRow(
+                    label: tour.precioPorPareja ? 'Por pareja' : 'Por persona',
+                    precio: currencyFmt.format(tour.price),
+                    destacado: true,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                // Categorías de precio individual
                 if (tour.precios.isNotEmpty) ...[
-                  Row(
-                    children: const [
-                      Icon(
-                        Icons.sell_rounded,
-                        color: SaasPalette.brand600,
-                        size: 15,
-                      ),
-                      SizedBox(width: 6),
-                      Text(
-                        'PRECIOS DE REFERENCIA',
-                        style: TextStyle(
-                          color: SaasPalette.textSecondary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
+                  _PrecioSectionHeader(
+                    icon: Icons.loyalty_rounded,
+                    label: 'CATEGORÍAS DE PRECIO',
                   ),
                   const SizedBox(height: 8),
                   ...tour.precios.map((p) {
-                    final edadStr = (p.edadMin != null || p.edadMax != null)
-                        ? '${p.edadMin ?? 0}-${p.edadMax ?? '∞'} años'
-                        : null;
-                    final puntoStr = p.puntoPartida != null
-                        ? 'desde ${p.puntoPartida}'
-                        : null;
-                    final sub = [
-                      if (edadStr != null) edadStr,
-                      if (puntoStr != null) puntoStr,
-                    ].join(' · ');
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  p.descripcion,
-                                  style: const TextStyle(
-                                    color: SaasPalette.textPrimary,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                if (sub.isNotEmpty)
-                                  Text(
-                                    sub,
-                                    style: const TextStyle(
-                                      color: SaasPalette.textTertiary,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            NumberFormat.currency(
-                              locale: 'es_CO',
-                              symbol: '\$',
-                              decimalDigits: 0,
-                            ).format(p.precio),
-                            style: const TextStyle(
-                              color: SaasPalette.success,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
+                    final parts = <String>[];
+                    if (p.edadMin != null || p.edadMax != null) {
+                      parts.add('${p.edadMin ?? 0}–${p.edadMax ?? '∞'} años');
+                    }
+                    if (p.puntoPartida != null) parts.add('desde ${p.puntoPartida}');
+                    return _PrecioRow(
+                      label: p.descripcion,
+                      sublabel: parts.isEmpty ? null : parts.join(' · '),
+                      precio: currencyFmt.format(p.precio),
                     );
                   }),
-                  const SizedBox(height: 8),
-                  const Divider(color: SaasPalette.border),
                   const SizedBox(height: 12),
                 ],
+
+                // Precios grupales
+                if (tour.preciosGrupales.isNotEmpty) ...[
+                  _PrecioSectionHeader(
+                    icon: Icons.groups_rounded,
+                    label: 'PRECIOS POR GRUPO',
+                  ),
+                  const SizedBox(height: 8),
+                  ...tour.preciosGrupales.map((g) => _PrecioRow(
+                    label: g.descripcion ?? 'Grupo',
+                    sublabel: '${g.minPersonas}–${g.maxPersonas} personas',
+                    precio: currencyFmt.format(g.precio),
+                  )),
+                  const SizedBox(height: 12),
+                ],
+
+                const Divider(color: SaasPalette.border),
+                const SizedBox(height: 12),
 
                 // ── Datos logísticos ─────────────────────────
                 _TourInfoRow(
@@ -2285,10 +2239,22 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 ],
               ),
             ),
+            DropdownMenuItem(
+              value: 'cancelada',
+              child: Row(
+                children: const [
+                  Icon(Icons.circle, color: SaasPalette.danger, size: 12),
+                  SizedBox(width: 8),
+                  Text('Cancelada'),
+                ],
+              ),
+            ),
           ],
-          onChanged: (v) {
-            if (v != null) setState(() => _estado = v);
-          },
+          onChanged: (_estado == 'cancelada' || _estado == 'cancelado')
+              ? null
+              : (v) {
+                  if (v != null) setState(() => _estado = v);
+                },
         ),
       ],
     );
@@ -2357,34 +2323,74 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               hotelesTotal += h.valor ?? 0.0;
             }
 
-            // Variables compartidas (solo relevantes para tour)
             final bool precioPorPareja = tour?.precioPorPareja ?? false;
             final int currentPersonas = 1 + _integrantes.length;
             final int currentUnits = precioPorPareja
                 ? (currentPersonas / 2).ceil()
                 : currentPersonas;
 
-            // ── Para vuelos: suma directa sin multiplicadores ni snapshot ─────
-            final double valorSinDescuento;
             final double descuentoTotal;
             final double tourSubtotalFinal;
             final String tourUnitLabel;
             final List<({String label, double price})> tourBreakdown;
 
-            if (_tipoReserva == 'vuelos') {
-              valorSinDescuento = vuelosTotal + hotelesTotal + serviciosTotal;
+            if (tour == null) {
               descuentoTotal = 0;
               tourSubtotalFinal = 0;
               tourUnitLabel = '';
               tourBreakdown = [];
+            } else if (tour.modoPrecio == 'grupal' && tour.preciosGrupales.isNotEmpty) {
+              // ── Tour Grupal: precio por persona según tier del grupo ───────
+              final tier = tour.preciosGrupales
+                  .cast<PrecioGrupal?>()
+                  .firstWhere(
+                    (p) => p != null && currentPersonas >= p.minPersonas && currentPersonas <= p.maxPersonas,
+                    orElse: () => tour.preciosGrupales.isNotEmpty ? tour.preciosGrupales.last : null,
+                  );
+              final precioTier = tier?.precio ?? 0.0;
+
+              // Desglose por persona (responsable + integrantes)
+              final List<({String label, double price})> rows = [];
+              rows.add((label: 'Responsable', price: precioTier));
+              for (int i = 0; i < _integrantes.length; i++) {
+                rows.add((label: 'Integrante ${i + 1}', price: precioTier));
+              }
+              tourBreakdown = rows;
+              tourSubtotalFinal = precioTier * currentPersonas;
+              descuentoTotal = 0;
+              tourUnitLabel = tier != null
+                  ? '${tier.descripcion ?? "Precio grupal"} · ${currencyFmt.format(precioTier)}/persona × $currentPersonas personas'
+                  : 'Precio grupal';
             } else {
-              // ── Tour: precio por unidad con snapshot al editar ───────────
-              final bool hasPrecioSeleccionado = _preciosPorPersona.values.any(
-                (p) => p != null,
-              );
+              // ── Tour Individual: precio por unidad con snapshot al editar ─
+              final reservaRef = _currentReserva ?? widget.reserva;
+
+              // Hay precio si hay TourPrecio en el mapa O si hay precioAplicado
+              // guardado en el responsable/integrantes (evita usar el snapshot
+              // cuando sí existen precios por persona definidos).
+              final bool hasPrecioSeleccionado =
+                  _preciosPorPersona.values.any((p) => p != null) ||
+                  reservaRef?.precioResponsableAplicado != null ||
+                  _integrantes.any((i) => i.precioAplicado != null);
+
+              // Devuelve el precio efectivo para cada persona:
+              //   1. TourPrecio seleccionado en el mapa (dropdown)
+              //   2. precioAplicado guardado en integrante / reserva
+              //   3. precio base genérico del tour
+              double resolvePrecio(int key) {
+                if (key == -1) {
+                  return _preciosPorPersona[-1]?.precio ??
+                      reservaRef?.precioResponsableAplicado ??
+                      basePrice;
+                }
+                return _preciosPorPersona[key]?.precio ??
+                    _integrantes[key].precioAplicado ??
+                    basePrice;
+              }
+
               final snapshotTotal = (_isEditing && !hasPrecioSeleccionado)
-                  ? ((_currentReserva ?? widget.reserva)?.valorSinDescuento ??
-                        (_currentReserva ?? widget.reserva)?.valorTotal ??
+                  ? (reservaRef?.valorSinDescuento ??
+                        reservaRef?.valorTotal ??
                         0.0)
                   : null;
               final useSnapshot = snapshotTotal != null && snapshotTotal > 0;
@@ -2393,17 +2399,25 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               final double tourSub;
 
               if (useSnapshot) {
-                final originalIds = _servicios.toSet();
-                final originalSvcCost = allServices
-                    .where((s) => originalIds.contains(s.id))
-                    .fold<double>(0.0, (sum, s) => sum + (s.cost ?? 0));
-                final tourBaseSnapshot = snapshotTotal - originalSvcCost;
+                // Sin precios por persona: usar el snapshot del tour puro.
+                // valorPersonas es el subtotal tour sin servicios guardado en
+                // la API; si no está disponible se resta el costo de servicios
+                // ORIGINALES (los que venían en la reserva al cargarla) para
+                // aislar el componente tour y no alterar el total al agregar
+                // servicios nuevos.
+                final tourBase = reservaRef?.valorPersonas ??
+                    (() {
+                      final origSvcCost = allServices
+                          .where((s) => (reservaRef?.serviciosIds ?? []).contains(s.id))
+                          .fold<double>(0.0, (sum, s) => sum + (s.cost ?? 0));
+                      return snapshotTotal - origSvcCost;
+                    })();
                 final originalPersonas = 1 + _integrantes.length;
                 final originalUnits = precioPorPareja
                     ? (originalPersonas / 2).ceil()
                     : originalPersonas;
                 efectiveUnitPrice = originalUnits > 0
-                    ? tourBaseSnapshot / originalUnits
+                    ? tourBase / originalUnits
                     : 0.0;
                 tourSub = efectiveUnitPrice * currentUnits;
                 tourBreakdown = [];
@@ -2414,13 +2428,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     final cat = _preciosPorPersona[-1];
                     return cat != null
                         ? 'Responsable (${cat.descripcion})'
-                        : 'Responsable (Precio base)';
+                        : 'Responsable';
                   }
                   final base = 'Integrante ${key + 1}';
                   final cat = _preciosPorPersona[key];
-                  return cat != null
-                      ? '$base (${cat.descripcion})'
-                      : '$base (Precio base)';
+                  return cat != null ? '$base (${cat.descripcion})' : base;
                 }
 
                 final allPersonKeys = [
@@ -2442,8 +2454,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
 
                   // 2. Formar parejas de la misma categoría
                   groups.forEach((catId, keys) {
-                    final categoryPrice =
-                        _preciosPorPersona[keys.first]?.precio ?? basePrice;
+                    final categoryPrice = resolvePrecio(keys.first);
                     for (int i = 0; i < keys.length; i += 2) {
                       if (i + 1 < keys.length) {
                         rows.add((
@@ -2453,7 +2464,6 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                         ));
                         pairSum += categoryPrice;
                       } else {
-                        // Queda una persona sola en esta categoría
                         leftovers.add(keys[i]);
                       }
                     }
@@ -2466,21 +2476,17 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       final k2 = leftovers[i + 1];
                       final cat1 = _preciosPorPersona[k1];
                       final cat2 = _preciosPorPersona[k2];
-
-                      // Si las categorías son distintas, usar precio base del tour
                       final double price = (cat1?.id == cat2?.id)
-                          ? (cat1?.precio ?? basePrice)
+                          ? resolvePrecio(k1)
                           : basePrice;
-
                       rows.add((
                         label: '${personLabel(k1)} + ${personLabel(k2)}',
                         price: price,
                       ));
                       pairSum += price;
                     } else {
-                      // Queda una persona verdaderamente sola al final (total pax impar)
                       final k = leftovers[i];
-                      final price = _preciosPorPersona[k]?.precio ?? basePrice;
+                      final price = resolvePrecio(k);
                       rows.add((label: personLabel(k), price: price));
                       pairSum += price;
                     }
@@ -2490,7 +2496,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   // ── Tour Normal (por persona) ──────────────────────────────
                   double personSum = 0.0;
                   for (final key in allPersonKeys) {
-                    final price = _preciosPorPersona[key]?.precio ?? basePrice;
+                    final price = resolvePrecio(key);
                     rows.add((label: personLabel(key), price: price));
                     personSum += price;
                   }
@@ -2505,11 +2511,6 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
 
               tourSubtotalFinal = tourSub;
               descuentoTotal = _descuentoPorPersona * currentUnits;
-              valorSinDescuento =
-                  tourSubtotalFinal +
-                  serviciosTotal +
-                  vuelosTotal +
-                  hotelesTotal;
 
               if (precioPorPareja) {
                 tourUnitLabel =
@@ -2521,6 +2522,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     ' × $currentPersonas persona${currentPersonas != 1 ? "s" : ""})';
               }
             }
+            final valorSinDescuento =
+                tourSubtotalFinal + vuelosTotal + hotelesTotal + serviciosTotal;
             final valorTotal = valorSinDescuento - descuentoTotal;
 
             final totalValidado = _pagos
@@ -2533,7 +2536,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               icon: Icons.payments_rounded,
               children: [
                 // Desglose del tour por persona / pareja
-                if (_tipoReserva == 'tour') ...[
+                if (tour != null) ...[
                   if (tourBreakdown.isNotEmpty) ...[
                     ...tourBreakdown.map(
                       (item) => Padding(
@@ -2646,8 +2649,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     );
                   }),
                 ],
-                // Campo de descuento por persona
-                if (_tipoReserva == 'tour') ...[
+                // Campo de descuento por persona (solo si hay tour)
+                if (tour != null) ...[
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -2752,65 +2755,62 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                         : SaasPalette.warning,
                   ),
                 ],
-                // Utilidad — solo para vuelos
-                if (_tipoReserva == 'vuelos') ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Divider(color: SaasPalette.border),
-                  ),
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Utilidad',
-                          style: TextStyle(
-                            color: SaasPalette.textSecondary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(color: SaasPalette.border),
+                ),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Utilidad',
+                        style: TextStyle(
+                          color: SaasPalette.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: SaasPalette.bgSubtle,
-                          borderRadius: BorderRadius.circular(8),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: SaasPalette.bgSubtle,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      width: 130,
+                      child: TextFormField(
+                        controller: _utilidadCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
                         ),
-                        width: 130,
-                        child: TextFormField(
-                          controller: _utilidadCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*'),
                           ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d*'),
-                            ),
-                          ],
-                          textAlign: TextAlign.right,
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                        ],
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          color: SaasPalette.textPrimary,
+                          fontSize: 13,
+                        ),
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          prefixText: '\$ ',
+                          prefixStyle: TextStyle(
+                            color: SaasPalette.textTertiary,
                             fontSize: 13,
                           ),
-                          decoration: const InputDecoration(
-                            isDense: true,
-                            prefixText: '\$ ',
-                            prefixStyle: TextStyle(
-                              color: SaasPalette.textTertiary,
-                              fontSize: 13,
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 8,
-                            ),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 8,
                           ),
-                          onChanged: (_) => setState(() {}),
                         ),
+                        onChanged: (_) => setState(() {}),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ],
             );
           },
@@ -2989,8 +2989,13 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         orElse: () => null,
       );
     }
+    // Solo se asignan categorías individuales si el tour tiene precios por categoría
+    // y NO es modo grupal con precios grupales definidos
+    final bool esGrupal = selectedTour != null &&
+        selectedTour.modoPrecio == 'grupal' &&
+        selectedTour.preciosGrupales.isNotEmpty;
     final List<TourPrecio>? categorias =
-        (selectedTour != null && selectedTour.precios.isNotEmpty)
+        (selectedTour != null && selectedTour.precios.isNotEmpty && !esGrupal)
         ? selectedTour.precios
         : null;
 
@@ -3045,26 +3050,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             itemBuilder: (context, index) {
               return _IntegranteFormFields(
                 integrante: _integrantes[index],
-                isResponsable: _integrantes[index].esResponsable,
+                isResponsable: false,
                 onChanged: (val) {
                   setState(() => _integrantes[index] = val);
                 },
-                onDelete: () {
-                  setState(() {
-                    _integrantes.removeAt(index);
-                    // Shift precio keys: remove deleted index, shift down higher keys
-                    final newMap = <int, TourPrecio?>{};
-                    for (final entry in _preciosPorPersona.entries) {
-                      if (entry.key == index) continue;
-                      if (entry.key > index) {
-                        newMap[entry.key - 1] = entry.value;
-                      } else {
-                        newMap[entry.key] = entry.value;
-                      }
-                    }
-                    _preciosPorPersona = newMap;
-                  });
-                },
+                onDelete: () => _onDeleteIntegrante(index),
                 categoriasDisponibles: categorias,
                 selectedPrecio: categorias != null
                     ? _preciosPorPersona[index]
@@ -3210,9 +3200,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              _tipoReserva == 'vuelos'
-                  ? 'Vuelos de la reserva'
-                  : 'Vuelos del tour (opcional)',
+              'Vuelos (opcionales)',
               style: TextStyle(color: SaasPalette.textSecondary, fontSize: 12),
             ),
             TextButton.icon(
@@ -4538,6 +4526,90 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
   }
 }
 
+// ─── Precio helpers ───────────────────────────────────────────────────────────
+
+class _PrecioSectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _PrecioSectionHeader({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: SaasPalette.brand600, size: 14),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            color: SaasPalette.textSecondary,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.6,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PrecioRow extends StatelessWidget {
+  final String label;
+  final String? sublabel;
+  final String precio;
+  final bool destacado;
+
+  const _PrecioRow({
+    required this.label,
+    this.sublabel,
+    required this.precio,
+    this.destacado = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 13,
+                    fontWeight: destacado ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+                if (sublabel != null)
+                  Text(
+                    sublabel!,
+                    style: const TextStyle(
+                      color: SaasPalette.textTertiary,
+                      fontSize: 11,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Text(
+            precio,
+            style: TextStyle(
+              color: SaasPalette.success,
+              fontSize: destacado ? 15 : 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _TourBadge extends StatelessWidget {
@@ -4710,71 +4782,6 @@ class _TourInfoRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-// ─── Tipo Reserva Chip ───────────────────────────────────────────────────────
-
-class _TipoReservaChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _TipoReservaChip({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: selected ? SaasPalette.brand50 : SaasPalette.bgCanvas,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? SaasPalette.brand600 : SaasPalette.border,
-            width: selected ? 1.5 : 1,
-          ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: SaasPalette.brand600.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: selected ? SaasPalette.brand600 : SaasPalette.textTertiary,
-              size: 18,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: selected
-                    ? SaasPalette.brand600
-                    : SaasPalette.textSecondary,
-                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

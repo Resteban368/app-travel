@@ -3,6 +3,7 @@ import 'package:agente_viajes/core/widgets/phone_form_field.dart';
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
 import '../../domain/entities/hotel.dart';
 import '../bloc/hotel_bloc.dart';
@@ -26,13 +27,38 @@ class _HotelFormScreenState extends State<HotelFormScreen>
   late final TextEditingController _telefonoCtrl;
   String _countryCode = '+57';
   late final TextEditingController _direccionCtrl;
+  final _imagenHotelCtrl = TextEditingController();
   late bool _isActive;
+
+  List<String> _imagenesHotel = [];
+  List<Habitacion> _habitaciones = [];
+
+  // Formulario inline de habitación (nueva o editando)
+  bool _showHabitacionForm = false;
+  int? _editingIndex;
+  String? _habTipoCama;
+  final _habCantidadCtrl = TextEditingController();
+  final _habPrecioCtrl = TextEditingController();
+  final _habImagenCtrl = TextEditingController();
+  final _habServicioCtrl = TextEditingController();
+  List<String> _habImagenes = [];
+  List<String> _habServicios = [];
+  final _habObservacionesCtrl = TextEditingController();
 
   late final AnimationController _entryCtrl;
   late final Animation<double> _fade;
   late final Animation<Offset> _slide;
 
   bool get _isEditing => widget.hotel != null;
+
+  static const _tiposCama = [
+    ('sencilla', 'Sencilla'),
+    ('doble', 'Doble'),
+    ('matrimonial', 'Matrimonial'),
+    ('triple', 'Triple'),
+    ('suite', 'Suite'),
+    ('familiar', 'Familiar'),
+  ];
 
   @override
   void initState() {
@@ -49,15 +75,16 @@ class _HotelFormScreenState extends State<HotelFormScreen>
     }
     _direccionCtrl = TextEditingController(text: widget.hotel?.direccion ?? '');
     _isActive = widget.hotel?.isActive ?? true;
+    _imagenesHotel = List.from(widget.hotel?.imagenes ?? []);
+    _habitaciones = List.from(widget.hotel?.habitaciones ?? []);
 
     _entryCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    _fade = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut));
+    _fade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut),
+    );
     _slide = Tween<Offset>(
       begin: const Offset(0, 0.05),
       end: Offset.zero,
@@ -72,18 +99,29 @@ class _HotelFormScreenState extends State<HotelFormScreen>
     _ciudadCtrl.dispose();
     _telefonoCtrl.dispose();
     _direccionCtrl.dispose();
+    _imagenHotelCtrl.dispose();
+    _habCantidadCtrl.dispose();
+    _habPrecioCtrl.dispose();
+    _habImagenCtrl.dispose();
+    _habServicioCtrl.dispose();
+    _habObservacionesCtrl.dispose();
     super.dispose();
   }
 
-  void _onSave(BuildContext context) {
-    //validamos el nombre del hotel
+  void _addImagenHotel() {
+    final url = _imagenHotelCtrl.text.trim();
+    if (url.isNotEmpty) {
+      setState(() => _imagenesHotel.add(url));
+      _imagenHotelCtrl.clear();
+    }
+  }
 
-    if (_nombreCtrl.text.isEmpty) {
+  void _onSave(BuildContext context) {
+    if (_nombreCtrl.text.trim().isEmpty) {
       SaasSnackBar.showWarning(context, 'Debe ingresar el nombre del hotel');
       return;
     }
-    //validamos la ciudad
-    if (_ciudadCtrl.text.isEmpty) {
+    if (_ciudadCtrl.text.trim().isEmpty) {
       SaasSnackBar.showWarning(context, 'Debe ingresar la ciudad');
       return;
     }
@@ -97,6 +135,8 @@ class _HotelFormScreenState extends State<HotelFormScreen>
           : '$_countryCode${_telefonoCtrl.text.trim()}',
       direccion: _direccionCtrl.text.trim(),
       isActive: _isActive,
+      imagenes: _imagenesHotel,
+      habitaciones: _habitaciones,
     );
 
     if (_isEditing) {
@@ -104,6 +144,585 @@ class _HotelFormScreenState extends State<HotelFormScreen>
     } else {
       context.read<HotelBloc>().add(CreateHotel(hotel));
     }
+  }
+
+  void _resetHabitacionForm() {
+    _habTipoCama = null;
+    _habCantidadCtrl.clear();
+    _habPrecioCtrl.clear();
+    _habImagenCtrl.clear();
+    _habServicioCtrl.clear();
+    _habImagenes = [];
+    _habServicios = [];
+    _habObservacionesCtrl.clear();
+    _showHabitacionForm = false;
+    _editingIndex = null;
+  }
+
+  void _startEditHabitacion(int index) {
+    final h = _habitaciones[index];
+    setState(() {
+      _editingIndex = index;
+      _habTipoCama = h.tipoCama;
+      _habCantidadCtrl.text = h.cantidad.toString();
+      _habPrecioCtrl.text = h.precio.toInt().toString();
+      _habImagenes = List.from(h.imagenes);
+      _habServicios = List.from(h.servicios);
+      _habObservacionesCtrl.text = h.observaciones ?? '';
+      _habImagenCtrl.clear();
+      _habServicioCtrl.clear();
+      _showHabitacionForm = true;
+    });
+  }
+
+  void _confirmDeleteHabitacion(int index) {
+    final label = _HabitacionCard._label(_habitaciones[index].tipoCama);
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: SaasPalette.bgCanvas,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          '¿Eliminar habitación?',
+          style: TextStyle(
+            color: SaasPalette.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Se eliminará la habitación "$label" de la lista.',
+          style: const TextStyle(color: SaasPalette.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: SaasPalette.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() => _habitaciones.removeAt(index));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SaasPalette.danger,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _submitHabitacion() {
+    if (_habTipoCama == null) {
+      SaasSnackBar.showWarning(context, 'Selecciona el tipo de cama');
+      return;
+    }
+    final cant = int.tryParse(_habCantidadCtrl.text.trim());
+    if (cant == null || cant <= 0) {
+      SaasSnackBar.showWarning(context, 'Ingresa una cantidad válida');
+      return;
+    }
+    final precio = double.tryParse(
+      _habPrecioCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+    );
+    if (precio == null || precio <= 0) {
+      SaasSnackBar.showWarning(context, 'Ingresa un precio válido');
+      return;
+    }
+    setState(() {
+      final hab = Habitacion(
+        tipoCama: _habTipoCama!,
+        cantidad: cant,
+        precio: precio,
+        imagenes: List.from(_habImagenes),
+        servicios: List.from(_habServicios),
+        observaciones: _habObservacionesCtrl.text.trim().isEmpty
+            ? null
+            : _habObservacionesCtrl.text.trim(),
+      );
+      if (_editingIndex != null) {
+        _habitaciones[_editingIndex!] = hab;
+      } else {
+        _habitaciones.add(hab);
+      }
+      _resetHabitacionForm();
+    });
+  }
+
+  Widget _buildImagenesHotelSection() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: PremiumSectionHeader(
+                  title: 'IMÁGENES DEL HOTEL',
+                  icon: Icons.photo_library_rounded,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _addImagenHotel,
+                style: TextButton.styleFrom(foregroundColor: SaasPalette.brand600),
+                icon: const Icon(Icons.add_rounded, size: 16),
+                label: const Text(
+                  'AGREGAR',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          PremiumTextField(
+            controller: _imagenHotelCtrl,
+            label: 'URL de imagen (opcional)',
+            icon: Icons.link_rounded,
+          ),
+          const SizedBox(height: 12),
+          if (_imagenesHotel.isEmpty)
+            const PremiumEmptyIndicator(
+              msg: 'Sin imágenes — campo opcional.',
+              icon: Icons.image_not_supported_rounded,
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _imagenesHotel
+                  .asMap()
+                  .entries
+                  .map(
+                    (e) => _ImagePreviewCard(
+                      url: e.value,
+                      onRemove: () =>
+                          setState(() => _imagenesHotel.removeAt(e.key)),
+                    ),
+                  )
+                  .toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHabitacionesSection() {
+    final fmt = NumberFormat.currency(
+      locale: 'es_CO',
+      symbol: '\$',
+      decimalDigits: 0,
+    );
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: PremiumSectionHeader(
+                  title: 'HABITACIONES',
+                  icon: Icons.bed_rounded,
+                ),
+              ),
+              if (!_showHabitacionForm)
+                TextButton.icon(
+                  onPressed: () => setState(() => _showHabitacionForm = true),
+                  style: TextButton.styleFrom(foregroundColor: SaasPalette.brand600),
+                  icon: const Icon(Icons.add_rounded, size: 16),
+                  label: const Text(
+                    'AGREGAR',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Lista de habitaciones existentes
+          if (_habitaciones.isEmpty && !_showHabitacionForm)
+            const PremiumEmptyIndicator(
+              msg: 'Opcional — agrega los tipos de habitación disponibles.',
+              icon: Icons.meeting_room_rounded,
+            )
+          else
+            ..._habitaciones
+                .asMap()
+                .entries
+                .map(
+                  (e) => _HabitacionCard(
+                    habitacion: e.value,
+                    fmt: fmt,
+                    onEdit: () => _startEditHabitacion(e.key),
+                    onRemove: () => _confirmDeleteHabitacion(e.key),
+                  ),
+                ),
+
+          // Formulario inline nueva habitación
+          if (_showHabitacionForm) ...[
+            if (_habitaciones.isNotEmpty) const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: SaasPalette.bgSubtle,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: SaasPalette.brand600.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Encabezado
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.add_home_rounded,
+                        color: SaasPalette.brand600,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _editingIndex != null
+                              ? 'Editar habitación'
+                              : 'Nueva habitación',
+                          style: const TextStyle(
+                            color: SaasPalette.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => setState(() => _resetHabitacionForm()),
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: SaasPalette.textTertiary,
+                          size: 20,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Tipo de cama
+                  const Text(
+                    'TIPO DE CAMA *',
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: _habTipoCama,
+                    dropdownColor: SaasPalette.bgCanvas,
+                    style: const TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontSize: 14,
+                    ),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(
+                        Icons.bed_rounded,
+                        color: SaasPalette.brand600,
+                        size: 18,
+                      ),
+                      filled: true,
+                      fillColor: SaasPalette.bgCanvas,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: SaasPalette.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: SaasPalette.brand600,
+                          width: 1.5,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                    ),
+                    hint: const Text(
+                      'Selecciona tipo',
+                      style: TextStyle(
+                        color: SaasPalette.textTertiary,
+                        fontSize: 13,
+                      ),
+                    ),
+                    items: _tiposCama
+                        .map(
+                          (o) => DropdownMenuItem(
+                            value: o.$1,
+                            child: Text(o.$2),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) => setState(() => _habTipoCama = val),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Cantidad y precio
+                  Row(
+                    children: [
+                      Expanded(
+                        child: PremiumTextField(
+                          controller: _habCantidadCtrl,
+                          label: 'Cantidad *',
+                          icon: Icons.format_list_numbered_rounded,
+                          isNumeric: true,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: PremiumTextField(
+                          controller: _habPrecioCtrl,
+                          label: 'Precio/noche (COP) *',
+                          icon: Icons.attach_money_rounded,
+                          isNumeric: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Imágenes habitación
+                  const Text(
+                    'IMÁGENES (opcional)',
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: PremiumTextField(
+                          controller: _habImagenCtrl,
+                          label: 'URL de imagen',
+                          icon: Icons.link_rounded,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: IconButton(
+                          onPressed: () {
+                            final url = _habImagenCtrl.text.trim();
+                            if (url.isNotEmpty) {
+                              setState(() {
+                                _habImagenes.add(url);
+                                _habImagenCtrl.clear();
+                              });
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.add_circle_rounded,
+                            color: SaasPalette.brand600,
+                            size: 28,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_habImagenes.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _habImagenes
+                          .asMap()
+                          .entries
+                          .map(
+                            (e) => _ImagePreviewCard(
+                              url: e.value,
+                              onRemove: () =>
+                                  setState(() => _habImagenes.removeAt(e.key)),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+
+                  // Servicios
+                  const Text(
+                    'SERVICIOS (opcional)',
+                    style: TextStyle(
+                      color: SaasPalette.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: PremiumTextField(
+                          controller: _habServicioCtrl,
+                          label: 'Ej: wifi, piscina, TV...',
+                          icon: Icons.room_service_rounded,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: IconButton(
+                          onPressed: () {
+                            final s = _habServicioCtrl.text.trim();
+                            if (s.isNotEmpty) {
+                              setState(() {
+                                _habServicios.add(s);
+                                _habServicioCtrl.clear();
+                              });
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.add_circle_rounded,
+                            color: SaasPalette.brand600,
+                            size: 28,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_habServicios.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: _habServicios
+                          .asMap()
+                          .entries
+                          .map(
+                            (e) => Chip(
+                              label: Text(
+                                e.value,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              backgroundColor: SaasPalette.brand50,
+                              side: const BorderSide(color: SaasPalette.border),
+                              deleteIcon: const Icon(Icons.close, size: 14),
+                              onDeleted: () => setState(
+                                () => _habServicios.removeAt(e.key),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+
+                  // Observaciones
+                  PremiumTextField(
+                    controller: _habObservacionesCtrl,
+                    label: 'Observaciones (opcional)',
+                    icon: Icons.notes_rounded,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Botones
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () =>
+                              setState(() => _resetHabitacionForm()),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: SaasPalette.textSecondary,
+                            side: const BorderSide(color: SaasPalette.border),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'CANCELAR',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: _submitHabitacion,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: SaasPalette.brand600,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            _editingIndex != null
+                                ? 'GUARDAR CAMBIOS'
+                                : 'AGREGAR HABITACIÓN',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   @override
@@ -146,7 +765,6 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Etiqueta
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
@@ -225,7 +843,13 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                             ),
                             const SizedBox(height: 24),
 
-                            if (_isEditing)
+                            _buildImagenesHotelSection(),
+                            const SizedBox(height: 24),
+
+                            _buildHabitacionesSection(),
+                            const SizedBox(height: 24),
+
+                            if (_isEditing) ...[
                               PremiumSectionCard(
                                 title: 'ESTADO',
                                 icon: Icons.toggle_on_rounded,
@@ -267,8 +891,8 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                                   ),
                                 ],
                               ),
-
-                            const SizedBox(height: 48),
+                              const SizedBox(height: 24),
+                            ],
 
                             Builder(
                               builder: (ctx) =>
@@ -295,6 +919,313 @@ class _HotelFormScreenState extends State<HotelFormScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── Widgets locales ──────────────────────────────────────────────────────────
+
+class _ImagePreviewCard extends StatelessWidget {
+  final String url;
+  final VoidCallback onRemove;
+  const _ImagePreviewCard({required this.url, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 110,
+          height: 90,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: SaasPalette.border),
+            color: SaasPalette.bgSubtle,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Image.network(
+            url,
+            fit: BoxFit.cover,
+            loadingBuilder: (_, child, progress) {
+              if (progress == null) return child;
+              return const Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              );
+            },
+            errorBuilder: (_, __, ___) => const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.broken_image_rounded,
+                  color: SaasPalette.textTertiary,
+                  size: 28,
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Sin vista previa',
+                  style: TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 10,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          top: -6,
+          right: -6,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(
+                color: SaasPalette.danger,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close_rounded, size: 13, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ImageThumbnailReadOnly extends StatelessWidget {
+  final String url;
+  const _ImageThumbnailReadOnly({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 80,
+      height: 66,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: SaasPalette.border),
+        color: SaasPalette.bgSubtle,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.network(
+        url,
+        fit: BoxFit.cover,
+        loadingBuilder: (_, child, progress) {
+          if (progress == null) return child;
+          return const Center(
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        },
+        errorBuilder: (_, __, ___) => const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.broken_image_rounded, color: SaasPalette.textTertiary, size: 22),
+            SizedBox(height: 2),
+            Text(
+              'Error',
+              style: TextStyle(color: SaasPalette.textTertiary, fontSize: 9),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HabitacionCard extends StatelessWidget {
+  final Habitacion habitacion;
+  final NumberFormat fmt;
+  final VoidCallback onEdit;
+  final VoidCallback onRemove;
+
+  const _HabitacionCard({
+    required this.habitacion,
+    required this.fmt,
+    required this.onEdit,
+    required this.onRemove,
+  });
+
+  static String _label(String tipo) {
+    const labels = {
+      'sencilla': 'Sencilla',
+      'doble': 'Doble',
+      'matrimonial': 'Matrimonial',
+      'triple': 'Triple',
+      'suite': 'Suite',
+      'familiar': 'Familiar',
+    };
+    return labels[tipo] ?? tipo;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SaasPalette.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.bed_rounded,
+                      color: SaasPalette.brand600,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _label(habitacion.tipoCama),
+                      style: const TextStyle(
+                        color: SaasPalette.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: SaasPalette.bgCanvas,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: SaasPalette.border),
+                      ),
+                      child: Text(
+                        '${habitacion.cantidad} cupo${habitacion.cantidad != 1 ? 's' : ''}',
+                        style: const TextStyle(
+                          color: SaasPalette.textSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (habitacion.servicios.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: habitacion.servicios
+                        .map(
+                          (s) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: SaasPalette.brand600.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              s,
+                              style: const TextStyle(
+                                color: SaasPalette.brand600,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+                if (habitacion.imagenes.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: habitacion.imagenes
+                        .map((url) => _ImageThumbnailReadOnly(url: url))
+                        .toList(),
+                  ),
+                ],
+                if (habitacion.observaciones != null &&
+                    habitacion.observaciones!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.notes_rounded,
+                        size: 13,
+                        color: SaasPalette.textTertiary,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          habitacion.observaciones!,
+                          style: const TextStyle(
+                            color: SaasPalette.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                fmt.format(habitacion.precio),
+                style: const TextStyle(
+                  color: SaasPalette.success,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: onEdit,
+                    child: const Icon(
+                      Icons.edit_rounded,
+                      color: SaasPalette.brand600,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: onRemove,
+                    child: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: SaasPalette.danger,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

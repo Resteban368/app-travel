@@ -33,9 +33,17 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
     };
     if (search != null && search.isNotEmpty) params['search'] = search;
     if (startDate != null) {
-      params['startDate'] = startDate.toUtc().toIso8601String();
+      params['startDate'] =
+          '${startDate.year.toString().padLeft(4, '0')}-'
+          '${startDate.month.toString().padLeft(2, '0')}-'
+          '${startDate.day.toString().padLeft(2, '0')}';
     }
-    if (endDate != null) params['endDate'] = endDate.toUtc().toIso8601String();
+    if (endDate != null) {
+      params['endDate'] =
+          '${endDate.year.toString().padLeft(4, '0')}-'
+          '${endDate.month.toString().padLeft(2, '0')}-'
+          '${endDate.day.toString().padLeft(2, '0')}';
+    }
 
     final uri = Uri.parse(_baseUrl).replace(queryParameters: params);
     debugPrint('API CALL: GET $uri');
@@ -184,6 +192,8 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
       proveedorId: json['proveedor_id'] is int
           ? json['proveedor_id']
           : int.tryParse(json['proveedor_id']?.toString() ?? ''),
+      sedeId: json['sede_id']?.toString(),
+      sedeName: (json['sede'] as Map<String, dynamic>?)?['nombre_sede']?.toString(),
     );
   }
 
@@ -199,6 +209,8 @@ class ApiPagoRealizadoRepository implements PagoRealizadoRepository {
       'is_validated': pago.isValidated,
       'is_rechazado': pago.isRechazado,
       if (pago.motivoRechazo != null) 'motivo_rechazo': pago.motivoRechazo,
+      if (pago.sedeId != null && pago.sedeId!.isNotEmpty)
+        'sede_id': int.tryParse(pago.sedeId!) ?? pago.sedeId,
     };
 
     switch (pago.entidadTipo) {

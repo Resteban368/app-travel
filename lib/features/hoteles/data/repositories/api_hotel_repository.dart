@@ -95,6 +95,10 @@ class ApiHotelRepository implements HotelRepository {
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
+      imagenes: (json['imagenes'] as List? ?? []).whereType<String>().toList(),
+      habitaciones: (json['habitaciones'] as List? ?? [])
+          .map((h) => Habitacion.fromJson(h as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -105,6 +109,9 @@ class ApiHotelRepository implements HotelRepository {
       if (hotel.telefono.isNotEmpty) 'telefono': hotel.telefono,
       if (hotel.direccion.isNotEmpty) 'direccion': hotel.direccion,
       'is_active': hotel.isActive,
+      if (hotel.imagenes.isNotEmpty) 'imagenes': hotel.imagenes,
+      if (hotel.habitaciones.isNotEmpty)
+        'habitaciones': hotel.habitaciones.map((h) => h.toJson()).toList(),
     };
   }
 }

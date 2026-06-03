@@ -342,128 +342,135 @@ class _HotelCardState extends State<_HotelCard> {
   Widget build(BuildContext context) {
     final hotel = widget.hotel;
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: _hovered
-                ? SaasPalette.brand600.withValues(alpha: 0.3)
-                : SaasPalette.border,
-          ),
-          boxShadow: _hovered
-              ? [
-                  BoxShadow(
-                    color: SaasPalette.brand600.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : [],
+      child: GestureDetector(
+        onTap: () => Navigator.pushNamed(
+          context,
+          AppRouter.hotelEdit,
+          arguments: hotel,
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: SaasPalette.brand50,
-                  borderRadius: BorderRadius.circular(10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          decoration: BoxDecoration(
+            color: SaasPalette.bgCanvas,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: _hovered
+                  ? SaasPalette.brand600.withValues(alpha: 0.3)
+                  : SaasPalette.border,
+            ),
+            boxShadow: _hovered
+                ? [
+                    BoxShadow(
+                      color: SaasPalette.brand600.withValues(alpha: 0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : [],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: SaasPalette.brand50,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.hotel_rounded,
+                    color: SaasPalette.brand600,
+                    size: 22,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.hotel_rounded,
-                  color: SaasPalette.brand600,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      hotel.nombre,
-                      style: const TextStyle(
-                        color: SaasPalette.textPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hotel.nombre,
+                        style: const TextStyle(
+                          color: SaasPalette.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 4,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.location_city_rounded,
-                              size: 12,
-                              color: SaasPalette.textTertiary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              hotel.ciudad,
-                              style: const TextStyle(
-                                color: SaasPalette.textSecondary,
-                                fontSize: 12,
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 4,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.location_city_rounded,
+                                size: 12,
+                                color: SaasPalette.textTertiary,
                               ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.phone_rounded,
-                              size: 12,
-                              color: SaasPalette.textTertiary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              hotel.telefono,
-                              style: const TextStyle(
-                                color: SaasPalette.textSecondary,
-                                fontSize: 12,
+                              const SizedBox(width: 4),
+                              Text(
+                                hotel.ciudad,
+                                style: const TextStyle(
+                                  color: SaasPalette.textSecondary,
+                                  fontSize: 12,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.location_on_rounded,
-                          size: 12,
-                          color: SaasPalette.textTertiary,
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            hotel.direccion,
-                            style: const TextStyle(
-                              color: SaasPalette.textTertiary,
-                              fontSize: 11,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.phone_rounded,
+                                size: 12,
+                                color: SaasPalette.textTertiary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                hotel.telefono,
+                                style: const TextStyle(
+                                  color: SaasPalette.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on_rounded,
+                            size: 12,
+                            color: SaasPalette.textTertiary,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              hotel.direccion,
+                              style: const TextStyle(
+                                color: SaasPalette.textTertiary,
+                                fontSize: 11,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              SaasStatusBadge(active: hotel.isActive),
-              const SizedBox(width: 8),
-              PopupMenuButton<String>(
+                const SizedBox(width: 12),
+                SaasStatusBadge(active: hotel.isActive),
+                const SizedBox(width: 8),
+                PopupMenuButton<String>(
                   icon: const Icon(
                     Icons.more_vert_rounded,
                     color: SaasPalette.textTertiary,
@@ -521,7 +528,8 @@ class _HotelCardState extends State<_HotelCard> {
                     ),
                   ],
                 ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

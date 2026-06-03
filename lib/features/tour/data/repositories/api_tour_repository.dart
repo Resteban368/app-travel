@@ -6,6 +6,7 @@ import 'package:agente_viajes/core/network/api_exception.dart';
 import '../../domain/entities/tour.dart';
 import '../../domain/entities/tour_detalle.dart';
 import '../../domain/entities/tour_precio.dart';
+import '../../domain/entities/precio_grupal.dart';
 import '../../domain/repositories/tour_repository.dart';
 
 class ApiTourRepository implements TourRepository {
@@ -67,7 +68,12 @@ class ApiTourRepository implements TourRepository {
   @override
   Future<void> createTour(Tour tour) async {
     final payload = _toJson(tour);
-    payload['precios'] = tour.precios!.map((p) => p.toJson()).toList();
+    if (tour.modoPrecio == 'grupal') {
+      payload['precios_grupales'] =
+          tour.preciosGrupales.map((p) => p.toJson()).toList();
+    } else {
+      payload['precios'] = tour.precios.map((p) => p.toJson()).toList();
+    }
     final body = json.encode(payload);
     debugPrint('📤 [ApiTourRepository] Creating tour: $body');
     final response = await client.post(
@@ -83,7 +89,10 @@ class ApiTourRepository implements TourRepository {
   @override
   Future<void> updateTour(Tour tour, {List<TourPrecio>? preciosPayload}) async {
     final payload = _toJson(tour);
-    if (preciosPayload != null) {
+    if (tour.modoPrecio == 'grupal') {
+      payload['precios_grupales'] =
+          tour.preciosGrupales.map((p) => p.toJson()).toList();
+    } else if (preciosPayload != null) {
       payload['precios'] = preciosPayload.map((p) => p.toJson()).toList();
     }
     final body = json.encode(payload);
@@ -206,24 +215,34 @@ class ApiTourRepository implements TourRepository {
           .map((e) => int.tryParse(e.toString()) ?? 0)
           .where((e) => e != 0)
           .toList(),
+      tipoTour: json['tipo_tour']?.toString(),
+      modoPrecio: json['modo_precio']?.toString() ?? 'individual',
+      preciosGrupales: (json['precios_grupales'] as List? ?? [])
+          .map((p) => PrecioGrupal.fromJson(p as Map<String, dynamic>))
+          .toList(),
+      imagenes: (json['imagenes'] as List? ?? [])
+          .whereType<String>()
+          .toList(),
     );
   }
 
   Map<String, dynamic> _toJson(Tour tour) {
+    final isGrupal = tour.modoPrecio == 'grupal';
     return {
       'id_tour': tour.idTour,
       'nombre_tour': tour.name,
       'agencia': tour.agency,
       'fecha_inicio': tour.startDate!.toIso8601String(),
       'fecha_fin': tour.endDate!.toIso8601String(),
-      'precio': tour.price,
+      if (!isGrupal) 'precio': tour.price,
+      'modo_precio': tour.modoPrecio ?? 'individual',
       'punto_partida': tour.departurePoint,
       'hora_partida': tour.departureTime,
       'llegada': tour.arrival,
       'link_pdf': tour.pdfLink,
       'inclusions': tour.inclusions,
       'exclusions': tour.exclusions,
-      'itinerary': tour.itinerary!
+      'itinerary': tour.itinerary
           .map(
             (i) => {
               'dia_numero': i.dayNumber,
@@ -240,6 +259,8 @@ class ApiTourRepository implements TourRepository {
       'precio_por_pareja': tour.precioPorPareja,
       if (tour.cupos != null) 'cupos': tour.cupos,
       'bus_layout_ids': tour.busLayoutIds,
+      if (tour.tipoTour != null) 'tipo_tour': tour.tipoTour,
+      'imagenes': tour.imagenes,
     };
   }
 }

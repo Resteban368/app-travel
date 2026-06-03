@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 class Integrante extends Equatable {
+  final int? id;
   final String nombre;
   final String telefono;
   final DateTime? fechaNacimiento;
@@ -12,6 +13,7 @@ class Integrante extends Equatable {
   final bool ocupaAsiento;
 
   const Integrante({
+    this.id,
     required this.nombre,
     required this.telefono,
     this.fechaNacimiento,
@@ -24,6 +26,7 @@ class Integrante extends Equatable {
   });
 
   Integrante copyWith({
+    int? id,
     String? nombre,
     String? telefono,
     DateTime? fechaNacimiento,
@@ -35,6 +38,7 @@ class Integrante extends Equatable {
     bool? ocupaAsiento,
   }) {
     return Integrante(
+      id: id ?? this.id,
       nombre: nombre ?? this.nombre,
       telefono: telefono ?? this.telefono,
       fechaNacimiento: fechaNacimiento ?? this.fechaNacimiento,
@@ -49,6 +53,7 @@ class Integrante extends Equatable {
 
   @override
   List<Object?> get props => [
+    id,
     nombre,
     telefono,
     fechaNacimiento,

@@ -59,3 +59,11 @@ class DeleteReserva extends ReservaEvent {
   @override
   List<Object?> get props => [id];
 }
+
+class CancelReserva extends ReservaEvent {
+  final String id;
+  const CancelReserva(this.id);
+
+  @override
+  List<Object?> get props => [id];
+}

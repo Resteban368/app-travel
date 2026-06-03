@@ -118,13 +118,20 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
     _loadFirstPage();
   }
 
+  String _pagoLabel(PagoRealizado pago) {
+    if (pago.proveedorComercio.isNotEmpty) return pago.proveedorComercio;
+    if (pago.concepto?.isNotEmpty == true) return pago.concepto!;
+    if (pago.clienteNombre?.isNotEmpty == true) return pago.clienteNombre!;
+    return '\$${pago.monto.toStringAsFixed(0)}';
+  }
+
   void _deletePressed(PagoRealizado pago) {
     showDialog(
       context: context,
       builder: (ctx) => SaasConfirmDialog(
         title: 'Eliminar Pago',
         body:
-            '¿Deseas eliminar el pago de ${pago.proveedorComercio}? Esta acción no se puede deshacer.',
+            '¿Deseas eliminar este pago de ${_pagoLabel(pago)}? Esta acción no se puede deshacer.',
         confirmLabel: 'Eliminar',
         onConfirm: () {
           Navigator.pop(ctx);
@@ -138,148 +145,140 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
-      body: BlocConsumer<PagoRealizadoBloc, PagoRealizadoState>(
-        listener: (context, state) {
-          if (_deletingId != null) {
-            if (state is PagoRealizadoSaved) {
-              setState(() => _deletingId = null);
-              SaasSnackBar.showSuccess(context, 'Pago eliminado exitosamente');
-            } else if (state is PagoRealizadoError) {
-              setState(() => _deletingId = null);
-              SaasSnackBar.showError(context, state.message);
+        backgroundColor: SaasPalette.bgApp,
+        body: BlocConsumer<PagoRealizadoBloc, PagoRealizadoState>(
+          listener: (context, state) {
+            if (_deletingId != null) {
+              if (state is PagoRealizadoSaved) {
+                setState(() => _deletingId = null);
+                SaasSnackBar.showSuccess(context, 'Pago eliminado exitosamente');
+              } else if (state is PagoRealizadoError) {
+                setState(() => _deletingId = null);
+                SaasSnackBar.showError(context, state.message);
+              }
             }
-          }
-        },
-        builder: (context, state) {
-          List<PagoRealizado> pagos = [];
-          if (state is PagosRealizadosLoaded) {
-            pagos = state.pagos;
-          } else if (state is PagoRealizadoSaving && state.pagos != null) {
-            pagos = state.pagos!;
-          }
+          },
+          builder: (context, state) {
+            List<PagoRealizado> pagos = [];
+            if (state is PagosRealizadosLoaded) {
+              pagos = state.pagos;
+            } else if (state is PagoRealizadoSaving && state.pagos != null) {
+              pagos = state.pagos!;
+            }
 
-          final isLoadingFirst = state is PagoRealizadoLoading && pagos.isEmpty;
+            final isLoadingFirst = state is PagoRealizadoLoading && pagos.isEmpty;
 
-          // Group by chat_id
-          final Map<String, List<PagoRealizado>> grouped = {};
-          for (var p in pagos) {
-            grouped.putIfAbsent(p.chatId, () => []).add(p);
-          }
-          final chatIds = grouped.keys.toList();
+            // Group by chat_id
+            final Map<String, List<PagoRealizado>> grouped = {};
+            for (var p in pagos) {
+              grouped.putIfAbsent(p.chatId, () => []).add(p);
+            }
+            final chatIds = grouped.keys.toList();
 
-          return RefreshIndicator(
-            onRefresh: () async => _loadFirstPage(),
-            color: SaasPalette.brand600,
-            child: CustomScrollView(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                // ── Header ─────────────────────────────────────────────────
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
-                  sliver: SliverToBoxAdapter(
-                    child: _PagoHeader(
-                      onAdd: () => Navigator.pushNamed(
-                        context,
-                        AppRouter.pagoRealizadoCreate,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // ── Filters & Search ────────────────────────────────────────
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      children: [
-                        SaasSearchField(
-                          controller: _searchController,
-                          hintText: 'Buscar por referencia, comercio o chat...',
-                          onChanged: _onSearchChanged,
-                          onClear: () {
-                            _searchController.clear();
-                            _onSearchChanged('');
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        _DateFilterBar(
-                          range: _selectedDateRange,
-                          onFilter: _onFilterDates,
-                          onClear: _clearFilter,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // ── Content ────────────────────────────────────────────────
-                if (isLoadingFirst)
-                  const SliverFillRemaining(
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: SaasPalette.brand600,
-                      ),
-                    ),
-                  )
-                else if (pagos.isEmpty)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: SaasEmptyState(
-                      icon:
-                          (_searchQuery.isNotEmpty ||
-                              _selectedDateRange != null)
-                          ? Icons.search_off_rounded
-                          : Icons.payments_rounded,
-                      title:
-                          (_searchQuery.isNotEmpty ||
-                              _selectedDateRange != null)
-                          ? 'Sin coincidencias'
-                          : 'Historial vacío',
-                      subtitle:
-                          (_searchQuery.isNotEmpty ||
-                              _selectedDateRange != null)
-                          ? 'No encontramos pagos con los criterios actuales.'
-                          : 'Los reportes de pagos registrados aparecerán aquí.',
-                    ),
-                  )
-                else ...[
+            return RefreshIndicator(
+              onRefresh: () async => _loadFirstPage(),
+              color: SaasPalette.brand600,
+              child: CustomScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  // ── Header ──────────────────────────────────────────────
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 24),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        final chatId = chatIds[index];
-                        final chatPagos = grouped[chatId]!;
-                        return _ChatGroupCard(
-                          chatId: chatId,
-                          pagos: chatPagos,
-                          index: index,
-                          onDelete: _deletePressed,
-                        );
-                      }, childCount: chatIds.length),
+                    padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                    sliver: SliverToBoxAdapter(
+                      child: _PagoHeader(
+                        onAdd: () => Navigator.pushNamed(
+                          context,
+                          AppRouter.pagoRealizadoCreate,
+                        ),
+                      ),
                     ),
                   ),
-                  if (state is PagosRealizadosLoaded && !state.hasReachedMax)
-                    const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: SaasPalette.brand600,
+
+                  // ── Filters & Search ─────────────────────────────────────
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          SaasSearchField(
+                            controller: _searchController,
+                            hintText: 'Buscar por referencia, comercio o chat...',
+                            onChanged: _onSearchChanged,
+                            onClear: () {
+                              _searchController.clear();
+                              _onSearchChanged('');
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _DateFilterBar(
+                            range: _selectedDateRange,
+                            onFilter: _onFilterDates,
+                            onClear: _clearFilter,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // ── Content ──────────────────────────────────────────────
+                  if (isLoadingFirst)
+                    const SliverFillRemaining(
+                      child: Center(
+                        child: CircularProgressIndicator(color: SaasPalette.brand600),
+                      ),
+                    )
+                  else if (pagos.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: SaasEmptyState(
+                        icon: (_searchQuery.isNotEmpty || _selectedDateRange != null)
+                            ? Icons.search_off_rounded
+                            : Icons.payments_rounded,
+                        title: (_searchQuery.isNotEmpty || _selectedDateRange != null)
+                            ? 'Sin coincidencias'
+                            : 'Historial vacío',
+                        subtitle: (_searchQuery.isNotEmpty || _selectedDateRange != null)
+                            ? 'No encontramos pagos con los criterios actuales.'
+                            : 'Los reportes de pagos registrados aparecerán aquí.',
+                      ),
+                    )
+                  else ...[
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(32, 24, 32, 24),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final chatId = chatIds[index];
+                          final chatPagos = grouped[chatId]!;
+                          return _ChatGroupCard(
+                            chatId: chatId,
+                            pagos: chatPagos,
+                            index: index,
+                            onDelete: _deletePressed,
+                          );
+                        }, childCount: chatIds.length),
+                      ),
+                    ),
+                    if (state is PagosRealizadosLoaded && !state.hasReachedMax)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.all(32),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: SaasPalette.brand600,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+                    const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+                  ],
                 ],
-              ],
-            ),
-          );
-        },
-      ),
-    );
+              ),
+            );
+          },
+        ),
+      );
   }
 }
 
@@ -389,7 +388,7 @@ class _DateFilterBar extends StatelessWidget {
                     Expanded(
                       child: Text(
                         range == null
-                            ? 'Filtrar por rango de fechas'
+                            ? 'Filtrar por fecha de documento'
                             : '${dateFormat.format(range!.start)} - ${dateFormat.format(range!.end)}',
                         style: TextStyle(
                           color: range != null
@@ -644,35 +643,58 @@ class _PagoItem extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  pago.proveedorComercio,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    pago.proveedorComercio.isNotEmpty
+                        ? pago.proveedorComercio
+                        : pago.concepto ?? pago.entidadTipo,
+                    style: const TextStyle(
+                      color: SaasPalette.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-                Text(
-                  '${pago.tipoDocumento} • ${pago.metodoPago}',
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
-                    fontSize: 11,
+                  Text(
+                    '${pago.tipoDocumento} • ${pago.metodoPago}',
+                    style: const TextStyle(
+                      color: SaasPalette.textTertiary,
+                      fontSize: 11,
+                    ),
                   ),
-                ),
-                Text(
-                  'Ref: ${pago.referencia}',
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
-                    fontSize: 10,
-                    fontStyle: FontStyle.italic,
+                  Text(
+                    'Ref: ${pago.referencia}',
+                    style: const TextStyle(
+                      color: SaasPalette.textTertiary,
+                      fontSize: 10,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
-                ),
-              ],
+                  if (pago.sedeName != null || pago.sedeId != null)
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.business_rounded,
+                          size: 10,
+                          color: SaasPalette.brand600,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          pago.sedeName ?? pago.sedeId!,
+                          style: const TextStyle(
+                            color: SaasPalette.brand600,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
-            const Spacer(),
+            const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
