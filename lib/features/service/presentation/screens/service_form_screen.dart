@@ -428,143 +428,75 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
 
   Widget _buildImagenesSection({required bool canWrite}) {
     return Container(
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: D.surfaceHigh.withOpacity(0.4),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SaasPalette.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.all(20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: D.skyBlue.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.photo_library_rounded,
-                  color: D.skyBlue,
-                  size: 18,
+              const Expanded(
+                child: PremiumSectionHeader(
+                  title: 'IMÁGENES DEL SERVICIO',
+                  icon: Icons.photo_library_rounded,
                 ),
               ),
-              const SizedBox(width: 12),
-              const Text(
-                'GALERÍA DE IMÁGENES',
-                style: TextStyle(
-                  color: D.slate400,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: D.skyBlue.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${_imagenes.length}',
-                  style: const TextStyle(
-                    color: D.skyBlue,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+              if (canWrite)
+                TextButton.icon(
+                  onPressed: _agregarImagen,
+                  style: TextButton.styleFrom(
+                    foregroundColor: SaasPalette.brand600,
+                  ),
+                  icon: const Icon(Icons.add_rounded, size: 16),
+                  label: const Text(
+                    'AGREGAR',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                   ),
                 ),
-              ),
             ],
           ),
+          const SizedBox(height: 12),
           if (canWrite) ...[
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _imagenCtrl,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'https://ejemplo.com/imagen.jpg',
-                      hintStyle: TextStyle(
-                        color: Colors.white.withOpacity(0.3),
-                        fontSize: 13,
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.link_rounded,
-                        color: D.skyBlue,
-                        size: 18,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.05),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.white.withOpacity(0.1),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: D.skyBlue, width: 1.5),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                    onSubmitted: (_) => _agregarImagen(),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: D.skyBlue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: _agregarImagen,
-                  child: const Icon(Icons.add_rounded, size: 20),
-                ),
-              ],
+            PremiumTextField(
+              controller: _imagenCtrl,
+              label: 'URL de imagen (opcional)',
+              icon: Icons.link_rounded,
             ),
+            const SizedBox(height: 12),
           ],
-          if (_imagenes.isEmpty) ...[
-            const SizedBox(height: 16),
-            Center(
-              child: Text(
-                'Sin imágenes agregadas',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.3),
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ] else ...[
-            const SizedBox(height: 16),
+          if (_imagenes.isEmpty)
+            const PremiumEmptyIndicator(
+              msg: 'Sin imágenes — campo opcional.',
+              icon: Icons.image_not_supported_rounded,
+            )
+          else
             Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: List.generate(
-                _imagenes.length,
-                (i) => _ServiceImagenThumbnail(
-                  url: _imagenes[i],
-                  canDelete: canWrite,
-                  onDelete: () => _confirmDeleteImagen(i),
-                ),
-              ),
+              spacing: 8,
+              runSpacing: 8,
+              children: _imagenes
+                  .asMap()
+                  .entries
+                  .map(
+                    (e) => _ServiceImagePreviewCard(
+                      url: e.value,
+                      canDelete: canWrite,
+                      onRemove: () => _confirmDeleteImagen(e.key),
+                    ),
+                  )
+                  .toList(),
             ),
-          ],
         ],
       ),
     );
@@ -590,44 +522,21 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
     required String body,
     required VoidCallback onConfirm,
   }) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: SaasPalette.bgCanvas,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: SaasPalette.danger.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.delete_rounded,
-                color: SaasPalette.danger,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
+        title: Text(
+          title,
+          style: const TextStyle(
+            color: SaasPalette.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: Text(
           body,
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
-            fontSize: 14,
-          ),
+          style: const TextStyle(color: SaasPalette.textSecondary),
         ),
         actions: [
           TextButton(
@@ -638,17 +547,17 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
             ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: SaasPalette.danger,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
             onPressed: () {
               Navigator.pop(ctx);
               onConfirm();
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SaasPalette.danger,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
             child: const Text('Eliminar'),
           ),
         ],
@@ -693,71 +602,81 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
   }
 }
 
-class _ServiceImagenThumbnail extends StatelessWidget {
+class _ServiceImagePreviewCard extends StatelessWidget {
   final String url;
   final bool canDelete;
-  final VoidCallback onDelete;
+  final VoidCallback onRemove;
 
-  const _ServiceImagenThumbnail({
+  const _ServiceImagePreviewCard({
     required this.url,
     required this.canDelete,
-    required this.onDelete,
+    required this.onRemove,
   });
 
   @override
   Widget build(BuildContext context) {
     return Stack(
+      clipBehavior: Clip.none,
       children: [
         Container(
-          width: 100,
-          height: 100,
+          width: 110,
+          height: 90,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: SaasPalette.border),
+            color: SaasPalette.bgSubtle,
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              url,
-              fit: BoxFit.cover,
-              loadingBuilder: (_, child, progress) => progress == null
-                  ? child
-                  : Container(
-                      color: Colors.white.withOpacity(0.05),
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: D.skyBlue,
-                        ),
-                      ),
-                    ),
-              errorBuilder: (ctx2, err, stack) => Container(
-                color: Colors.white.withOpacity(0.05),
-                child: const Icon(
-                  Icons.broken_image_rounded,
-                  color: D.slate400,
-                  size: 32,
+          clipBehavior: Clip.antiAlias,
+          child: Image.network(
+            url,
+            fit: BoxFit.cover,
+            loadingBuilder: (_, child, progress) {
+              if (progress == null) return child;
+              return const Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-              ),
+              );
+            },
+            errorBuilder: (ctx2, err, stack) => const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.broken_image_rounded,
+                  color: SaasPalette.textTertiary,
+                  size: 28,
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Sin vista previa',
+                  style: TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 10,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
         ),
         if (canDelete)
           Positioned(
-            top: 4,
-            right: 4,
+            top: -6,
+            right: -6,
             child: GestureDetector(
-              onTap: onDelete,
+              onTap: onRemove,
               child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(
                   color: SaasPalette.danger,
-                  borderRadius: BorderRadius.circular(6),
+                  shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.close_rounded,
+                  size: 13,
                   color: Colors.white,
-                  size: 14,
                 ),
               ),
             ),
