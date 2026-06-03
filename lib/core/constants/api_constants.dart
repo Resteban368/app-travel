@@ -8,9 +8,9 @@ class ApiConstants {
 
   // todo para el navegador
   //
-  // static const String kBaseUrl = 'http://localhost:3001';
+  static const String kBaseUrl = 'http://localhost:3001';
   //todo api de test
-  static const String kBaseUrl = 'https://api-travel-api-test.rvbxuq.easypanel.host';
+  // static const String kBaseUrl = 'https://api-travel-api-test.rvbxuq.easypanel.host';
   // todo vamos a usar el emulador de android
   // static const String kBaseUrl = 'http://10.0.2.2:3001';
 
