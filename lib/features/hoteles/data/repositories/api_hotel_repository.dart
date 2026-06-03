@@ -42,9 +42,7 @@ class ApiHotelRepository implements HotelRepository {
     debugPrint('🌎 [ApiHotelRepository] GET $url');
     final response = await client.get(Uri.parse(url), headers: _headers);
     if (response.statusCode == 200) {
-      final decoded = json.decode(response.body);
-      final data = decoded is Map ? decoded : decoded;
-      return _fromJson(data as Map<String, dynamic>);
+      return _fromJson(json.decode(response.body) as Map<String, dynamic>);
     }
     throw Exception('Error al cargar hotel: ${response.statusCode}');
   }
