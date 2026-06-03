@@ -10,6 +10,7 @@ class HotelBloc extends Bloc<HotelEvent, HotelState> {
 
   HotelBloc({required this.repository}) : super(HotelInitial()) {
     on<LoadHoteles>(_onLoad);
+    on<LoadHotelById>(_onLoadById);
     on<CreateHotel>(_onCreate);
     on<UpdateHotel>(_onUpdate);
     on<DeleteHotel>(_onDelete);
@@ -20,6 +21,24 @@ class HotelBloc extends Bloc<HotelEvent, HotelState> {
     try {
       final hoteles = await repository.getHoteles();
       emit(HotelLoaded(hoteles));
+    } catch (e) {
+      emit(HotelError(e.toString()));
+    }
+  }
+
+  Future<void> _onLoadById(
+    LoadHotelById event,
+    Emitter<HotelState> emit,
+  ) async {
+    try {
+      final hotel = await repository.getHotelById(event.id);
+      final currentState = state;
+      List<Hotel> hoteles = currentState is HotelLoaded
+          ? List.from(currentState.hoteles)
+          : [];
+      final idx = hoteles.indexWhere((h) => h.id == hotel.id);
+      if (idx != -1) hoteles[idx] = hotel;
+      emit(HotelDetailLoaded(hotel, hoteles));
     } catch (e) {
       emit(HotelError(e.toString()));
     }
@@ -42,18 +61,20 @@ class HotelBloc extends Bloc<HotelEvent, HotelState> {
 
   Future<void> _onUpdate(UpdateHotel event, Emitter<HotelState> emit) async {
     final currentState = state;
-    if (currentState is HotelLoaded) {
-      final list = List<Hotel>.from(currentState.hoteles);
-      emit(HotelSaving(list));
-      try {
-        await repository.updateHotel(event.hotel);
-        final idx = list.indexWhere((h) => h.id == event.hotel.id);
-        if (idx != -1) list[idx] = event.hotel;
-        emit(HotelSaved(list));
-        emit(HotelLoaded(list));
-      } catch (e) {
-        emit(HotelError(e.toString()));
-      }
+    final List<Hotel> list = currentState is HotelLoaded
+        ? List.from(currentState.hoteles)
+        : currentState is HotelDetailLoaded
+        ? List.from(currentState.hoteles)
+        : [];
+    emit(HotelSaving(list.isEmpty ? null : list));
+    try {
+      await repository.updateHotel(event.hotel);
+      final idx = list.indexWhere((h) => h.id == event.hotel.id);
+      if (idx != -1) list[idx] = event.hotel;
+      emit(HotelSaved(list.isEmpty ? null : list));
+      emit(HotelLoaded(list));
+    } catch (e) {
+      emit(HotelError(e.toString()));
     }
   }
 

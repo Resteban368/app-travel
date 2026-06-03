@@ -12,6 +12,14 @@ class LoadHoteles extends HotelEvent {
   const LoadHoteles();
 }
 
+class LoadHotelById extends HotelEvent {
+  final int id;
+  const LoadHotelById(this.id);
+
+  @override
+  List<Object?> get props => [id];
+}
+
 class CreateHotel extends HotelEvent {
   final Hotel hotel;
   const CreateHotel(this.hotel);

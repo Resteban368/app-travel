@@ -37,6 +37,19 @@ class ApiHotelRepository implements HotelRepository {
   }
 
   @override
+  Future<Hotel> getHotelById(int id) async {
+    final url = '$_baseUrl/$id';
+    debugPrint('🌎 [ApiHotelRepository] GET $url');
+    final response = await client.get(Uri.parse(url), headers: _headers);
+    if (response.statusCode == 200) {
+      final decoded = json.decode(response.body);
+      final data = decoded is Map ? decoded : decoded;
+      return _fromJson(data as Map<String, dynamic>);
+    }
+    throw Exception('Error al cargar hotel: ${response.statusCode}');
+  }
+
+  @override
   Future<void> createHotel(Hotel hotel) async {
     final body = json.encode(_toJson(hotel));
     debugPrint('📤 [ApiHotelRepository] Creating: $body');

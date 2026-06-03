@@ -36,6 +36,15 @@ class HotelSaved extends HotelState {
   List<Object?> get props => [hoteles];
 }
 
+class HotelDetailLoaded extends HotelState {
+  final Hotel hotel;
+  final List<Hotel> hoteles;
+  const HotelDetailLoaded(this.hotel, this.hoteles);
+
+  @override
+  List<Object?> get props => [hotel, hoteles];
+}
+
 class HotelError extends HotelState {
   final String message;
   const HotelError(this.message);

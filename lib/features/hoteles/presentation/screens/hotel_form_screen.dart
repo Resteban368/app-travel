@@ -29,6 +29,7 @@ class _HotelFormScreenState extends State<HotelFormScreen>
   late final TextEditingController _direccionCtrl;
   final _imagenHotelCtrl = TextEditingController();
   late bool _isActive;
+  bool _loadingDetail = false;
 
   List<String> _imagenesHotel = [];
   List<Habitacion> _habitaciones = [];
@@ -78,6 +79,13 @@ class _HotelFormScreenState extends State<HotelFormScreen>
     _imagenesHotel = List.from(widget.hotel?.imagenes ?? []);
     _habitaciones = List.from(widget.hotel?.habitaciones ?? []);
 
+    if (_isEditing) {
+      _loadingDetail = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<HotelBloc>().add(LoadHotelById(widget.hotel!.id!));
+      });
+    }
+
     _entryCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -106,6 +114,24 @@ class _HotelFormScreenState extends State<HotelFormScreen>
     _habServicioCtrl.dispose();
     _habObservacionesCtrl.dispose();
     super.dispose();
+  }
+
+  void _applyHotelDetail(Hotel hotel) {
+    if (!mounted) return;
+    setState(() {
+      _nombreCtrl.text = hotel.nombre;
+      _ciudadCtrl.text = hotel.ciudad;
+      _direccionCtrl.text = hotel.direccion;
+      if (hotel.telefono.isNotEmpty) {
+        final parsed = parsePhone(hotel.telefono);
+        _countryCode = parsed.$1;
+        _telefonoCtrl.text = parsed.$2;
+      }
+      _isActive = hotel.isActive;
+      _imagenesHotel = List.from(hotel.imagenes);
+      _habitaciones = List.from(hotel.habitaciones);
+      _loadingDetail = false;
+    });
   }
 
   void _addImagenHotel() {
@@ -729,13 +755,16 @@ class _HotelFormScreenState extends State<HotelFormScreen>
   Widget build(BuildContext context) {
     return BlocListener<HotelBloc, HotelState>(
       listener: (context, state) {
-        if (state is HotelSaved) {
+        if (state is HotelDetailLoaded) {
+          _applyHotelDetail(state.hotel);
+        } else if (state is HotelSaved) {
           SaasSnackBar.showSuccess(
             context,
             _isEditing ? 'Hotel actualizado' : 'Hotel creado',
           );
           Navigator.pop(context);
         } else if (state is HotelError) {
+          if (_loadingDetail) setState(() => _loadingDetail = false);
           SaasSnackBar.showError(context, state.message);
         }
       },
@@ -749,6 +778,26 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                 onPressed: () => Navigator.pop(context),
               ),
             ),
+            if (_loadingDetail)
+              const SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: SaasPalette.brand600),
+                      SizedBox(height: 16),
+                      Text(
+                        'Cargando datos del hotel...',
+                        style: TextStyle(
+                          color: SaasPalette.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
             SliverToBoxAdapter(
               child: FadeTransition(
                 opacity: _fade,
