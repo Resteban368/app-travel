@@ -536,6 +536,17 @@ class ApiReservaRepository implements ReservaRepository {
         isActive: hotelJson['is_active'] as bool? ?? true,
       );
     }
+    final habitaciones = (json['habitaciones'] as List? ?? [])
+        .map((h) => HabitacionReserva(
+              tipoCama: h['tipo_cama']?.toString() ?? '',
+              cantidad: (h['cantidad'] as num?)?.toInt() ?? 0,
+              precioUnitario:
+                  double.tryParse(h['precio_unitario']?.toString() ?? '0') ??
+                      0.0,
+            ))
+        .where((h) => h.tipoCama.isNotEmpty)
+        .toList();
+
     return HotelReserva(
       id: int.tryParse(json['id']?.toString() ?? ''),
       hotelId: int.tryParse(
@@ -546,6 +557,7 @@ class ApiReservaRepository implements ReservaRepository {
       fechaCheckin: json['fecha_checkin']?.toString() ?? '',
       fechaCheckout: json['fecha_checkout']?.toString() ?? '',
       valor: double.tryParse(json['valor']?.toString() ?? ''),
+      habitaciones: habitaciones,
     );
   }
 
@@ -558,6 +570,14 @@ class ApiReservaRepository implements ReservaRepository {
             'fecha_checkin': h.fechaCheckin,
             'fecha_checkout': h.fechaCheckout,
             if (h.valor != null) 'valor': h.valor,
+            if (h.habitaciones.isNotEmpty)
+              'habitaciones': h.habitaciones
+                  .map((hab) => {
+                        'tipo_cama': hab.tipoCama,
+                        'cantidad': hab.cantidad,
+                        'precio_unitario': hab.precioUnitario,
+                      })
+                  .toList(),
           },
         )
         .toList();

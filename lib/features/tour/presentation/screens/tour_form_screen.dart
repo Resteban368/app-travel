@@ -16,6 +16,7 @@ import '../../../../features/bus_layouts/domain/entities/bus_layout.dart';
 import '../../../../features/bus_layouts/presentation/bloc/bus_layout_bloc.dart';
 import '../../../../features/bus_layouts/presentation/bloc/bus_layout_event.dart';
 import '../../../../features/bus_layouts/presentation/bloc/bus_layout_state.dart';
+import '../../domain/repositories/tour_repository.dart';
 import '../bloc/tour_bloc.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 
@@ -44,6 +45,8 @@ class _TourFormScreenState extends State<TourFormScreen>
   DateTimeRange? _dateRange;
   String? _selectedSedeId;
   List<int> _selectedBusLayoutIds = [];
+  // busLayoutId → asientos de agente seleccionados para ese bus en este tour
+  Map<int, Set<String>> _agenteSeatsByBus = {};
   bool _isPromotion = false;
   bool _isActive = true;
   bool _precioPorPareja = false;
@@ -195,6 +198,37 @@ class _TourFormScreenState extends State<TourFormScreen>
     });
   }
 
+  Future<void> _loadAgentesForAllBuses(
+    String tourId,
+    List<int> busIds,
+  ) async {
+    final repo = sl<TourRepository>();
+    debugPrint('🔍 [Agentes] Cargando agentes — tourId=$tourId busIds=$busIds');
+    for (final busId in busIds) {
+      try {
+        final seats = await repo.getAgentesForBus(tourId, busId);
+        debugPrint('✅ [Agentes] bus=$busId → seats=$seats');
+        if (mounted) {
+          setState(() => _agenteSeatsByBus[busId] = Set<String>.from(seats));
+        }
+      } catch (e, st) {
+        debugPrint('❌ [Agentes] bus=$busId error: $e\n$st');
+      }
+    }
+  }
+
+  Future<void> _saveAllAgentes(BuildContext ctx, String tourId) async {
+    if (_agenteSeatsByBus.isEmpty) return;
+    final repo = sl<TourRepository>();
+    for (final entry in _agenteSeatsByBus.entries) {
+      try {
+        await repo.updateAgentesForBus(tourId, entry.key, entry.value.toList());
+      } catch (e) {
+        debugPrint('⚠️ Error guardando agentes bus ${entry.key}: $e');
+      }
+    }
+  }
+
   void _saveTour(BuildContext context, {required bool publish}) {
     //validamos que tenga un codigo de operacion
     if (_idTourCtrl.text.trim().isEmpty) {
@@ -288,6 +322,20 @@ class _TourFormScreenState extends State<TourFormScreen>
       return;
     }
 
+    // BUSES → cada bus asignado debe tener al menos un agente configurado
+    if (_selectedBusLayoutIds.isNotEmpty) {
+      final sinAgentes = _selectedBusLayoutIds
+          .where((id) => (_agenteSeatsByBus[id] ?? {}).isEmpty)
+          .toList();
+      if (sinAgentes.isNotEmpty) {
+        SaasSnackBar.showWarning(
+          context,
+          'Todos los buses deben tener al menos un asiento de agente configurado.',
+        );
+        return;
+      }
+    }
+
     final tour = Tour(
       id: _isEditing
           ? widget.tour!.id
@@ -351,10 +399,14 @@ class _TourFormScreenState extends State<TourFormScreen>
             : true);
 
     return BlocListener<TourBloc, TourState>(
-      listener: (context, state) {
+      listener: (context, state) async {
         if (state is TourDetailLoaded) {
           Navigator.of(context, rootNavigator: true).pop();
           setState(() => _updateFieldsFromTour(state.tour));
+          final busIds = state.tour.busLayoutIds ?? [];
+          if (busIds.isNotEmpty) {
+            _loadAgentesForAllBuses(state.tour.id, busIds);
+          }
           final now = DateTime.now();
           final end = state.tour.endDate;
           final start = state.tour.startDate;
@@ -376,6 +428,12 @@ class _TourFormScreenState extends State<TourFormScreen>
           SaasSnackBar.showSuccess(context, 'Tour duplicado exitosamente');
           if (mounted) Navigator.pop(context);
         } else if (state is TourSaved) {
+          final tourId = _isEditing
+              ? widget.tour!.id
+              : state.savedTourId;
+          if (tourId != null && _agenteSeatsByBus.isNotEmpty) {
+            await _saveAllAgentes(context, tourId);
+          }
           SaasSnackBar.showSuccess(
             context,
             'Experiencia guardada exitosamente',
@@ -1372,6 +1430,10 @@ class _TourFormScreenState extends State<TourFormScreen>
               ? state.layouts
               : <BusLayout>[];
 
+          final selectedLayouts = layouts
+              .where((l) => _selectedBusLayoutIds.contains(l.id))
+              .toList();
+
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1411,9 +1473,7 @@ class _TourFormScreenState extends State<TourFormScreen>
                         runSpacing: 6,
                         children: [
                           ...layouts.map((l) {
-                            final isSelected = _selectedBusLayoutIds.contains(
-                              l.id,
-                            );
+                            final isSelected = _selectedBusLayoutIds.contains(l.id);
                             return FilterChip(
                               label: Text(
                                 '${l.nombre} (${l.totalAsientosCliente})',
@@ -1449,6 +1509,7 @@ class _TourFormScreenState extends State<TourFormScreen>
                                           _selectedBusLayoutIds.add(l.id!);
                                         } else {
                                           _selectedBusLayoutIds.remove(l.id);
+                                          _agenteSeatsByBus.remove(l.id);
                                         }
                                       });
                                     }
@@ -1466,6 +1527,96 @@ class _TourFormScreenState extends State<TourFormScreen>
                         ],
                       ),
               ),
+
+              // ── Configurar agentes por bus seleccionado ──────────────────
+              if (selectedLayouts.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                ...selectedLayouts.map((l) {
+                  final agentes = _agenteSeatsByBus[l.id] ?? {};
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: SaasPalette.bgSubtle,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: SaasPalette.border),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.directions_bus_rounded,
+                          size: 15,
+                          color: SaasPalette.brand600,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l.nombre,
+                                style: const TextStyle(
+                                  color: SaasPalette.textPrimary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              if (agentes.isNotEmpty)
+                                Text(
+                                  '${agentes.length} asiento${agentes.length == 1 ? '' : 's'} de agente',
+                                  style: const TextStyle(
+                                    color: Color(0xFFF59E0B),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: l.configuracion == null
+                              ? null
+                              : () async {
+                                  final result =
+                                      await showDialog<Set<String>>(
+                                    context: context,
+                                    builder: (_) => _AgenteSeatDialog(
+                                      layout: l,
+                                      initialAgentes: agentes,
+                                    ),
+                                  );
+                                  if (result != null) {
+                                    setState(() =>
+                                        _agenteSeatsByBus[l.id!] = result);
+                                  }
+                                },
+                          style: TextButton.styleFrom(
+                            foregroundColor: const Color(0xFFF59E0B),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.person_pin_rounded,
+                            size: 14,
+                          ),
+                          label: const Text(
+                            'Configurar agentes',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
             ],
           );
         },
@@ -2571,6 +2722,331 @@ class _FinalizarTourDialogState extends State<_FinalizarTourDialog> {
                 : const Text('Finalizar'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Diálogo para configurar asientos de agente en un bus ──────────────────────
+
+class _AgenteSeatDialog extends StatefulWidget {
+  final BusLayout layout;
+  final Set<String> initialAgentes;
+
+  const _AgenteSeatDialog({
+    required this.layout,
+    required this.initialAgentes,
+  });
+
+  @override
+  State<_AgenteSeatDialog> createState() => _AgenteSeatDialogState();
+}
+
+class _AgenteSeatDialogState extends State<_AgenteSeatDialog> {
+  late Set<String> _selected;
+
+  static const _cellSize = 24.0;
+  static const _gap = 4.0;
+  static const _aisleWidth = 14.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = Set.from(widget.initialAgentes);
+  }
+
+  void _toggleSeat(String numero, TipoAsiento tipo) {
+    if (tipo != TipoAsiento.normal) return;
+    setState(() {
+      if (_selected.contains(numero)) {
+        _selected.remove(numero);
+      } else {
+        _selected.add(numero);
+      }
+    });
+  }
+
+  Color _colorForSeat(AsientoLayout a) {
+    if (_selected.contains(a.numero)) return const Color(0xFFF59E0B);
+    switch (a.tipo) {
+      case TipoAsiento.normal:
+        return const Color(0xFF3B82F6);
+      case TipoAsiento.agente:
+        return const Color(0xFFF59E0B);
+      case TipoAsiento.conductor:
+        return const Color(0xFF1E3A5F);
+      case TipoAsiento.bano:
+        return const Color(0xFF10B981);
+      case TipoAsiento.vacio:
+        return Colors.grey.shade900;
+      case TipoAsiento.entrada:
+        return Colors.grey.shade400;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cfg = widget.layout.configuracion!;
+    final aisle = cfg.columnas ~/ 2;
+    final maxFila = cfg.asientos.map((a) => a.fila).reduce((a, b) => a > b ? a : b);
+    final porFila = <int, List<AsientoLayout>>{};
+    for (final a in cfg.asientos) {
+      porFila.putIfAbsent(a.fila, () => []).add(a);
+    }
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+          maxWidth: 520,
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: SaasPalette.bgCanvas,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: SaasPalette.border)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.person_pin_rounded,
+                      color: Color(0xFFF59E0B), size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Asientos de Agente',
+                          style: TextStyle(
+                            color: SaasPalette.textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          widget.layout.nombre,
+                          style: const TextStyle(
+                            color: SaasPalette.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded,
+                        color: SaasPalette.textTertiary),
+                  ),
+                ],
+              ),
+            ),
+
+            // Instrucción
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Row(
+                children: [
+                  Container(
+                    width: 14, height: 14,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Toca un asiento normal (azul) para marcarlo como agente (ámbar)',
+                      style: TextStyle(
+                        color: SaasPalette.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Contador
+            if (_selected.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Text(
+                    '${_selected.length} asiento${_selected.length == 1 ? '' : 's'} seleccionado${_selected.length == 1 ? '' : 's'}: ${_selected.join(', ')}',
+                    style: const TextStyle(
+                      color: Color(0xFFF59E0B),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+
+            // Mapa del bus
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: List.generate(maxFila + 1, (fila) {
+                      final asientosFila =
+                          (porFila[fila] ?? [])
+                            ..sort((a, b) => a.columna.compareTo(b.columna));
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: _gap),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: List.generate(cfg.columnas, (col) {
+                            if (col == aisle) {
+                              return const SizedBox(width: _aisleWidth);
+                            }
+                            final asiento = asientosFila
+                                .where((a) => a.columna == col)
+                                .firstOrNull;
+                            if (asiento == null) {
+                              return SizedBox(width: _cellSize + _gap);
+                            }
+                            final tappable = asiento.tipo == TipoAsiento.normal;
+                            Widget? child;
+                            if (asiento.tipo == TipoAsiento.bano) {
+                              child = const Icon(Icons.wc_rounded,
+                                  size: 12, color: Colors.white);
+                            } else if (asiento.tipo == TipoAsiento.entrada) {
+                              child = const Center(
+                                child: Text('E',
+                                    style: TextStyle(
+                                      color: Colors.black87,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    )),
+                              );
+                            } else if (asiento.numero.isNotEmpty &&
+                                asiento.tipo != TipoAsiento.vacio) {
+                              child = FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(2),
+                                  child: Text(
+                                    asiento.tipo == TipoAsiento.conductor
+                                        ? 'C'
+                                        : asiento.numero,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 7,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                            final cell = AnimatedContainer(
+                              duration: const Duration(milliseconds: 120),
+                              width: _cellSize,
+                              height: _cellSize,
+                              decoration: BoxDecoration(
+                                color: _colorForSeat(asiento),
+                                borderRadius: BorderRadius.circular(4),
+                                border: tappable
+                                    ? Border.all(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.3),
+                                        width: 1,
+                                      )
+                                    : null,
+                              ),
+                              child: child,
+                            );
+                            return Padding(
+                              padding: const EdgeInsets.only(right: _gap),
+                              child: Tooltip(
+                                message: asiento.numero,
+                                child: tappable
+                                    ? GestureDetector(
+                                        onTap: () => _toggleSeat(
+                                          asiento.numero,
+                                          asiento.tipo,
+                                        ),
+                                        child: MouseRegion(
+                                          cursor: SystemMouseCursors.click,
+                                          child: cell,
+                                        ),
+                                      )
+                                    : cell,
+                              ),
+                            );
+                          }),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ),
+            ),
+
+            // Botones
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => setState(() => _selected.clear()),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: SaasPalette.textSecondary,
+                        side: const BorderSide(color: SaasPalette.border),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text('Limpiar'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context, Set<String>.from(_selected)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF59E0B),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text(
+                        'CONFIRMAR',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        ),
       ),
     );
   }

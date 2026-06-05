@@ -87,6 +87,32 @@ class ApiBusLayoutRepository implements BusLayoutRepository {
     }
   }
 
+  @override
+  Future<List<BusTourHistorialItem>> getHistorial(int id) async {
+    final url = '$_baseUrl/$id/historial';
+    debugPrint('🌎 [ApiBusLayoutRepository] GET $url');
+    final response = await client.get(Uri.parse(url), headers: _headers);
+    if (response.statusCode == 200) {
+      final list = json.decode(response.body) as List<dynamic>;
+      return list.map((h) {
+        final m = h as Map<String, dynamic>;
+        return BusTourHistorialItem(
+          tourId: (m['tour_id'] as num?)?.toInt() ?? 0,
+          nombreTour: m['nombre_tour']?.toString() ?? '',
+          fechaInicio: DateTime.tryParse(m['fecha_inicio']?.toString() ?? ''),
+          fechaFin: DateTime.tryParse(m['fecha_fin']?.toString() ?? ''),
+          estado: m['estado']?.toString() ?? '',
+          totalReservas: (m['total_reservas'] as num?)?.toInt() ?? 0,
+          totalPasajeros: (m['total_pasajeros'] as num?)?.toInt() ?? 0,
+          asientosOcupados: (m['asientos_ocupados'] as num?)?.toInt() ?? 0,
+          asientosDisponibles: (m['asientos_disponibles'] as num?)?.toInt() ?? 0,
+          porcentajeOcupacion: (m['porcentaje_ocupacion'] as num?)?.toInt() ?? 0,
+        );
+      }).toList();
+    }
+    throw ApiException.fromResponse(response);
+  }
+
   BusLayout _fromJson(Map<String, dynamic> json) {
     BusConfiguracion? configuracion;
     if (json['configuracion'] != null) {

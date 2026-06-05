@@ -6,4 +6,5 @@ abstract class BusLayoutRepository {
   Future<void> createBusLayout(BusLayout layout);
   Future<void> updateBusLayout(BusLayout layout);
   Future<void> deleteBusLayout(int id);
+  Future<List<BusTourHistorialItem>> getHistorial(int id);
 }

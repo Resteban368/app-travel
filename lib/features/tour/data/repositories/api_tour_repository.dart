@@ -66,7 +66,7 @@ class ApiTourRepository implements TourRepository {
   }
 
   @override
-  Future<void> createTour(Tour tour) async {
+  Future<String> createTour(Tour tour) async {
     final payload = _toJson(tour);
     if (tour.modoPrecio == 'grupal') {
       payload['precios_grupales'] =
@@ -82,6 +82,43 @@ class ApiTourRepository implements TourRepository {
       body: body,
     );
     if (response.statusCode != 201 && response.statusCode != 200) {
+      throw ApiException.fromResponse(response);
+    }
+    final decoded = json.decode(response.body);
+    return (decoded['id'] ?? decoded['tour']?['id'] ?? '').toString();
+  }
+
+  @override
+  Future<List<String>> getAgentesForBus(String tourId, int busLayoutId) async {
+    final url = '$_baseUrl/$tourId/buses/$busLayoutId/agentes';
+    debugPrint('🌎 [ApiTourRepository] GET $url');
+    final response = await client.get(Uri.parse(url), headers: _headers);
+    debugPrint('📥 [ApiTourRepository] agentes status=${response.statusCode} body=${response.body}');
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data is Map && data['asientos_agentes'] is List) {
+        return (data['asientos_agentes'] as List).whereType<String>().toList();
+      }
+      return [];
+    }
+    if (response.statusCode == 404) return [];
+    throw ApiException.fromResponse(response);
+  }
+
+  @override
+  Future<void> updateAgentesForBus(
+    String tourId,
+    int busLayoutId,
+    List<String> asientos,
+  ) async {
+    final url = '$_baseUrl/$tourId/buses/$busLayoutId/agentes';
+    debugPrint('📤 [ApiTourRepository] PATCH $url asientos_agentes=$asientos');
+    final response = await client.patch(
+      Uri.parse(url),
+      headers: _headers,
+      body: json.encode({'asientos_agentes': asientos}),
+    );
+    if (response.statusCode != 200) {
       throw ApiException.fromResponse(response);
     }
   }

@@ -3,13 +3,16 @@ import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
 import '../../domain/entities/bus_layout.dart';
+import '../../domain/repositories/bus_layout_repository.dart';
 import '../bloc/bus_layout_bloc.dart';
 import '../bloc/bus_layout_event.dart';
 import '../bloc/bus_layout_state.dart';
 
-enum _PaintMode { normal, agente, bano, vacio, conductor, entrada }
+enum _PaintMode { normal, bano, vacio, conductor, entrada }
 
 enum _ColumnaConfig {
   unoMasUno, // 1+1 → 2 asientos/fila (minibus)
@@ -37,12 +40,15 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
   // Configuración del layout
   int _filasPassajeros = 11;
   _ColumnaConfig _columnaConfig = _ColumnaConfig.dosMasDos;
-  Set<String> _agenteSeatNumbers = {'1A', '1B'};
   Set<String> _banoSeatNumbers = {};
   Set<String> _vazioSeatNumbers = {};
   Set<String> _entradaSeatNumbers = {};
   String? _conductorSeatNumber; // solo uno
-  _PaintMode _paintMode = _PaintMode.agente;
+  _PaintMode _paintMode = _PaintMode.bano;
+
+  List<BusTourHistorialItem> _historial = [];
+  bool _loadingHistorial = false;
+  String? _historialError;
 
   late final AnimationController _entryCtrl;
   late final Animation<double> _fade;
@@ -62,6 +68,10 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
       _inferirConfiguracion(widget.layout!.configuracion!);
     }
 
+    if (_isEditing) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadHistorial());
+    }
+
     _entryCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -75,6 +85,19 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
     _entryCtrl.forward();
+  }
+
+  Future<void> _loadHistorial() async {
+    if (!mounted || widget.layout?.id == null) return;
+    setState(() { _loadingHistorial = true; _historialError = null; });
+    try {
+      final items = await sl<BusLayoutRepository>().getHistorial(widget.layout!.id!);
+      if (mounted) setState(() => _historial = items);
+    } catch (e) {
+      if (mounted) setState(() => _historialError = e.toString());
+    } finally {
+      if (mounted) setState(() => _loadingHistorial = false);
+    }
   }
 
   void _inferirConfiguracion(BusConfiguracion cfg) {
@@ -102,11 +125,6 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
     } else {
       _columnaConfig = _ColumnaConfig.dosMasDos;
     }
-
-    _agenteSeatNumbers = cfg.asientos
-        .where((a) => a.tipo == TipoAsiento.agente && a.numero.isNotEmpty)
-        .map((a) => a.numero)
-        .toSet();
 
     _banoSeatNumbers = cfg.asientos
         .where((a) => a.tipo == TipoAsiento.bano && a.numero.isNotEmpty)
@@ -216,14 +234,11 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
       }
     }
 
-    // Aplicar overrides: baño > agente > vacio > entrada > conductor
+    // Aplicar overrides: baño > vacio > entrada > conductor
     final resultado = asientos.map((a) {
       if (a.numero.isNotEmpty) {
         if (_banoSeatNumbers.contains(a.numero)) {
           return AsientoLayout(fila: a.fila, columna: a.columna, numero: a.numero, tipo: TipoAsiento.bano);
-        }
-        if (_agenteSeatNumbers.contains(a.numero)) {
-          return AsientoLayout(fila: a.fila, columna: a.columna, numero: a.numero, tipo: TipoAsiento.agente);
         }
         if (_vazioSeatNumbers.contains(a.numero)) {
           return AsientoLayout(fila: a.fila, columna: a.columna, numero: a.numero, tipo: TipoAsiento.vacio);
@@ -258,22 +273,10 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
       final isRightEdge = columna == totalCols - 1;
 
       switch (_paintMode) {
-        case _PaintMode.agente:
-          if (_agenteSeatNumbers.contains(numero)) {
-            _agenteSeatNumbers.remove(numero);
-          } else {
-            _banoSeatNumbers.remove(numero);
-            _vazioSeatNumbers.remove(numero);
-            _entradaSeatNumbers.remove(numero);
-            if (_conductorSeatNumber == numero) _conductorSeatNumber = null;
-            _agenteSeatNumbers.add(numero);
-          }
-
         case _PaintMode.bano:
           if (_banoSeatNumbers.contains(numero)) {
             _banoSeatNumbers.remove(numero);
           } else {
-            _agenteSeatNumbers.remove(numero);
             _vazioSeatNumbers.remove(numero);
             _entradaSeatNumbers.remove(numero);
             if (_conductorSeatNumber == numero) _conductorSeatNumber = null;
@@ -284,7 +287,6 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
           if (_vazioSeatNumbers.contains(numero)) {
             _vazioSeatNumbers.remove(numero);
           } else {
-            _agenteSeatNumbers.remove(numero);
             _banoSeatNumbers.remove(numero);
             _entradaSeatNumbers.remove(numero);
             if (_conductorSeatNumber == numero) _conductorSeatNumber = null;
@@ -293,7 +295,6 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
 
         case _PaintMode.entrada:
           if (!isLeftEdge && !isRightEdge) {
-            // Mostrar SnackBar sin llamar a setState (lo llamamos después)
             WidgetsBinding.instance.addPostFrameCallback((_) {
               ScaffoldMessenger.of(ctx).showSnackBar(
                 const SnackBar(
@@ -307,7 +308,6 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
           if (_entradaSeatNumbers.contains(numero)) {
             _entradaSeatNumbers.remove(numero);
           } else {
-            _agenteSeatNumbers.remove(numero);
             _banoSeatNumbers.remove(numero);
             _vazioSeatNumbers.remove(numero);
             if (_conductorSeatNumber == numero) _conductorSeatNumber = null;
@@ -339,7 +339,6 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
             });
             return;
           } else {
-            _agenteSeatNumbers.remove(numero);
             _banoSeatNumbers.remove(numero);
             _vazioSeatNumbers.remove(numero);
             _entradaSeatNumbers.remove(numero);
@@ -347,7 +346,6 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
           }
 
         case _PaintMode.normal:
-          _agenteSeatNumbers.remove(numero);
           _banoSeatNumbers.remove(numero);
           _vazioSeatNumbers.remove(numero);
           _entradaSeatNumbers.remove(numero);
@@ -360,6 +358,86 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
     return _generarLayout().asientos
         .where((a) => a.tipo == TipoAsiento.normal)
         .length;
+  }
+
+  // ── Historial ────────────────────────────────────────────────────────────────
+
+  Widget _buildHistorialSection() {
+    Widget body;
+
+    if (_loadingHistorial) {
+      body = const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: SaasPalette.brand600,
+                ),
+              ),
+              SizedBox(width: 10),
+              Text(
+                'Cargando historial...',
+                style: TextStyle(
+                  color: SaasPalette.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (_historialError != null) {
+      body = Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: SaasPalette.danger.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: SaasPalette.danger.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline_rounded,
+                color: SaasPalette.danger, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Error al cargar el historial',
+                style: const TextStyle(
+                  color: SaasPalette.danger, fontSize: 13),
+              ),
+            ),
+            TextButton(
+              onPressed: _loadHistorial,
+              child: const Text('Reintentar',
+                  style: TextStyle(color: SaasPalette.brand600, fontSize: 12)),
+            ),
+          ],
+        ),
+      );
+    } else if (_historial.isEmpty) {
+      body = const PremiumEmptyIndicator(
+        msg: 'Este bus aún no ha sido asignado a ningún tour.',
+        icon: Icons.route_rounded,
+      );
+    } else {
+      body = Column(
+        children: _historial
+            .map((item) => _HistorialItemCard(item: item))
+            .toList(),
+      );
+    }
+
+    return PremiumSectionCard(
+      title: 'HISTORIAL DE VIAJES',
+      icon: Icons.history_rounded,
+      children: [body],
+    );
   }
 
   // ── Guardar ─────────────────────────────────────────────────────────────────
@@ -570,27 +648,9 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
                                   final numeros = layout.asientos
                                       .map((a) => a.numero)
                                       .toSet();
-                                  _agenteSeatNumbers.removeWhere(
-                                    (n) => !numeros.contains(n),
-                                  );
                                   _banoSeatNumbers.removeWhere(
                                     (n) => !numeros.contains(n),
                                   );
-                                }),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Asientos de agente
-                              _SeatSetPanel(
-                                icon: Icons.person_pin_rounded,
-                                label: 'Asientos para agente',
-                                hint: 'Toca en la vista previa en modo Agente',
-                                color: const Color(0xFFF59E0B),
-                                bgColor: const Color(0xFFFFFBEB),
-                                seats: _agenteSeatNumbers,
-                                canWrite: canWrite,
-                                onDelete: (n) => setState(() {
-                                  _agenteSeatNumbers.remove(n);
                                 }),
                               ),
                               const SizedBox(height: 16),
@@ -639,9 +699,7 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
                                     const SizedBox(width: 6),
                                                                     Expanded(
                                       child: Text(
-                                        _paintMode == _PaintMode.agente
-                                            ? 'Toca un asiento para marcarlo como asiento de agente (ámbar)'
-                                            : _paintMode == _PaintMode.bano
+                                        _paintMode == _PaintMode.bano
                                             ? 'Toca un asiento para marcarlo como baño (verde)'
                                             : _paintMode == _PaintMode.vacio
                                             ? 'Toca un asiento para marcarlo como vacío (negro)'
@@ -672,6 +730,11 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
                               ),
                             ],
                           ),
+                          const SizedBox(height: 20),
+
+                          // ── Historial de viajes ─────────────────────────
+                          if (_isEditing) _buildHistorialSection(),
+
                           const SizedBox(height: 32),
 
                           // ── Botón guardar ───────────────────────────────
@@ -731,13 +794,6 @@ class _PaintModeSelector extends StatelessWidget {
                 color: SaasPalette.brand600,
                 selected: mode == _PaintMode.normal,
                 onTap: () => onChanged(_PaintMode.normal),
-              ),
-              _ModeTab(
-                label: 'Agente',
-                icon: Icons.person_pin_rounded,
-                color: const Color(0xFFF59E0B),
-                selected: mode == _PaintMode.agente,
-                onTap: () => onChanged(_PaintMode.agente),
               ),
               _ModeTab(
                 label: 'Baño',
@@ -1328,7 +1384,6 @@ class _BusPreview extends StatelessWidget {
           runSpacing: 6,
           children: [
             const _LeyendaItem(color: Color(0xFF3B82F6), label: 'Normal'),
-            const _LeyendaItem(color: Color(0xFFF59E0B), label: 'Agente'),
             const _LeyendaItem(color: Color(0xFF1E3A5F), label: 'Conductor'),
             const _LeyendaItem(color: Color(0xFF10B981), label: 'Baño'),
             _LeyendaItem(color: Colors.grey.shade900, label: 'Vacío'),
@@ -1449,6 +1504,204 @@ class _BusPreview extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Historial item card ────────────────────────────────────────────────────────
+
+class _HistorialItemCard extends StatelessWidget {
+  final BusTourHistorialItem item;
+  const _HistorialItemCard({required this.item});
+
+  static const _dateFmt = 'dd MMM yyyy';
+
+  Color _estadoColor(String estado) {
+    switch (estado.toLowerCase()) {
+      case 'activo':
+        return const Color(0xFF10B981);
+      case 'finalizado':
+        return const Color(0xFF6B7280);
+      default:
+        return const Color(0xFFF59E0B);
+    }
+  }
+
+  String _estadoLabel(String estado) {
+    switch (estado.toLowerCase()) {
+      case 'activo':
+        return 'Activo';
+      case 'finalizado':
+        return 'Finalizado';
+      case 'inactivo':
+        return 'Inactivo';
+      default:
+        return estado;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _estadoColor(item.estado);
+    final dateFmt = DateFormat(_dateFmt, 'es_CO');
+    final inicio = item.fechaInicio != null
+        ? dateFmt.format(item.fechaInicio!)
+        : '—';
+    final fin = item.fechaFin != null
+        ? dateFmt.format(item.fechaFin!)
+        : '—';
+    final ocup = item.porcentajeOcupacion.clamp(0, 100) / 100.0;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgSubtle,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SaasPalette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Nombre + badge estado
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  item.nombreTour,
+                  style: const TextStyle(
+                    color: SaasPalette.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  _estadoLabel(item.estado),
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
+          // Fechas
+          Row(
+            children: [
+              const Icon(Icons.calendar_today_rounded,
+                  size: 12, color: SaasPalette.textTertiary),
+              const SizedBox(width: 5),
+              Text(
+                '$inicio → $fin',
+                style: const TextStyle(
+                  color: SaasPalette.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Stats
+          Row(
+            children: [
+              _StatChip(
+                icon: Icons.confirmation_number_rounded,
+                label: '${item.totalReservas} reservas',
+              ),
+              const SizedBox(width: 8),
+              _StatChip(
+                icon: Icons.people_rounded,
+                label: '${item.totalPasajeros} pasajeros',
+              ),
+              const SizedBox(width: 8),
+              _StatChip(
+                icon: Icons.event_seat_rounded,
+                label: '${item.asientosOcupados}/${item.asientosOcupados + item.asientosDisponibles}',
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Barra de ocupación
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: ocup,
+                    minHeight: 6,
+                    backgroundColor: SaasPalette.border,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      item.porcentajeOcupacion >= 90
+                          ? const Color(0xFFEF4444)
+                          : item.porcentajeOcupacion >= 60
+                              ? const Color(0xFFF59E0B)
+                              : const Color(0xFF10B981),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${item.porcentajeOcupacion}%',
+                style: const TextStyle(
+                  color: SaasPalette.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _StatChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: SaasPalette.bgCanvas,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: SaasPalette.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: SaasPalette.textTertiary),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: SaasPalette.textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

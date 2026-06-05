@@ -137,9 +137,10 @@ class TourSaving extends TourState {
 
 class TourSaved extends TourState {
   final List<Tour>? tours;
-  const TourSaved({this.tours});
+  final String? savedTourId;
+  const TourSaved({this.tours, this.savedTourId});
   @override
-  List<Object?> get props => [tours];
+  List<Object?> get props => [tours, savedTourId];
 }
 
 class TourError extends TourState {
@@ -211,9 +212,9 @@ class TourBloc extends Bloc<TourEvent, TourState> {
         : null;
     emit(TourSaving(tours: currentTours));
     try {
-      await _tourRepository.createTour(event.tour);
+      final savedId = await _tourRepository.createTour(event.tour);
       final tours = await _tourRepository.getTours();
-      emit(TourSaved(tours: tours));
+      emit(TourSaved(tours: tours, savedTourId: savedId));
       emit(ToursLoaded(tours: tours, filteredTours: tours));
     } catch (e) {
       emit(TourError(e.toString()));

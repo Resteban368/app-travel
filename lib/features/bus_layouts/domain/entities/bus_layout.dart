@@ -2,6 +2,32 @@ import 'package:equatable/equatable.dart';
 
 enum TipoAsiento { normal, agente, conductor, vacio, bano, entrada }
 
+class BusTourHistorialItem {
+  final int tourId;
+  final String nombreTour;
+  final DateTime? fechaInicio;
+  final DateTime? fechaFin;
+  final String estado;
+  final int totalReservas;
+  final int totalPasajeros;
+  final int asientosOcupados;
+  final int asientosDisponibles;
+  final int porcentajeOcupacion;
+
+  const BusTourHistorialItem({
+    required this.tourId,
+    required this.nombreTour,
+    this.fechaInicio,
+    this.fechaFin,
+    required this.estado,
+    required this.totalReservas,
+    required this.totalPasajeros,
+    required this.asientosOcupados,
+    required this.asientosDisponibles,
+    required this.porcentajeOcupacion,
+  });
+}
+
 class AsientoLayout extends Equatable {
   final int fila;
   final int columna;

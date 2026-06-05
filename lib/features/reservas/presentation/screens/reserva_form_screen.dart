@@ -1146,6 +1146,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
 
     final hasAsientos = res.asientosBus.isNotEmpty;
     final hasLink = res.seleccionLink != null && res.seleccionLink!.isNotEmpty;
+    final hasBus = (res.busLayoutId ?? _selectedBusLayoutId) != null ||
+        _busesDisponibilidad.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1199,7 +1201,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               );
             }).toList(),
           ),
-        ] else ...[
+        ] else if (hasBus) ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
@@ -1841,55 +1843,105 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 const Divider(color: SaasPalette.border),
                 const SizedBox(height: 12),
 
-                // Precio base (individual)
-                if (tour.price > 0) ...[
-                  _PrecioSectionHeader(
-                    icon: Icons.sell_rounded,
-                    label: tour.precioPorPareja ? 'PRECIO BASE (POR PAREJA)' : 'PRECIO BASE (POR PERSONA)',
+                if (tour.modoPrecio == 'grupal') ...[
+                  // ── Modo grupal: solo mostrar tramos grupales ──
+                  Row(
+                    children: [
+                      _PrecioSectionHeader(
+                        icon: Icons.groups_rounded,
+                        label: 'PRECIOS POR GRUPO',
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: SaasPalette.brand600.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'Modo grupal',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: SaasPalette.brand600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
-                  _PrecioRow(
-                    label: tour.precioPorPareja ? 'Por pareja' : 'Por persona',
-                    precio: currencyFmt.format(tour.price),
-                    destacado: true,
-                  ),
+                  if (tour.preciosGrupales.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'Sin tramos de precio configurados',
+                        style: TextStyle(color: SaasPalette.textSecondary, fontSize: 13),
+                      ),
+                    )
+                  else
+                    ...tour.preciosGrupales.map((g) => _PrecioRow(
+                      label: g.descripcion?.isNotEmpty == true ? g.descripcion! : 'Grupo',
+                      sublabel: '${g.minPersonas}–${g.maxPersonas} personas',
+                      precio: currencyFmt.format(g.precio),
+                    )),
                   const SizedBox(height: 12),
-                ],
-
-                // Categorías de precio individual
-                if (tour.precios.isNotEmpty) ...[
-                  _PrecioSectionHeader(
-                    icon: Icons.loyalty_rounded,
-                    label: 'CATEGORÍAS DE PRECIO',
+                ] else ...[
+                  // ── Modo individual: precio base + categorías ──
+                  Row(
+                    children: [
+                      _PrecioSectionHeader(
+                        icon: Icons.sell_rounded,
+                        label: tour.precioPorPareja
+                            ? 'PRECIO BASE (POR PAREJA)'
+                            : 'PRECIO BASE (POR PERSONA)',
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: SaasPalette.success.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          tour.precioPorPareja ? 'Por pareja' : 'Individual',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: SaasPalette.success,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
-                  ...tour.precios.map((p) {
-                    final parts = <String>[];
-                    if (p.edadMin != null || p.edadMax != null) {
-                      parts.add('${p.edadMin ?? 0}–${p.edadMax ?? '∞'} años');
-                    }
-                    if (p.puntoPartida != null) parts.add('desde ${p.puntoPartida}');
-                    return _PrecioRow(
-                      label: p.descripcion,
-                      sublabel: parts.isEmpty ? null : parts.join(' · '),
-                      precio: currencyFmt.format(p.precio),
-                    );
-                  }),
-                  const SizedBox(height: 12),
-                ],
-
-                // Precios grupales
-                if (tour.preciosGrupales.isNotEmpty) ...[
-                  _PrecioSectionHeader(
-                    icon: Icons.groups_rounded,
-                    label: 'PRECIOS POR GRUPO',
-                  ),
-                  const SizedBox(height: 8),
-                  ...tour.preciosGrupales.map((g) => _PrecioRow(
-                    label: g.descripcion ?? 'Grupo',
-                    sublabel: '${g.minPersonas}–${g.maxPersonas} personas',
-                    precio: currencyFmt.format(g.precio),
-                  )),
+                  if (tour.price > 0)
+                    _PrecioRow(
+                      label: tour.precioPorPareja ? 'Por pareja' : 'Por persona',
+                      precio: currencyFmt.format(tour.price),
+                      destacado: true,
+                    ),
+                  if (tour.precios.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _PrecioSectionHeader(
+                      icon: Icons.loyalty_rounded,
+                      label: 'CATEGORÍAS DE PRECIO',
+                    ),
+                    const SizedBox(height: 8),
+                    ...tour.precios.map((p) {
+                      final parts = <String>[];
+                      if (p.edadMin != null || p.edadMax != null) {
+                        parts.add('${p.edadMin ?? 0}–${p.edadMax ?? '∞'} años');
+                      }
+                      if (p.puntoPartida != null && p.puntoPartida!.isNotEmpty) {
+                        parts.add('desde ${p.puntoPartida}');
+                      }
+                      return _PrecioRow(
+                        label: p.descripcion,
+                        sublabel: parts.isEmpty ? null : parts.join(' · '),
+                        precio: currencyFmt.format(p.precio),
+                      );
+                    }),
+                  ],
                   const SizedBox(height: 12),
                 ],
 
@@ -4367,7 +4419,7 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 640),
         decoration: BoxDecoration(
           color: SaasPalette.bgCanvas,
           borderRadius: BorderRadius.circular(28),
@@ -4475,42 +4527,157 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
                           const SizedBox(height: 4),
                       itemBuilder: (context, index) {
                         final t = _filtered[index];
+                        final dateFmt = DateFormat('dd MMM yyyy', 'es_CO');
+                        final fechaInicio = t.startDate != null
+                            ? dateFmt.format(t.startDate!)
+                            : null;
+                        final fechaFin = t.endDate != null
+                            ? dateFmt.format(t.endDate!)
+                            : null;
+                        final total = t.cupos ?? 0;
+                        final libres = t.cuposDisponibles ?? 0;
+                        final ocupados = (total - libres).clamp(0, total);
+                        final ocupPct = total > 0 ? ocupados / total : 0.0;
+                        final ocupColor = ocupPct >= 0.9
+                            ? const Color(0xFFEF4444)
+                            : ocupPct >= 0.6
+                                ? const Color(0xFFF59E0B)
+                                : const Color(0xFF10B981);
+
                         return Material(
                           color: Colors.transparent,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12),
                             onTap: () => Navigator.pop(context, t),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
+                              padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: SaasPalette.border.withValues(
-                                    alpha: 0.5,
-                                  ),
+                                  color: SaasPalette.border.withValues(alpha: 0.5),
                                 ),
                               ),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(
-                                    Icons.tour_rounded,
-                                    color: SaasPalette.brand600,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      t.name,
-                                      style: const TextStyle(
-                                        color: SaasPalette.textPrimary,
-                                        fontSize: 13,
+                                  // Nombre + tipo
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(
+                                        Icons.tour_rounded,
+                                        color: SaasPalette.brand600,
+                                        size: 15,
                                       ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          t.name,
+                                          style: const TextStyle(
+                                            color: SaasPalette.textPrimary,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      if (t.tipoTour != null &&
+                                          t.tipoTour!.isNotEmpty) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 7,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: SaasPalette.brand600
+                                                .withValues(alpha: 0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: SaasPalette.brand600
+                                                  .withValues(alpha: 0.25),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            t.tipoTour!,
+                                            style: const TextStyle(
+                                              color: SaasPalette.brand600,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
+
+                                  // Fechas
+                                  if (fechaInicio != null) ...[
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.calendar_today_rounded,
+                                          size: 11,
+                                          color: SaasPalette.textTertiary,
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          fechaFin != null &&
+                                                  fechaFin != fechaInicio
+                                              ? '$fechaInicio → $fechaFin'
+                                              : fechaInicio,
+                                          style: const TextStyle(
+                                            color: SaasPalette.textSecondary,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+
+                                  // Cupos
+                                  if (total > 0) ...[
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        // Ocupados
+                                        _CupoChip(
+                                          icon: Icons.people_rounded,
+                                          label: '$ocupados ocupados',
+                                          color: ocupColor,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        // Libres
+                                        _CupoChip(
+                                          icon: Icons.event_seat_rounded,
+                                          label: '$libres libres',
+                                          color: const Color(0xFF10B981),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        // Total
+                                        _CupoChip(
+                                          icon: Icons.format_list_numbered_rounded,
+                                          label: '$total total',
+                                          color: SaasPalette.textTertiary,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    // Barra de ocupación
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(3),
+                                      child: LinearProgressIndicator(
+                                        value: ocupPct,
+                                        minHeight: 4,
+                                        backgroundColor: SaasPalette.border,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                          ocupColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -5950,13 +6117,11 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                 final cant = _cantidades[hab.tipoCama] ?? 0;
                 final label = tipoLabels[hab.tipoCama] ?? hab.tipoCama;
                 final isSelected = cant > 0;
+                final personasCount = hab.cantidad;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? SaasPalette.brand600.withValues(alpha: 0.06)
@@ -5968,106 +6133,181 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                           : SaasPalette.border,
                     ),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Icono + info
-                      Icon(
-                        Icons.bed_rounded,
-                        size: 16,
-                        color: isSelected
-                            ? SaasPalette.brand600
-                            : SaasPalette.textTertiary,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              label,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? SaasPalette.textPrimary
-                                    : SaasPalette.textSecondary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            Text(
-                              _currFmt.format(hab.precio),
-                              style: TextStyle(
-                                color: isSelected
-                                    ? SaasPalette.brand600
-                                    : SaasPalette.textTertiary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Servicios chips (compactos)
-                      if (hab.servicios.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 10),
-                          child: Wrap(
-                            spacing: 4,
-                            children: hab.servicios.take(3).map((s) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 5,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: SaasPalette.bgSubtle,
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(
-                                    color: SaasPalette.border,
-                                  ),
-                                ),
-                                child: Text(
-                                  s,
-                                  style: const TextStyle(
-                                    color: SaasPalette.textTertiary,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      // Stepper
+                      // Fila principal: icono + info + servicios + stepper
                       Row(
-                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          _StepperBtn(
-                            icon: Icons.remove,
-                            enabled: cant > 0,
-                            onTap: () =>
-                                _setCantidad(hab.tipoCama, cant - 1),
+                          Icon(
+                            Icons.bed_rounded,
+                            size: 16,
+                            color: isSelected
+                                ? SaasPalette.brand600
+                                : SaasPalette.textTertiary,
                           ),
-                          SizedBox(
-                            width: 28,
-                            child: Text(
-                              '$cant',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: cant > 0
-                                    ? SaasPalette.textPrimary
-                                    : SaasPalette.textTertiary,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                              ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  label,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? SaasPalette.textPrimary
+                                        : SaasPalette.textSecondary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Row(
+                                  children: [
+                                    Text(
+                                      _currFmt.format(hab.precio),
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? SaasPalette.brand600
+                                            : SaasPalette.textTertiary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: SaasPalette.bgSubtle,
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: SaasPalette.border,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.person_rounded,
+                                            size: 10,
+                                            color: SaasPalette.textTertiary,
+                                          ),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            '$personasCount pers.',
+                                            style: const TextStyle(
+                                              color: SaasPalette.textTertiary,
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
-                          _StepperBtn(
-                            icon: Icons.add,
-                            enabled: cant < hab.cantidad,
-                            onTap: () =>
-                                _setCantidad(hab.tipoCama, cant + 1),
+                          // Servicios chips (compactos)
+                          if (hab.servicios.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 10),
+                              child: Wrap(
+                                spacing: 4,
+                                children: hab.servicios.take(3).map((s) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: SaasPalette.bgSubtle,
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(
+                                        color: SaasPalette.border,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      s,
+                                      style: const TextStyle(
+                                        color: SaasPalette.textTertiary,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          // Stepper — cantidad de habitaciones a tomar
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _StepperBtn(
+                                    icon: Icons.remove,
+                                    enabled: cant > 0,
+                                    onTap: () =>
+                                        _setCantidad(hab.tipoCama, cant - 1),
+                                  ),
+                                  SizedBox(
+                                    width: 28,
+                                    child: Text(
+                                      '$cant',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: cant > 0
+                                            ? SaasPalette.textPrimary
+                                            : SaasPalette.textTertiary,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  _StepperBtn(
+                                    icon: Icons.add,
+                                    enabled: true,
+                                    onTap: () =>
+                                        _setCantidad(hab.tipoCama, cant + 1),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                cant == 1 ? 'habitación' : 'habitaciones',
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? SaasPalette.brand600
+                                      : SaasPalette.textTertiary,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
+
+                      // Strip de imágenes de la habitación
+                      if (hab.imagenes.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: 62,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: hab.imagenes.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 6),
+                            itemBuilder: (ctx, i) =>
+                                _HabImageThumb(url: hab.imagenes[i]),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 );
@@ -6406,6 +6646,132 @@ class _StepperBtn extends StatelessWidget {
           icon,
           size: 14,
           color: enabled ? SaasPalette.brand600 : SaasPalette.textTertiary,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Habitacion image thumbnail (read-only, tap to zoom) ──────────────────────
+
+class _HabImageThumb extends StatelessWidget {
+  final String url;
+  const _HabImageThumb({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => showDialog(
+        context: context,
+        builder: (dialogCtx) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(16),
+          child: Stack(
+            alignment: Alignment.topRight,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: InteractiveViewer(
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: SaasPalette.bgCanvas,
+                      padding: const EdgeInsets.all(32),
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.broken_image_rounded,
+                            color: SaasPalette.textTertiary,
+                            size: 48,
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Error al cargar imagen',
+                            style: TextStyle(color: SaasPalette.textTertiary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(dialogCtx),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      child: Container(
+        width: 78,
+        height: 62,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: SaasPalette.border),
+          color: SaasPalette.bgSubtle,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              url,
+              fit: BoxFit.cover,
+              loadingBuilder: (_, child, progress) {
+                if (progress == null) return child;
+                return const Center(
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: SaasPalette.brand600,
+                    ),
+                  ),
+                );
+              },
+              errorBuilder: (_, __, ___) => const Center(
+                child: Icon(
+                  Icons.broken_image_rounded,
+                  color: SaasPalette.textTertiary,
+                  size: 22,
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 3,
+              right: 3,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: Colors.black38,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.zoom_in_rounded,
+                  color: Colors.white,
+                  size: 10,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -6999,6 +7365,44 @@ class _DialogInfoRowState extends State<_DialogInfoRow> {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _CupoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  const _CupoChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
