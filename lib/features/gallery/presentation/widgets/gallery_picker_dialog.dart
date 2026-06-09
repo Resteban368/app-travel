@@ -1,6 +1,7 @@
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -124,6 +125,21 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
       filename: name,
       mimeType: mime,
     ));
+  }
+
+  void _showPreview(BuildContext context, NextcloudImage img) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.88),
+      builder: (_) => _ImagePreviewDialog(
+        image: img,
+        onUse: () {
+          Navigator.of(context).pop();
+          _selectAndClose(img);
+        },
+        onCopyUrl: () => _copyUrl(img.url),
+      ),
+    );
   }
 
   void _copyUrl(String url) {
@@ -581,6 +597,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
               isAdmin: widget.isAdmin,
               onTap: () => setState(() => _selected = img),
               onDoubleTap: () => _selectAndClose(img),
+              onPreview: () => _showPreview(context, img),
               onCopyUrl: () => _copyUrl(img.url),
               onDelete: () async {
                 final confirmed = await showDialog<bool>(
@@ -724,6 +741,7 @@ class _ImageCard extends StatefulWidget {
   final bool isAdmin;
   final VoidCallback onTap;
   final VoidCallback onDoubleTap;
+  final VoidCallback onPreview;
   final VoidCallback onCopyUrl;
   final VoidCallback onDelete;
 
@@ -733,6 +751,7 @@ class _ImageCard extends StatefulWidget {
     required this.isAdmin,
     required this.onTap,
     required this.onDoubleTap,
+    required this.onPreview,
     required this.onCopyUrl,
     required this.onDelete,
   });
@@ -816,6 +835,30 @@ class _ImageCardState extends State<_ImageCard> {
                         opacity: _hovered && !widget.isSelected ? 0.08 : 0.0,
                         duration: const Duration(milliseconds: 120),
                         child: Container(color: Colors.black),
+                      ),
+
+                      // Preview / zoom button (center, hover)
+                      AnimatedOpacity(
+                        opacity: _hovered ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 150),
+                        child: Center(
+                          child: GestureDetector(
+                            onTap: widget.onPreview,
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.55),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.zoom_in_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
 
                       // Checkmark badge (selected)
@@ -1038,6 +1081,191 @@ class _AuthImageState extends State<_AuthImage> {
           gaplessPlayback: true,
         );
       },
+    );
+  }
+}
+
+// ─── Diálogo de previsualización ─────────────────────────────────────────────
+
+class _ImagePreviewDialog extends StatelessWidget {
+  final NextcloudImage image;
+  final VoidCallback onUse;
+  final VoidCallback onCopyUrl;
+
+  const _ImagePreviewDialog({
+    required this.image,
+    required this.onUse,
+    required this.onCopyUrl,
+  });
+
+  static String _shortName(String f) {
+    final parts = f.split('-');
+    if (parts.length > 1 && int.tryParse(parts.first) != null && parts.first.length >= 10) {
+      return parts.skip(1).join('-');
+    }
+    return f;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final w = math.min(screenSize.width - 48.0, 920.0);
+    final h = math.min(screenSize.height * 0.92, 700.0);
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(24),
+      child: SizedBox(
+        width: w,
+        height: h,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Column(
+            children: [
+              _buildHeader(context),
+              Expanded(
+                child: Container(
+                  color: const Color(0xFF0D0D1A),
+                  padding: const EdgeInsets.all(12),
+                  child: _AuthImage(url: image.url, fit: BoxFit.contain),
+                ),
+              ),
+              _buildFooter(context),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+      color: const Color(0xFF1A1A2E),
+      child: Row(
+        children: [
+          const Icon(Icons.photo_rounded, color: Colors.white54, size: 17),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _shortName(image.filename),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close_rounded),
+            color: Colors.white60,
+            iconSize: 20,
+            padding: const EdgeInsets.all(6),
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFooter(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+      color: const Color(0xFF1A1A2E),
+      child: LayoutBuilder(
+        builder: (_, constraints) {
+          final narrow = constraints.maxWidth < 480;
+
+          final meta = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (image.uploadedAt != null) ...[
+                const Icon(Icons.schedule_rounded, size: 12, color: Colors.white38),
+                const SizedBox(width: 4),
+                Text(
+                  DateFormat('dd/MM/yyyy').format(image.uploadedAt!),
+                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  image.folder,
+                  style: const TextStyle(color: Colors.white60, fontSize: 11),
+                ),
+              ),
+            ],
+          );
+
+          final actions = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onCopyUrl();
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white70,
+                  side: const BorderSide(color: Colors.white24),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.link_rounded, size: 14),
+                label: const Text('Copiar URL', style: TextStyle(fontSize: 13)),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: onUse,
+                style: FilledButton.styleFrom(
+                  backgroundColor: SaasPalette.brand600,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.check_rounded, size: 14),
+                label: const Text(
+                  'Usar imagen',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          );
+
+          if (narrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                meta,
+                const SizedBox(height: 10),
+                Row(mainAxisAlignment: MainAxisAlignment.end, children: [actions]),
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              meta,
+              const Spacer(),
+              actions,
+            ],
+          );
+        },
+      ),
     );
   }
 }
