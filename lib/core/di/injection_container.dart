@@ -85,6 +85,10 @@ import '../../features/notificaciones/data/services/sse_notificacion_service.dar
 import '../../features/notificaciones/domain/repositories/notificacion_repository.dart';
 import '../../features/notificaciones/presentation/bloc/notificacion_bloc.dart';
 
+import '../../features/gallery/data/repositories/api_nextcloud_repository.dart';
+import '../../features/gallery/domain/repositories/nextcloud_repository.dart';
+import '../../features/gallery/presentation/bloc/gallery_bloc.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../network/auth_client.dart';
@@ -174,6 +178,9 @@ void initDependencies() {
   sl.registerLazySingleton<SseNotificacionService>(
     () => SseNotificacionService(),
   );
+  sl.registerLazySingleton<NextcloudRepository>(
+    () => ApiNextcloudRepository(client: sl()),
+  );
 
   // ─── Use Cases ────────────────────────────────────────
   sl.registerLazySingleton(() => SendWhatsAppMessage(sl()));
@@ -213,4 +220,5 @@ void initDependencies() {
       storage: sl(),
     ),
   );
+  sl.registerFactory(() => GalleryBloc(repository: sl()));
 }

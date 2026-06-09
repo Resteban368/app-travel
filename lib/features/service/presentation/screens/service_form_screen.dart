@@ -11,6 +11,7 @@ import '../bloc/service_event.dart';
 import '../bloc/service_state.dart';
 import '../../../settings/presentation/bloc/sede_bloc.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
+import '../../../gallery/presentation/widgets/gallery_picker_dialog.dart';
 
 class ServiceFormScreen extends StatefulWidget {
   final Service? service;
@@ -445,34 +446,57 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: PremiumSectionHeader(
-                  title: 'IMÁGENES DEL SERVICIO',
-                  icon: Icons.photo_library_rounded,
-                ),
-              ),
-              if (canWrite)
-                TextButton.icon(
-                  onPressed: _agregarImagen,
-                  style: TextButton.styleFrom(
-                    foregroundColor: SaasPalette.brand600,
-                  ),
-                  icon: const Icon(Icons.add_rounded, size: 16),
-                  label: const Text(
-                    'AGREGAR',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                  ),
-                ),
-            ],
+          const PremiumSectionHeader(
+            title: 'IMÁGENES DEL SERVICIO',
+            icon: Icons.photo_library_rounded,
           ),
           const SizedBox(height: 12),
           if (canWrite) ...[
-            PremiumTextField(
-              controller: _imagenCtrl,
-              label: 'URL de imagen (opcional)',
-              icon: Icons.link_rounded,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: PremiumTextField(
+                    controller: _imagenCtrl,
+                    label: 'URL de imagen (opcional)',
+                    icon: Icons.link_rounded,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _GaleriaBtn(
+                  onPressed: () async {
+                    final url = await GalleryPickerDialog.show(
+                      context,
+                      initialFolder: 'general',
+                      isAdmin: true,
+                    );
+                    if (url != null && mounted) {
+                      setState(() {
+                        if (!_imagenes.contains(url)) _imagenes.add(url);
+                        _imagenCtrl.clear();
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: TextButton.icon(
+                    onPressed: _agregarImagen,
+                    style: TextButton.styleFrom(
+                      foregroundColor: SaasPalette.brand600,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 11),
+                    ),
+                    icon: const Icon(Icons.add_rounded, size: 16),
+                    label: const Text(
+                      'AGREGAR',
+                      style:
+                          TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
           ],
@@ -596,6 +620,43 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
             inactiveTrackColor: D.bg.withOpacity(0.5),
             onChanged: canWrite ? (v) => setState(() => _isActive = v) : null,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GaleriaBtn extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _GaleriaBtn({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: SaasPalette.brand600),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.photo_library_rounded,
+                color: SaasPalette.brand600, size: 16),
+            SizedBox(width: 5),
+            Text(
+              'Galería',
+              style: TextStyle(
+                color: SaasPalette.brand600,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );

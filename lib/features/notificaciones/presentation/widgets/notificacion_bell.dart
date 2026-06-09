@@ -85,7 +85,7 @@ class NotificacionBell extends StatelessWidget {
           child: child,
         ),
       ),
-      pageBuilder: (ctx, _, __) => BlocProvider.value(
+      pageBuilder: (ctx, a1, a2) => BlocProvider.value(
         value: context.read<NotificacionBloc>(),
         child: Builder(
           builder: (innerCtx) => Align(
@@ -280,7 +280,7 @@ class _NotificacionPanel extends StatelessWidget {
           shrinkWrap: true,
           padding: EdgeInsets.zero,
           itemCount: items.length,
-          separatorBuilder: (_, __) =>
+          separatorBuilder: (context, index) =>
               const Divider(height: 1, color: SaasPalette.border),
           itemBuilder: (ctx, i) => _NotificacionTile(
             notificacion: items[i],
@@ -304,7 +304,7 @@ class _NotificacionPanel extends StatelessWidget {
 
 // ─── Tile de notificación ─────────────────────────────────
 
-class _NotificacionTile extends StatelessWidget {
+class _NotificacionTile extends StatefulWidget {
   final Notificacion notificacion;
   final bool isAdmin;
   final VoidCallback onTap;
@@ -318,98 +318,54 @@ class _NotificacionTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final unread = !notificacion.leida;
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        color: unread
-            ? SaasPalette.brand600.withValues(alpha: 0.04)
-            : Colors.transparent,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _TipoIcon(tipo: notificacion.tipo),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          notificacion.titulo,
-                          style: TextStyle(
-                            color: SaasPalette.textPrimary,
-                            fontSize: 13,
-                            fontWeight: unread
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (unread)
-                        Container(
-                          width: 7,
-                          height: 7,
-                          margin: const EdgeInsets.only(left: 6),
-                          decoration: const BoxDecoration(
-                            color: SaasPalette.brand600,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    notificacion.mensaje,
-                    style: const TextStyle(
-                      color: SaasPalette.textSecondary,
-                      fontSize: 12,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      if (notificacion.esGeneral)
-                        _SmallBadge(
-                          label: 'General',
-                          color: SaasPalette.textTertiary,
-                        ),
-                      if (notificacion.esGeneral) const SizedBox(width: 6),
-                      Text(
-                        _formatTime(notificacion.createdAt),
-                        style: const TextStyle(
-                          color: SaasPalette.textTertiary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            if (onDelete != null)
-              IconButton(
-                onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                color: SaasPalette.textTertiary,
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(),
-              ),
-          ],
-        ),
+  State<_NotificacionTile> createState() => _NotificacionTileState();
+}
+
+class _NotificacionTileState extends State<_NotificacionTile>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<Offset> _slide;
+  late final Animation<double> _fade;
+  late final Animation<double> _size;
+  bool _deleting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _slide = Tween<Offset>(begin: Offset.zero, end: const Offset(1.2, 0))
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInCubic));
+    _fade = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _ctrl,
+        curve: const Interval(0.2, 0.9, curve: Curves.easeIn),
+      ),
+    );
+    _size = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _ctrl,
+        curve: const Interval(0.55, 1.0, curve: Curves.easeInCubic),
       ),
     );
   }
 
-  String _formatTime(DateTime dt) {
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _handleDelete() {
+    if (_deleting) return;
+    setState(() => _deleting = true);
+    widget.onDelete?.call();
+    _ctrl.forward();
+  }
+
+  static String _formatTime(DateTime dt) {
     final now = DateTime.now();
     final diff = now.difference(dt);
     if (diff.inMinutes < 1) return 'Ahora';
@@ -417,6 +373,126 @@ class _NotificacionTile extends StatelessWidget {
     if (diff.inHours < 24) return 'Hace ${diff.inHours}h';
     if (diff.inDays < 7) return 'Hace ${diff.inDays}d';
     return DateFormat('dd MMM', 'es_CO').format(dt);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final unread = !widget.notificacion.leida;
+    return SizeTransition(
+      sizeFactor: _size,
+      axisAlignment: -1,
+      child: FadeTransition(
+        opacity: _fade,
+        child: SlideTransition(
+          position: _slide,
+          child: InkWell(
+            onTap: widget.onTap,
+            child: Container(
+              color: unread
+                  ? SaasPalette.brand600.withValues(alpha: 0.04)
+                  : Colors.transparent,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _TipoIcon(tipo: widget.notificacion.tipo),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                widget.notificacion.titulo,
+                                style: TextStyle(
+                                  color: SaasPalette.textPrimary,
+                                  fontSize: 13,
+                                  fontWeight: unread
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (unread)
+                              Container(
+                                width: 7,
+                                height: 7,
+                                margin: const EdgeInsets.only(left: 6),
+                                decoration: const BoxDecoration(
+                                  color: SaasPalette.brand600,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          widget.notificacion.mensaje,
+                          style: const TextStyle(
+                            color: SaasPalette.textSecondary,
+                            fontSize: 12,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            if (widget.notificacion.esGeneral)
+                              _SmallBadge(
+                                label: 'General',
+                                color: SaasPalette.textTertiary,
+                              ),
+                            if (widget.notificacion.esGeneral)
+                              const SizedBox(width: 6),
+                            Text(
+                              _formatTime(widget.notificacion.createdAt),
+                              style: const TextStyle(
+                                color: SaasPalette.textTertiary,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (widget.onDelete != null)
+                    IconButton(
+                      onPressed: _deleting ? null : _handleDelete,
+                      icon: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        child: _deleting
+                            ? const SizedBox(
+                                key: ValueKey('spinner'),
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 1.5,
+                                  color: SaasPalette.textTertiary,
+                                ),
+                              )
+                            : const Icon(
+                                key: ValueKey('icon'),
+                                Icons.delete_outline_rounded,
+                                size: 16,
+                              ),
+                      ),
+                      color: SaasPalette.textTertiary,
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

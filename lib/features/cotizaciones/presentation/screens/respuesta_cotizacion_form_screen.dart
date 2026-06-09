@@ -22,8 +22,29 @@ import '../../domain/repositories/respuesta_cotizacion_repository.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/widgets/dialog_loading_widget.dart';
+import '../../../gallery/presentation/widgets/gallery_picker_dialog.dart';
 
 // ── Mutable state helpers ─────────────────────────────────────────────────────
+
+class _EscalaData {
+  int? aerolineaId;
+  Aerolinea? aerolinea;
+  final numeroVueloCtrl = TextEditingController();
+  final origenCtrl = TextEditingController();
+  final destinoCtrl = TextEditingController();
+  final horaSalidaCtrl = TextEditingController();
+  final horaLlegadaCtrl = TextEditingController();
+  final tiempoConexionCtrl = TextEditingController();
+
+  void dispose() {
+    numeroVueloCtrl.dispose();
+    origenCtrl.dispose();
+    destinoCtrl.dispose();
+    horaSalidaCtrl.dispose();
+    horaLlegadaCtrl.dispose();
+    tiempoConexionCtrl.dispose();
+  }
+}
 
 class _VueloData {
   int? aerolineaId;
@@ -36,9 +57,7 @@ class _VueloData {
   final horaLlegadaCtrl = TextEditingController();
   final costoCtrl = TextEditingController();
   final numeroPasajerosCtrl = TextEditingController(text: '1');
-  bool tieneEscala = false;
-  final ciudadEscalaCtrl = TextEditingController();
-  final tiempoEscalaCtrl = TextEditingController();
+  final List<_EscalaData> escalas = [];
   DateTime? fecha;
 
   void dispose() {
@@ -49,8 +68,9 @@ class _VueloData {
     horaLlegadaCtrl.dispose();
     costoCtrl.dispose();
     numeroPasajerosCtrl.dispose();
-    ciudadEscalaCtrl.dispose();
-    tiempoEscalaCtrl.dispose();
+    for (final e in escalas) {
+      e.dispose();
+    }
   }
 }
 
@@ -445,9 +465,17 @@ class _RespuestaCotizacionFormScreenState
       data.horaLlegadaCtrl.text = v.horaLlegada;
       data.costoCtrl.text = _formatPrice(v.costo);
       data.numeroPasajerosCtrl.text = v.numeroPasajeros.toString();
-      data.tieneEscala = v.tieneEscala;
-      data.ciudadEscalaCtrl.text = v.ciudadEscala;
-      data.tiempoEscalaCtrl.text = v.tiempoEscala;
+      for (final e in v.escalas) {
+        final ed = _EscalaData()
+          ..aerolineaId = e.aerolineaId;
+        ed.numeroVueloCtrl.text = e.numeroVuelo;
+        ed.origenCtrl.text = e.origen;
+        ed.destinoCtrl.text = e.destino;
+        ed.horaSalidaCtrl.text = e.horaSalida;
+        ed.horaLlegadaCtrl.text = e.horaLlegada;
+        ed.tiempoConexionCtrl.text = e.tiempoConexion;
+        data.escalas.add(ed);
+      }
       data.costoCtrl.addListener(_refreshResumen);
       data.origenCtrl.addListener(_refreshResumen);
       data.destinoCtrl.addListener(_refreshResumen);
@@ -500,12 +528,19 @@ class _RespuestaCotizacionFormScreenState
       if (mounted) {
         setState(() {
           _aerolineas = list;
-          // Matches aerolineaId → Aerolinea en vuelos pre-cargados
+          // Matches aerolineaId → Aerolinea en vuelos y escalas pre-cargados
           for (final v in _vuelos) {
             if (v.aerolineaId != null && v.aerolinea == null) {
               try {
                 v.aerolinea = list.firstWhere((a) => a.id == v.aerolineaId);
               } catch (_) {}
+            }
+            for (final e in v.escalas) {
+              if (e.aerolineaId != null && e.aerolinea == null) {
+                try {
+                  e.aerolinea = list.firstWhere((a) => a.id == e.aerolineaId);
+                } catch (_) {}
+              }
             }
           }
         });
@@ -705,9 +740,16 @@ class _RespuestaCotizacionFormScreenState
               costo: _parsePrice(v.costoCtrl.text.trim()),
               numeroPasajeros:
                   int.tryParse(v.numeroPasajerosCtrl.text.trim()) ?? 1,
-              tieneEscala: v.tieneEscala,
-              ciudadEscala: v.ciudadEscalaCtrl.text.trim(),
-              tiempoEscala: v.tiempoEscalaCtrl.text.trim(),
+              escalas: v.escalas.map((e) => EscalaVuelo(
+                aerolineaId: e.aerolineaId,
+                aerolinea: e.aerolinea?.nombre ?? '',
+                numeroVuelo: e.numeroVueloCtrl.text.trim(),
+                origen: e.origenCtrl.text.trim(),
+                destino: e.destinoCtrl.text.trim(),
+                horaSalida: e.horaSalidaCtrl.text.trim(),
+                horaLlegada: e.horaLlegadaCtrl.text.trim(),
+                tiempoConexion: e.tiempoConexionCtrl.text.trim(),
+              )).toList(),
             ),
           )
           .toList(),
@@ -1173,7 +1215,26 @@ class _RespuestaCotizacionFormScreenState
                 validator: (_) => null,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
+            _GaleriaButton(
+              onPressed: () async {
+                final url = await GalleryPickerDialog.show(
+                  context,
+                  initialFolder: 'general',
+                  isAdmin: true,
+                );
+                if (url != null && mounted) {
+                  setState(() {
+                    if (!_imagenes.contains(url)) {
+                      _imagenes.add(url);
+                      _activeImageIndex = _imagenes.length - 1;
+                    }
+                    _imagenUrlCtrl.clear();
+                  });
+                }
+              },
+            ),
+            const SizedBox(width: 8),
             _AddButton(label: 'Agregar', onTap: _addImagen),
           ],
         ),
@@ -1605,71 +1666,260 @@ class _RespuestaCotizacionFormScreenState
           ),
           const SizedBox(height: 12),
 
-          // Escalas
-          Theme(
-            data: Theme.of(context).copyWith(
-              unselectedWidgetColor: SaasPalette.textTertiary,
-            ),
-            child: CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text(
-                '¿Tiene escala?',
-                style: TextStyle(
-                  color: SaasPalette.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+          // ── Escalas ──────────────────────────────────────────────────────
+          const Divider(color: SaasPalette.border, height: 24),
+          Row(
+            children: [
+              const Icon(
+                Icons.connecting_airports_rounded,
+                size: 16,
+                color: SaasPalette.textSecondary,
+              ),
+              const SizedBox(width: 6),
+              const Expanded(
+                child: Text(
+                  'ESCALAS / CONEXIONES',
+                  style: TextStyle(
+                    color: SaasPalette.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4,
+                  ),
                 ),
               ),
-              subtitle: const Text(
-                'Indica si el vuelo requiere conexión',
+              TextButton.icon(
+                onPressed: () => setState(() => data.escalas.add(_EscalaData())),
+                style: TextButton.styleFrom(
+                  foregroundColor: SaasPalette.brand600,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                ),
+                icon: const Icon(Icons.add_rounded, size: 16),
+                label: const Text(
+                  'Agregar escala',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          if (data.escalas.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 4),
+              child: Text(
+                'Sin escalas — vuelo directo',
                 style: TextStyle(
-                  color: SaasPalette.textSecondary,
+                  color: SaasPalette.textTertiary,
                   fontSize: 12,
+                  fontStyle: FontStyle.italic,
                 ),
               ),
-              value: data.tieneEscala,
-              activeColor: SaasPalette.brand600,
-              onChanged: (val) {
-                setState(() => data.tieneEscala = val ?? false);
-              },
-              controlAffinity: ListTileControlAffinity.leading,
+            )
+          else
+            ...data.escalas.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final esc = entry.value;
+              return _buildEscalaCard(idx, esc, data);
+            }),
+        ],
+      ),
+    );
+  }
+
+  // ── Escala card ───────────────────────────────────────────────────────────
+  Widget _buildEscalaCard(int idx, _EscalaData esc, _VueloData vuelo) {
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F7FF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SaasPalette.brand600.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Cabecera de la escala
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 8, 0),
+            child: Row(
+              children: [
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: SaasPalette.brand600,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${idx + 1}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Escala',
+                  style: TextStyle(
+                    color: SaasPalette.brand600,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => setState(() => vuelo.escalas.removeAt(idx)),
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: SaasPalette.danger, size: 18),
+                  padding: const EdgeInsets.all(6),
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Eliminar escala',
+                ),
+              ],
             ),
           ),
-          if (data.tieneEscala) ...[
-            const SizedBox(height: 8),
-            LayoutBuilder(
-              builder: (ctx, constraints) {
-                final wide = constraints.maxWidth > 500;
-                final ciudadEscala = PremiumTextField(
-                  controller: data.ciudadEscalaCtrl,
-                  label: 'Ciudad de Escala',
-                  icon: Icons.location_city_rounded,
-                  validator: (_) => null,
-                );
-                final tiempoEscala = PremiumTextField(
-                  controller: data.tiempoEscalaCtrl,
-                  label: 'Tiempo de Escala (ej. 2h 30m)',
-                  icon: Icons.timer_rounded,
-                  validator: (_) => null,
-                );
-                return wide
-                    ? Row(
-                        children: [
-                          Expanded(child: ciudadEscala),
-                          const SizedBox(width: 12),
-                          Expanded(child: tiempoEscala),
-                        ],
-                      )
-                    : Column(
-                        children: [
-                          ciudadEscala,
-                          const SizedBox(height: 12),
-                          tiempoEscala,
-                        ],
-                      );
-              },
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+            child: Column(
+              children: [
+                // Aerolínea
+                GestureDetector(
+                  onTap: () async {
+                    final result = await showDialog<Aerolinea>(
+                      context: context,
+                      builder: (_) =>
+                          _AerolineaPickerDialog(aerolineas: _aerolineas),
+                    );
+                    if (result != null && mounted) {
+                      setState(() {
+                        esc.aerolineaId = result.id;
+                        esc.aerolinea = result;
+                      });
+                    }
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 13),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: SaasPalette.border),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.flight_rounded,
+                            size: 16,
+                            color: SaasPalette.textTertiary),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            esc.aerolinea?.nombre ?? 'Seleccionar aerolínea',
+                            style: TextStyle(
+                              color: esc.aerolinea != null
+                                  ? SaasPalette.textPrimary
+                                  : SaasPalette.textTertiary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        const Icon(Icons.keyboard_arrow_down_rounded,
+                            size: 18,
+                            color: SaasPalette.textTertiary),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Número de vuelo + tiempo de conexión
+                LayoutBuilder(builder: (_, c) {
+                  final wide = c.maxWidth > 500;
+                  final numVuelo = PremiumTextField(
+                    controller: esc.numeroVueloCtrl,
+                    label: 'Número de vuelo',
+                    icon: Icons.tag_rounded,
+                    validator: (_) => null,
+                  );
+                  final tiempoConexion = PremiumTextField(
+                    controller: esc.tiempoConexionCtrl,
+                    label: 'Tiempo de conexión (ej. 1h 30m)',
+                    icon: Icons.timer_rounded,
+                    validator: (_) => null,
+                  );
+                  return wide
+                      ? Row(children: [
+                          Expanded(child: numVuelo),
+                          const SizedBox(width: 10),
+                          Expanded(child: tiempoConexion),
+                        ])
+                      : Column(children: [
+                          numVuelo,
+                          const SizedBox(height: 10),
+                          tiempoConexion,
+                        ]);
+                }),
+                const SizedBox(height: 10),
+                // Origen → Destino
+                LayoutBuilder(builder: (_, c) {
+                  final wide = c.maxWidth > 500;
+                  final origen = PremiumTextField(
+                    controller: esc.origenCtrl,
+                    label: 'Ciudad origen',
+                    icon: Icons.flight_takeoff_rounded,
+                    validator: (_) => null,
+                  );
+                  final destino = PremiumTextField(
+                    controller: esc.destinoCtrl,
+                    label: 'Ciudad destino',
+                    icon: Icons.flight_land_rounded,
+                    validator: (_) => null,
+                  );
+                  return wide
+                      ? Row(children: [
+                          Expanded(child: origen),
+                          const SizedBox(width: 10),
+                          Expanded(child: destino),
+                        ])
+                      : Column(children: [
+                          origen,
+                          const SizedBox(height: 10),
+                          destino,
+                        ]);
+                }),
+                const SizedBox(height: 10),
+                // Hora salida → Hora llegada
+                LayoutBuilder(builder: (_, c) {
+                  final wide = c.maxWidth > 500;
+                  final salida = PremiumTextField(
+                    controller: esc.horaSalidaCtrl,
+                    label: 'Hora de salida',
+                    icon: Icons.access_time_rounded,
+                    validator: (_) => null,
+                  );
+                  final llegada = PremiumTextField(
+                    controller: esc.horaLlegadaCtrl,
+                    label: 'Hora de llegada',
+                    icon: Icons.access_time_filled_rounded,
+                    validator: (_) => null,
+                  );
+                  return wide
+                      ? Row(children: [
+                          Expanded(child: salida),
+                          const SizedBox(width: 10),
+                          Expanded(child: llegada),
+                        ])
+                      : Column(children: [
+                          salida,
+                          const SizedBox(height: 10),
+                          llegada,
+                        ]);
+                }),
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -3661,6 +3911,46 @@ class _RemoveButton extends StatelessWidget {
       ),
       tooltip: 'Eliminar',
       splashRadius: 18,
+    );
+  }
+}
+
+class _GaleriaButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _GaleriaButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: SaasPalette.brand600),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(
+              Icons.photo_library_rounded,
+              color: SaasPalette.brand600,
+              size: 16,
+            ),
+            SizedBox(width: 5),
+            Text(
+              'Galería',
+              style: TextStyle(
+                color: SaasPalette.brand600,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

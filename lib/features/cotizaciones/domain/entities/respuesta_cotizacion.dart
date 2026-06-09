@@ -1,3 +1,25 @@
+class EscalaVuelo {
+  final int? aerolineaId;
+  final String aerolinea;
+  final String numeroVuelo;
+  final String origen;
+  final String destino;
+  final String horaSalida;
+  final String horaLlegada;
+  final String tiempoConexion; // espera antes de este tramo
+
+  const EscalaVuelo({
+    this.aerolineaId,
+    this.aerolinea = '',
+    this.numeroVuelo = '',
+    this.origen = '',
+    this.destino = '',
+    this.horaSalida = '',
+    this.horaLlegada = '',
+    this.tiempoConexion = '',
+  });
+}
+
 class VueloItinerario {
   final String tipo; // 'ida' | 'vuelta'
   final int? aerolineaId;
@@ -10,9 +32,7 @@ class VueloItinerario {
   final String horaLlegada;
   final double costo;
   final int numeroPasajeros;
-  final bool tieneEscala;
-  final String ciudadEscala;
-  final String tiempoEscala;
+  final List<EscalaVuelo> escalas;
 
   const VueloItinerario({
     required this.tipo,
@@ -26,9 +46,7 @@ class VueloItinerario {
     required this.horaLlegada,
     this.costo = 0,
     this.numeroPasajeros = 1,
-    this.tieneEscala = false,
-    this.ciudadEscala = '',
-    this.tiempoEscala = '',
+    this.escalas = const [],
   });
 }
 

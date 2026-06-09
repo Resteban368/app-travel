@@ -156,9 +156,18 @@ class ApiRespuestaCotizacionRepository
     'hora_llegada': v.horaLlegada,
     if (v.costo > 0) 'costo': v.costo,
     'numero_pasajeros': v.numeroPasajeros,
-    'tiene_escala': v.tieneEscala,
-    'ciudad_escala': v.ciudadEscala,
-    'tiempo_escala': v.tiempoEscala,
+    'escalas': v.escalas.map(_escalaToJson).toList(),
+  };
+
+  Map<String, dynamic> _escalaToJson(EscalaVuelo e) => {
+    if (e.aerolineaId != null) 'aerolinea_id': e.aerolineaId,
+    'aerolinea': e.aerolinea,
+    'numero_vuelo': e.numeroVuelo,
+    'origen': e.origen,
+    'destino': e.destino,
+    'hora_salida': e.horaSalida,
+    'hora_llegada': e.horaLlegada,
+    'tiempo_conexion': e.tiempoConexion,
   };
 
   Map<String, dynamic> _hotelToJson(OpcionHotel h) => {
@@ -237,21 +246,50 @@ class ApiRespuestaCotizacionRepository
         : DateTime.now(),
   );
 
-  VueloItinerario _vueloFromJson(Map<String, dynamic> j) => VueloItinerario(
-    tipo: j['tipo'] as String? ?? 'ida',
+  VueloItinerario _vueloFromJson(Map<String, dynamic> j) {
+    List<dynamic> asList(dynamic v) => v is List ? v : [];
+    // Backward compat: formato antiguo (tiene_escala / ciudad_escala / tiempo_escala)
+    List<EscalaVuelo> escalas;
+    if (j.containsKey('escalas')) {
+      escalas = asList(j['escalas'])
+          .map((e) => _escalaFromJson(e as Map<String, dynamic>))
+          .toList();
+    } else if (j['tiene_escala'] as bool? ?? false) {
+      escalas = [
+        EscalaVuelo(
+          origen: j['ciudad_escala'] as String? ?? '',
+          destino: j['ciudad_escala'] as String? ?? '',
+          tiempoConexion: j['tiempo_escala'] as String? ?? '',
+        ),
+      ];
+    } else {
+      escalas = const [];
+    }
+    return VueloItinerario(
+      tipo: j['tipo'] as String? ?? 'ida',
+      aerolineaId: j['aerolinea_id'] as int?,
+      aerolinea: j['aerolinea'] as String? ?? '',
+      numeroVuelo: j['numero_vuelo'] as String? ?? '',
+      origen: j['origen'] as String? ?? '',
+      destino: j['destino'] as String? ?? '',
+      fecha: j['fecha'] as String? ?? '',
+      horaSalida: j['hora_salida'] as String? ?? '',
+      horaLlegada: j['hora_llegada'] as String? ?? '',
+      costo: (j['costo'] as num?)?.toDouble() ?? 0,
+      numeroPasajeros: (j['numero_pasajeros'] as int?) ?? 1,
+      escalas: escalas,
+    );
+  }
+
+  EscalaVuelo _escalaFromJson(Map<String, dynamic> j) => EscalaVuelo(
     aerolineaId: j['aerolinea_id'] as int?,
     aerolinea: j['aerolinea'] as String? ?? '',
     numeroVuelo: j['numero_vuelo'] as String? ?? '',
     origen: j['origen'] as String? ?? '',
     destino: j['destino'] as String? ?? '',
-    fecha: j['fecha'] as String? ?? '',
     horaSalida: j['hora_salida'] as String? ?? '',
     horaLlegada: j['hora_llegada'] as String? ?? '',
-    costo: (j['costo'] as num?)?.toDouble() ?? 0,
-    numeroPasajeros: (j['numero_pasajeros'] as int?) ?? 1,
-    tieneEscala: j['tiene_escala'] as bool? ?? false,
-    ciudadEscala: j['ciudad_escala'] as String? ?? '',
-    tiempoEscala: j['tiempo_escala'] as String? ?? '',
+    tiempoConexion: j['tiempo_conexion'] as String? ?? '',
   );
 
   OpcionHotel _hotelFromJson(Map<String, dynamic> j) => OpcionHotel(

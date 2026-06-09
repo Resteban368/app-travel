@@ -9,6 +9,7 @@ import '../../domain/entities/hotel.dart';
 import '../bloc/hotel_bloc.dart';
 import '../bloc/hotel_event.dart';
 import '../bloc/hotel_state.dart';
+import '../../../gallery/presentation/widgets/gallery_picker_dialog.dart';
 
 class HotelFormScreen extends StatefulWidget {
   final Hotel? hotel;
@@ -301,30 +302,58 @@ class _HotelFormScreenState extends State<HotelFormScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const PremiumSectionHeader(
+            title: 'IMÁGENES DEL HOTEL',
+            icon: Icons.photo_library_rounded,
+          ),
+          const SizedBox(height: 12),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Expanded(
-                child: PremiumSectionHeader(
-                  title: 'IMÁGENES DEL HOTEL',
-                  icon: Icons.photo_library_rounded,
+              Expanded(
+                child: PremiumTextField(
+                  controller: _imagenHotelCtrl,
+                  label: 'URL de imagen (opcional)',
+                  icon: Icons.link_rounded,
                 ),
               ),
-              TextButton.icon(
-                onPressed: _addImagenHotel,
-                style: TextButton.styleFrom(foregroundColor: SaasPalette.brand600),
-                icon: const Icon(Icons.add_rounded, size: 16),
-                label: const Text(
-                  'AGREGAR',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+              const SizedBox(width: 8),
+              _GaleriaBtn(
+                onPressed: () async {
+                  final url = await GalleryPickerDialog.show(
+                    context,
+                    initialFolder: 'hoteles',
+                    isAdmin: true,
+                  );
+                  if (url != null && mounted) {
+                    setState(() {
+                      if (!_imagenesHotel.contains(url)) {
+                        _imagenesHotel.add(url);
+                      }
+                      _imagenHotelCtrl.clear();
+                    });
+                  }
+                },
+              ),
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: TextButton.icon(
+                  onPressed: _addImagenHotel,
+                  style: TextButton.styleFrom(
+                    foregroundColor: SaasPalette.brand600,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 11),
+                  ),
+                  icon: const Icon(Icons.add_rounded, size: 16),
+                  label: const Text(
+                    'AGREGAR',
+                    style:
+                        TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          PremiumTextField(
-            controller: _imagenHotelCtrl,
-            label: 'URL de imagen (opcional)',
-            icon: Icons.link_rounded,
           ),
           const SizedBox(height: 12),
           if (_imagenesHotel.isEmpty)
@@ -564,6 +593,7 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                   ),
                   const SizedBox(height: 6),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
                         child: PremiumTextField(
@@ -573,8 +603,26 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                         ),
                       ),
                       const SizedBox(width: 8),
+                      _GaleriaBtn(
+                        onPressed: () async {
+                          final url = await GalleryPickerDialog.show(
+                            context,
+                            initialFolder: 'hoteles',
+                            isAdmin: true,
+                          );
+                          if (url != null && mounted) {
+                            setState(() {
+                              if (!_habImagenes.contains(url)) {
+                                _habImagenes.add(url);
+                              }
+                              _habImagenCtrl.clear();
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 4),
                       Padding(
-                        padding: const EdgeInsets.only(top: 20),
+                        padding: const EdgeInsets.only(bottom: 2),
                         child: IconButton(
                           onPressed: () {
                             final url = _habImagenCtrl.text.trim();
@@ -974,6 +1022,43 @@ class _HotelFormScreenState extends State<HotelFormScreen>
 }
 
 // ─── Widgets locales ──────────────────────────────────────────────────────────
+
+class _GaleriaBtn extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _GaleriaBtn({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: SaasPalette.brand600),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.photo_library_rounded,
+                color: SaasPalette.brand600, size: 16),
+            SizedBox(width: 5),
+            Text(
+              'Galería',
+              style: TextStyle(
+                color: SaasPalette.brand600,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _ImagePreviewCard extends StatelessWidget {
   final String url;

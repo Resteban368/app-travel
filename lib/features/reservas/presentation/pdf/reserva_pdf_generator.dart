@@ -925,6 +925,16 @@ class ReservaPdfGenerator {
 
   // ─── Hoteles ─────────────────────────────────────────────────────
 
+  static String _tipoCamaLabel(String tipo) => switch (tipo.toLowerCase()) {
+    'sencilla'    => 'Sencilla',
+    'doble'       => 'Doble',
+    'matrimonial' => 'Matrimonial',
+    'triple'      => 'Triple',
+    'suite'       => 'Suite',
+    'familiar'    => 'Familiar',
+    _             => tipo,
+  };
+
   static pw.Widget _buildHotelesSection(
     Reserva reserva,
     pw.Font bold,
@@ -937,7 +947,7 @@ class ReservaPdfGenerator {
         pw.Table(
           border: pw.TableBorder.all(color: _border, width: 0.5),
           columnWidths: {
-            0: const pw.FlexColumnWidth(2.5),
+            0: const pw.FlexColumnWidth(2.8),
             1: const pw.FlexColumnWidth(1.5),
             2: const pw.FlexColumnWidth(2),
             3: const pw.FlexColumnWidth(2),
@@ -948,7 +958,7 @@ class ReservaPdfGenerator {
             pw.TableRow(
               decoration: pw.BoxDecoration(color: _bgSubtle),
               children: [
-                _tableHeader('Hotel', bold),
+                _tableHeader('Hotel / Habitaciones', bold),
                 _tableHeader('Ciudad', bold),
                 _tableHeader('N° Reserva', bold),
                 _tableHeader('Check-in', bold),
@@ -959,7 +969,60 @@ class ReservaPdfGenerator {
             ...reserva.hoteles.map(
               (h) => pw.TableRow(
                 children: [
-                  _tableCell(h.hotel?.nombre ?? 'Hotel ${h.hotelId}', bold),
+                  // Hotel name + room breakdown
+                  _tableCellWidget(
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 5,
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            h.hotel?.nombre ?? 'Hotel ${h.hotelId}',
+                            style: pw.TextStyle(
+                              font: bold,
+                              fontSize: 8,
+                              color: _textPrimary,
+                            ),
+                          ),
+                          if (h.habitaciones.isNotEmpty) ...[
+                            pw.SizedBox(height: 3),
+                            ...h.habitaciones.map(
+                              (hab) => pw.Padding(
+                                padding: const pw.EdgeInsets.only(top: 1),
+                                child: pw.Row(
+                                  children: [
+                                    pw.Container(
+                                      width: 4,
+                                      height: 4,
+                                      margin: const pw.EdgeInsets.only(
+                                        right: 4,
+                                        top: 1,
+                                      ),
+                                      decoration: pw.BoxDecoration(
+                                        color: _brand,
+                                        shape: pw.BoxShape.circle,
+                                      ),
+                                    ),
+                                    pw.Text(
+                                      '${hab.cantidad}× ${_tipoCamaLabel(hab.tipoCama)}'
+                                      '  —  ${_fmt(hab.precioUnitario)}/noche',
+                                      style: pw.TextStyle(
+                                        fontSize: 7,
+                                        color: _textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
                   _tableCell(h.hotel?.ciudad ?? '-', regular),
                   _tableCell(h.numeroReserva, regular),
                   _tableCell(h.fechaCheckin, regular),
@@ -1178,7 +1241,53 @@ class ReservaPdfGenerator {
                 ),
 
               if (isTour) ...[
-                if (reserva.tour?.precioPorPareja == true) ...[
+                if (reserva.tour?.modoPrecio == 'grupal' &&
+                    (reserva.tour?.preciosGrupales.isNotEmpty ?? false)) ...[
+                  // Tour grupal: precio por persona según el tier del grupo
+                  ...() {
+                    final int totalPax =
+                        reserva.totalPersonas ??
+                        (reserva.integrantes.length + 1);
+                    final tourG = reserva.tour!;
+                    final matchingTiers = tourG.preciosGrupales
+                        .where(
+                          (p) =>
+                              totalPax >= p.minPersonas &&
+                              totalPax <= p.maxPersonas,
+                        )
+                        .toList();
+                    final tier = matchingTiers.isNotEmpty
+                        ? matchingTiers.first
+                        : (tourG.preciosGrupales.isNotEmpty
+                              ? tourG.preciosGrupales.last
+                              : null);
+                    final double precioPorPersona =
+                        tier?.precio ?? tourG.price;
+                    final String tierLabel =
+                        (tier?.descripcion?.isNotEmpty ?? false)
+                            ? tier!.descripcion!
+                            : '${tier?.minPersonas ?? 0}–'
+                                '${tier?.maxPersonas ?? 0} personas';
+
+                    final rows = <pw.Widget>[
+                      _summaryRow(
+                        'Responsable (Grupal · $tierLabel)',
+                        _fmt(precioPorPersona),
+                        bold,
+                        regular,
+                      ),
+                      ...reserva.integrantes.asMap().entries.map(
+                        (e) => _summaryRow(
+                          'Integrante ${e.key + 1} (Grupal · $tierLabel)',
+                          _fmt(precioPorPersona),
+                          bold,
+                          regular,
+                        ),
+                      ),
+                    ];
+                    return rows;
+                  }(),
+                ] else if (reserva.tour?.precioPorPareja == true) ...[
                   // Agrupar todos los viajeros (responsable + integrantes) por precio
                   ...() {
                     final travellers = <Map<String, dynamic>>[];
@@ -1353,22 +1462,37 @@ class ReservaPdfGenerator {
               ],
 
               if (reserva.tipoReserva == 'vuelos') ...[
-                ...reserva.vuelos.map(
-                  (v) => _summaryRow(
-                    'Vuelo: ${v.aerolinea?.nombre ?? v.numeroVuelo}',
-                    _fmt(v.precio),
-                    bold,
-                    regular,
-                  ),
-                ),
-                ...reserva.hoteles.map(
-                  (h) => _summaryRow(
-                    'Hotel: ${h.hotel?.nombre ?? 'Hospedaje'}',
-                    _fmt(h.valor),
-                    bold,
-                    regular,
-                  ),
-                ),
+                ...reserva.vuelos.map((v) {
+                  final aerolinea = v.aerolinea?.nombre;
+                  final numero = v.numeroVuelo.isNotEmpty ? v.numeroVuelo : null;
+                  final ruta = '${v.origen} → ${v.destino}';
+                  final tipo = v.tipoVuelo == 'vuelta' ? 'Vuelta' : 'Ida';
+                  final label = [
+                    ?aerolinea,
+                    ?numero,
+                    ruta,
+                    '($tipo)',
+                  ].join(' · ');
+                  return _summaryRow(label, _fmt(v.precio), bold, regular);
+                }),
+                ...reserva.hoteles.expand((h) {
+                  final nombre = h.hotel?.nombre ?? 'Hotel';
+                  final ciudad = h.hotel?.ciudad;
+                  final hotelLabel = (ciudad != null && ciudad.isNotEmpty)
+                      ? '$nombre · $ciudad'
+                      : nombre;
+                  return [
+                    _summaryRow(hotelLabel, _fmt(h.valor), bold, regular),
+                    ...h.habitaciones.map(
+                      (hab) => _summaryRow(
+                        '   ${hab.cantidad}× ${_tipoCamaLabel(hab.tipoCama)}',
+                        _fmt(hab.precioUnitario * hab.cantidad),
+                        bold,
+                        regular,
+                      ),
+                    ),
+                  ];
+                }),
               ],
 
               pw.SizedBox(height: 6),
