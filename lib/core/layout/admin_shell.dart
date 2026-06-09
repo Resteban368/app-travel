@@ -1,4 +1,8 @@
+import 'dart:js' as js;
+import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:agente_viajes/features/notificaciones/presentation/bloc/notificacion_bloc.dart';
+import 'package:agente_viajes/features/notificaciones/presentation/widgets/notificacion_bell.dart';
 import 'package:agente_viajes/features/settings/presentation/bloc/payment_method_bloc.dart';
 import 'package:agente_viajes/features/settings/presentation/bloc/sede_bloc.dart';
 import 'package:agente_viajes/features/tour/presentation/bloc/tour_bloc.dart';
@@ -57,6 +61,8 @@ class AdminShell extends StatefulWidget {
 class _AdminShellState extends State<AdminShell> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  // -1 = no inicializado aún; evita mostrar toast en la carga inicial
+  int _prevNoLeidas = -1;
 
   @override
   void initState() {
@@ -65,6 +71,9 @@ class _AdminShellState extends State<AdminShell> {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
       });
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificacionBloc>().add(ConectarSse());
     });
   }
 
@@ -256,6 +265,27 @@ class _AdminShellState extends State<AdminShell> {
 
   @override
   Widget build(BuildContext context) {
+    return BlocListener<NotificacionBloc, NotificacionState>(
+      listener: (context, state) {
+        if (state is NotificacionesCargadas) {
+          final esNueva = _prevNoLeidas >= 0 &&
+              state.totalNoLeidas > _prevNoLeidas &&
+              state.items.isNotEmpty;
+          if (esNueva) {
+            _playNotificacionSound();
+            SaasSnackBar.showNotificacion(
+              context,
+              notificacion: state.items.first,
+            );
+          }
+          _prevNoLeidas = state.totalNoLeidas;
+        }
+      },
+      child: _buildShell(context),
+    );
+  }
+
+  Widget _buildShell(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width >= 800;
 
@@ -303,6 +333,10 @@ class _AdminShellState extends State<AdminShell> {
               onPressed: () => Scaffold.of(ctx).openDrawer(),
             ),
           ),
+          actions: const [
+            NotificacionBell(),
+            SizedBox(width: 8),
+          ],
         ),
         drawer: _buildDrawer(
           user?.name ?? user?.username ?? 'Sin usuario',
@@ -427,8 +461,11 @@ class _AdminShellState extends State<AdminShell> {
   }
 
   Widget _buildHeader(String email) {
+    final authState = context.watch<AuthBloc>().state;
+    final isAdmin = authState is AuthAuthenticated && authState.user.isAdmin;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 20, 8, 12),
       child: Row(
         children: [
           Container(
@@ -468,6 +505,27 @@ class _AdminShellState extends State<AdminShell> {
               ],
             ),
           ),
+          if (isAdmin)
+            Tooltip(
+              message: 'Enviar notificación',
+              child: InkWell(
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  AppRouter.enviarNotificacion,
+                ),
+                borderRadius: BorderRadius.circular(8),
+                child: const Padding(
+                  padding: EdgeInsets.all(6),
+                  child: Icon(
+                    Icons.add_alert_rounded,
+                    size: 18,
+                    color: SaasPalette.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          const NotificacionBell(),
+          const SizedBox(width: 4),
         ],
       ),
     );
@@ -597,6 +655,36 @@ class _AdminShellState extends State<AdminShell> {
         ],
       ),
     );
+  }
+
+  void _playNotificacionSound() {
+    try {
+      final AudioCtxCtor = js.context['AudioContext'] ??
+          js.context['webkitAudioContext'];
+      if (AudioCtxCtor == null) return;
+
+      final ctx = js.JsObject(AudioCtxCtor as js.JsFunction);
+      final now = (ctx['currentTime'] as num).toDouble();
+
+      void _tone(double freq, double startAt, double duration, double peak) {
+        final osc = ctx.callMethod('createOscillator') as js.JsObject;
+        final gain = ctx.callMethod('createGain') as js.JsObject;
+        osc.callMethod('connect', [gain]);
+        gain.callMethod('connect', [ctx['destination']]);
+        osc['type'] = 'sine';
+        (osc['frequency'] as js.JsObject)['value'] = freq;
+        final gainParam = gain['gain'] as js.JsObject;
+        gainParam.callMethod('setValueAtTime', [0.0, now + startAt]);
+        gainParam.callMethod('linearRampToValueAtTime', [peak, now + startAt + 0.01]);
+        gainParam.callMethod('exponentialRampToValueAtTime', [0.001, now + startAt + duration]);
+        osc.callMethod('start', [now + startAt]);
+        osc.callMethod('stop', [now + startAt + duration]);
+      }
+
+      // Ding doble: 880 Hz → 1109 Hz
+      _tone(880, 0.0, 0.18, 0.12);
+      _tone(1109, 0.12, 0.18, 0.10);
+    } catch (_) {}
   }
 
   void _confirmLogout() {

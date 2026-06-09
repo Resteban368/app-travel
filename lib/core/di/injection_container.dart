@@ -80,6 +80,10 @@ import '../../features/saldos_pendientes/data/repositories/api_saldo_pendiente_r
 import '../../features/saldos_pendientes/domain/repositories/saldo_pendiente_repository.dart';
 import '../../features/saldos_pendientes/presentation/bloc/saldo_pendiente_bloc.dart';
 import '../../features/saldos_pendientes/presentation/bloc/saldo_pendiente_detail_bloc.dart';
+import '../../features/notificaciones/data/repositories/api_notificacion_repository.dart';
+import '../../features/notificaciones/data/services/sse_notificacion_service.dart';
+import '../../features/notificaciones/domain/repositories/notificacion_repository.dart';
+import '../../features/notificaciones/presentation/bloc/notificacion_bloc.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -164,6 +168,12 @@ void initDependencies() {
   sl.registerLazySingleton<SaldoPendienteRepository>(
     () => ApiSaldoPendienteRepository(client: sl()),
   );
+  sl.registerLazySingleton<NotificacionRepository>(
+    () => ApiNotificacionRepository(client: sl()),
+  );
+  sl.registerLazySingleton<SseNotificacionService>(
+    () => SseNotificacionService(),
+  );
 
   // ─── Use Cases ────────────────────────────────────────
   sl.registerLazySingleton(() => SendWhatsAppMessage(sl()));
@@ -196,4 +206,11 @@ void initDependencies() {
   sl.registerFactory(() => AuditoriaGeneralBloc(repository: sl()));
   sl.registerFactory(() => SaldoPendienteBloc(repository: sl()));
   sl.registerFactory(() => SaldoPendienteDetailBloc(repository: sl()));
+  sl.registerLazySingleton(
+    () => NotificacionBloc(
+      repository: sl(),
+      sseService: sl(),
+      storage: sl(),
+    ),
+  );
 }

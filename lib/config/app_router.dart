@@ -73,6 +73,7 @@ import '../features/saldos_pendientes/presentation/screens/saldo_pendiente_detai
 import '../features/saldos_pendientes/presentation/bloc/saldo_pendiente_bloc.dart';
 import '../features/saldos_pendientes/presentation/bloc/saldo_pendiente_detail_bloc.dart';
 import '../features/saldos_pendientes/domain/entities/saldo_pendiente.dart';
+import '../features/notificaciones/presentation/screens/enviar_notificacion_screen.dart';
 
 /// Centralised route configuration.
 class AppRouter {
@@ -137,6 +138,7 @@ class AppRouter {
   static const String auditoria = '/auditoria';
   static const String saldosPendientes = '/saldos-pendientes';
   static const String saldosPendientesDetalle = '/saldos-pendientes/detalle';
+  static const String enviarNotificacion = '/notificaciones/enviar';
 
   static final ValueNotifier<String> currentRouteNotifier =
       ValueNotifier<String>('/');
@@ -349,6 +351,8 @@ class AppRouter {
           ),
           settings,
         );
+      case enviarNotificacion:
+        return _fadeRoute(const EnviarNotificacionScreen(), settings);
 
       default:
         return _fadeRoute(const ProfileScreen(), settings);
