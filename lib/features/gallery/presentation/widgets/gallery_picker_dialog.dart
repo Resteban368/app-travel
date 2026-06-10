@@ -7,9 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
 import 'package:agente_viajes/core/di/injection_container.dart';
 import 'package:agente_viajes/core/theme/saas_palette.dart';
+import 'package:agente_viajes/core/widgets/auth_network_image.dart';
 import 'package:agente_viajes/core/widgets/dialog_loading_widget.dart';
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import '../bloc/gallery_bloc.dart';
@@ -684,7 +684,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(4),
-                        child: _AuthImage(
+                        child: AuthNetworkImage(
                             url: _selected!.url, fit: BoxFit.cover),
                       ),
                     ),
@@ -828,7 +828,7 @@ class _ImageCardState extends State<_ImageCard> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      _AuthImage(url: widget.image.url),
+                      AuthNetworkImage(url: widget.image.url),
 
                       // Overlay hover
                       AnimatedOpacity(
@@ -1007,93 +1007,6 @@ class _SmallActionButton extends StatelessWidget {
   }
 }
 
-// ─── Imagen con autenticación JWT ─────────────────────────────────────────────
-
-class _AuthImage extends StatefulWidget {
-  final String url;
-  final BoxFit fit;
-
-  const _AuthImage({required this.url, this.fit = BoxFit.cover});
-
-  @override
-  State<_AuthImage> createState() => _AuthImageState();
-}
-
-class _AuthImageState extends State<_AuthImage> {
-  static final Map<String, Uint8List> _cache = {};
-
-  late Future<Uint8List?> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = _load();
-  }
-
-  @override
-  void didUpdateWidget(_AuthImage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url) {
-      _future = _load();
-      setState(() {});
-    }
-  }
-
-  Future<Uint8List?> _load() async {
-    if (_cache.containsKey(widget.url)) return _cache[widget.url];
-    try {
-      final resp =
-          await sl<http.Client>().get(Uri.parse(widget.url));
-      if (resp.statusCode == 200) {
-        _cache[widget.url] = resp.bodyBytes;
-        return resp.bodyBytes;
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Uint8List?>(
-      future: _future,
-      builder: (_, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return Container(
-            color: const Color(0xFFF1F5F9),
-            child: const Center(
-              child: SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: SaasPalette.brand600,
-                ),
-              ),
-            ),
-          );
-        }
-        if (snap.data == null) {
-          return Container(
-            color: const Color(0xFFF1F5F9),
-            child: const Center(
-              child: Icon(
-                Icons.broken_image_outlined,
-                color: SaasPalette.textTertiary,
-                size: 22,
-              ),
-            ),
-          );
-        }
-        return Image.memory(
-          snap.data!,
-          fit: widget.fit,
-          gaplessPlayback: true,
-        );
-      },
-    );
-  }
-}
-
 // ─── Diálogo de previsualización ─────────────────────────────────────────────
 
 class _ImagePreviewDialog extends StatelessWidget {
@@ -1136,7 +1049,7 @@ class _ImagePreviewDialog extends StatelessWidget {
                 child: Container(
                   color: const Color(0xFF0D0D1A),
                   padding: const EdgeInsets.all(12),
-                  child: _AuthImage(url: image.url, fit: BoxFit.contain),
+                  child: AuthNetworkImage(url: image.url, fit: BoxFit.contain),
                 ),
               ),
               _buildFooter(context),

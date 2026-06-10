@@ -10,6 +10,7 @@ import '../bloc/service_bloc.dart';
 import '../bloc/service_event.dart';
 import '../bloc/service_state.dart';
 import '../../../settings/presentation/bloc/sede_bloc.dart';
+import '../../../../core/widgets/auth_network_image.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
 import '../../../gallery/presentation/widgets/gallery_picker_dialog.dart';
 
@@ -688,39 +689,7 @@ class _ServiceImagePreviewCard extends StatelessWidget {
             color: SaasPalette.bgSubtle,
           ),
           clipBehavior: Clip.antiAlias,
-          child: Image.network(
-            url,
-            fit: BoxFit.cover,
-            loadingBuilder: (_, child, progress) {
-              if (progress == null) return child;
-              return const Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              );
-            },
-            errorBuilder: (ctx2, err, stack) => const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.broken_image_rounded,
-                  color: SaasPalette.textTertiary,
-                  size: 28,
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Sin vista previa',
-                  style: TextStyle(
-                    color: SaasPalette.textTertiary,
-                    fontSize: 10,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
+          child: AuthNetworkImage(url: url, fit: BoxFit.cover),
         ),
         if (canDelete)
           Positioned(

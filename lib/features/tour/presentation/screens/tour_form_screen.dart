@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/widgets/auth_network_image.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
 import '../../../../config/app_router.dart';
 import '../../domain/entities/tour.dart';
@@ -2358,44 +2359,7 @@ class _ImagenThumbnail extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.network(
-              url,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: SaasPalette.bgSubtle,
-                child: const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.broken_image_rounded,
-                      color: SaasPalette.textTertiary,
-                      size: 32,
-                    ),
-                    SizedBox(height: 6),
-                    Text(
-                      'Sin vista previa',
-                      style: TextStyle(
-                        color: SaasPalette.textTertiary,
-                        fontSize: 10,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-              loadingBuilder: (_, child, progress) => progress == null
-                  ? child
-                  : Container(
-                      color: SaasPalette.bgSubtle,
-                      child: const Center(
-                        child: SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                    ),
-            ),
+            AuthNetworkImage(url: url, fit: BoxFit.cover),
             if (canWrite)
               Positioned(
                 top: 6,
