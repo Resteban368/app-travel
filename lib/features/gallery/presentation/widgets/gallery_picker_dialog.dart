@@ -27,11 +27,13 @@ const _kFolderLabels = {'general': 'General', 'tours': 'Tours', 'hoteles': 'Hote
 class GalleryPickerDialog extends StatefulWidget {
   final String initialFolder;
   final bool isAdmin;
+  final void Function(String url)? onSelected;
 
   const GalleryPickerDialog({
     super.key,
     this.initialFolder = 'general',
     this.isAdmin = false,
+    this.onSelected,
   });
 
   /// Abre el diálogo y devuelve la URL seleccionada, o null si se cancela.
@@ -40,7 +42,8 @@ class GalleryPickerDialog extends StatefulWidget {
     String initialFolder = 'general',
     bool isAdmin = false,
   }) {
-    return showDialog<String>(
+    final completer = Completer<String?>();
+    showDialog<void>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.45),
       builder: (_) => BlocProvider(
@@ -49,9 +52,15 @@ class GalleryPickerDialog extends StatefulWidget {
         child: GalleryPickerDialog(
           initialFolder: initialFolder,
           isAdmin: isAdmin,
+          onSelected: (url) {
+            if (!completer.isCompleted) completer.complete(url);
+          },
         ),
       ),
-    );
+    ).then((_) {
+      if (!completer.isCompleted) completer.complete(null);
+    });
+    return completer.future;
   }
 
   @override
@@ -154,7 +163,8 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
   }
 
   void _selectAndClose(NextcloudImage img) {
-    Navigator.of(context, rootNavigator: true).pop(img.url);
+    widget.onSelected?.call(img.url);
+    Navigator.of(context, rootNavigator: true).pop();
   }
 
   // ─── Build ─────────────────────────────────────────────────────────────────
