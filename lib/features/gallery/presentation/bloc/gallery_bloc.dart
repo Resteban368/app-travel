@@ -6,6 +6,7 @@ import 'gallery_state.dart';
 
 class GalleryBloc extends Bloc<GalleryEvent, GalleryState> {
   final NextcloudRepository _repository;
+  final Map<String, List<NextcloudImage>> _folderCache = {};
 
   GalleryBloc({required NextcloudRepository repository})
       : _repository = repository,
@@ -19,15 +20,20 @@ class GalleryBloc extends Bloc<GalleryEvent, GalleryState> {
     CargarGallery event,
     Emitter<GalleryState> emit,
   ) async {
-    final prevImagenes = state is GalleryCargada
-        ? (state as GalleryCargada).imagenes
-        : const <NextcloudImage>[];
-    emit(GalleryCargando(imagenes: prevImagenes));
+    if (_folderCache.containsKey(event.folder)) {
+      emit(GalleryCargada(
+        imagenes: _folderCache[event.folder]!,
+        folder: event.folder,
+      ));
+      return;
+    }
+    emit(const GalleryCargando());
     try {
       final imagenes = await _repository.getImagenes(event.folder);
+      _folderCache[event.folder] = imagenes;
       emit(GalleryCargada(imagenes: imagenes, folder: event.folder));
     } catch (e) {
-      emit(GalleryError('No se pudieron cargar las imágenes'));
+      emit(const GalleryError('No se pudieron cargar las imágenes'));
     }
   }
 
@@ -48,7 +54,9 @@ class GalleryBloc extends Bloc<GalleryEvent, GalleryState> {
         filename: event.filename,
         mimeType: event.mimeType,
       );
-      emit(GalleryCargada(imagenes: [nueva, ...prev], folder: folder));
+      final updated = [nueva, ...prev];
+      _folderCache[folder] = updated;
+      emit(GalleryCargada(imagenes: updated, folder: folder));
     } catch (_) {
       emit(GalleryCargada(
         imagenes: prev,
@@ -76,6 +84,7 @@ class GalleryBloc extends Bloc<GalleryEvent, GalleryState> {
       final updated = current.imagenes
           .where((img) => img.filename != event.filename)
           .toList();
+      _folderCache[current.folder] = updated;
       emit(GalleryCargada(imagenes: updated, folder: current.folder));
     } catch (_) {
       emit(GalleryCargada(

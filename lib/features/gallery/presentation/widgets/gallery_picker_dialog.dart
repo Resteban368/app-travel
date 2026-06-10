@@ -1030,6 +1030,14 @@ class _AuthImageState extends State<_AuthImage> {
     _future = _load();
   }
 
+  @override
+  void didUpdateWidget(_AuthImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      setState(() => _future = _load());
+    }
+  }
+
   Future<Uint8List?> _load() async {
     if (_cache.containsKey(widget.url)) return _cache[widget.url];
     try {
