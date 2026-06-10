@@ -121,6 +121,11 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
       imagenes: List.from(_imagenes),
     );
 
+    // ignore: avoid_print
+    print('[ServiceForm] _save imagenes: ${service.imagenes}');
+    // ignore: avoid_print
+    print('[ServiceForm] _save isEditing: $_isEditing, id: ${service.id}');
+
     if (_isEditing) {
       context.read<ServiceBloc>().add(UpdateService(service));
     } else {
@@ -471,6 +476,8 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
                       initialFolder: 'general',
                       isAdmin: true,
                     );
+                    // ignore: avoid_print
+                    print('[GaleriaBtn] gallery returned url: $url');
                     if (url != null && mounted) {
                       setState(() {
                         if (!_imagenes.contains(url)) _imagenes.add(url);

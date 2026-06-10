@@ -29,14 +29,18 @@ class ApiServiceRepository implements ServiceRepository {
   @override
   Future<void> createService(Service service) async {
     final payload = _toJson(service);
-    // ignore: avoid_print
-    print('[ServiceRepo] createService body: ${json.encode(payload)}');
     final body = json.encode(payload);
+    // ignore: avoid_print
+    print('[ServiceRepo] POST $_baseUrl');
+    // ignore: avoid_print
+    print('[ServiceRepo] createService body: $body');
     final response = await client.post(
       Uri.parse(_baseUrl),
       headers: _headers,
       body: body,
     );
+    // ignore: avoid_print
+    print('[ServiceRepo] createService response ${response.statusCode}: ${response.body}');
     if (response.statusCode != 201 && response.statusCode != 200) {
       throw Exception(
         'Failed to create service ${response.statusCode}: ${response.body}',
@@ -46,12 +50,20 @@ class ApiServiceRepository implements ServiceRepository {
 
   @override
   Future<void> updateService(Service service) async {
-    final body = json.encode(_toJson(service));
+    final payload = _toJson(service);
+    final body = json.encode(payload);
+    final url = '$_baseUrl/${service.id}';
+    // ignore: avoid_print
+    print('[ServiceRepo] PATCH $url');
+    // ignore: avoid_print
+    print('[ServiceRepo] updateService body: $body');
     final response = await client.patch(
-      Uri.parse('$_baseUrl/${service.id}'),
+      Uri.parse(url),
       headers: _headers,
       body: body,
     );
+    // ignore: avoid_print
+    print('[ServiceRepo] updateService response ${response.statusCode}: ${response.body}');
     if (response.statusCode != 200) {
       throw Exception(
         'Failed to update service ${response.statusCode}: ${response.body}',
