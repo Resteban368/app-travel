@@ -134,7 +134,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
       builder: (_) => _ImagePreviewDialog(
         image: img,
         onUse: () {
-          Navigator.of(context).pop();
+          Navigator.of(context, rootNavigator: true).pop();
           _selectAndClose(img);
         },
         onCopyUrl: () => _copyUrl(img.url),
@@ -154,7 +154,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
   }
 
   void _selectAndClose(NextcloudImage img) {
-    Navigator.of(context).pop(img.url);
+    Navigator.of(context, rootNavigator: true).pop(img.url);
   }
 
   // ─── Build ─────────────────────────────────────────────────────────────────
@@ -296,7 +296,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
           ),
           const Spacer(),
           IconButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
             icon: const Icon(Icons.close_rounded),
             color: SaasPalette.textSecondary,
             iconSize: 20,
@@ -627,7 +627,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
           child: const Text('Cancelar'),
         ),
         const SizedBox(width: 8),
@@ -1167,7 +1167,7 @@ class _ImagePreviewDialog extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
             icon: const Icon(Icons.close_rounded),
             color: Colors.white60,
             iconSize: 20,
@@ -1218,7 +1218,7 @@ class _ImagePreviewDialog extends StatelessWidget {
             children: [
               OutlinedButton.icon(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  Navigator.of(context, rootNavigator: true).pop();
                   onCopyUrl();
                 },
                 style: OutlinedButton.styleFrom(

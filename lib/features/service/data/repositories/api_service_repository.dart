@@ -28,14 +28,19 @@ class ApiServiceRepository implements ServiceRepository {
 
   @override
   Future<void> createService(Service service) async {
-    final body = json.encode(_toJson(service));
+    final payload = _toJson(service);
+    // ignore: avoid_print
+    print('[ServiceRepo] createService body: ${json.encode(payload)}');
+    final body = json.encode(payload);
     final response = await client.post(
       Uri.parse(_baseUrl),
       headers: _headers,
       body: body,
     );
     if (response.statusCode != 201 && response.statusCode != 200) {
-      throw Exception('Failed to create service: ${response.statusCode}');
+      throw Exception(
+        'Failed to create service ${response.statusCode}: ${response.body}',
+      );
     }
   }
 
@@ -48,7 +53,9 @@ class ApiServiceRepository implements ServiceRepository {
       body: body,
     );
     if (response.statusCode != 200) {
-      throw Exception('Failed to update service: ${response.statusCode}');
+      throw Exception(
+        'Failed to update service ${response.statusCode}: ${response.body}',
+      );
     }
   }
 
