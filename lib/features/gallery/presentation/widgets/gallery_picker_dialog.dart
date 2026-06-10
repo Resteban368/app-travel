@@ -1034,7 +1034,8 @@ class _AuthImageState extends State<_AuthImage> {
   void didUpdateWidget(_AuthImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url != widget.url) {
-      setState(() => _future = _load());
+      _future = _load();
+      setState(() {});
     }
   }
 
