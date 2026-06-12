@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:agente_viajes/core/theme/saas_palette.dart';
+import 'package:agente_viajes/core/di/injection_container.dart';
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
+import '../../data/services/web_notification_service.dart';
 import '../../domain/entities/notificacion.dart';
 import '../bloc/notificacion_bloc.dart';
 
@@ -20,7 +22,7 @@ class NotificacionBell extends StatelessWidget {
         return Tooltip(
           message: 'Notificaciones',
           child: InkWell(
-            onTap: () => _showPanel(context),
+            onTap: () => _handleTap(context),
             borderRadius: BorderRadius.circular(8),
             child: Padding(
               padding: const EdgeInsets.all(6),
@@ -65,6 +67,66 @@ class NotificacionBell extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _handleTap(BuildContext context) async {
+    final webNotif = sl<WebNotificationService>();
+    if (webNotif.isSupported && webNotif.permission == 'default') {
+      final agreed = await _showPermissionPrompt(context);
+      if (agreed == true) await webNotif.requestPermission();
+    }
+    if (context.mounted) _showPanel(context);
+  }
+
+  Future<bool?> _showPermissionPrompt(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: SaasPalette.bgCanvas,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.notifications_active_rounded,
+                color: Color(0xFFF59E0B), size: 22),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Notificaciones del navegador',
+                style: TextStyle(
+                  color: SaasPalette.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Activa las notificaciones para recibir alertas aunque estés en otra pestaña del navegador.',
+          style: TextStyle(color: SaasPalette.textSecondary, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'Ahora no',
+              style: TextStyle(color: SaasPalette.textSecondary),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.notifications_rounded, size: 16),
+            label: const Text('Activar'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF59E0B),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -233,6 +295,14 @@ class _NotificacionPanel extends StatelessWidget {
     );
   }
 
+  void _showDetail(BuildContext context, Notificacion n) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.35),
+      builder: (_) => _NotificacionDetailDialog(notificacion: n, isAdmin: isAdmin),
+    );
+  }
+
   Widget _buildList(BuildContext context) {
     return BlocBuilder<NotificacionBloc, NotificacionState>(
       builder: (context, state) {
@@ -289,6 +359,7 @@ class _NotificacionPanel extends StatelessWidget {
               if (!items[i].leida) {
                 context.read<NotificacionBloc>().add(MarcarLeida(items[i].id));
               }
+              _showDetail(ctx, items[i]);
             },
             onDelete: isAdmin
                 ? () => context
@@ -519,6 +590,252 @@ class _TipoIcon extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(icon, size: 17, color: color),
+    );
+  }
+}
+
+// ─── Diálogo de detalle ───────────────────────────────────
+
+class _NotificacionDetailDialog extends StatelessWidget {
+  final Notificacion notificacion;
+  final bool isAdmin;
+
+  const _NotificacionDetailDialog({
+    required this.notificacion,
+    required this.isAdmin,
+  });
+
+  static String _tipoLabel(String tipo) => switch (tipo) {
+    'cotizacion' => 'Cotización',
+    'pago'       => 'Pago',
+    'reserva'    => 'Reserva',
+    'sistema'    => 'Sistema',
+    _            => 'General',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final n = notificacion;
+    final (icon, color) = switch (n.tipo) {
+      'cotizacion' => (Icons.request_quote_rounded,  const Color(0xFF7C3AED)),
+      'pago'       => (Icons.payments_rounded,        const Color(0xFF059669)),
+      'reserva'    => (Icons.airplane_ticket_rounded, SaasPalette.brand600),
+      'sistema'    => (Icons.settings_rounded,        SaasPalette.textSecondary),
+      _            => (Icons.campaign_rounded,         const Color(0xFFD97706)),
+    };
+
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Cabecera ──────────────────────────────────────────────────
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, size: 22, color: color),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          n.titulo,
+                          style: const TextStyle(
+                            color: SaasPalette.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            height: 1.3,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            _SmallBadge(
+                              label: _tipoLabel(n.tipo),
+                              color: color,
+                            ),
+                            if (n.esGeneral)
+                              const _SmallBadge(
+                                label: 'General',
+                                color: SaasPalette.textTertiary,
+                              )
+                            else
+                              const _SmallBadge(
+                                label: 'Personal',
+                                color: SaasPalette.brand600,
+                              ),
+                            _SmallBadge(
+                              label: n.leida ? 'Leída' : 'No leída',
+                              color: n.leida
+                                  ? SaasPalette.textTertiary
+                                  : SaasPalette.danger,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded, size: 18),
+                    color: SaasPalette.textSecondary,
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 18),
+              const Divider(color: SaasPalette.border, height: 1),
+              const SizedBox(height: 18),
+
+              // ── Mensaje completo ──────────────────────────────────────────
+              const Text(
+                'Mensaje',
+                style: TextStyle(
+                  color: SaasPalette.textTertiary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                n.mensaje,
+                style: const TextStyle(
+                  color: SaasPalette.textPrimary,
+                  fontSize: 14,
+                  height: 1.6,
+                ),
+              ),
+
+              const SizedBox(height: 18),
+              const Divider(color: SaasPalette.border, height: 1),
+              const SizedBox(height: 14),
+
+              // ── Metadatos ─────────────────────────────────────────────────
+              _MetaRow(
+                icon: Icons.schedule_rounded,
+                label: 'Fecha',
+                value: DateFormat('dd/MM/yyyy – HH:mm', 'es_CO')
+                    .format(n.createdAt),
+              ),
+              const SizedBox(height: 8),
+              _MetaRow(
+                icon: Icons.label_rounded,
+                label: 'Tipo',
+                value: _tipoLabel(n.tipo),
+              ),
+              if (isAdmin && n.usuarioId != null) ...[
+                const SizedBox(height: 8),
+                _MetaRow(
+                  icon: Icons.person_rounded,
+                  label: 'Usuario ID',
+                  value: n.usuarioId.toString(),
+                ),
+              ],
+              if (isAdmin && n.creadoBy != null) ...[
+                const SizedBox(height: 8),
+                _MetaRow(
+                  icon: Icons.manage_accounts_rounded,
+                  label: 'Creado por',
+                  value: n.creadoBy.toString(),
+                ),
+              ],
+              if (isAdmin) ...[
+                const SizedBox(height: 8),
+                _MetaRow(
+                  icon: Icons.tag_rounded,
+                  label: 'ID',
+                  value: '#${n.id}',
+                ),
+              ],
+
+              const SizedBox(height: 20),
+
+              // ── Botón cerrar ──────────────────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: SaasPalette.brand600,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'Cerrar',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MetaRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _MetaRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 14, color: SaasPalette.textTertiary),
+        const SizedBox(width: 6),
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: SaasPalette.textTertiary,
+              fontSize: 12,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              color: SaasPalette.textPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

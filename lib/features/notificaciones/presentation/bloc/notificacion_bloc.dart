@@ -6,6 +6,7 @@ import 'package:agente_viajes/core/constants/api_constants.dart';
 import '../../domain/entities/notificacion.dart';
 import '../../domain/repositories/notificacion_repository.dart';
 import '../../data/services/sse_notificacion_service.dart';
+import '../../data/services/web_notification_service.dart';
 
 // ─── Events ──────────────────────────────────────────────
 
@@ -114,14 +115,17 @@ class NotificacionBloc extends Bloc<NotificacionEvent, NotificacionState> {
   final NotificacionRepository _repo;
   final SseNotificacionService _sseService;
   final FlutterSecureStorage _storage;
+  final WebNotificationService _webNotif;
 
   NotificacionBloc({
     required NotificacionRepository repository,
     required SseNotificacionService sseService,
     required FlutterSecureStorage storage,
+    required WebNotificationService webNotificationService,
   })  : _repo = repository,
         _sseService = sseService,
         _storage = storage,
+        _webNotif = webNotificationService,
         super(NotificacionInitial()) {
     on<CargarNotificaciones>(_onCargar);
     on<ConectarSse>(_onConectar);
@@ -174,6 +178,9 @@ class NotificacionBloc extends Bloc<NotificacionEvent, NotificacionState> {
     final token = await _storage.read(key: 'access_token');
     if (token == null) return;
 
+    // Carga inmediata sin esperar al evento SSE "connected"
+    add(CargarNotificaciones());
+
     _sseService.connect(
       ApiConstants.kBaseUrl,
       token,
@@ -202,6 +209,7 @@ class NotificacionBloc extends Bloc<NotificacionEvent, NotificacionState> {
         totalNoLeidas: _currentCount + 1,
         sseConectado: true,
       ));
+      _webNotif.showNotification(nueva.titulo, body: nueva.mensaje);
     } catch (e) {
       debugPrint('⚠️ [NotificacionBloc] Error procesando SSE: $e');
     }

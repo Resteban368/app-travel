@@ -324,20 +324,6 @@ class _TourFormScreenState extends State<TourFormScreen>
       return;
     }
 
-    // BUSES → cada bus asignado debe tener al menos un agente configurado
-    if (_selectedBusLayoutIds.isNotEmpty) {
-      final sinAgentes = _selectedBusLayoutIds
-          .where((id) => (_agenteSeatsByBus[id] ?? {}).isEmpty)
-          .toList();
-      if (sinAgentes.isNotEmpty) {
-        SaasSnackBar.showWarning(
-          context,
-          'Todos los buses deben tener al menos un asiento de agente configurado.',
-        );
-        return;
-      }
-    }
-
     final tour = Tour(
       id: _isEditing
           ? widget.tour!.id
@@ -399,6 +385,9 @@ class _TourFormScreenState extends State<TourFormScreen>
         : (authState is AuthAuthenticated
             ? authState.user.canWrite('tours')
             : true);
+    final canDuplicate = authState is AuthAuthenticated
+        ? authState.user.canWrite('historico_tours')
+        : true;
 
     return BlocListener<TourBloc, TourState>(
       listener: (context, state) async {
@@ -655,7 +644,7 @@ class _TourFormScreenState extends State<TourFormScreen>
                                   _buildPasajerosBtn(context),
                                 ],
                                 const SizedBox(height: 40),
-                                if (widget.duplicateMode)
+                                if (widget.duplicateMode && canDuplicate)
                                   _buildDuplicateAction()
                                 else if (canWrite)
                                   _buildBottomActions(),
@@ -2767,18 +2756,13 @@ class _AgenteSeatDialog extends StatefulWidget {
 class _AgenteSeatDialogState extends State<_AgenteSeatDialog> {
   late Set<String> _selected;
 
-  static const _cellSize = 24.0;
-  static const _gap = 4.0;
-  static const _aisleWidth = 14.0;
-
   @override
   void initState() {
     super.initState();
     _selected = Set.from(widget.initialAgentes);
   }
 
-  void _toggleSeat(String numero, TipoAsiento tipo) {
-    if (tipo != TipoAsiento.normal) return;
+  void _toggleSeat(String numero) {
     setState(() {
       if (_selected.contains(numero)) {
         _selected.remove(numero);
@@ -2788,33 +2772,129 @@ class _AgenteSeatDialogState extends State<_AgenteSeatDialog> {
     });
   }
 
-  Color _colorForSeat(AsientoLayout a) {
-    if (_selected.contains(a.numero)) return const Color(0xFFF59E0B);
-    switch (a.tipo) {
-      case TipoAsiento.normal:
-        return const Color(0xFF3B82F6);
-      case TipoAsiento.agente:
-        return const Color(0xFFF59E0B);
-      case TipoAsiento.conductor:
-        return const Color(0xFF1E3A5F);
-      case TipoAsiento.bano:
-        return const Color(0xFF10B981);
-      case TipoAsiento.vacio:
-        return Colors.grey.shade900;
-      case TipoAsiento.entrada:
-        return Colors.grey.shade400;
+  Widget _buildCelda(AsientoLayout? layout) {
+    if (layout == null || layout.tipo == TipoAsiento.vacio) {
+      return const SizedBox(width: 52, height: 52);
     }
+    if (layout.tipo == TipoAsiento.bano) {
+      return Container(
+        width: 44,
+        height: 40,
+        margin: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FDF4),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFF86EFAC)),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('🚽', style: TextStyle(fontSize: 13)),
+            Text('Baño', style: TextStyle(fontSize: 7, color: Color(0xFF16A34A))),
+          ],
+        ),
+      );
+    }
+    if (layout.tipo == TipoAsiento.conductor) {
+      return Container(
+        width: 48,
+        height: 48,
+        margin: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E293B),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.person_rounded, color: Colors.white54, size: 18),
+            Text('Cond.', style: TextStyle(fontSize: 8, color: Colors.white54)),
+          ],
+        ),
+      );
+    }
+    if (layout.tipo == TipoAsiento.entrada) {
+      return Container(
+        width: 48,
+        height: 48,
+        margin: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: const Color(0xFF7C3AED).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.4)),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.confirmation_num_rounded,
+                color: Color(0xFF7C3AED), size: 18),
+            Text('Entrada',
+                style: TextStyle(fontSize: 8, color: Color(0xFF7C3AED))),
+          ],
+        ),
+      );
+    }
+
+    // Normal seat (or agente already set): tappable to toggle agente status.
+    final isSelected = _selected.contains(layout.numero);
+    final baseColor =
+        isSelected ? const Color(0xFFF59E0B) : const Color(0xFF3B82F6);
+
+    final cell = AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
+      width: 48,
+      height: 48,
+      margin: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: baseColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isSelected ? Colors.white : baseColor.withValues(alpha: 0.5),
+          width: isSelected ? 2.5 : 1,
+        ),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.5),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                )
+              ]
+            : null,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.airline_seat_recline_normal_rounded,
+              size: 18, color: Colors.white),
+          Text(
+            layout.numero,
+            style: const TextStyle(
+                fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
+          ),
+        ],
+      ),
+    );
+
+    return Tooltip(
+      message: layout.numero,
+      child: GestureDetector(
+        onTap: () => _toggleSeat(layout.numero),
+        child: MouseRegion(cursor: SystemMouseCursors.click, child: cell),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final cfg = widget.layout.configuracion!;
-    final aisle = cfg.columnas ~/ 2;
-    final maxFila = cfg.asientos.map((a) => a.fila).reduce((a, b) => a > b ? a : b);
-    final porFila = <int, List<AsientoLayout>>{};
-    for (final a in cfg.asientos) {
-      porFila.putIfAbsent(a.fila, () => []).add(a);
-    }
+    final mitad = cfg.columnas ~/ 2;
+    final maxFila = cfg.asientos.isEmpty
+        ? 0
+        : cfg.asientos.map((a) => a.fila).reduce((a, b) => a > b ? a : b);
+    final layoutByPos = <(int, int), AsientoLayout>{
+      for (final a in cfg.asientos) (a.fila, a.columna): a,
+    };
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -2831,244 +2911,254 @@ class _AgenteSeatDialogState extends State<_AgenteSeatDialog> {
           ),
           child: Column(
             children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: SaasPalette.border)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.person_pin_rounded,
-                      color: Color(0xFFF59E0B), size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Asientos de Agente',
-                          style: TextStyle(
-                            color: SaasPalette.textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
+              // Header
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: SaasPalette.border)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.person_pin_rounded,
+                        color: Color(0xFFF59E0B), size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Asientos de Agente',
+                            style: TextStyle(
+                              color: SaasPalette.textPrimary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                        Text(
-                          widget.layout.nombre,
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
-                            fontSize: 12,
+                          Text(
+                            widget.layout.nombre,
+                            style: const TextStyle(
+                                color: SaasPalette.textSecondary, fontSize: 12),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded,
-                        color: SaasPalette.textTertiary),
-                  ),
-                ],
-              ),
-            ),
-
-            // Instrucción
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Row(
-                children: [
-                  Container(
-                    width: 14, height: 14,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Toca un asiento normal (azul) para marcarlo como agente (ámbar)',
-                      style: TextStyle(
-                        color: SaasPalette.textSecondary,
-                        fontSize: 12,
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Contador
-            if (_selected.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded,
+                          color: SaasPalette.textTertiary),
                     ),
-                  ),
-                  child: Text(
-                    '${_selected.length} asiento${_selected.length == 1 ? '' : 's'} seleccionado${_selected.length == 1 ? '' : 's'}: ${_selected.join(', ')}',
-                    style: const TextStyle(
-                      color: Color(0xFFF59E0B),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  ],
                 ),
               ),
 
-            // Mapa del bus
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+              // Instrucción
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Toca un asiento normal (azul) para marcarlo como agente (ámbar)',
+                        style: TextStyle(
+                            color: SaasPalette.textSecondary, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Contador de seleccionados
+              if (_selected.isNotEmpty)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color:
+                              const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      '${_selected.length} asiento${_selected.length == 1 ? '' : 's'} seleccionado${_selected.length == 1 ? '' : 's'}: ${_selected.join(', ')}',
+                      style: const TextStyle(
+                        color: Color(0xFFF59E0B),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Mapa del bus
+              Expanded(
                 child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: List.generate(maxFila + 1, (fila) {
-                      final asientosFila =
-                          (porFila[fila] ?? [])
-                            ..sort((a, b) => a.columna.compareTo(b.columna));
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: _gap),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: List.generate(cfg.columnas, (col) {
-                            if (col == aisle) {
-                              return const SizedBox(width: _aisleWidth);
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: Column(
+                        children: [
+                          const _TourBusFront(),
+                          const SizedBox(height: 8),
+                          ...List.generate(maxFila + 1, (filaIdx) {
+                            if (!cfg.asientos.any((a) => a.fila == filaIdx)) {
+                              return const SizedBox.shrink();
                             }
-                            final asiento = asientosFila
-                                .where((a) => a.columna == col)
-                                .firstOrNull;
-                            if (asiento == null) {
-                              return SizedBox(width: _cellSize + _gap);
-                            }
-                            final tappable = asiento.tipo == TipoAsiento.normal;
-                            Widget? child;
-                            if (asiento.tipo == TipoAsiento.bano) {
-                              child = const Icon(Icons.wc_rounded,
-                                  size: 12, color: Colors.white);
-                            } else if (asiento.tipo == TipoAsiento.entrada) {
-                              child = const Center(
-                                child: Text('E',
-                                    style: TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                    )),
-                              );
-                            } else if (asiento.numero.isNotEmpty &&
-                                asiento.tipo != TipoAsiento.vacio) {
-                              child = FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(2),
-                                  child: Text(
-                                    asiento.tipo == TipoAsiento.conductor
-                                        ? 'C'
-                                        : asiento.numero,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 7,
-                                      fontWeight: FontWeight.bold,
+                            return Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 3),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 24,
+                                    child: Text(
+                                      filaIdx == 0 ? '' : '$filaIdx',
+                                      style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Color(0xFF94A3B8)),
+                                      textAlign: TextAlign.center,
                                     ),
                                   ),
-                                ),
-                              );
-                            }
-                            final cell = AnimatedContainer(
-                              duration: const Duration(milliseconds: 120),
-                              width: _cellSize,
-                              height: _cellSize,
-                              decoration: BoxDecoration(
-                                color: _colorForSeat(asiento),
-                                borderRadius: BorderRadius.circular(4),
-                                border: tappable
-                                    ? Border.all(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.3),
-                                        width: 1,
-                                      )
-                                    : null,
-                              ),
-                              child: child,
-                            );
-                            return Padding(
-                              padding: const EdgeInsets.only(right: _gap),
-                              child: Tooltip(
-                                message: asiento.numero,
-                                child: tappable
-                                    ? GestureDetector(
-                                        onTap: () => _toggleSeat(
-                                          asiento.numero,
-                                          asiento.tipo,
-                                        ),
-                                        child: MouseRegion(
-                                          cursor: SystemMouseCursors.click,
-                                          child: cell,
-                                        ),
-                                      )
-                                    : cell,
+                                  const SizedBox(width: 4),
+                                  for (int col = 0;
+                                      col < cfg.columnas;
+                                      col++)
+                                    if (col == mitad)
+                                      const SizedBox(width: 20)
+                                    else
+                                      _buildCelda(layoutByPos[(filaIdx, col)]),
+                                  const SizedBox(width: 4),
+                                  const SizedBox(width: 24),
+                                ],
                               ),
                             );
                           }),
-                        ),
-                      );
-                    }),
+                          const _TourBusBack(),
+                          const SizedBox(height: 12),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            // Botones
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => setState(() => _selected.clear()),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: SaasPalette.textSecondary,
-                        side: const BorderSide(color: SaasPalette.border),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: const Text('Limpiar'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context, Set<String>.from(_selected)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF59E0B),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: const Text(
-                        'CONFIRMAR',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+              // Botones
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => setState(() => _selected.clear()),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: SaasPalette.textSecondary,
+                          side: const BorderSide(color: SaasPalette.border),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('Limpiar'),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        onPressed: () =>
+                            Navigator.pop(context, Set<String>.from(_selected)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF59E0B),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text(
+                          'CONFIRMAR',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        ),
+      ),
+    );
+  }
+}
+
+// ── Bus shape decorations ─────────────────────────────────────────────────────
+
+class _TourBusFront extends StatelessWidget {
+  const _TourBusFront();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E293B),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.remove_road_rounded, color: Colors.white38, size: 14),
+          SizedBox(width: 8),
+          Text(
+            'FRENTE DEL BUS',
+            style: TextStyle(
+                color: Colors.white38, fontSize: 10, letterSpacing: 1),
+          ),
+          SizedBox(width: 8),
+          Icon(Icons.remove_road_rounded, color: Colors.white38, size: 14),
+        ],
+      ),
+    );
+  }
+}
+
+class _TourBusBack extends StatelessWidget {
+  const _TourBusBack();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E293B),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.remove_road_rounded, color: Colors.white38, size: 14),
+          SizedBox(width: 8),
+          Text(
+            'PARTE TRASERA',
+            style: TextStyle(
+                color: Colors.white38, fontSize: 10, letterSpacing: 1),
+          ),
+          SizedBox(width: 8),
+          Icon(Icons.remove_road_rounded, color: Colors.white38, size: 14),
+        ],
       ),
     );
   }

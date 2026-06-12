@@ -82,6 +82,7 @@ import '../../features/saldos_pendientes/presentation/bloc/saldo_pendiente_bloc.
 import '../../features/saldos_pendientes/presentation/bloc/saldo_pendiente_detail_bloc.dart';
 import '../../features/notificaciones/data/repositories/api_notificacion_repository.dart';
 import '../../features/notificaciones/data/services/sse_notificacion_service.dart';
+import '../../features/notificaciones/data/services/web_notification_service.dart';
 import '../../features/notificaciones/domain/repositories/notificacion_repository.dart';
 import '../../features/notificaciones/presentation/bloc/notificacion_bloc.dart';
 
@@ -178,6 +179,9 @@ void initDependencies() {
   sl.registerLazySingleton<SseNotificacionService>(
     () => SseNotificacionService(),
   );
+  sl.registerLazySingleton<WebNotificationService>(
+    () => WebNotificationService(),
+  );
   sl.registerLazySingleton<NextcloudRepository>(
     () => ApiNextcloudRepository(client: sl()),
   );
@@ -218,6 +222,7 @@ void initDependencies() {
       repository: sl(),
       sseService: sl(),
       storage: sl(),
+      webNotificationService: sl(),
     ),
   );
   sl.registerFactory(() => GalleryBloc(repository: sl()));

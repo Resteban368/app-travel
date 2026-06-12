@@ -38,7 +38,11 @@ class ApiBusManifiestoRepository implements BusManifiestoRepository {
   }
 
   @override
-  Future<void> liberarAsiento({required int tourId, required int reservaId, required String numeroAsiento}) async {
+  Future<void> liberarAsiento({
+    required int tourId,
+    required int reservaId,
+    required String numeroAsiento,
+  }) async {
     final url = '${ApiConstants.kBaseUrl}/v1/tours/$tourId/liberar-asiento';
     final response = await client.post(
       Uri.parse(url),
@@ -74,10 +78,35 @@ class ApiBusManifiestoRepository implements BusManifiestoRepository {
     }
   }
 
-  BusManifiesto _fromJson(Map<String, dynamic> json) {
-    final tourJson = json['tour'] as Map<String, dynamic>;
-    final busesJson = (json['buses'] as List<dynamic>?) ?? [];
-    final sinAsientosJson = (json['reservas_sin_asientos'] as List<dynamic>?) ?? [];
+  @override
+  Future<void> asignarAsiento({
+    required int tourId,
+    required int busLayoutId,
+    required int reservaId,
+    required List<String> asientos,
+  }) async {
+    final url = '${ApiConstants.kBaseUrl}/v1/tours/$tourId/asignar-asiento';
+    debugPrint('🌎 [ApiBusManifiestoRepository] POST $url');
+    final response = await client.post(
+      Uri.parse(url),
+      headers: _headers,
+      body: json.encode({
+        'bus_layout_id': busLayoutId,
+        'reserva_id': reservaId,
+        'asientos': asientos,
+      }),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Error al asignar asiento: ${response.statusCode}');
+    }
+  }
+
+  // ── Parsing ──────────────────────────────────────────────────────────────
+
+  BusManifiesto _fromJson(Map<String, dynamic> data) {
+    final tourJson = data['tour'] as Map<String, dynamic>;
+    final busesJson = (data['buses'] as List<dynamic>?) ?? [];
+    final sinAsientosJson = (data['reservas_sin_asientos'] as List<dynamic>?) ?? [];
 
     final tour = TourInfoManifiesto(
       id: tourJson['id'] as int,
@@ -96,34 +125,101 @@ class ApiBusManifiestoRepository implements BusManifiestoRepository {
       linkPdf: tourJson['link_pdf'] as String?,
     );
 
-    final buses = busesJson.map((b) => _parseBus(b as Map<String, dynamic>)).toList();
-    final reservasSinAsientos =
-        sinAsientosJson.map((r) => _parseReservaSinAsiento(r as Map<String, dynamic>)).toList();
+    final buses = busesJson
+        .map((b) => _parseBus(b as Map<String, dynamic>))
+        .toList();
+    final reservasSinAsientos = sinAsientosJson
+        .map((r) => _parseReservaSinAsiento(r as Map<String, dynamic>))
+        .toList();
 
-    return BusManifiesto(tour: tour, buses: buses, reservasSinAsientos: reservasSinAsientos);
+    return BusManifiesto(
+      tour: tour,
+      buses: buses,
+      reservasSinAsientos: reservasSinAsientos,
+    );
   }
 
   BusManifiestoData _parseBus(Map<String, dynamic> json) {
-    final cfgJson = json['configuracion'] as Map<String, dynamic>? ?? {};
-    final asientosJsonCfg = (cfgJson['asientos'] as List<dynamic>?) ?? [];
+    // ── 1. Build layout from configuracion (authoritative: integer columns) ──
+    final cfgJson = json['configuracion'] as Map<String, dynamic>?;
+    final cfgFilas = cfgJson?['filas'] as int? ?? 0;
+    final cfgColumnas = cfgJson?['columnas'] as int? ?? 0;
+    final cfgAsientosRaw = cfgJson?['asientos'] as List<dynamic>? ?? const [];
 
-    final configuracion = BusConfiguracion(
-      filas: cfgJson['filas'] as int? ?? 0,
-      columnas: cfgJson['columnas'] as int? ?? 4,
-      asientos: asientosJsonCfg.map((a) {
-        final aj = a as Map<String, dynamic>;
-        return AsientoLayout(
-          fila: aj['fila'] as int,
-          columna: aj['columna'] as int,
-          numero: aj['numero'] as String,
-          tipo: _parseTipo(aj['tipo'] as String? ?? 'normal'),
-        );
-      }).toList(),
-    );
+    final layoutPorPos = <(int, int), AsientoLayout>{};
+    for (final a in cfgAsientosRaw) {
+      final aMap = a as Map<String, dynamic>;
+      final fila = (aMap['fila'] as num).toInt();
+      final columna = (aMap['columna'] as num).toInt();
+      final numero = aMap['numero']?.toString() ?? '';
+      final tipo = _parseTipoAsiento(aMap['tipo']?.toString() ?? 'normal');
+      layoutPorPos[(fila, columna)] = AsientoLayout(
+        fila: fila, columna: columna, numero: numero, tipo: tipo,
+      );
+    }
 
+    // Numero → position lookup so manifest seats find their correct column.
+    final numPorNumero = <String, (int, int)>{
+      for (final e in layoutPorPos.entries)
+        if (e.value.numero.isNotEmpty) e.value.numero: e.key,
+    };
+
+    // ── 2. Parse asientos for reservation data + agente overrides ───────────
     final asientosJson = (json['asientos'] as List<dynamic>?) ?? [];
-    final asientos = asientosJson.map((a) {
+    final manifiestoAsientos = <AsientoManifiesto>[];
+
+    for (final a in asientosJson) {
       final aj = a as Map<String, dynamic>;
+      final numero = aj['numero'] as String;
+      final tipoStr = aj['tipo'] as String? ?? 'normal';
+
+      if (tipoStr != 'normal') {
+        // Special seats come from configuracion; only add as fallback when
+        // configuracion was absent.
+        if (layoutPorPos.isEmpty) {
+          final fila = (aj['fila'] as num).toInt();
+          final columnaRaw = aj['columna'];
+          final columna = columnaRaw is int
+              ? columnaRaw
+              : (columnaRaw as String).toUpperCase().codeUnitAt(0) -
+                  'A'.codeUnitAt(0);
+          layoutPorPos[(fila, columna)] = AsientoLayout(
+            fila: fila,
+            columna: columna,
+            numero: numero,
+            tipo: _parseTipoAsiento(tipoStr),
+          );
+        }
+        continue;
+      }
+
+      // Resolve to correct integer column via the layout lookup.
+      final pos = numPorNumero[numero];
+      int fila;
+      int columna;
+      if (pos != null) {
+        fila = pos.$1;
+        columna = pos.$2;
+      } else {
+        fila = (aj['fila'] as num).toInt();
+        final columnaRaw = aj['columna'];
+        columna = columnaRaw is int
+            ? columnaRaw
+            : (columnaRaw as String).toUpperCase().codeUnitAt(0) -
+                'A'.codeUnitAt(0);
+      }
+
+      // Apply agente type override in the layout map.
+      if (aj['agente'] == true) {
+        final cur = layoutPorPos[(fila, columna)];
+        if (cur != null && cur.tipo == TipoAsiento.normal) {
+          layoutPorPos[(fila, columna)] = AsientoLayout(
+            fila: fila, columna: columna, numero: numero,
+            tipo: TipoAsiento.agente,
+          );
+        }
+      }
+
       ReservaManifiesto? reserva;
       if (aj['reserva'] != null) {
         final rj = aj['reserva'] as Map<String, dynamic>;
@@ -139,13 +235,33 @@ class ApiBusManifiestoRepository implements BusManifiestoRepository {
               .toList(),
         );
       }
-      return AsientoManifiesto(
-        numero: aj['numero'] as String,
-        fila: aj['fila'] as int,
-        columna: aj['columna'] as int,
+      manifiestoAsientos.add(AsientoManifiesto(
+        numero: numero,
+        fila: fila,
+        columna: columna,
         reserva: reserva,
-      );
-    }).toList();
+      ));
+    }
+
+    // ── 3. Derive dimensions ─────────────────────────────────────────────────
+    final layoutList = layoutPorPos.values.toList();
+    final maxFila = layoutList.isEmpty
+        ? 0
+        : layoutList.map((a) => a.fila).reduce((a, b) => a > b ? a : b);
+    final maxColumna = layoutList.isEmpty
+        ? 3
+        : layoutList.map((a) => a.columna).reduce((a, b) => a > b ? a : b);
+
+    final finalFilas = cfgFilas > 0 ? cfgFilas : maxFila;
+    final finalColumnas = cfgColumnas > 0 ? cfgColumnas : maxColumna + 1;
+
+    final speciales = layoutList
+        .where((a) => a.tipo != TipoAsiento.normal && a.tipo != TipoAsiento.vacio)
+        .map((a) => '${a.tipo.name}(${a.fila},${a.columna})')
+        .toList();
+    debugPrint('🚌 [parseBus] "${json['nombre']}": '
+        'cfg=${cfgColumnas}cols×${cfgFilas}rows → final=${finalColumnas}cols | '
+        'speciales=$speciales');
 
     return BusManifiestoData(
       busLayoutId: json['bus_layout_id'] as int,
@@ -154,9 +270,31 @@ class ApiBusManifiestoRepository implements BusManifiestoRepository {
       asientosOcupados: json['asientos_ocupados'] as int? ?? 0,
       asientosDisponibles: json['asientos_disponibles'] as int? ?? 0,
       entrada: json['entrada'] as String?,
-      configuracion: configuracion,
-      asientos: asientos,
+      configuracion: BusConfiguracion(
+        filas: finalFilas,
+        columnas: finalColumnas,
+        asientos: layoutList,
+      ),
+      asientos: manifiestoAsientos,
     );
+  }
+
+  TipoAsiento _parseTipoAsiento(String tipo) {
+    switch (tipo) {
+      case 'agente':
+        return TipoAsiento.agente;
+      case 'conductor':
+        return TipoAsiento.conductor;
+      case 'vacio':
+        return TipoAsiento.vacio;
+      case 'baño':
+      case 'bano':
+        return TipoAsiento.bano;
+      case 'entrada':
+        return TipoAsiento.entrada;
+      default:
+        return TipoAsiento.normal;
+    }
   }
 
   ReservaManifiesto _parseReservaSinAsiento(Map<String, dynamic> json) {
@@ -185,17 +323,5 @@ class ApiBusManifiestoRepository implements BusManifiestoRepository {
       telefono: json['telefono'] as String?,
       ocupaAsiento: json['ocupa_asiento'] != false,
     );
-  }
-
-  TipoAsiento _parseTipo(String tipo) {
-    switch (tipo) {
-      case 'agente': return TipoAsiento.agente;
-      case 'conductor': return TipoAsiento.conductor;
-      case 'vacio': return TipoAsiento.vacio;
-      case 'baño':
-      case 'bano': return TipoAsiento.bano;
-      case 'entrada': return TipoAsiento.entrada;
-      default: return TipoAsiento.normal;
-    }
   }
 }
