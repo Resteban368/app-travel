@@ -11,31 +11,33 @@ class ApiAgenteRepository implements AgenteRepository {
   ApiAgenteRepository({required this.client});
 
   static String get _baseUrl => '${ApiConstants.kBaseUrl}/v1/agentes';
+  static String get _modulosUrl => '${ApiConstants.kBaseUrl}/v1/modulos';
 
-  // Mapa estático: clave del módulo → id en la BD
-  static const Map<String, int> _moduloIds = {
-    'dashboard': 14,
-    'tours': 15,
-    'sedes': 13,
-    'paymentMethods': 16,
-    'catalogues': 17,
-    'faqs': 18,
-    'services': 19,
-    'politicasReserva': 20,
-    'infoEmpresa': 21,
-    'pagosRealizados': 22,
-    'agentes': 23,
-    'reservas': 24,
-    'cotizacion': 12,
-    'clientes': 25,
-    'bus_layouts': 26,
-  };
+  // Caché en memoria; se llena una vez y se reutiliza.
+  Map<String, int>? _moduloIds;
+
+  Future<Map<String, int>> _fetchModuloIds() async {
+    if (_moduloIds != null) return _moduloIds!;
+    final response = await client.get(Uri.parse(_modulosUrl), headers: _headers);
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      _moduloIds = {
+        for (final m in data) m['nombre'] as String: m['id'] as int,
+      };
+      debugPrint('✅ [ApiAgenteRepository] Módulos cargados: $_moduloIds');
+      return _moduloIds!;
+    }
+    throw Exception('Error al cargar módulos: ${response.statusCode}');
+  }
 
   /// Convierte Map<moduloKey, nivel> → lista de objetos que espera el API
-  List<Map<String, dynamic>> _permisosToApi(Map<String, String> permisos) {
+  List<Map<String, dynamic>> _permisosToApi(
+    Map<String, String> permisos,
+    Map<String, int> moduloIds,
+  ) {
     return permisos.entries
-        .where((e) => _moduloIds.containsKey(e.key))
-        .map((e) => {'modulo_id': _moduloIds[e.key], 'tipo_permiso': e.value})
+        .where((e) => moduloIds.containsKey(e.key))
+        .map((e) => {'modulo_id': moduloIds[e.key], 'tipo_permiso': e.value})
         .toList();
   }
 
@@ -71,11 +73,12 @@ class ApiAgenteRepository implements AgenteRepository {
 
   @override
   Future<void> createAgente(Agente agente) async {
+    final moduloIds = await _fetchModuloIds();
     final body = json.encode({
       'nombre': agente.nombre,
       'email': agente.correo,
       'password': agente.password,
-      'permisos': _permisosToApi(agente.permisos),
+      'permisos': _permisosToApi(agente.permisos, moduloIds),
     });
     debugPrint('📤 [ApiAgenteRepository] Creating: $body');
     final response = await client.post(
@@ -90,12 +93,13 @@ class ApiAgenteRepository implements AgenteRepository {
 
   @override
   Future<void> updateAgente(Agente agente) async {
+    final moduloIds = await _fetchModuloIds();
     final body = json.encode({
       'nombre': agente.nombre,
       'email': agente.correo,
       if (agente.password != null && agente.password!.isNotEmpty)
         'password': agente.password,
-      'permisos': _permisosToApi(agente.permisos),
+      'permisos': _permisosToApi(agente.permisos, moduloIds),
       'is_active': agente.isActive,
     });
     final response = await client.patch(

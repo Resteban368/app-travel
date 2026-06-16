@@ -3,8 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../config/app_router.dart';
+import '../../../../core/widgets/saas_snackbar.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../domain/entities/tour.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../bloc/tour_bloc.dart';
 import '../bloc/tour_historico_bloc.dart';
 
 class TourHistoricoScreen extends StatefulWidget {
@@ -65,63 +68,77 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width >= 800;
+    final authState = context.watch<AuthBloc>().state;
+    final canWrite = authState is AuthAuthenticated
+        ? authState.user.canWrite('historico_tours')
+        : false;
 
-    return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
-      body: BlocBuilder<TourHistoricoBloc, TourHistoricoState>(
-        builder: (context, state) {
-          List<Tour>? tours;
-          if (state is ToursHistoricosLoaded) {
-            tours = state.filteredTours;
-          }
-
-          if (tours != null) {
-            if (_searchQuery.isNotEmpty) {
-              final query = _searchQuery.toLowerCase();
-              tours = tours.where((t) => t.name.toLowerCase().contains(query)).toList();
+    return BlocListener<TourBloc, TourState>(
+      listener: (context, state) {
+        if (state is TourDuplicado) {
+          SaasSnackBar.showSuccess(context, 'Tour duplicado exitosamente');
+          context.read<TourHistoricoBloc>().add(LoadToursHistoricos());
+        } else if (state is TourError) {
+          SaasSnackBar.showError(context, state.message);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: SaasPalette.bgApp,
+        body: BlocBuilder<TourHistoricoBloc, TourHistoricoState>(
+          builder: (context, state) {
+            List<Tour>? tours;
+            if (state is ToursHistoricosLoaded) {
+              tours = state.filteredTours;
             }
-            if (_activeTab == 'Tours') {
-              tours = tours.where((t) => !t.isPromotion).toList();
-            } else if (_activeTab == 'Promos') {
-              tours = tours.where((t) => t.isPromotion).toList();
-            }
-          }
 
-          return CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              SliverPadding(
-                padding: EdgeInsets.fromLTRB(
-                  isDesktop ? 32 : 16,
-                  32,
-                  isDesktop ? 32 : 16,
-                  0,
-                ),
-                sliver: SliverToBoxAdapter(
-                  child: _buildHeader(context, width),
-                ),
-              ),
-              SliverPadding(
-                padding: EdgeInsets.fromLTRB(
-                  isDesktop ? 32 : 16,
-                  24,
-                  isDesktop ? 32 : 16,
-                  16,
-                ),
-                sliver: SliverToBoxAdapter(
-                  child: _buildSearchAndTabs(width),
-                ),
-              ),
-              if (_filtersVisible)
+            if (tours != null) {
+              if (_searchQuery.isNotEmpty) {
+                final query = _searchQuery.toLowerCase();
+                tours = tours.where((t) => t.name.toLowerCase().contains(query)).toList();
+              }
+              if (_activeTab == 'Tours') {
+                tours = tours.where((t) => !t.isPromotion).toList();
+              } else if (_activeTab == 'Promos') {
+                tours = tours.where((t) => t.isPromotion).toList();
+              }
+            }
+
+            return CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
                 SliverPadding(
-                  padding: EdgeInsets.symmetric(horizontal: isDesktop ? 32 : 16),
-                  sliver: SliverToBoxAdapter(child: _buildFilterPanel(context)),
+                  padding: EdgeInsets.fromLTRB(
+                    isDesktop ? 32 : 16,
+                    32,
+                    isDesktop ? 32 : 16,
+                    0,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: _buildHeader(context, width),
+                  ),
                 ),
-              _buildContent(context, state, tours, isDesktop),
-              const SliverPadding(padding: EdgeInsets.only(bottom: 60)),
-            ],
-          );
-        },
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    isDesktop ? 32 : 16,
+                    24,
+                    isDesktop ? 32 : 16,
+                    16,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: _buildSearchAndTabs(width),
+                  ),
+                ),
+                if (_filtersVisible)
+                  SliverPadding(
+                    padding: EdgeInsets.symmetric(horizontal: isDesktop ? 32 : 16),
+                    sliver: SliverToBoxAdapter(child: _buildFilterPanel(context)),
+                  ),
+                _buildContent(context, state, tours, isDesktop, canWrite),
+                const SliverPadding(padding: EdgeInsets.only(bottom: 60)),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -353,6 +370,7 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
     TourHistoricoState state,
     List<Tour>? tours,
     bool isDesktop,
+    bool canWrite,
   ) {
     if (state is TourHistoricoLoading && tours == null) {
       return SliverPadding(
@@ -428,6 +446,7 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
           (context, index) => _TourHistoricoRow(
             tour: tours[index],
             currencyFormat: _currencyFormat,
+            canWrite: canWrite,
           ),
           childCount: tours.length,
         ),
@@ -441,10 +460,12 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
 class _TourHistoricoRow extends StatefulWidget {
   final Tour tour;
   final NumberFormat currencyFormat;
+  final bool canWrite;
 
   const _TourHistoricoRow({
     required this.tour,
     required this.currencyFormat,
+    required this.canWrite,
   });
 
   @override
@@ -710,12 +731,42 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
                         ),
                       ),
                       const SizedBox(width: 12),
+                    ],
+                    if (widget.canWrite)
+                      PopupMenuButton<String>(
+                        icon: const Icon(
+                          Icons.more_vert_rounded,
+                          color: SaasPalette.textTertiary,
+                          size: 20,
+                        ),
+                        color: SaasPalette.bgCanvas,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        onSelected: (value) {
+                          if (value == 'duplicate') {
+                            context.read<TourBloc>().add(DuplicarTour(tour.id));
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(
+                            value: 'duplicate',
+                            child: Row(
+                              children: [
+                                Icon(Icons.copy_rounded, size: 16, color: SaasPalette.brand600),
+                                SizedBox(width: 8),
+                                Text('Duplicar', style: TextStyle(color: SaasPalette.textPrimary)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    else if (!isNarrow)
                       const Icon(
                         Icons.chevron_right_rounded,
                         color: SaasPalette.textTertiary,
                         size: 20,
                       ),
-                    ],
                   ],
                 ),
               );

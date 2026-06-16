@@ -1,13 +1,10 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:agente_viajes/core/di/injection_container.dart';
 import 'package:agente_viajes/core/theme/saas_palette.dart';
 
-/// Muestra una imagen que requiere autenticación JWT.
-/// Usa [sl<http.Client>()] (AuthClient) para hacer GET con el token.
-/// Cache estático en memoria para la sesión.
-class AuthNetworkImage extends StatefulWidget {
+/// Muestra una imagen de red con indicador de carga y placeholder de error.
+/// Usa Image.network() para aprovechar la caché nativa del browser y evitar
+/// CORS preflight que ocurre al enviar headers Authorization en recursos públicos.
+class AuthNetworkImage extends StatelessWidget {
   final String url;
   final BoxFit fit;
   final double? width;
@@ -21,102 +18,56 @@ class AuthNetworkImage extends StatefulWidget {
     this.height,
   });
 
-  static final Map<String, Uint8List> _cache = {};
-
-  @override
-  State<AuthNetworkImage> createState() => _AuthNetworkImageState();
-}
-
-class _AuthNetworkImageState extends State<AuthNetworkImage> {
-  late Future<Uint8List?> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = _load();
-  }
-
-  @override
-  void didUpdateWidget(AuthNetworkImage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url) {
-      _future = _load();
-      setState(() {});
-    }
-  }
-
-  Future<Uint8List?> _load() async {
-    if (AuthNetworkImage._cache.containsKey(widget.url)) {
-      return AuthNetworkImage._cache[widget.url];
-    }
-    try {
-      final resp = await sl<http.Client>().get(Uri.parse(widget.url));
-      if (resp.statusCode == 200) {
-        AuthNetworkImage._cache[widget.url] = resp.bodyBytes;
-        return resp.bodyBytes;
-      }
-    } catch (_) {}
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: widget.width,
-      height: widget.height,
-      child: FutureBuilder<Uint8List?>(
-        future: _future,
-        builder: (_, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return Container(
-              color: const Color(0xFFF1F5F9),
-              child: const Center(
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: SaasPalette.brand600,
+    return Image.network(
+      url,
+      fit: fit,
+      width: width,
+      height: height,
+      gaplessPlayback: true,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          color: const Color(0xFFF1F5F9),
+          child: const Center(
+            child: SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: SaasPalette.brand600,
+              ),
+            ),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          color: const Color(0xFFF1F5F9),
+          child: const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.broken_image_outlined,
+                  color: SaasPalette.textTertiary,
+                  size: 22,
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Sin vista previa',
+                  style: TextStyle(
+                    color: SaasPalette.textTertiary,
+                    fontSize: 10,
                   ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-            );
-          }
-          if (snap.data == null) {
-            return Container(
-              color: const Color(0xFFF1F5F9),
-              child: const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.broken_image_outlined,
-                      color: SaasPalette.textTertiary,
-                      size: 22,
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Sin vista previa',
-                      style: TextStyle(
-                        color: SaasPalette.textTertiary,
-                        fontSize: 10,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-          return Image.memory(
-            snap.data!,
-            fit: widget.fit,
-            width: widget.width,
-            height: widget.height,
-            gaplessPlayback: true,
-          );
-        },
-      ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

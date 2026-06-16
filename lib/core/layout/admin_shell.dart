@@ -100,7 +100,7 @@ class _AdminShellState extends State<AdminShell> {
       icon: Icons.history_rounded,
       label: 'Histórico\nde Tours',
       route: AppRouter.toursHistorico,
-      permission: 'tours',
+      permission: 'historico_tours',
     ),
     _NavItem(
       icon: Icons.store_rounded,
@@ -190,13 +190,13 @@ class _AdminShellState extends State<AdminShell> {
       icon: Icons.business_rounded,
       label: 'Proveedores',
       route: AppRouter.proveedores,
-      permission: '',
+      permission: 'proveedores',
     ),
     _NavItem(
       icon: Icons.directions_bus_rounded,
       label: 'Buses',
       route: AppRouter.busLayouts,
-      permission: '',
+      permission: 'bus_layouts',
     ),
     _NavItem(
       icon: Icons.manage_search_rounded,

@@ -7,20 +7,28 @@ abstract class GalleryEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class CargarGallery extends GalleryEvent {
-  final String folder;
-  const CargarGallery(this.folder);
+/// Navega y carga subcarpetas + imágenes de [folder] (null = raíz).
+class BrowseCarpeta extends GalleryEvent {
+  final String? folder;
+  const BrowseCarpeta(this.folder);
   @override
   List<Object?> get props => [folder];
 }
 
+class CrearCarpetaGallery extends GalleryEvent {
+  final String nombre;
+  const CrearCarpetaGallery(this.nombre);
+  @override
+  List<Object?> get props => [nombre];
+}
+
 class SubirImagenGallery extends GalleryEvent {
-  final String folder;
+  final String? folder;
   final Uint8List bytes;
   final String filename;
   final String mimeType;
   const SubirImagenGallery({
-    required this.folder,
+    this.folder,
     required this.bytes,
     required this.filename,
     required this.mimeType,
@@ -30,14 +38,19 @@ class SubirImagenGallery extends GalleryEvent {
 }
 
 class EliminarImagenGallery extends GalleryEvent {
-  final String folder;
   final String filename;
   final String imageUrl;
   const EliminarImagenGallery({
-    required this.folder,
     required this.filename,
     required this.imageUrl,
   });
   @override
-  List<Object?> get props => [folder, filename, imageUrl];
+  List<Object?> get props => [filename, imageUrl];
+}
+
+class EliminarCarpetaGallery extends GalleryEvent {
+  final String folder;
+  const EliminarCarpetaGallery(this.folder);
+  @override
+  List<Object?> get props => [folder];
 }

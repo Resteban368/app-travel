@@ -378,14 +378,17 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
                 ]
               : [],
         ),
-        child: GestureDetector(
-          onTap: () {
-            Navigator.pushNamed(
+        child: InkWell(
+          onTap: () async {
+            final bloc = context.read<BusLayoutBloc>();
+            await Navigator.pushNamed(
               context,
               AppRouter.busLayoutEdit,
               arguments: layout,
             );
+            bloc.add(const LoadBusLayouts());
           },
+          borderRadius: BorderRadius.circular(14),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             child: Row(

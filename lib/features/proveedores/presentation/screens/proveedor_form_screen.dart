@@ -4,6 +4,7 @@ import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/proveedor.dart';
 import '../bloc/proveedor_bloc.dart';
 import '../bloc/proveedor_event.dart';
@@ -155,6 +156,11 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen>
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final canWrite = authState is AuthAuthenticated
+        ? authState.user.canWrite('proveedores')
+        : true;
+
     return BlocListener<ProveedorBloc, ProveedorState>(
       listener: (context, state) {
         if (state is ProveedorSaved) {
@@ -239,18 +245,20 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen>
                                   controller: _nombreCtrl,
                                   label: 'Nombre *',
                                   icon: Icons.business_rounded,
+                                  readOnly: !canWrite,
                                   validator: (v) =>
                                       (v == null || v.trim().isEmpty)
                                       ? 'El nombre es requerido'
                                       : null,
                                 ),
                                 const SizedBox(height: 20),
-                                _buildTipoDropdown(),
+                                _buildTipoDropdown(canWrite: canWrite),
                                 const SizedBox(height: 20),
                                 PremiumTextField(
                                   controller: _nitCtrl,
                                   label: 'NIT (opcional)',
                                   icon: Icons.badge_outlined,
+                                  readOnly: !canWrite,
                                 ),
                                 const SizedBox(height: 20),
                                 PhoneFormField(
@@ -260,12 +268,14 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen>
                                       setState(() => _countryCode = v),
                                   label: 'Teléfono (opcional)',
                                   required: false,
+                                  readOnly: !canWrite,
                                 ),
                                 const SizedBox(height: 20),
                                 PremiumTextField(
                                   controller: _emailCtrl,
                                   label: 'Correo electrónico (opcional)',
                                   icon: Icons.email_rounded,
+                                  readOnly: !canWrite,
                                 ),
                               ],
                             ),
@@ -280,18 +290,21 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen>
                                   controller: _bancoCtrl,
                                   label: 'Banco (opcional)',
                                   icon: Icons.account_balance_rounded,
+                                  readOnly: !canWrite,
                                 ),
                                 const SizedBox(height: 20),
                                 PremiumTextField(
                                   controller: _numeroCuentaCtrl,
                                   label: 'Número de cuenta (opcional)',
                                   icon: Icons.credit_card_rounded,
+                                  readOnly: !canWrite,
                                 ),
                                 const SizedBox(height: 20),
                                 PremiumTextField(
                                   controller: _notasCtrl,
                                   label: 'Notas (opcional)',
                                   icon: Icons.notes_rounded,
+                                  readOnly: !canWrite,
                                 ),
                               ],
                             ),
@@ -307,9 +320,7 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen>
                                     decoration: BoxDecoration(
                                       color: SaasPalette.bgSubtle,
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: SaasPalette.border,
-                                      ),
+                                      border: Border.all(color: SaasPalette.border),
                                     ),
                                     child: SwitchListTile(
                                       title: const Text(
@@ -329,13 +340,10 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen>
                                       ),
                                       value: _isActive,
                                       activeThumbColor: SaasPalette.success,
-                                      activeTrackColor: SaasPalette.success
-                                          .withValues(alpha: 0.25),
-                                      inactiveThumbColor:
-                                          SaasPalette.textTertiary,
+                                      activeTrackColor: SaasPalette.success.withValues(alpha: 0.25),
+                                      inactiveThumbColor: SaasPalette.textTertiary,
                                       inactiveTrackColor: SaasPalette.bgSubtle,
-                                      onChanged: (v) =>
-                                          setState(() => _isActive = v),
+                                      onChanged: canWrite ? (v) => setState(() => _isActive = v) : null,
                                     ),
                                   ),
                                 ],
@@ -344,20 +352,21 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen>
                             const SizedBox(height: 48),
 
                             // ── Botón guardar ───────────────────────────────
-                            Builder(
-                              builder: (ctx) =>
-                                  BlocBuilder<ProveedorBloc, ProveedorState>(
-                                    builder: (context, state) =>
-                                        PremiumActionButton(
-                                          label: _isEditing
-                                              ? 'GUARDAR CAMBIOS'
-                                              : 'CREAR PROVEEDOR',
-                                          icon: Icons.save_rounded,
-                                          isLoading: state is ProveedorSaving,
-                                          onTap: () => _onSave(ctx),
-                                        ),
-                                  ),
-                            ),
+                            if (canWrite)
+                              Builder(
+                                builder: (ctx) =>
+                                    BlocBuilder<ProveedorBloc, ProveedorState>(
+                                      builder: (context, state) =>
+                                          PremiumActionButton(
+                                            label: _isEditing
+                                                ? 'GUARDAR CAMBIOS'
+                                                : 'CREAR PROVEEDOR',
+                                            icon: Icons.save_rounded,
+                                            isLoading: state is ProveedorSaving,
+                                            onTap: () => _onSave(ctx),
+                                          ),
+                                    ),
+                              ),
                             const SizedBox(height: 100),
                           ],
                         ),
@@ -373,7 +382,7 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen>
     );
   }
 
-  Widget _buildTipoDropdown() {
+  Widget _buildTipoDropdown({required bool canWrite}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -431,7 +440,7 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen>
                 ),
               )
               .toList(),
-          onChanged: (v) => setState(() => _tipo = v!),
+          onChanged: canWrite ? (v) => setState(() => _tipo = v!) : null,
           validator: (v) =>
               (v == null || v.isEmpty) ? 'El tipo es requerido' : null,
         ),

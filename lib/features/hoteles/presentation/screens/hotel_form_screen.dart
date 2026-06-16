@@ -323,7 +323,6 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                 onPressed: () async {
                   final url = await GalleryPickerDialog.show(
                     context,
-                    initialFolder: 'hoteles',
                     isAdmin: true,
                   );
                   if (url != null && mounted) {
@@ -608,7 +607,6 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                         onPressed: () async {
                           final url = await GalleryPickerDialog.show(
                             context,
-                            initialFolder: 'hoteles',
                             isAdmin: true,
                           );
                           if (url != null && mounted) {

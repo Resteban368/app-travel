@@ -473,7 +473,6 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
                   onPressed: () async {
                     final url = await GalleryPickerDialog.show(
                       context,
-                      initialFolder: 'general',
                       isAdmin: true,
                     );
                     // ignore: avoid_print

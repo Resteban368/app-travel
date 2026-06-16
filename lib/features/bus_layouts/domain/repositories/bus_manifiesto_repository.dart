@@ -11,4 +11,10 @@ abstract class BusManifiestoRepository {
     required String asientoOrigen,
     required String asientoDestino,
   });
+  Future<void> asignarAsiento({
+    required int tourId,
+    required int busLayoutId,
+    required int reservaId,
+    required List<String> asientos,
+  });
 }

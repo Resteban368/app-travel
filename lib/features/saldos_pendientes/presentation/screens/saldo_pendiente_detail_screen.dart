@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/saldo_pendiente.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 
 class SaldoPendienteDetailScreen extends StatefulWidget {
   final TourConSaldo tour;
@@ -139,6 +140,10 @@ class _ReservaCardState extends State<_ReservaCard> {
   Widget build(BuildContext context) {
     final reserva = widget.reserva;
     final currFmt = widget.currFmt;
+    final authState = context.watch<AuthBloc>().state;
+    final canWrite = authState is AuthAuthenticated
+        ? authState.user.canWrite('saldo_pendiente')
+        : false;
     final pct = reserva.valorTotal > 0
         ? (reserva.totalPagado / reserva.valorTotal).clamp(0.0, 1.0)
         : 0.0;
@@ -170,7 +175,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                 const SizedBox(width: 8),
                 _EstadoBadge(estado: reserva.estado),
                 const Spacer(),
-                _WhatsAppReminderButton(reserva: reserva),
+                if (canWrite) _WhatsAppReminderButton(reserva: reserva),
               ],
             ),
             const SizedBox(height: 12),

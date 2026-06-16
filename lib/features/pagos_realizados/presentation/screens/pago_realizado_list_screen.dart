@@ -8,6 +8,7 @@ import '../../../../core/widgets/saas_snackbar.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../domain/entities/pago_realizado.dart';
 import '../bloc/pago_realizado_bloc.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 
 class PagoRealizadoListScreen extends StatelessWidget {
   const PagoRealizadoListScreen({super.key});
@@ -175,6 +176,11 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
             }
             final chatIds = grouped.keys.toList();
 
+            final authState = context.watch<AuthBloc>().state;
+            final canDelete = authState is AuthAuthenticated
+                ? authState.user.canWrite('pagosRealizados')
+                : true;
+
             return RefreshIndicator(
               onRefresh: () async => _loadFirstPage(),
               color: SaasPalette.brand600,
@@ -254,6 +260,7 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
                             chatId: chatId,
                             pagos: chatPagos,
                             index: index,
+                            canDelete: canDelete,
                             onDelete: _deletePressed,
                           );
                         }, childCount: chatIds.length),
@@ -444,11 +451,13 @@ class _ChatGroupCard extends StatefulWidget {
   final String chatId;
   final List<PagoRealizado> pagos;
   final int index;
+  final bool canDelete;
   final void Function(PagoRealizado) onDelete;
   const _ChatGroupCard({
     required this.chatId,
     required this.pagos,
     required this.index,
+    required this.canDelete,
     required this.onDelete,
   });
 
@@ -596,7 +605,7 @@ class _ChatGroupCardState extends State<_ChatGroupCard> {
               secondChild: Column(
                 children: [
                   const Divider(height: 1, color: SaasPalette.border),
-                  ...widget.pagos.map((p) => _PagoItem(pago: p, onDelete: widget.onDelete)),
+                  ...widget.pagos.map((p) => _PagoItem(pago: p, canDelete: widget.canDelete, onDelete: widget.onDelete)),
                   const SizedBox(height: 8),
                 ],
               ),
@@ -617,8 +626,9 @@ class _ChatGroupCardState extends State<_ChatGroupCard> {
 // ─────────────────────────────────────────────────────────────────────────────
 class _PagoItem extends StatelessWidget {
   final PagoRealizado pago;
+  final bool canDelete;
   final void Function(PagoRealizado) onDelete;
-  const _PagoItem({required this.pago, required this.onDelete});
+  const _PagoItem({required this.pago, required this.canDelete, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -717,18 +727,20 @@ class _PagoItem extends StatelessWidget {
                 _StatusBadge(pago: pago),
               ],
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: () => onDelete(pago),
-              icon: const Icon(
-                Icons.delete_outline_rounded,
-                color: SaasPalette.danger,
-                size: 20,
+            if (canDelete) ...[
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () => onDelete(pago),
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: SaasPalette.danger,
+                  size: 20,
+                ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'Eliminar pago',
               ),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              tooltip: 'Eliminar pago',
-            ),
+            ],
             const SizedBox(width: 8),
             const Icon(
               Icons.chevron_right_rounded,

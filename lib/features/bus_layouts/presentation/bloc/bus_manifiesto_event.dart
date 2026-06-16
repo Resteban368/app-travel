@@ -45,3 +45,18 @@ class MoverAsiento extends BusManifiestoEvent {
   @override
   List<Object?> get props => [tourId, reservaIdOrigen, asientoOrigen, asientoDestino];
 }
+
+class AsignarAsientoManual extends BusManifiestoEvent {
+  final int tourId;
+  final int busLayoutId;
+  final int reservaId;
+  final List<String> asientos;
+  const AsignarAsientoManual({
+    required this.tourId,
+    required this.busLayoutId,
+    required this.reservaId,
+    required this.asientos,
+  });
+  @override
+  List<Object?> get props => [tourId, busLayoutId, reservaId, asientos];
+}

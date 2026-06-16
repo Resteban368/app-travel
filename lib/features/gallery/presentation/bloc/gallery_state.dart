@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../domain/entities/nextcloud_folder.dart';
 import '../../domain/entities/nextcloud_image.dart';
 
 abstract class GalleryState extends Equatable {
@@ -10,31 +11,45 @@ abstract class GalleryState extends Equatable {
 class GalleryInitial extends GalleryState {}
 
 class GalleryCargando extends GalleryState {
-  final List<NextcloudImage> imagenes;
-  final bool subiendo;
-  const GalleryCargando({this.imagenes = const [], this.subiendo = false});
-  @override
-  List<Object?> get props => [imagenes, subiendo];
+  const GalleryCargando();
 }
 
-class GalleryCargada extends GalleryState {
-  final List<NextcloudImage> imagenes;
-  final String folder;
+/// Estado principal: contiene subcarpetas + imágenes de la carpeta actual.
+/// [folder] null = raíz.
+class GalleryBrowseCargada extends GalleryState {
+  final String? folder;
+  final List<NextcloudFolder> subfolders;
+  final List<NextcloudImage> images;
   final bool subiendo;
   final String? errorSubida;
   final bool eliminando;
   final String? errorEliminacion;
-  const GalleryCargada({
-    required this.imagenes,
-    required this.folder,
+  final bool creandoCarpeta;
+  final String? errorCreacion;
+  final bool eliminandoCarpeta;
+  final String? errorEliminacionCarpeta;
+
+  const GalleryBrowseCargada({
+    this.folder,
+    required this.subfolders,
+    required this.images,
     this.subiendo = false,
     this.errorSubida,
     this.eliminando = false,
     this.errorEliminacion,
+    this.creandoCarpeta = false,
+    this.errorCreacion,
+    this.eliminandoCarpeta = false,
+    this.errorEliminacionCarpeta,
   });
+
   @override
   List<Object?> get props => [
-    imagenes, folder, subiendo, errorSubida, eliminando, errorEliminacion,
+    folder, subfolders, images,
+    subiendo, errorSubida,
+    eliminando, errorEliminacion,
+    creandoCarpeta, errorCreacion,
+    eliminandoCarpeta, errorEliminacionCarpeta,
   ];
 }
 

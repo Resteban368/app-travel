@@ -1073,7 +1073,6 @@ class _TourFormScreenState extends State<TourFormScreen>
                   onPressed: () async {
                     final url = await GalleryPickerDialog.show(
                       context,
-                      initialFolder: 'tours',
                       isAdmin: true,
                     );
                     if (url != null && mounted) {

@@ -1220,7 +1220,6 @@ class _RespuestaCotizacionFormScreenState
               onPressed: () async {
                 final url = await GalleryPickerDialog.show(
                   context,
-                  initialFolder: 'general',
                   isAdmin: true,
                 );
                 if (url != null && mounted) {

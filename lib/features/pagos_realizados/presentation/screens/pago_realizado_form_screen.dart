@@ -685,7 +685,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                                             },
                                           ),
                                     ),
-                                  if (_isEditing) ...[
+                                  if (_isEditing && canWrite) ...[
                                     const SizedBox(height: 16),
                                     BlocBuilder<PagoRealizadoBloc,
                                         PagoRealizadoState>(

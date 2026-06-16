@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/proveedor.dart';
 import '../bloc/proveedor_bloc.dart';
 import '../bloc/proveedor_event.dart';
@@ -55,6 +56,11 @@ class _ProveedorListBodyState extends State<_ProveedorListBody> {
           proveedores = state.proveedores!;
         }
 
+        final authState = context.watch<AuthBloc>().state;
+        final canWrite = authState is AuthAuthenticated
+            ? authState.user.canWrite('proveedores')
+            : true;
+
         final filtered = _search.isEmpty
             ? proveedores
             : proveedores.where((p) {
@@ -73,7 +79,7 @@ class _ProveedorListBodyState extends State<_ProveedorListBody> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                  child: const _ProveedorHeader(),
+                  child: _ProveedorHeader(canWrite: canWrite),
                 ),
               ),
               SliverToBoxAdapter(
@@ -132,7 +138,7 @@ class _ProveedorListBodyState extends State<_ProveedorListBody> {
                     delegate: SliverChildBuilderDelegate(
                       (context, index) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
-                        child: _ProveedorCard(proveedor: filtered[index]),
+                        child: _ProveedorCard(proveedor: filtered[index], canWrite: canWrite),
                       ),
                       childCount: filtered.length,
                     ),
@@ -149,10 +155,24 @@ class _ProveedorListBodyState extends State<_ProveedorListBody> {
 // ── Header ────────────────────────────────────────────────────────────────────
 
 class _ProveedorHeader extends StatelessWidget {
-  const _ProveedorHeader();
+  final bool canWrite;
+  const _ProveedorHeader({required this.canWrite});
 
   @override
   Widget build(BuildContext context) {
+    final addBtn = ElevatedButton.icon(
+      onPressed: () => Navigator.pushNamed(context, AppRouter.proveedorCreate),
+      icon: const Icon(Icons.add_rounded, size: 18),
+      label: const Text('Nuevo Proveedor'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: SaasPalette.brand600,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 0,
+      ),
+    );
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isNarrow = constraints.maxWidth < 450;
@@ -188,25 +208,10 @@ class _ProveedorHeader extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () =>
-                      Navigator.pushNamed(context, AppRouter.proveedorCreate),
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Nuevo Proveedor'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: SaasPalette.brand600,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                ),
-              ),
+              if (canWrite) ...[
+                const SizedBox(height: 12),
+                SizedBox(width: double.infinity, child: addBtn),
+              ],
             ],
           );
         }
@@ -253,24 +258,7 @@ class _ProveedorHeader extends StatelessWidget {
                 ],
               ),
             ),
-            ElevatedButton.icon(
-              onPressed: () =>
-                  Navigator.pushNamed(context, AppRouter.proveedorCreate),
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Nuevo Proveedor'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: SaasPalette.brand600,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-            ),
+            if (canWrite) addBtn,
           ],
         );
       },
@@ -321,7 +309,8 @@ class _TipoChip extends StatelessWidget {
 
 class _ProveedorCard extends StatefulWidget {
   final Proveedor proveedor;
-  const _ProveedorCard({required this.proveedor});
+  final bool canWrite;
+  const _ProveedorCard({required this.proveedor, required this.canWrite});
 
   @override
   State<_ProveedorCard> createState() => _ProveedorCardState();
@@ -403,7 +392,18 @@ class _ProveedorCardState extends State<_ProveedorCard> {
                 ]
               : [],
         ),
-        child: Padding(
+        child: InkWell(
+          onTap: () async {
+            final bloc = context.read<ProveedorBloc>();
+            await Navigator.pushNamed(
+              context,
+              AppRouter.proveedorEdit,
+              arguments: p,
+            );
+            bloc.add(const LoadProveedores());
+          },
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           child: Row(
             children: [
@@ -511,69 +511,58 @@ class _ProveedorCardState extends State<_ProveedorCard> {
               ),
               const SizedBox(width: 12),
               SaasStatusBadge(active: p.isActive),
-              const SizedBox(width: 8),
-              PopupMenuButton<String>(
-                icon: const Icon(
-                  Icons.more_vert_rounded,
-                  color: SaasPalette.textTertiary,
-                  size: 18,
-                ),
-                color: SaasPalette.bgCanvas,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                onSelected: (value) {
-                  if (value == 'edit') {
-                    Navigator.pushNamed(
-                      context,
-                      AppRouter.proveedorEdit,
-                      arguments: p,
-                    );
-                  } else if (value == 'delete') {
-                    _confirmDelete(context);
-                  }
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.edit_rounded,
-                          size: 16,
-                          color: SaasPalette.brand600,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Editar',
-                          style: TextStyle(color: SaasPalette.textPrimary),
-                        ),
-                      ],
-                    ),
+              if (widget.canWrite) ...[
+                const SizedBox(width: 8),
+                PopupMenuButton<String>(
+                  icon: const Icon(
+                    Icons.more_vert_rounded,
+                    color: SaasPalette.textTertiary,
+                    size: 18,
                   ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline_rounded,
-                          size: 16,
-                          color: SaasPalette.danger,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Eliminar',
-                          style: TextStyle(color: SaasPalette.danger),
-                        ),
-                      ],
-                    ),
+                  color: SaasPalette.bgCanvas,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
-              ),
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      Navigator.pushNamed(
+                        context,
+                        AppRouter.proveedorEdit,
+                        arguments: p,
+                      );
+                    } else if (value == 'delete') {
+                      _confirmDelete(context);
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_rounded, size: 16, color: SaasPalette.brand600),
+                          SizedBox(width: 8),
+                          Text('Editar', style: TextStyle(color: SaasPalette.textPrimary)),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline_rounded, size: 16, color: SaasPalette.danger),
+                          SizedBox(width: 8),
+                          Text('Eliminar', style: TextStyle(color: SaasPalette.danger)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }

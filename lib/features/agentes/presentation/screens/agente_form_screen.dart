@@ -79,9 +79,19 @@ const _modules = [
   ),
   _Module(key: 'clientes', label: 'Clientes', icon: Icons.people_rounded),
   _Module(
+    key: 'proveedores',
+    label: 'Proveedores',
+    icon: Icons.store_rounded,
+  ),
+  _Module(
     key: 'bus_layouts',
     label: 'Diseños de Bus',
     icon: Icons.directions_bus_rounded,
+  ),
+  _Module(
+    key: 'historico_tours',
+    label: 'Histórico de Tours',
+    icon: Icons.history_rounded,
   ),
 ];
 
@@ -173,18 +183,10 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
     }
   }
 
-  static const Map<String, List<String>> _dependencias = {
-    'reservas': ['tours', 'pagosRealizados'],
-  };
-
   void _toggleModule(String key, bool enabled) {
     setState(() {
       if (enabled) {
         _permisos[key] = 'lectura';
-        final deps = _dependencias[key] ?? [];
-        for (final dep in deps) {
-          _permisos.putIfAbsent(dep, () => 'lectura');
-        }
       } else {
         _permisos.remove(key);
       }

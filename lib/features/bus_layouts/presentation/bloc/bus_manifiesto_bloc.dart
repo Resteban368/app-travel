@@ -13,6 +13,7 @@ class BusManifiestoBloc extends Bloc<BusManifiestoEvent, BusManifiestoState> {
     on<AutoAsignarAsientos>(_onAutoAsignar);
     on<LiberarAsiento>(_onLiberar);
     on<MoverAsiento>(_onMover);
+    on<AsignarAsientoManual>(_onAsignar);
   }
 
   Future<void> _onLoad(
@@ -88,6 +89,27 @@ class BusManifiestoBloc extends Bloc<BusManifiestoEvent, BusManifiestoState> {
         reservaIdOrigen: event.reservaIdOrigen,
         asientoOrigen: event.asientoOrigen,
         asientoDestino: event.asientoDestino,
+      );
+      final manifiesto = await repository.getBusManifiesto(event.tourId);
+      emit(BusManifiestoOperacionExito(manifiesto));
+    } catch (e) {
+      emit(BusManifiestoOperacionError(current, e.toString()));
+    }
+  }
+
+  Future<void> _onAsignar(
+    AsignarAsientoManual event,
+    Emitter<BusManifiestoState> emit,
+  ) async {
+    final current = _manifiestoActual();
+    if (current == null) return;
+    emit(BusManifiestoOperando(current));
+    try {
+      await repository.asignarAsiento(
+        tourId: event.tourId,
+        busLayoutId: event.busLayoutId,
+        reservaId: event.reservaId,
+        asientos: event.asientos,
       );
       final manifiesto = await repository.getBusManifiesto(event.tourId);
       emit(BusManifiestoOperacionExito(manifiesto));
