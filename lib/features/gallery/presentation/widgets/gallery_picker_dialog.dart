@@ -20,26 +20,31 @@ import '../../domain/entities/nextcloud_image.dart';
 
 class GalleryPickerDialog extends StatefulWidget {
   final bool isAdmin;
+  /// Carpeta raíz de la galería; la navegación no sube más allá de aquí.
+  final String rootFolder;
   final void Function(String url)? onSelected;
 
   const GalleryPickerDialog({
     super.key,
     this.isAdmin = false,
+    this.rootFolder = 'Photos',
     this.onSelected,
   });
 
   static Future<String?> show(
     BuildContext context, {
     bool isAdmin = false,
+    String rootFolder = 'Photos',
   }) {
     final completer = Completer<String?>();
     showDialog<void>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.45),
       builder: (_) => BlocProvider(
-        create: (_) => sl<GalleryBloc>()..add(const BrowseCarpeta(null)),
+        create: (_) => sl<GalleryBloc>()..add(BrowseCarpeta(rootFolder)),
         child: GalleryPickerDialog(
           isAdmin: isAdmin,
+          rootFolder: rootFolder,
           onSelected: (url) {
             if (!completer.isCompleted) completer.complete(url);
           },
@@ -58,8 +63,7 @@ class GalleryPickerDialog extends StatefulWidget {
 // ─── Estado ───────────────────────────────────────────────────────────────────
 
 class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
-  /// Carpeta actual (null = raíz)
-  String? _currentFolder;
+  late String _currentFolder;
 
   String _search = '';
   NextcloudImage? _selected;
@@ -67,14 +71,22 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
   String? _loadingOperation;
 
   @override
+  void initState() {
+    super.initState();
+    _currentFolder = widget.rootFolder;
+  }
+
+  @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
   }
 
+  bool get _atRoot => _currentFolder == widget.rootFolder;
+
   // ─── Navegación ────────────────────────────────────────────────────────────
 
-  void _navigate(String? folder) {
+  void _navigate(String folder) {
     setState(() {
       _currentFolder = folder;
       _selected = null;
@@ -85,14 +97,19 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
   }
 
   void _navigateUp() {
-    if (_currentFolder == null) return;
-    final idx = _currentFolder!.lastIndexOf('/');
-    _navigate(idx == -1 ? null : _currentFolder!.substring(0, idx));
+    if (_atRoot) return;
+    final idx = _currentFolder.lastIndexOf('/');
+    final parent = idx == -1 ? widget.rootFolder : _currentFolder.substring(0, idx);
+    // No subir más allá de rootFolder
+    _navigate(parent.length < widget.rootFolder.length ? widget.rootFolder : parent);
   }
 
-  String _formatPath(String? path) {
-    if (path == null) return 'Galería';
-    return path.split('/').join(' / ');
+  String _formatPath(String path) {
+    if (path == widget.rootFolder) return 'Galería';
+    // Muestra solo la parte relativa a rootFolder
+    final prefix = '${widget.rootFolder}/';
+    final relative = path.startsWith(prefix) ? path.substring(prefix.length) : path;
+    return relative.split('/').join(' / ');
   }
 
   // ─── Helpers de imagen ─────────────────────────────────────────────────────
@@ -313,7 +330,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
   // ─── Header ────────────────────────────────────────────────────────────────
 
   Widget _buildHeader() {
-    final atRoot = _currentFolder == null;
+    final atRoot = _atRoot;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 18, 12, 18),
       decoration: const BoxDecoration(
@@ -458,9 +475,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
                               : const Icon(Icons.create_new_folder_rounded,
                                   size: 15),
                           label: Text(
-                            _currentFolder != null
-                                ? 'Nueva subcarpeta'
-                                : 'Nueva carpeta',
+                            _atRoot ? 'Nueva carpeta' : 'Nueva subcarpeta',
                             style: const TextStyle(
                                 fontSize: 12, fontWeight: FontWeight.w500),
                           ),

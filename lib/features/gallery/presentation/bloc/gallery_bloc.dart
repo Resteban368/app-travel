@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/nextcloud_browse_result.dart';
 import '../../domain/entities/nextcloud_image.dart';
@@ -46,8 +47,9 @@ class GalleryBloc extends Bloc<GalleryEvent, GalleryState> {
       final result = await _repository.browse(event.folder);
       _browseCache[key] = result;
       emit(_fromResult(result));
-    } catch (_) {
-      emit(const GalleryError('No se pudo cargar el contenido'));
+    } catch (e, st) {
+      debugPrint('[GalleryBloc] browse error: $e\n$st');
+      emit(GalleryError('Error: $e'));
     }
   }
 

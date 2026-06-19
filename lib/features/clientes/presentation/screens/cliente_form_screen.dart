@@ -26,7 +26,6 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
   late final TextEditingController _correoCtrl;
   late final TextEditingController _telefonoCtrl;
   late final TextEditingController _numeroDocumentoCtrl;
-  late final TextEditingController _notasCtrl;
 
   late String _tipoDocumento;
   String _countryCode = '+57';
@@ -80,7 +79,6 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
     _correoCtrl.dispose();
     _telefonoCtrl.dispose();
     _numeroDocumentoCtrl.dispose();
-    _notasCtrl.dispose();
     super.dispose();
   }
 

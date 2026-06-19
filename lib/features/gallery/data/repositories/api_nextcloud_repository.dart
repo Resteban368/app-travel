@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:agente_viajes/core/constants/api_constants.dart';
@@ -20,11 +20,13 @@ class ApiNextcloudRepository implements NextcloudRepository {
 
   @override
   Future<NextcloudBrowseResult> browse(String? folder) async {
-    final path = (folder != null && folder.isNotEmpty)
-        ? '/v1/nextcloud/browse/$folder'
-        : '/v1/nextcloud/browse';
-    final uri = Uri.parse('${ApiConstants.kBaseUrl}$path');
+    final base = Uri.parse('${ApiConstants.kBaseUrl}/v1/nextcloud/nc-browse');
+    final uri = (folder != null && folder.isNotEmpty)
+        ? base.replace(queryParameters: {'path': folder})
+        : base;
+    debugPrint('[Gallery] GET $uri');
     final response = await _client.get(uri);
+    debugPrint('[Gallery] status=${response.statusCode} body=${response.body}');
     if (response.statusCode != 200) {
       throw Exception('Error al navegar carpeta: ${response.statusCode}');
     }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:agente_viajes/core/widgets/saas_ui_components.dart';
 import 'package:flutter/material.dart';
@@ -4145,11 +4146,21 @@ class _ClientePickerDialog extends StatefulWidget {
 
 class _ClientePickerDialogState extends State<_ClientePickerDialog> {
   final _searchCtrl = TextEditingController();
+  Timer? _debounce;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  void _onSearch(String value, BuildContext ctx) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      final q = value.trim();
+      ctx.read<ClienteBloc>().add(LoadClientes(search: q.isEmpty ? null : q));
+    });
   }
 
   @override
@@ -4159,23 +4170,10 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       child: BlocBuilder<ClienteBloc, ClienteState>(
         builder: (context, state) {
+          final isSearching = state is ClienteLoading;
           List<Cliente> currentList = widget.clientes;
           if (state is ClienteLoaded) currentList = state.clientes;
           if (state is ClienteActionSuccess) currentList = state.clientes;
-
-          // Filtrado reactivo
-          final q = _searchCtrl.text.toLowerCase().trim();
-          final filtered = q.isEmpty
-              ? currentList
-              : currentList
-                    .where(
-                      (c) =>
-                          c.nombre.toLowerCase().contains(q) ||
-                          c.correo.toLowerCase().contains(q) ||
-                          c.telefono.contains(q) ||
-                          c.documento.toString().contains(q),
-                    )
-                    .toList();
 
           return Container(
             constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
@@ -4236,8 +4234,7 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                       color: SaasPalette.textPrimary,
                       fontSize: 14,
                     ),
-                    onChanged: (v) =>
-                        setState(() {}), // Forzar re-filtrado local
+                    onChanged: (v) => _onSearch(v, context),
                     decoration: InputDecoration(
                       hintText: 'Buscar por nombre, correo o documento...',
                       hintStyle: const TextStyle(
@@ -4271,7 +4268,14 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                 const SizedBox(height: 12),
                 // List
                 Expanded(
-                  child: filtered.isEmpty
+                  child: isSearching
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: SaasPalette.brand600,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : currentList.isEmpty
                       ? Center(
                           child: Text(
                             'Sin resultados',
@@ -4286,11 +4290,11 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                             horizontal: 16,
                             vertical: 4,
                           ),
-                          itemCount: filtered.length,
+                          itemCount: currentList.length,
                           separatorBuilder: (context, i) =>
                               const SizedBox(height: 4),
                           itemBuilder: (context, index) {
-                            final c = filtered[index];
+                            final c = currentList[index];
                             return Material(
                               color: Colors.transparent,
                               child: InkWell(

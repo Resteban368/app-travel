@@ -20,7 +20,6 @@ class ClienteListScreen extends StatefulWidget {
 
 class _ClienteListScreenState extends State<ClienteListScreen>
     with TickerProviderStateMixin {
-  late final AnimationController _bgCtrl;
   late final AnimationController _entryCtrl;
 
   late final Animation<double> _headerOpacity;
@@ -36,11 +35,6 @@ class _ClienteListScreenState extends State<ClienteListScreen>
   @override
   void initState() {
     super.initState();
-    _bgCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 10),
-    )..repeat();
-
     _entryCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -73,7 +67,6 @@ class _ClienteListScreenState extends State<ClienteListScreen>
 
   @override
   void dispose() {
-    _bgCtrl.dispose();
     _entryCtrl.dispose();
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
@@ -84,7 +77,9 @@ class _ClienteListScreenState extends State<ClienteListScreen>
   void _onScroll() {
     if (_isBottom && !(_debounce?.isActive ?? false)) {
       final state = context.read<ClienteBloc>().state;
-      if (state is ClienteLoaded && !state.hasReachedMax) {
+      // state.page == _currentPage garantiza que la página anterior ya cargó
+      // antes de pedir la siguiente, evitando dispatches duplicados.
+      if (state is ClienteLoaded && !state.hasReachedMax && state.page == _currentPage) {
         _loadNextPage();
       }
     }
@@ -476,135 +471,6 @@ class _ClienteCardState extends State<_ClienteCard> {
           onPressed: isSaving ? null : _confirmDelete,
         ),
       ],
-    );
-  }
-}
-
-class _Orb extends StatelessWidget {
-  final Color color;
-  final double size;
-  const _Orb({required this.color, required this.size});
-  @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: RadialGradient(colors: [color, Colors.transparent]),
-    ),
-  );
-}
-
-class _DotGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = D.border.withOpacity(0.2);
-    const spacing = 32.0;
-    for (double i = 0; i < size.width; i += spacing) {
-      for (double j = 0; j < size.height; j += spacing) {
-        canvas.drawCircle(Offset(i, j), 0.8, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
-}
-
-class _SkelCard extends StatefulWidget {
-  @override
-  State<_SkelCard> createState() => _SkelCardState();
-}
-
-class _SkelCardState extends State<_SkelCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _anim;
-
-  @override
-  void initState() {
-    super.initState();
-    _anim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _anim.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _anim,
-      builder: (context, _) => Container(
-        height: 100,
-        margin: const EdgeInsets.only(bottom: 16, left: 24, right: 24),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: D.border.withOpacity(0.5)),
-          gradient: LinearGradient(
-            begin: Alignment(-2.0 + (_anim.value * 4), -0.5),
-            end: Alignment(-1.0 + (_anim.value * 4), 0.5),
-            colors: [
-              D.surface.withOpacity(0.3),
-              D.surface.withOpacity(0.8),
-              D.surface.withOpacity(0.3),
-            ],
-            stops: const [0.0, 0.5, 1.0],
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: D.surface,
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    height: 16,
-                    width: 150,
-                    decoration: BoxDecoration(
-                      color: D.surface,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    height: 12,
-                    width: 200,
-                    decoration: BoxDecoration(
-                      color: D.surface,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    height: 12,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: D.surface,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

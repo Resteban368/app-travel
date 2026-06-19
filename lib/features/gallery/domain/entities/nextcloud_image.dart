@@ -15,7 +15,8 @@ class NextcloudImage extends Equatable {
 
   factory NextcloudImage.fromJson(Map<String, dynamic> json) => NextcloudImage(
     filename: json['filename']?.toString() ?? '',
-    folder: json['folder']?.toString() ?? '',
+    // API v2 usa "ncPath"; v1 usaba "folder"
+    folder: (json['ncPath'] ?? json['folder'])?.toString() ?? '',
     url: json['url']?.toString() ?? '',
     href: json['href']?.toString(),
   );
