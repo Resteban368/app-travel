@@ -134,7 +134,7 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: isError ? D.rose : D.emerald,
+        backgroundColor: isError ? context.saas.danger : context.saas.success,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -201,25 +201,25 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: D.emerald.withOpacity(0.1),
+                                    color: context.saas.success.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: D.emerald.withOpacity(0.3),
+                                      color: context.saas.success.withValues(alpha: 0.3),
                                     ),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
                                         Icons.security_rounded,
-                                        color: D.emerald,
+                                        color: context.saas.success,
                                         size: 16,
                                       ),
-                                      SizedBox(width: 8),
+                                      const SizedBox(width: 8),
                                       Text(
                                         'Información Financiera Segura',
                                         style: TextStyle(
-                                          color: D.emerald,
+                                          color: context.saas.success,
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -243,41 +243,44 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
                                     LayoutBuilder(
                                       builder: (context, constraints) {
                                         final isNarrow = constraints.maxWidth < 450;
-                                        final dropdowns = [
-                                          _buildDropdown(
-                                            value: _paymentType,
-                                            label: 'Tipo de Pago',
-                                            icon: Icons.payments_rounded,
-                                            items: _paymentTypes,
-                                            onChanged: canWrite
-                                                ? (v) => setState(
-                                                    () => _paymentType = v!,
-                                                  )
-                                                : null,
-                                          ),
-                                          if (isNarrow) const SizedBox(height: 20),
-                                          _buildDropdown(
-                                            value: _accountType,
-                                            label: 'Tipo de Cuenta',
-                                            icon: Icons.credit_card_rounded,
-                                            items: _accountTypes,
-                                            onChanged: canWrite
-                                                ? (v) => setState(
-                                                    () => _accountType = v!,
-                                                  )
-                                                : null,
-                                          ),
-                                        ];
+                                        final dropdownTipoPago = _buildDropdown(
+                                          value: _paymentType,
+                                          label: 'Tipo de Pago',
+                                          icon: Icons.payments_rounded,
+                                          items: _paymentTypes,
+                                          onChanged: canWrite
+                                              ? (v) => setState(
+                                                  () => _paymentType = v!,
+                                                )
+                                              : null,
+                                        );
+                                        final dropdownTipoCuenta = _buildDropdown(
+                                          value: _accountType,
+                                          label: 'Tipo de Cuenta',
+                                          icon: Icons.credit_card_rounded,
+                                          items: _accountTypes,
+                                          onChanged: canWrite
+                                              ? (v) => setState(
+                                                  () => _accountType = v!,
+                                                )
+                                              : null,
+                                        );
 
                                         if (isNarrow) {
-                                          return Column(children: dropdowns);
+                                          return Column(
+                                            children: [
+                                              dropdownTipoPago,
+                                              const SizedBox(height: 20),
+                                              dropdownTipoCuenta,
+                                            ],
+                                          );
                                         }
 
                                         return Row(
                                           children: [
-                                            Expanded(child: dropdowns[0]),
+                                            Expanded(child: dropdownTipoPago),
                                             const SizedBox(width: 20),
-                                            Expanded(child: dropdowns[2]),
+                                            Expanded(child: dropdownTipoCuenta),
                                           ],
                                         );
                                       },
@@ -359,7 +362,8 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
+            color: context.saas.textTertiary,
             fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.5,
@@ -370,16 +374,20 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
+              color: context.saas.bgSubtle,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
+              border: Border.all(color: context.saas.border),
             ),
             child: Row(
               children: [
-                Icon(icon, color: D.skyBlue, size: 20),
+                Icon(icon, color: context.saas.brand600, size: 20),
                 const SizedBox(width: 12),
                 Text(
                   value,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
@@ -388,19 +396,19 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
           DropdownButtonFormField<String>(
             isExpanded: true,
             initialValue: items.contains(value) ? value : items.first,
-            dropdownColor: Colors.white,
-            style: const TextStyle(color: Colors.black, fontSize: 14),
+            dropdownColor: context.saas.bgCanvas,
+            style: TextStyle(color: context.saas.textPrimary, fontSize: 14),
             decoration: InputDecoration(
-              prefixIcon: Icon(icon, color: SaasPalette.brand600, size: 20),
+              prefixIcon: Icon(icon, color: context.saas.brand600, size: 20),
               filled: true,
+              fillColor: context.saas.bgSubtle,
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.05)),
+                borderSide: BorderSide(color: context.saas.border),
               ),
-              fillColor: Colors.white,
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: D.skyBlue, width: 1.5),
+                borderSide: BorderSide(color: context.saas.brand600, width: 1.5),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
@@ -417,37 +425,31 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen>
   }
 
   Widget _buildVisibilitySwitch({required bool canWrite}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          decoration: BoxDecoration(
-            color: D.bg,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
-          ),
-          child: SwitchListTile(
-            title: const Text(
-              'Estado de la Cuenta',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            subtitle: Text(
-              _isActive ? 'Activa para cobros' : 'Inactiva temporalmente',
-              style: const TextStyle(color: D.slate400, fontSize: 12),
-            ),
-            value: _isActive,
-            activeThumbColor: D.emerald,
-            activeTrackColor: D.emerald.withOpacity(0.3),
-            inactiveThumbColor: D.slate400,
-            inactiveTrackColor: D.bg.withOpacity(0.5),
-            onChanged: canWrite ? (v) => setState(() => _isActive = v) : null,
+    return Container(
+      decoration: BoxDecoration(
+        color: context.saas.bgSubtle,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.saas.border),
+      ),
+      child: SwitchListTile(
+        title: Text(
+          'Estado de la Cuenta',
+          style: TextStyle(
+            color: context.saas.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
           ),
         ),
+        subtitle: Text(
+          _isActive ? 'Activa para cobros' : 'Inactiva temporalmente',
+          style: TextStyle(color: context.saas.textSecondary, fontSize: 12),
+        ),
+        value: _isActive,
+        activeThumbColor: context.saas.success,
+        activeTrackColor: context.saas.success.withValues(alpha: 0.3),
+        inactiveThumbColor: context.saas.textTertiary,
+        inactiveTrackColor: context.saas.bgSubtle,
+        onChanged: canWrite ? (v) => setState(() => _isActive = v) : null,
       ),
     );
   }

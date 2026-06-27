@@ -208,25 +208,25 @@ class _HotelFormScreenState extends State<HotelFormScreen>
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: SaasPalette.bgCanvas,
+        backgroundColor: context.saas.bgCanvas,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
+        title: Text(
           '¿Eliminar habitación?',
           style: TextStyle(
-            color: SaasPalette.textPrimary,
+            color: context.saas.textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           'Se eliminará la habitación "$label" de la lista.',
-          style: const TextStyle(color: SaasPalette.textSecondary),
+          style: TextStyle(color: context.saas.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
+            child: Text(
               'Cancelar',
-              style: TextStyle(color: SaasPalette.textSecondary),
+              style: TextStyle(color: context.saas.textSecondary),
             ),
           ),
           ElevatedButton(
@@ -235,7 +235,7 @@ class _HotelFormScreenState extends State<HotelFormScreen>
               setState(() => _habitaciones.removeAt(index));
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: SaasPalette.danger,
+              backgroundColor: context.saas.danger,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -289,9 +289,9 @@ class _HotelFormScreenState extends State<HotelFormScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -341,7 +341,7 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                 child: TextButton.icon(
                   onPressed: _addImagenHotel,
                   style: TextButton.styleFrom(
-                    foregroundColor: SaasPalette.brand600,
+                    foregroundColor: context.saas.brand600,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 11),
                   ),
@@ -391,9 +391,9 @@ class _HotelFormScreenState extends State<HotelFormScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -416,7 +416,7 @@ class _HotelFormScreenState extends State<HotelFormScreen>
               if (!_showHabitacionForm)
                 TextButton.icon(
                   onPressed: () => setState(() => _showHabitacionForm = true),
-                  style: TextButton.styleFrom(foregroundColor: SaasPalette.brand600),
+                  style: TextButton.styleFrom(foregroundColor: context.saas.brand600),
                   icon: const Icon(Icons.add_rounded, size: 16),
                   label: const Text(
                     'AGREGAR',
@@ -452,10 +452,10 @@ class _HotelFormScreenState extends State<HotelFormScreen>
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: SaasPalette.bgSubtle,
+                color: context.saas.bgSubtle,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: SaasPalette.brand600.withValues(alpha: 0.3),
+                  color: context.saas.brand600.withValues(alpha: 0.3),
                 ),
               ),
               child: Column(
@@ -464,9 +464,9 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                   // Encabezado
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.add_home_rounded,
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                         size: 16,
                       ),
                       const SizedBox(width: 8),
@@ -475,8 +475,8 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                           _editingIndex != null
                               ? 'Editar habitación'
                               : 'Nueva habitación',
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                           ),
@@ -484,9 +484,9 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                       ),
                       IconButton(
                         onPressed: () => setState(() => _resetHabitacionForm()),
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.close_rounded,
-                          color: SaasPalette.textTertiary,
+                          color: context.saas.textTertiary,
                           size: 20,
                         ),
                         padding: EdgeInsets.zero,
@@ -497,10 +497,10 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                   const SizedBox(height: 16),
 
                   // Tipo de cama
-                  const Text(
+                  Text(
                     'TIPO DE CAMA *',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.3,
@@ -509,27 +509,27 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
                     value: _habTipoCama,
-                    dropdownColor: SaasPalette.bgCanvas,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    dropdownColor: context.saas.bgCanvas,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 14,
                     ),
                     decoration: InputDecoration(
-                      prefixIcon: const Icon(
+                      prefixIcon: Icon(
                         Icons.bed_rounded,
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                         size: 18,
                       ),
                       filled: true,
-                      fillColor: SaasPalette.bgCanvas,
+                      fillColor: context.saas.bgCanvas,
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: SaasPalette.border),
+                        borderSide: BorderSide(color: context.saas.border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: SaasPalette.brand600,
+                        borderSide: BorderSide(
+                          color: context.saas.brand600,
                           width: 1.5,
                         ),
                       ),
@@ -538,10 +538,10 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                         vertical: 12,
                       ),
                     ),
-                    hint: const Text(
+                    hint: Text(
                       'Selecciona tipo',
                       style: TextStyle(
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                         fontSize: 13,
                       ),
                     ),
@@ -582,10 +582,10 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                   const SizedBox(height: 20),
 
                   // Imágenes habitación
-                  const Text(
+                  Text(
                     'IMÁGENES (opcional)',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.3,
@@ -632,9 +632,9 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                               });
                             }
                           },
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.add_circle_rounded,
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                             size: 28,
                           ),
                         ),
@@ -662,10 +662,10 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                   const SizedBox(height: 20),
 
                   // Servicios
-                  const Text(
+                  Text(
                     'SERVICIOS (opcional)',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.3,
@@ -694,9 +694,9 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                               });
                             }
                           },
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.add_circle_rounded,
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                             size: 28,
                           ),
                         ),
@@ -717,8 +717,8 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                                 e.value,
                                 style: const TextStyle(fontSize: 12),
                               ),
-                              backgroundColor: SaasPalette.brand50,
-                              side: const BorderSide(color: SaasPalette.border),
+                              backgroundColor: context.saas.brand50,
+                              side: BorderSide(color: context.saas.border),
                               deleteIcon: const Icon(Icons.close, size: 14),
                               onDeleted: () => setState(
                                 () => _habServicios.removeAt(e.key),
@@ -747,8 +747,8 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                           onPressed: () =>
                               setState(() => _resetHabitacionForm()),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: SaasPalette.textSecondary,
-                            side: const BorderSide(color: SaasPalette.border),
+                            foregroundColor: context.saas.textSecondary,
+                            side: BorderSide(color: context.saas.border),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -769,7 +769,7 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                         child: ElevatedButton(
                           onPressed: _submitHabitacion,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: SaasPalette.brand600,
+                            backgroundColor: context.saas.brand600,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
@@ -826,17 +826,17 @@ class _HotelFormScreenState extends State<HotelFormScreen>
               ),
             ),
             if (_loadingDetail)
-              const SliverFillRemaining(
+              SliverFillRemaining(
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircularProgressIndicator(color: SaasPalette.brand600),
+                      CircularProgressIndicator(color: context.saas.brand600),
                       SizedBox(height: 16),
                       Text(
                         'Cargando datos del hotel...',
                         style: TextStyle(
-                          color: SaasPalette.textSecondary,
+                          color: context.saas.textSecondary,
                           fontSize: 14,
                         ),
                       ),
@@ -867,27 +867,27 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                                 vertical: 8,
                               ),
                               decoration: BoxDecoration(
-                                color: SaasPalette.brand50,
+                                color: context.saas.brand50,
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: SaasPalette.brand600.withValues(
+                                  color: context.saas.brand600.withValues(
                                     alpha: 0.3,
                                   ),
                                 ),
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
                                     Icons.hotel_rounded,
-                                    color: SaasPalette.brand600,
+                                    color: context.saas.brand600,
                                     size: 16,
                                   ),
                                   SizedBox(width: 8),
                                   Text(
                                     'DATOS DEL HOTEL',
                                     style: TextStyle(
-                                      color: SaasPalette.brand600,
+                                      color: context.saas.brand600,
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -952,35 +952,35 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                                 children: [
                                   Container(
                                     decoration: BoxDecoration(
-                                      color: SaasPalette.bgSubtle,
+                                      color: context.saas.bgSubtle,
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: SaasPalette.border,
+                                        color: context.saas.border,
                                       ),
                                     ),
                                     child: SwitchListTile(
-                                      title: const Text(
+                                      title: Text(
                                         'Hotel Activo',
                                         style: TextStyle(
-                                          color: SaasPalette.textPrimary,
+                                          color: context.saas.textPrimary,
                                           fontSize: 14,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      subtitle: const Text(
+                                      subtitle: Text(
                                         'Disponible para asignar a reservas',
                                         style: TextStyle(
-                                          color: SaasPalette.textTertiary,
+                                          color: context.saas.textTertiary,
                                           fontSize: 12,
                                         ),
                                       ),
                                       value: _isActive,
-                                      activeThumbColor: SaasPalette.success,
-                                      activeTrackColor: SaasPalette.success
+                                      activeThumbColor: context.saas.success,
+                                      activeTrackColor: context.saas.success
                                           .withValues(alpha: 0.25),
                                       inactiveThumbColor:
-                                          SaasPalette.textTertiary,
-                                      inactiveTrackColor: SaasPalette.bgSubtle,
+                                          context.saas.textTertiary,
+                                      inactiveTrackColor: context.saas.bgSubtle,
                                       onChanged: (v) =>
                                           setState(() => _isActive = v),
                                     ),
@@ -1036,18 +1036,18 @@ class _GaleriaBtn extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: SaasPalette.brand600),
+          border: Border.all(color: context.saas.brand600),
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.photo_library_rounded,
-                color: SaasPalette.brand600, size: 16),
+                color: context.saas.brand600, size: 16),
             SizedBox(width: 5),
             Text(
               'Galería',
               style: TextStyle(
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -1074,8 +1074,8 @@ class _ImagePreviewCard extends StatelessWidget {
           height: 90,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: SaasPalette.border),
-            color: SaasPalette.bgSubtle,
+            border: Border.all(color: context.saas.border),
+            color: context.saas.bgSubtle,
           ),
           clipBehavior: Clip.antiAlias,
           child: AuthNetworkImage(url: url, fit: BoxFit.cover),
@@ -1087,8 +1087,8 @@ class _ImagePreviewCard extends StatelessWidget {
             onTap: onRemove,
             child: Container(
               padding: const EdgeInsets.all(3),
-              decoration: const BoxDecoration(
-                color: SaasPalette.danger,
+              decoration: BoxDecoration(
+                color: context.saas.danger,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.close_rounded, size: 13, color: Colors.white),
@@ -1111,8 +1111,8 @@ class _ImageThumbnailReadOnly extends StatelessWidget {
       height: 66,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: SaasPalette.border),
-        color: SaasPalette.bgSubtle,
+        border: Border.all(color: context.saas.border),
+        color: context.saas.bgSubtle,
       ),
       clipBehavior: Clip.antiAlias,
       child: AuthNetworkImage(url: url, fit: BoxFit.cover),
@@ -1151,9 +1151,9 @@ class _HabitacionCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1164,16 +1164,16 @@ class _HabitacionCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.bed_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 16,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       _label(habitacion.tipoCama),
-                      style: const TextStyle(
-                        color: SaasPalette.textPrimary,
+                      style: TextStyle(
+                        color: context.saas.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -1185,14 +1185,14 @@ class _HabitacionCard extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: SaasPalette.bgCanvas,
+                        color: context.saas.bgCanvas,
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: SaasPalette.border),
+                        border: Border.all(color: context.saas.border),
                       ),
                       child: Text(
                         '${habitacion.cantidad} cupo${habitacion.cantidad != 1 ? 's' : ''}',
-                        style: const TextStyle(
-                          color: SaasPalette.textSecondary,
+                        style: TextStyle(
+                          color: context.saas.textSecondary,
                           fontSize: 11,
                         ),
                       ),
@@ -1212,13 +1212,13 @@ class _HabitacionCard extends StatelessWidget {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: SaasPalette.brand600.withValues(alpha: 0.08),
+                              color: context.saas.brand600.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               s,
-                              style: const TextStyle(
-                                color: SaasPalette.brand600,
+                              style: TextStyle(
+                                color: context.saas.brand600,
                                 fontSize: 11,
                               ),
                             ),
@@ -1243,17 +1243,17 @@ class _HabitacionCard extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.notes_rounded,
                         size: 13,
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                       ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           habitacion.observaciones!,
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                             fontSize: 12,
                           ),
                         ),
@@ -1270,8 +1270,8 @@ class _HabitacionCard extends StatelessWidget {
             children: [
               Text(
                 fmt.format(habitacion.precio),
-                style: const TextStyle(
-                  color: SaasPalette.success,
+                style: TextStyle(
+                  color: context.saas.success,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1282,18 +1282,18 @@ class _HabitacionCard extends StatelessWidget {
                 children: [
                   GestureDetector(
                     onTap: onEdit,
-                    child: const Icon(
+                    child: Icon(
                       Icons.edit_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 18,
                     ),
                   ),
                   const SizedBox(width: 10),
                   GestureDetector(
                     onTap: onRemove,
-                    child: const Icon(
+                    child: Icon(
                       Icons.delete_outline_rounded,
-                      color: SaasPalette.danger,
+                      color: context.saas.danger,
                       size: 20,
                     ),
                   ),

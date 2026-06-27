@@ -26,9 +26,9 @@ class DialogDetailTour extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           child: Container(
             decoration: BoxDecoration(
-              color: SaasPalette.bgCanvas,
+              color: context.saas.bgCanvas,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: SaasPalette.border),
+              border: Border.all(color: context.saas.border),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
@@ -66,14 +66,14 @@ class DialogDetailTour extends StatelessWidget {
                           _SectionTitle(
                             icon: Icons.check_circle_rounded,
                             label: 'Incluye',
-                            color: SaasPalette.success,
+                            color: context.saas.success,
                           ),
                           const SizedBox(height: 12),
                           ...tour.inclusions.map(
                             (item) => _ListItem(
                               text: item,
                               icon: Icons.check_rounded,
-                              color: SaasPalette.success,
+                              color: context.saas.success,
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -84,14 +84,14 @@ class DialogDetailTour extends StatelessWidget {
                           _SectionTitle(
                             icon: Icons.cancel_rounded,
                             label: 'No incluye',
-                            color: SaasPalette.danger,
+                            color: context.saas.danger,
                           ),
                           const SizedBox(height: 12),
                           ...tour.exclusions.map(
                             (item) => _ListItem(
                               text: item,
                               icon: Icons.close_rounded,
-                              color: SaasPalette.danger,
+                              color: context.saas.danger,
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -102,7 +102,7 @@ class DialogDetailTour extends StatelessWidget {
                           _SectionTitle(
                             icon: Icons.map_rounded,
                             label: 'Itinerario',
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                           ),
                           const SizedBox(height: 16),
                           ...tour.itinerary.asMap().entries.map(
@@ -182,10 +182,10 @@ class _HeroSection extends StatelessWidget {
             child: Row(
               children: [
                 if (tour.isPromotion)
-                  _Tag(label: 'PROMO', color: SaasPalette.warning),
+                  _Tag(label: 'PROMO', color: context.saas.warning),
                 if (!tour.isActive) ...[
                   if (tour.isPromotion) const SizedBox(width: 8),
-                  _Tag(label: 'INACTIVO', color: SaasPalette.danger),
+                  _Tag(label: 'INACTIVO', color: context.saas.danger),
                 ],
               ],
             ),
@@ -272,7 +272,7 @@ class _PriceAgencyRow extends StatelessWidget {
       margin: const EdgeInsets.only(top: 24),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -281,17 +281,17 @@ class _PriceAgencyRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Precio por persona',
                   style: TextStyle(
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                     fontSize: 11,
                   ),
                 ),
                 Text(
                   currencyFormat.format(tour.price),
-                  style: const TextStyle(
-                    color: SaasPalette.brand600,
+                  style: TextStyle(
+                    color: context.saas.brand600,
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                   ),
@@ -299,23 +299,23 @@ class _PriceAgencyRow extends StatelessWidget {
               ],
             ),
           ),
-          Container(height: 30, width: 1, color: SaasPalette.border),
+          Container(height: 30, width: 1, color: context.saas.border),
           const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Agencia Operadora',
                   style: TextStyle(
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                     fontSize: 11,
                   ),
                 ),
                 Text(
                   tour.agency,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -360,12 +360,12 @@ class _InfoGrid extends StatelessWidget {
       itemBuilder: (context, i) => Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          border: Border.all(color: SaasPalette.border),
+          border: Border.all(color: context.saas.border),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           children: [
-            Icon(items[i].$1, size: 16, color: SaasPalette.brand600),
+            Icon(items[i].$1, size: 16, color: context.saas.brand600),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -374,15 +374,15 @@ class _InfoGrid extends StatelessWidget {
                 children: [
                   Text(
                     items[i].$2,
-                    style: const TextStyle(
-                      color: SaasPalette.textTertiary,
+                    style: TextStyle(
+                      color: context.saas.textTertiary,
                       fontSize: 9,
                     ),
                   ),
                   Text(
                     items[i].$3,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
@@ -416,8 +416,8 @@ class _SectionTitle extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           label,
-          style: const TextStyle(
-            color: SaasPalette.textPrimary,
+          style: TextStyle(
+            color: context.saas.textPrimary,
             fontSize: 15,
             fontWeight: FontWeight.w700,
           ),
@@ -449,8 +449,8 @@ class _ListItem extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                color: SaasPalette.textSecondary,
+              style: TextStyle(
+                color: context.saas.textSecondary,
                 fontSize: 13,
               ),
             ),
@@ -476,8 +476,8 @@ class _ItineraryItem extends StatelessWidget {
             Container(
               width: 28,
               height: 28,
-              decoration: const BoxDecoration(
-                color: SaasPalette.brand600,
+              decoration: BoxDecoration(
+                color: context.saas.brand600,
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -492,7 +492,7 @@ class _ItineraryItem extends StatelessWidget {
               ),
             ),
             if (!isLast)
-              Container(width: 2, height: 40, color: SaasPalette.border),
+              Container(width: 2, height: 40, color: context.saas.border),
           ],
         ),
         const SizedBox(width: 12),
@@ -502,8 +502,8 @@ class _ItineraryItem extends StatelessWidget {
             children: [
               Text(
                 day.title,
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
+                style: TextStyle(
+                  color: context.saas.textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -511,8 +511,8 @@ class _ItineraryItem extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 day.description,
-                style: const TextStyle(
-                  color: SaasPalette.textSecondary,
+                style: TextStyle(
+                  color: context.saas.textSecondary,
                   fontSize: 13,
                 ),
               ),

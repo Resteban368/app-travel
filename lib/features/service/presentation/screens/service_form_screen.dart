@@ -314,20 +314,20 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
     return BlocBuilder<SedeBloc, SedeState>(
       builder: (context, state) {
         if (state is SedeLoading || state is SedeInitial) {
-          return const Column(
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'SEDE ASOCIADA *',
                 style: TextStyle(
-                  color: D.slate400,
+                  color: context.saas.textTertiary,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
                 ),
               ),
-              SizedBox(height: 16),
-              CircularProgressIndicator(color: D.skyBlue),
+              const SizedBox(height: 16),
+              CircularProgressIndicator(color: context.saas.brand600),
             ],
           );
         }
@@ -343,10 +343,10 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'SEDE ASOCIADA *',
               style: TextStyle(
-                color: D.slate400,
+                color: context.saas.textTertiary,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
@@ -360,15 +360,15 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  color: D.surfaceHigh.withOpacity(0.5),
+                  color: context.saas.bgSubtle,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  border: Border.all(color: context.saas.border),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.store_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 20,
                     ),
                     const SizedBox(width: 12),
@@ -380,7 +380,10 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
                                 )
                                 .nombreSede
                           : 'Selecciona una sede',
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      style: TextStyle(
+                        color: context.saas.textPrimary,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -391,25 +394,29 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
                     sedes.any((s) => int.tryParse(s.id) == _selectedSedeId)
                     ? _selectedSedeId
                     : null,
-                dropdownColor: D.white,
-                style: const TextStyle(color: Colors.black, fontSize: 14),
+                dropdownColor: context.saas.bgCanvas,
+                style: TextStyle(
+                  color: context.saas.textPrimary,
+                  fontSize: 14,
+                ),
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(
+                  prefixIcon: Icon(
                     Icons.store_rounded,
-                    color: SaasPalette.brand600,
+                    color: context.saas.brand600,
                     size: 20,
                   ),
                   filled: true,
-                  fillColor: D.white,
+                  fillColor: context.saas.bgSubtle,
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: Colors.black.withOpacity(0.08),
-                    ),
+                    borderSide: BorderSide(color: context.saas.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: D.skyBlue, width: 1.5),
+                    borderSide: BorderSide(
+                      color: context.saas.brand600,
+                      width: 1.5,
+                    ),
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -437,9 +444,9 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -491,7 +498,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
                   child: TextButton.icon(
                     onPressed: _agregarImagen,
                     style: TextButton.styleFrom(
-                      foregroundColor: SaasPalette.brand600,
+                      foregroundColor: context.saas.brand600,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 11),
                     ),
@@ -556,25 +563,25 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: SaasPalette.bgCanvas,
+        backgroundColor: context.saas.bgCanvas,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           title,
-          style: const TextStyle(
-            color: SaasPalette.textPrimary,
+          style: TextStyle(
+            color: context.saas.textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           body,
-          style: const TextStyle(color: SaasPalette.textSecondary),
+          style: TextStyle(color: context.saas.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
+            child: Text(
               'Cancelar',
-              style: TextStyle(color: SaasPalette.textSecondary),
+              style: TextStyle(color: context.saas.textSecondary),
             ),
           ),
           ElevatedButton(
@@ -583,8 +590,8 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
               onConfirm();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: SaasPalette.danger,
-              foregroundColor: Colors.white,
+              backgroundColor: context.saas.danger,
+              foregroundColor: context.saas.bgApp,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -647,18 +654,18 @@ class _GaleriaBtn extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: SaasPalette.brand600),
+          border: Border.all(color: context.saas.brand600),
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.photo_library_rounded,
-                color: SaasPalette.brand600, size: 16),
+                color: context.saas.brand600, size: 16),
             SizedBox(width: 5),
             Text(
               'Galería',
               style: TextStyle(
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -691,8 +698,8 @@ class _ServiceImagePreviewCard extends StatelessWidget {
           height: 90,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: SaasPalette.border),
-            color: SaasPalette.bgSubtle,
+            border: Border.all(color: context.saas.border),
+            color: context.saas.bgSubtle,
           ),
           clipBehavior: Clip.antiAlias,
           child: AuthNetworkImage(url: url, fit: BoxFit.cover),
@@ -705,8 +712,8 @@ class _ServiceImagePreviewCard extends StatelessWidget {
               onTap: onRemove,
               child: Container(
                 padding: const EdgeInsets.all(3),
-                decoration: const BoxDecoration(
-                  color: SaasPalette.danger,
+                decoration: BoxDecoration(
+                  color: context.saas.danger,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(

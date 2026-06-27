@@ -28,14 +28,14 @@ class _SidebarNavItemState extends State<SidebarNavItem> {
 
     // Determine colors based on state
     final Color bgColor = isSelected
-        ? SaasPalette.brand50
+        ? context.saas.brand50
         : (_isHovered
-              ? SaasPalette.brand600.withValues(alpha: 0.08)
+              ? context.saas.brand600.withValues(alpha: 0.08)
               : Colors.transparent);
 
     final Color contentColor = isSelected
-        ? SaasPalette.brand600
-        : (_isHovered ? SaasPalette.brand600 : SaasPalette.textSecondary);
+        ? context.saas.brand600
+        : (_isHovered ? context.saas.brand600 : context.saas.textSecondary);
 
     // We keep the left border logic if we want a subtle indicator,
     // but the design mostly relies on the background and text color.

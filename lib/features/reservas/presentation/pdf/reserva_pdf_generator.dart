@@ -608,24 +608,46 @@ class ReservaPdfGenerator {
             children: [
               _infoRow('Nombre del tour:', tour.name, bold, regular),
               _infoRow('Agencia:', tour.agency, bold, regular),
-              _infoRow(
-                'Fecha inicio:',
-                DateFormat(
-                  'dd MMMM yyyy',
-                  'es',
-                ).format(tour.startDate ?? DateTime.now()),
-                bold,
-                regular,
-              ),
-              _infoRow(
-                'Fecha fin:',
-                DateFormat(
-                  'dd MMMM yyyy',
-                  'es',
-                ).format(tour.endDate ?? DateTime.now()),
-                bold,
-                regular,
-              ),
+              if (tour.disponibilidadTipo == 'permanente') ...[
+                if (reserva.fechaInicioPersonalizada != null)
+                  _infoRow(
+                    'Fecha inicio:',
+                    DateFormat('dd MMMM yyyy', 'es').format(reserva.fechaInicioPersonalizada!),
+                    bold,
+                    regular,
+                  ),
+                if (reserva.fechaFinPersonalizada != null)
+                  _infoRow(
+                    'Fecha fin:',
+                    DateFormat('dd MMMM yyyy', 'es').format(reserva.fechaFinPersonalizada!),
+                    bold,
+                    regular,
+                  ),
+              ] else ...[
+                _infoRow(
+                  'Fecha inicio:',
+                  DateFormat('dd MMMM yyyy', 'es').format(
+                    reserva.tourSalida != null
+                        ? DateTime.parse(reserva.tourSalida!.fechaInicio)
+                        : (tour.startDate ?? DateTime.now()),
+                  ),
+                  bold,
+                  regular,
+                ),
+                _infoRow(
+                  'Fecha fin:',
+                  DateFormat('dd MMMM yyyy', 'es').format(
+                    reserva.tourSalida != null
+                        ? DateTime.parse(reserva.tourSalida!.fechaFin)
+                        : (tour.endDate ?? DateTime.now()),
+                  ),
+                  bold,
+                  regular,
+                ),
+                if (reserva.tourSalida?.label != null &&
+                    reserva.tourSalida!.label!.isNotEmpty)
+                  _infoRow('Salida:', reserva.tourSalida!.label!, bold, regular),
+              ],
               if (tour.departurePoint.isNotEmpty)
                 _infoRow(
                   'Punto de salida:',
@@ -637,7 +659,10 @@ class ReservaPdfGenerator {
                 _infoRow('Hora de salida:', tour.departureTime, bold, regular),
               if (tour.arrival.isNotEmpty)
                 _infoRow('Destino/Llegada:', tour.arrival, bold, regular),
-              // _infoRow('Precio por persona:', _fmt(tour.price), bold, regular),
+              if (tour.descripcion != null && tour.descripcion!.isNotEmpty)
+                _infoRow('Descripción:', tour.descripcion!, bold, regular),
+              if (tour.recomendaciones != null && tour.recomendaciones!.isNotEmpty)
+                _infoRow('Recomendaciones:', tour.recomendaciones!, bold, regular),
             ],
           ),
         ),

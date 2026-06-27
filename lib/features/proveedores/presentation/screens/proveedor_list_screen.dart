@@ -71,7 +71,7 @@ class _ProveedorListBodyState extends State<_ProveedorListBody> {
               }).toList();
 
         return RefreshIndicator(
-          color: SaasPalette.brand600,
+          color: context.saas.brand600,
           onRefresh: () async =>
               context.read<ProveedorBloc>().add(const LoadProveedores()),
           child: CustomScrollView(
@@ -115,15 +115,15 @@ class _ProveedorListBodyState extends State<_ProveedorListBody> {
                         Icon(
                           Icons.business_rounded,
                           size: 56,
-                          color: SaasPalette.textTertiary.withValues(alpha: 0.4),
+                          color: context.saas.textTertiary.withValues(alpha: 0.4),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           _search.isEmpty
                               ? 'No hay proveedores registrados'
                               : 'Sin resultados para "$_search"',
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                             fontSize: 15,
                           ),
                         ),
@@ -165,7 +165,7 @@ class _ProveedorHeader extends StatelessWidget {
       icon: const Icon(Icons.add_rounded, size: 18),
       label: const Text('Nuevo Proveedor'),
       style: ElevatedButton.styleFrom(
-        backgroundColor: SaasPalette.brand600,
+        backgroundColor: context.saas.brand600,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -186,21 +186,21 @@ class _ProveedorHeader extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: SaasPalette.brand50,
+                      color: context.saas.brand50,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.business_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 20,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Proveedores',
                       style: TextStyle(
-                        color: SaasPalette.textPrimary,
+                        color: context.saas.textPrimary,
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                       ),
@@ -227,20 +227,20 @@ class _ProveedorHeader extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: SaasPalette.brand50,
+                          color: context.saas.brand50,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.business_rounded,
-                          color: SaasPalette.brand600,
+                          color: context.saas.brand600,
                           size: 20,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
+                      Text(
                         'Proveedores',
                         style: TextStyle(
-                          color: SaasPalette.textPrimary,
+                          color: context.saas.textPrimary,
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                         ),
@@ -248,10 +248,10 @@ class _ProveedorHeader extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Gestión de proveedores del negocio',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 13,
                     ),
                   ),
@@ -289,14 +289,14 @@ class _TipoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: SaasPalette.brand50,
+        color: context.saas.brand50,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: SaasPalette.brand600.withValues(alpha: 0.3)),
+        border: Border.all(color: context.saas.brand600.withValues(alpha: 0.3)),
       ),
       child: Text(
         _label(tipo),
-        style: const TextStyle(
-          color: SaasPalette.brand600,
+        style: TextStyle(
+          color: context.saas.brand600,
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
@@ -323,26 +323,26 @@ class _ProveedorCardState extends State<_ProveedorCard> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: SaasPalette.bgCanvas,
+        backgroundColor: context.saas.bgCanvas,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
+        title: Text(
           '¿Eliminar proveedor?',
           style: TextStyle(
-            color: SaasPalette.textPrimary,
+            color: context.saas.textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           'Se eliminará "${widget.proveedor.nombre}" permanentemente.',
-          style: const TextStyle(color: SaasPalette.textSecondary),
+          style: TextStyle(color: context.saas.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
+            child: Text(
               'Cancelar',
-              style: TextStyle(color: SaasPalette.textSecondary),
+              style: TextStyle(color: context.saas.textSecondary),
             ),
           ),
           ElevatedButton(
@@ -353,7 +353,7 @@ class _ProveedorCardState extends State<_ProveedorCard> {
                   .add(DeleteProveedor(widget.proveedor.id!));
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: SaasPalette.danger,
+              backgroundColor: context.saas.danger,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -375,17 +375,17 @@ class _ProveedorCardState extends State<_ProveedorCard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
+          color: context.saas.bgCanvas,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: _hovered
-                ? SaasPalette.brand600.withValues(alpha: 0.3)
-                : SaasPalette.border,
+                ? context.saas.brand600.withValues(alpha: 0.3)
+                : context.saas.border,
           ),
           boxShadow: _hovered
               ? [
                   BoxShadow(
-                    color: SaasPalette.brand600.withValues(alpha: 0.06),
+                    color: context.saas.brand600.withValues(alpha: 0.06),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -410,12 +410,12 @@ class _ProveedorCardState extends State<_ProveedorCard> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: SaasPalette.brand50,
+                  color: context.saas.brand50,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.business_rounded,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   size: 22,
                 ),
               ),
@@ -429,8 +429,8 @@ class _ProveedorCardState extends State<_ProveedorCard> {
                         Expanded(
                           child: Text(
                             p.nombre,
-                            style: const TextStyle(
-                              color: SaasPalette.textPrimary,
+                            style: TextStyle(
+                              color: context.saas.textPrimary,
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
                             ),
@@ -450,16 +450,16 @@ class _ProveedorCardState extends State<_ProveedorCard> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.badge_outlined,
                                 size: 12,
-                                color: SaasPalette.textTertiary,
+                                color: context.saas.textTertiary,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 'NIT: ${p.nit}',
-                                style: const TextStyle(
-                                  color: SaasPalette.textSecondary,
+                                style: TextStyle(
+                                  color: context.saas.textSecondary,
                                   fontSize: 12,
                                 ),
                               ),
@@ -469,16 +469,16 @@ class _ProveedorCardState extends State<_ProveedorCard> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.phone_rounded,
                                 size: 12,
-                                color: SaasPalette.textTertiary,
+                                color: context.saas.textTertiary,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 p.telefono!,
-                                style: const TextStyle(
-                                  color: SaasPalette.textSecondary,
+                                style: TextStyle(
+                                  color: context.saas.textSecondary,
                                   fontSize: 12,
                                 ),
                               ),
@@ -488,16 +488,16 @@ class _ProveedorCardState extends State<_ProveedorCard> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.email_rounded,
                                 size: 12,
-                                color: SaasPalette.textTertiary,
+                                color: context.saas.textTertiary,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 p.email!,
-                                style: const TextStyle(
-                                  color: SaasPalette.textSecondary,
+                                style: TextStyle(
+                                  color: context.saas.textSecondary,
                                   fontSize: 12,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -514,12 +514,12 @@ class _ProveedorCardState extends State<_ProveedorCard> {
               if (widget.canWrite) ...[
                 const SizedBox(width: 8),
                 PopupMenuButton<String>(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.more_vert_rounded,
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                     size: 18,
                   ),
-                  color: SaasPalette.bgCanvas,
+                  color: context.saas.bgCanvas,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -535,23 +535,23 @@ class _ProveedorCardState extends State<_ProveedorCard> {
                     }
                   },
                   itemBuilder: (_) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'edit',
                       child: Row(
                         children: [
-                          Icon(Icons.edit_rounded, size: 16, color: SaasPalette.brand600),
+                          Icon(Icons.edit_rounded, size: 16, color: context.saas.brand600),
                           SizedBox(width: 8),
-                          Text('Editar', style: TextStyle(color: SaasPalette.textPrimary)),
+                          Text('Editar', style: TextStyle(color: context.saas.textPrimary)),
                         ],
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'delete',
                       child: Row(
                         children: [
-                          Icon(Icons.delete_outline_rounded, size: 16, color: SaasPalette.danger),
+                          Icon(Icons.delete_outline_rounded, size: 16, color: context.saas.danger),
                           SizedBox(width: 8),
-                          Text('Eliminar', style: TextStyle(color: SaasPalette.danger)),
+                          Text('Eliminar', style: TextStyle(color: context.saas.danger)),
                         ],
                       ),
                     ),

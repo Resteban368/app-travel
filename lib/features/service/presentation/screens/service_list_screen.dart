@@ -43,7 +43,7 @@ class _ServiceListBodyState extends State<_ServiceListBody> {
         authState is AuthAuthenticated && authState.user.canWrite('services');
 
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       body: BlocBuilder<ServiceBloc, ServiceState>(
         builder: (context, state) {
           List<Service> list = [];
@@ -66,7 +66,7 @@ class _ServiceListBodyState extends State<_ServiceListBody> {
           return RefreshIndicator(
             onRefresh: () async =>
                 context.read<ServiceBloc>().add(LoadServices()),
-            color: SaasPalette.brand600,
+            color: context.saas.brand600,
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
@@ -177,11 +177,11 @@ class _ServiceHeader extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Catálogo de Servicios',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -191,7 +191,7 @@ class _ServiceHeader extends StatelessWidget {
                   Text(
                     'Gestiona los beneficios y servicios adicionales de tus productos.',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 14,
                     ),
                   ),
@@ -246,10 +246,10 @@ class _ServiceCardState extends State<_ServiceCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _isHovered ? SaasPalette.brand600 : SaasPalette.border,
+              color: _isHovered ? context.saas.brand600 : context.saas.border,
               width: _isHovered ? 1.5 : 1,
             ),
             boxShadow: [
@@ -276,12 +276,12 @@ class _ServiceCardState extends State<_ServiceCard> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: SaasPalette.brand50,
+                      color: context.saas.brand50,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.settings_suggest_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 24,
                     ),
                   ),
@@ -295,8 +295,8 @@ class _ServiceCardState extends State<_ServiceCard> {
                             Expanded(
                               child: Text(
                                 s.name,
-                                style: const TextStyle(
-                                  color: SaasPalette.textPrimary,
+                                style: TextStyle(
+                                  color: context.saas.textPrimary,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -311,8 +311,8 @@ class _ServiceCardState extends State<_ServiceCard> {
                           s.description,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                             fontSize: 13,
                           ),
                         ),
@@ -326,15 +326,15 @@ class _ServiceCardState extends State<_ServiceCard> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: SaasPalette.success.withOpacity(0.1),
+                                color: context.saas.success.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 s.cost != null && s.cost! > 0
                                     ? currencyFormat.format(s.cost)
                                     : 'Gratuito',
-                                style: const TextStyle(
-                                  color: SaasPalette.success,
+                                style: TextStyle(
+                                  color: context.saas.success,
                                   fontWeight: FontWeight.w800,
                                   fontSize: 14,
                                 ),
@@ -373,12 +373,12 @@ class _ServiceActionMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: const Icon(
+      icon: Icon(
         Icons.more_horiz_rounded,
-        color: SaasPalette.textTertiary,
+        color: context.saas.textTertiary,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: SaasPalette.bgCanvas,
+      color: context.saas.bgCanvas,
       elevation: 4,
       onSelected: (value) {
         if (value == 'edit') onEdit();
@@ -388,11 +388,11 @@ class _ServiceActionMenu extends StatelessWidget {
         PopupMenuItem(
           value: 'edit',
           child: Row(
-            children: const [
+            children: [
               Icon(
                 Icons.edit_outlined,
                 size: 18,
-                color: SaasPalette.textPrimary,
+                color: context.saas.textPrimary,
               ),
               SizedBox(width: 12),
               Text('Editar servicio', style: TextStyle(fontSize: 13)),
@@ -403,16 +403,16 @@ class _ServiceActionMenu extends StatelessWidget {
         PopupMenuItem(
           value: 'delete',
           child: Row(
-            children: const [
+            children: [
               Icon(
                 Icons.delete_outline_rounded,
                 size: 18,
-                color: SaasPalette.danger,
+                color: context.saas.danger,
               ),
               SizedBox(width: 12),
               Text(
                 'Eliminar',
-                style: TextStyle(color: SaasPalette.danger, fontSize: 13),
+                style: TextStyle(color: context.saas.danger, fontSize: 13),
               ),
             ],
           ),

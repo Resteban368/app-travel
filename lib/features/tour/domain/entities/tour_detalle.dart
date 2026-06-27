@@ -1,5 +1,27 @@
 // Models for the GET /v1/tours/{id}/detalle response.
 
+class TourSalidaResumen {
+  final int id;
+  final String fechaInicio;
+  final String fechaFin;
+  final String? label;
+
+  const TourSalidaResumen({
+    required this.id,
+    required this.fechaInicio,
+    required this.fechaFin,
+    this.label,
+  });
+
+  factory TourSalidaResumen.fromJson(Map<String, dynamic> json) =>
+      TourSalidaResumen(
+        id: json['id'] ?? 0,
+        fechaInicio: json['fecha_inicio']?.toString() ?? '',
+        fechaFin: json['fecha_fin']?.toString() ?? '',
+        label: json['label']?.toString(),
+      );
+}
+
 class ResponsableDetalle {
   final int id;
   final String nombre;
@@ -93,6 +115,10 @@ class ReservaDetalle {
 
   final List<String> asientosBus;
   final String? seleccionLink;
+  final String? fechaInicioPersonalizada;
+  final String? fechaFinPersonalizada;
+  final int? idTourSalida;
+  final TourSalidaResumen? tourSalida;
 
   const ReservaDetalle({
     required this.id,
@@ -112,6 +138,10 @@ class ReservaDetalle {
     this.servicios = const [],
     this.asientosBus = const [],
     this.seleccionLink,
+    this.fechaInicioPersonalizada,
+    this.fechaFinPersonalizada,
+    this.idTourSalida,
+    this.tourSalida,
   });
 
   factory ReservaDetalle.fromJson(Map<String, dynamic> json) {
@@ -149,6 +179,12 @@ class ReservaDetalle {
           .map((e) => e.toString())
           .toList(),
       seleccionLink: json['seleccion_link'],
+      fechaInicioPersonalizada: json['fecha_inicio_personalizada']?.toString(),
+      fechaFinPersonalizada: json['fecha_fin_personalizada']?.toString(),
+      idTourSalida: int.tryParse(json['id_tour_salida']?.toString() ?? ''),
+      tourSalida: json['tour_salida'] != null
+          ? TourSalidaResumen.fromJson(json['tour_salida'] as Map<String, dynamic>)
+          : null,
     );
   }
 }

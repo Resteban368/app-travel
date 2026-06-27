@@ -138,8 +138,8 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
           colorScheme: ColorScheme.dark(
             primary: D.royalBlue,
             onPrimary: Colors.white,
-            surface: D.surface,
-            onSurface: Colors.white,
+            surface: context.saas.textPrimary,
+            onSurface: context.saas.bgApp,
           ),
         ),
         child: child!,
@@ -289,24 +289,24 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _tipoDocumento,
-          dropdownColor: D.white,
+          dropdownColor: context.saas.bgApp,
           iconEnabledColor: D.slate400,
           style: const TextStyle(color: Colors.black, fontSize: 14),
           decoration: InputDecoration(
-            prefixIcon: const Icon(
+            prefixIcon: Icon(
               Icons.badge_rounded,
-              color: SaasPalette.brand600,
+              color: context.saas.brand600,
               size: 20,
             ),
             filled: true,
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.05)),
+              borderSide: BorderSide(color: context.saas.bgApp),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(
-                color: SaasPalette.brand600,
+              borderSide: BorderSide(
+                color: context.saas.brand600,
                 width: 1.5,
               ),
             ),
@@ -321,7 +321,7 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
                   value: tipo,
                   child: Text(
                     tipo,
-                    style: const TextStyle(color: Colors.black),
+                    style:  TextStyle(color: context.saas.textPrimary),
                   ),
                 ),
               )
@@ -336,10 +336,10 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'FECHA DE NACIMIENTO',
           style: TextStyle(
-            color: SaasPalette.textTertiary,
+            color: context.saas.textTertiary,
             fontSize: 10,
             fontWeight: FontWeight.w900,
             letterSpacing: 0.8,
@@ -353,14 +353,14 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: SaasPalette.border),
-              color: SaasPalette.bgSubtle,
+              border: Border.all(color: context.saas.border),
+              color: context.saas.bgSubtle,
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.cake_rounded,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   size: 18,
                 ),
                 const SizedBox(width: 12),
@@ -369,8 +369,8 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
                     _fechaNacimiento != null
                         ? '${_fechaNacimiento!.day}/${_fechaNacimiento!.month}/${_fechaNacimiento!.year}'
                         : 'Seleccionar fecha (Opcional)',
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 13,
                     ),
                   ),
@@ -378,9 +378,9 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
                 if (_fechaNacimiento != null)
                   GestureDetector(
                     onTap: () => setState(() => _fechaNacimiento = null),
-                    child: const Icon(
+                    child: Icon(
                       Icons.close_rounded,
-                      color: SaasPalette.textTertiary,
+                      color: context.saas.textTertiary,
                       size: 16,
                     ),
                   ),

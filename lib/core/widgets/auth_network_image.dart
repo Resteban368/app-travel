@@ -30,13 +30,13 @@ class AuthNetworkImage extends StatelessWidget {
         if (loadingProgress == null) return child;
         return Container(
           color: const Color(0xFFF1F5F9),
-          child: const Center(
+          child: Center(
             child: SizedBox(
               width: 18,
               height: 18,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
               ),
             ),
           ),
@@ -45,20 +45,20 @@ class AuthNetworkImage extends StatelessWidget {
       errorBuilder: (context, error, stackTrace) {
         return Container(
           color: const Color(0xFFF1F5F9),
-          child: const Center(
+          child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   Icons.broken_image_outlined,
-                  color: SaasPalette.textTertiary,
+                  color: context.saas.textTertiary,
                   size: 22,
                 ),
                 SizedBox(height: 2),
                 Text(
                   'Sin vista previa',
                   style: TextStyle(
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                     fontSize: 10,
                   ),
                   textAlign: TextAlign.center,

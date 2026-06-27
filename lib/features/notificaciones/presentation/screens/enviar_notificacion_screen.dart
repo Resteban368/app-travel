@@ -31,7 +31,7 @@ class _EnviarNotificacionScreenState extends State<EnviarNotificacionScreen> {
     ('sistema', 'Sistema', Icons.settings_rounded, Color(0xFF6B7280)),
     ('cotizacion', 'Cotización', Icons.request_quote_rounded, Color(0xFF7C3AED)),
     ('pago', 'Pago', Icons.payments_rounded, Color(0xFF059669)),
-    ('reserva', 'Reserva', Icons.airplane_ticket_rounded, SaasPalette.brand600),
+    ('reserva', 'Reserva', Icons.airplane_ticket_rounded, SaasPalette.brand600), // TODO: dark mode
   ];
 
   @override
@@ -82,18 +82,18 @@ class _EnviarNotificacionScreenState extends State<EnviarNotificacionScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: SaasPalette.bgApp,
+        backgroundColor: context.saas.bgApp,
         appBar: AppBar(
-          backgroundColor: SaasPalette.bgCanvas,
-          foregroundColor: SaasPalette.textPrimary,
+          backgroundColor: context.saas.bgCanvas,
+          foregroundColor: context.saas.textPrimary,
           elevation: 0,
-          shape: const Border(bottom: BorderSide(color: SaasPalette.border)),
-          title: const Text(
+          shape: Border(bottom: BorderSide(color: context.saas.border)),
+          title: Text(
             'Enviar Notificación',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: SaasPalette.textPrimary,
+              color: context.saas.textPrimary,
             ),
           ),
         ),
@@ -115,8 +115,8 @@ class _EnviarNotificacionScreenState extends State<EnviarNotificacionScreen> {
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _tituloCtrl,
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 14,
                           ),
                           decoration: _inputDecoration('Ej. Nueva actualización disponible'),
@@ -130,8 +130,8 @@ class _EnviarNotificacionScreenState extends State<EnviarNotificacionScreen> {
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _mensajeCtrl,
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 14,
                           ),
                           decoration: _inputDecoration(
@@ -167,17 +167,17 @@ class _EnviarNotificacionScreenState extends State<EnviarNotificacionScreen> {
                                 decoration: BoxDecoration(
                                   color: selected
                                       ? color.withValues(alpha: 0.12)
-                                      : SaasPalette.bgApp,
+                                      : context.saas.bgApp,
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
-                                    color: selected ? color : SaasPalette.border,
+                                    color: selected ? color : context.saas.border,
                                     width: selected ? 1.5 : 1,
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(icon, size: 15, color: selected ? color : SaasPalette.textSecondary),
+                                    Icon(icon, size: 15, color: selected ? color : context.saas.textSecondary),
                                     const SizedBox(width: 6),
                                     Text(
                                       label,
@@ -188,7 +188,7 @@ class _EnviarNotificacionScreenState extends State<EnviarNotificacionScreen> {
                                             : FontWeight.w400,
                                         color: selected
                                             ? color
-                                            : SaasPalette.textSecondary,
+                                            : context.saas.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -264,10 +264,10 @@ class _EnviarNotificacionScreenState extends State<EnviarNotificacionScreen> {
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: SaasPalette.brand600,
+                          backgroundColor: context.saas.brand600,
                           foregroundColor: Colors.white,
                           disabledBackgroundColor:
-                              SaasPalette.brand600.withValues(alpha: 0.6),
+                              context.saas.brand600.withValues(alpha: 0.6),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -306,8 +306,8 @@ class _EnviarNotificacionScreenState extends State<EnviarNotificacionScreen> {
 
   Widget _buildLabel(String text) => Text(
     text,
-    style: const TextStyle(
-      color: SaasPalette.textSecondary,
+    style: TextStyle(
+      color: context.saas.textSecondary,
       fontSize: 13,
       fontWeight: FontWeight.w500,
     ),
@@ -315,31 +315,31 @@ class _EnviarNotificacionScreenState extends State<EnviarNotificacionScreen> {
 
   InputDecoration _inputDecoration(String hint) => InputDecoration(
     hintText: hint,
-    hintStyle: const TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
+    hintStyle: TextStyle(color: context.saas.textTertiary, fontSize: 13),
     filled: true,
-    fillColor: SaasPalette.bgApp,
+    fillColor: context.saas.bgApp,
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: SaasPalette.border),
+      borderSide: BorderSide(color: context.saas.border),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: SaasPalette.border),
+      borderSide: BorderSide(color: context.saas.border),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: SaasPalette.brand600),
+      borderSide: BorderSide(color: context.saas.brand600),
     ),
     errorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: SaasPalette.danger),
+      borderSide: BorderSide(color: context.saas.danger),
     ),
     focusedErrorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: SaasPalette.danger),
+      borderSide: BorderSide(color: context.saas.danger),
     ),
-    counterStyle: const TextStyle(color: SaasPalette.textTertiary, fontSize: 11),
+    counterStyle: TextStyle(color: context.saas.textTertiary, fontSize: 11),
   );
 }
 
@@ -361,21 +361,21 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 16, color: SaasPalette.brand600),
+              Icon(icon, size: 16, color: context.saas.brand600),
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
+                style: TextStyle(
+                  color: context.saas.textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
@@ -414,11 +414,11 @@ class _DestinatarioOption extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: selected
-              ? SaasPalette.brand600.withValues(alpha: 0.08)
-              : SaasPalette.bgApp,
+              ? context.saas.brand600.withValues(alpha: 0.08)
+              : context.saas.bgApp,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? SaasPalette.brand600 : SaasPalette.border,
+            color: selected ? context.saas.brand600 : context.saas.border,
             width: selected ? 1.5 : 1,
           ),
         ),
@@ -428,13 +428,13 @@ class _DestinatarioOption extends StatelessWidget {
             Icon(
               icon,
               size: 22,
-              color: selected ? SaasPalette.brand600 : SaasPalette.textSecondary,
+              color: selected ? context.saas.brand600 : context.saas.textSecondary,
             ),
             const SizedBox(height: 8),
             Text(
               label,
               style: TextStyle(
-                color: selected ? SaasPalette.brand600 : SaasPalette.textPrimary,
+                color: selected ? context.saas.brand600 : context.saas.textPrimary,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -442,8 +442,8 @@ class _DestinatarioOption extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               sublabel,
-              style: const TextStyle(
-                color: SaasPalette.textTertiary,
+              style: TextStyle(
+                color: context.saas.textTertiary,
                 fontSize: 11,
               ),
             ),
@@ -469,10 +469,10 @@ class _AgenteSelectorField extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: SaasPalette.bgApp,
+          color: context.saas.bgApp,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected != null ? SaasPalette.brand600 : SaasPalette.border,
+            color: selected != null ? context.saas.brand600 : context.saas.border,
           ),
         ),
         child: Row(
@@ -480,13 +480,13 @@ class _AgenteSelectorField extends StatelessWidget {
             if (selected != null) ...[
               CircleAvatar(
                 radius: 14,
-                backgroundColor: SaasPalette.brand600.withValues(alpha: 0.15),
+                backgroundColor: context.saas.brand600.withValues(alpha: 0.15),
                 child: Text(
                   selected!.nombre.isNotEmpty
                       ? selected!.nombre[0].toUpperCase()
                       : '?',
-                  style: const TextStyle(
-                    color: SaasPalette.brand600,
+                  style: TextStyle(
+                    color: context.saas.brand600,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -499,16 +499,16 @@ class _AgenteSelectorField extends StatelessWidget {
                   children: [
                     Text(
                       selected!.nombre,
-                      style: const TextStyle(
-                        color: SaasPalette.textPrimary,
+                      style: TextStyle(
+                        color: context.saas.textPrimary,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     Text(
                       selected!.correo,
-                      style: const TextStyle(
-                        color: SaasPalette.textSecondary,
+                      style: TextStyle(
+                        color: context.saas.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -519,15 +519,15 @@ class _AgenteSelectorField extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Seleccionar agente...',
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  style: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 13,
                   ),
                 ),
               ),
-            const Icon(
+            Icon(
               Icons.arrow_drop_down_rounded,
-              color: SaasPalette.textSecondary,
+              color: context.saas.textSecondary,
             ),
           ],
         ),
@@ -558,7 +558,7 @@ class _AgentePickerDialogState extends State<_AgentePickerDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: SaasPalette.bgCanvas,
+      backgroundColor: context.saas.bgCanvas,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -573,16 +573,16 @@ class _AgentePickerDialogState extends State<_AgentePickerDialog> {
               padding: const EdgeInsets.fromLTRB(20, 20, 16, 12),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.person_search_rounded,
                     size: 18,
-                    color: SaasPalette.brand600,
+                    color: context.saas.brand600,
                   ),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'Seleccionar agente',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
@@ -590,10 +590,10 @@ class _AgentePickerDialogState extends State<_AgentePickerDialog> {
                   const Spacer(),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close_rounded,
                       size: 18,
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                     ),
                     padding: const EdgeInsets.all(4),
                     constraints: const BoxConstraints(),
@@ -608,51 +608,51 @@ class _AgentePickerDialogState extends State<_AgentePickerDialog> {
                 controller: _searchCtrl,
                 autofocus: true,
                 onChanged: (v) => setState(() => _query = v.toLowerCase()),
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
+                style: TextStyle(
+                  color: context.saas.textPrimary,
                   fontSize: 13,
                 ),
                 decoration: InputDecoration(
                   hintText: 'Buscar por nombre o correo...',
-                  hintStyle: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  hintStyle: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 13,
                   ),
-                  prefixIcon: const Icon(
+                  prefixIcon: Icon(
                     Icons.search_rounded,
                     size: 18,
-                    color: SaasPalette.textSecondary,
+                    color: context.saas.textSecondary,
                   ),
                   filled: true,
-                  fillColor: SaasPalette.bgApp,
+                  fillColor: context.saas.bgApp,
                   contentPadding: const EdgeInsets.symmetric(vertical: 10),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: SaasPalette.border),
+                    borderSide: BorderSide(color: context.saas.border),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: SaasPalette.border),
+                    borderSide: BorderSide(color: context.saas.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: SaasPalette.brand600),
+                    borderSide: BorderSide(color: context.saas.brand600),
                   ),
                 ),
               ),
             ),
-            const Divider(height: 1, color: SaasPalette.border),
+            Divider(height: 1, color: context.saas.border),
             // Lista
             Flexible(
               child: BlocBuilder<AgenteBloc, AgenteState>(
                 builder: (context, state) {
                   if (state is AgenteLoading) {
-                    return const SizedBox(
+                    return SizedBox(
                       height: 120,
                       child: Center(
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: SaasPalette.brand600,
+                          color: context.saas.brand600,
                         ),
                       ),
                     );
@@ -670,13 +670,13 @@ class _AgentePickerDialogState extends State<_AgentePickerDialog> {
                           a.correo.toLowerCase().contains(_query)).toList();
 
                   if (filtered.isEmpty) {
-                    return const SizedBox(
+                    return SizedBox(
                       height: 100,
                       child: Center(
                         child: Text(
                           'Sin resultados',
                           style: TextStyle(
-                            color: SaasPalette.textSecondary,
+                            color: context.saas.textSecondary,
                             fontSize: 13,
                           ),
                         ),
@@ -688,7 +688,7 @@ class _AgentePickerDialogState extends State<_AgentePickerDialog> {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: filtered.length,
                     separatorBuilder: (_, __) =>
-                        const Divider(height: 1, color: SaasPalette.border),
+                        Divider(height: 1, color: context.saas.border),
                     itemBuilder: (ctx, i) {
                       final agente = filtered[i];
                       return InkWell(
@@ -703,13 +703,13 @@ class _AgentePickerDialogState extends State<_AgentePickerDialog> {
                               CircleAvatar(
                                 radius: 18,
                                 backgroundColor:
-                                    SaasPalette.brand600.withValues(alpha: 0.12),
+                                    context.saas.brand600.withValues(alpha: 0.12),
                                 child: Text(
                                   agente.nombre.isNotEmpty
                                       ? agente.nombre[0].toUpperCase()
                                       : '?',
-                                  style: const TextStyle(
-                                    color: SaasPalette.brand600,
+                                  style: TextStyle(
+                                    color: context.saas.brand600,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -722,16 +722,16 @@ class _AgentePickerDialogState extends State<_AgentePickerDialog> {
                                   children: [
                                     Text(
                                       agente.nombre,
-                                      style: const TextStyle(
-                                        color: SaasPalette.textPrimary,
+                                      style: TextStyle(
+                                        color: context.saas.textPrimary,
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                     Text(
                                       agente.correo,
-                                      style: const TextStyle(
-                                        color: SaasPalette.textSecondary,
+                                      style: TextStyle(
+                                        color: context.saas.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -745,14 +745,14 @@ class _AgentePickerDialogState extends State<_AgentePickerDialog> {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: SaasPalette.danger
+                                    color: context.saas.danger
                                         .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: const Text(
+                                  child: Text(
                                     'Inactivo',
                                     style: TextStyle(
-                                      color: SaasPalette.danger,
+                                      color: context.saas.danger,
                                       fontSize: 10,
                                       fontWeight: FontWeight.w600,
                                     ),

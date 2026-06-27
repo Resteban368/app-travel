@@ -42,7 +42,7 @@ class _FaqListBodyState extends State<_FaqListBody> {
         authState is AuthAuthenticated && authState.user.canWrite('faqs');
 
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       body: BlocBuilder<FaqBloc, FaqState>(
         builder: (context, state) {
           List<Faq> list = [];
@@ -64,7 +64,7 @@ class _FaqListBodyState extends State<_FaqListBody> {
 
           return RefreshIndicator(
             onRefresh: () async => context.read<FaqBloc>().add(LoadFaqs()),
-            color: SaasPalette.brand600,
+            color: context.saas.brand600,
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
@@ -176,11 +176,11 @@ class _FaqHeader extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Preguntas Frecuentes',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -190,7 +190,7 @@ class _FaqHeader extends StatelessWidget {
                   Text(
                     'Administra las respuestas a las dudas más comunes de tus clientes.',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 14,
                     ),
                   ),
@@ -245,12 +245,12 @@ class _FaqCardState extends State<_FaqCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: (_isExpanded || _hovered)
-                  ? SaasPalette.brand600
-                  : SaasPalette.border,
+                  ? context.saas.brand600
+                  : context.saas.border,
               width: (_isExpanded || _hovered) ? 1.5 : 1,
             ),
             boxShadow: [
@@ -279,15 +279,15 @@ class _FaqCardState extends State<_FaqCard> {
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: f.isActive
-                              ? SaasPalette.brand50
-                              : SaasPalette.bgSubtle,
+                              ? context.saas.brand50
+                              : context.saas.bgSubtle,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.help_center_outlined,
                           color: f.isActive
-                              ? SaasPalette.brand600
-                              : SaasPalette.textTertiary,
+                              ? context.saas.brand600
+                              : context.saas.textTertiary,
                           size: 20,
                         ),
                       ),
@@ -296,13 +296,13 @@ class _FaqCardState extends State<_FaqCard> {
                         child: Text(
                           f.question,
                           style: TextStyle(
-                            color: SaasPalette.textPrimary,
+                            color: context.saas.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             decoration: f.isActive
                                 ? null
                                 : TextDecoration.lineThrough,
-                            decorationColor: SaasPalette.textTertiary,
+                            decorationColor: context.saas.textTertiary,
                           ),
                         ),
                       ),
@@ -312,9 +312,9 @@ class _FaqCardState extends State<_FaqCard> {
                       AnimatedRotation(
                         turns: _isExpanded ? 0.5 : 0.0,
                         duration: const Duration(milliseconds: 200),
-                        child: const Icon(
+                        child: Icon(
                           Icons.expand_more_rounded,
-                          color: SaasPalette.textTertiary,
+                          color: context.saas.textTertiary,
                         ),
                       ),
                     ],
@@ -325,7 +325,7 @@ class _FaqCardState extends State<_FaqCard> {
                 firstChild: const SizedBox(width: double.infinity),
                 secondChild: Column(
                   children: [
-                    const Divider(height: 1, color: SaasPalette.border),
+                    Divider(height: 1, color: context.saas.border),
                     Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -333,8 +333,8 @@ class _FaqCardState extends State<_FaqCard> {
                         children: [
                           Text(
                             f.answer,
-                            style: const TextStyle(
-                              color: SaasPalette.textSecondary,
+                            style: TextStyle(
+                              color: context.saas.textSecondary,
                               fontSize: 14,
                               height: 1.6,
                             ),

@@ -19,20 +19,20 @@ class _SectionDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: Divider(color: SaasPalette.border, height: 1)),
+        Expanded(child: Divider(color: context.saas.border, height: 1)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             label.toUpperCase(),
-            style: const TextStyle(
-              color: SaasPalette.textTertiary,
+            style: TextStyle(
+              color: context.saas.textTertiary,
               fontSize: 10,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.8,
             ),
           ),
         ),
-        Expanded(child: Divider(color: SaasPalette.border, height: 1)),
+        Expanded(child: Divider(color: context.saas.border, height: 1)),
       ],
     );
   }
@@ -91,9 +91,9 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: SaasPalette.border.withOpacity(0.5)),
+        border: Border.all(color: context.saas.border.withOpacity(0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -111,7 +111,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
               curve: Curves.easeInOut,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               decoration: BoxDecoration(
-                color: selected ? SaasPalette.bgCanvas : Colors.transparent,
+                color: selected ? context.saas.bgCanvas : Colors.transparent,
                 borderRadius: BorderRadius.circular(11),
                 boxShadow: selected
                     ? [
@@ -127,8 +127,8 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                 p.$2,
                 style: TextStyle(
                   color: selected
-                      ? SaasPalette.textPrimary
-                      : SaasPalette.textTertiary,
+                      ? context.saas.textPrimary
+                      : context.saas.textTertiary,
                   fontSize: 13,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
@@ -164,21 +164,21 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: SaasPalette.brand600.withOpacity(0.1),
+                          color: context.saas.brand600.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.bar_chart_rounded,
-                          color: SaasPalette.brand600,
+                          color: context.saas.brand600,
                           size: 20,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Rendimiento y Analítica',
                           style: TextStyle(
-                            color: SaasPalette.textPrimary,
+                            color: context.saas.textPrimary,
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
                           ),
@@ -195,20 +195,20 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: SaasPalette.brand600.withOpacity(0.1),
+                      color: context.saas.brand600.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.bar_chart_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 20,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'Rendimiento y Analítica',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
@@ -233,7 +233,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                       child: Container(
                         height: 64,
                         decoration: BoxDecoration(
-                          color: SaasPalette.bgCanvas,
+                          color: context.saas.bgCanvas,
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
@@ -246,31 +246,31 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
               return Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: SaasPalette.bgCanvas,
+                  color: context.saas.bgCanvas,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: SaasPalette.border),
+                  border: Border.all(color: context.saas.border),
                 ),
                 child: Column(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.error_outline_rounded,
-                      color: SaasPalette.danger,
+                      color: context.saas.danger,
                       size: 24,
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'No se pudieron cargar los datos analíticos.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: SaasPalette.textSecondary,
+                        color: context.saas.textSecondary,
                         fontSize: 14,
                       ),
                     ),
                     TextButton(
                       onPressed: _fetch,
-                      child: const Text(
+                      child: Text(
                         'Reintentar',
-                        style: TextStyle(color: SaasPalette.brand600),
+                        style: TextStyle(color: context.saas.brand600),
                       ),
                     ),
                   ],
@@ -290,7 +290,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                         width: double.infinity,
                         child: SummaryCard(
                           icon: Icons.check_circle_rounded,
-                          color: SaasPalette.success,
+                          color: context.saas.success,
                           label: 'Pagos validados',
                           value: '${data.pagosTotal}',
                           sub: currFmt.format(data.pagosMontoTotal),
@@ -303,7 +303,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                           Expanded(
                             child: SummaryCard(
                               icon: Icons.tour_rounded,
-                              color: SaasPalette.brand600,
+                              color: context.saas.brand600,
                               label: 'Reservas tour',
                               value: '${data.reservasTourTotal}',
                             ),
@@ -312,7 +312,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                           Expanded(
                             child: SummaryCard(
                               icon: Icons.request_quote_rounded,
-                              color: SaasPalette.warning,
+                              color: context.saas.warning,
                               label: 'Cotizaciones',
                               value: '${data.cotizacionesTotal}',
                             ),
@@ -328,7 +328,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                       Expanded(
                         child: SummaryCard(
                           icon: Icons.check_circle_rounded,
-                          color: SaasPalette.success,
+                          color: context.saas.success,
                           label: 'Pagos validados',
                           value: '${data.pagosTotal}',
                           sub: currFmt.format(data.pagosMontoTotal),
@@ -338,7 +338,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                       Expanded(
                         child: SummaryCard(
                           icon: Icons.tour_rounded,
-                          color: SaasPalette.brand600,
+                          color: context.saas.brand600,
                           label: 'Reservas tour',
                           value: '${data.reservasTourTotal}',
                         ),
@@ -347,7 +347,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                       Expanded(
                         child: SummaryCard(
                           icon: Icons.request_quote_rounded,
-                          color: SaasPalette.warning,
+                          color: context.saas.warning,
                           label: 'Cotizaciones',
                           value: '${data.cotizacionesTotal}',
                         ),
@@ -359,7 +359,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                 // ── Pagos validados ────────────────────────────────────────
                 AnalyticsExpansionCard(
                   icon: Icons.payments_rounded,
-                  color: SaasPalette.success,
+                  color: context.saas.success,
                   title: 'Pagos validados',
                   count: data.pagosTotal,
                   emptyText: 'Sin pagos validados en este período',
@@ -377,7 +377,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                 // ── Reservas de tour ───────────────────────────────────────
                 AnalyticsExpansionCard(
                   icon: Icons.tour_rounded,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   title: 'Reservas de tour',
                   count: data.reservasTourTotal,
                   emptyText: 'Sin reservas de tour en este período',
@@ -395,7 +395,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                 // ── Cotizaciones ───────────────────────────────────────────
                 AnalyticsExpansionCard(
                   icon: Icons.request_quote_rounded,
-                  color: SaasPalette.warning,
+                  color: context.saas.warning,
                   title: 'Cotizaciones recibidas',
                   count: data.cotizacionesTotal,
                   emptyText: 'Sin cotizaciones en este período',

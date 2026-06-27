@@ -84,13 +84,13 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
       lastDate: DateTime(2030),
       builder: (context, child) => Theme(
         data: ThemeData.light().copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: SaasPalette.brand600,
+          colorScheme: ColorScheme.light(
+            primary: context.saas.brand600,
             onPrimary: Colors.white,
-            surface: SaasPalette.bgCanvas,
-            onSurface: SaasPalette.textPrimary,
+            surface: context.saas.bgCanvas,
+            onSurface: context.saas.textPrimary,
           ),
-          dialogTheme: DialogThemeData(backgroundColor: SaasPalette.bgCanvas),
+          dialogTheme: DialogThemeData(backgroundColor: context.saas.bgCanvas),
         ),
         child: child!,
       ),
@@ -334,11 +334,11 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
                                 child: Container(
                                   height: 52,
                                   decoration: BoxDecoration(
-                                    color: SaasPalette.success,
+                                    color: context.saas.success,
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: SaasPalette.success.withValues(alpha: 0.25),
+                                        color: context.saas.success.withValues(alpha: 0.25),
                                         blurRadius: 12,
                                         offset: const Offset(0, 4),
                                       ),
@@ -431,8 +431,8 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (_) => const Center(
-          child: CircularProgressIndicator(color: SaasPalette.brand600),
+        builder: (_) => Center(
+          child: CircularProgressIndicator(color: context.saas.brand600),
         ),
       );
       await Future.delayed(const Duration(milliseconds: 150));
@@ -558,8 +558,8 @@ class _PhoneField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
+          style: TextStyle(
+            color: context.saas.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
@@ -568,9 +568,9 @@ class _PhoneField extends StatelessWidget {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: SaasPalette.border),
+            border: Border.all(color: context.saas.border),
           ),
           child: Row(
             children: [
@@ -578,14 +578,14 @@ class _PhoneField extends StatelessWidget {
               DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: countryCode,
-                  dropdownColor: SaasPalette.bgCanvas,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  dropdownColor: context.saas.bgCanvas,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 13,
                   ),
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.arrow_drop_down_rounded,
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                     size: 18,
                   ),
                   menuMaxHeight: 320,
@@ -598,8 +598,8 @@ class _PhoneField extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
                               '${cc.flag} ${cc.code}',
-                              style: const TextStyle(
-                                color: SaasPalette.textPrimary,
+                              style: TextStyle(
+                                color: context.saas.textPrimary,
                                 fontSize: 13,
                               ),
                             ),
@@ -609,21 +609,21 @@ class _PhoneField extends StatelessWidget {
                       .toList(),
                 ),
               ),
-              Container(width: 1, height: 24, color: SaasPalette.border),
+              Container(width: 1, height: 24, color: context.saas.border),
               // Campo numérico
               Expanded(
                 child: TextFormField(
                   controller: controller,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 14,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Número sin indicativo',
                     hintStyle: TextStyle(
-                      color: SaasPalette.textTertiary,
+                      color: context.saas.textTertiary,
                       fontSize: 13,
                     ),
                     border: InputBorder.none,
@@ -669,8 +669,8 @@ class _DatePickerPremium extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
+          style: TextStyle(
+            color: context.saas.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.5,
@@ -684,10 +684,10 @@ class _DatePickerPremium extends StatelessWidget {
             height: 52,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: SaasPalette.bgCanvas,
+              color: context.saas.bgCanvas,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: hasDate ? SaasPalette.brand600 : SaasPalette.border,
+                color: hasDate ? context.saas.brand600 : context.saas.border,
                 width: hasDate ? 1.5 : 1,
               ),
             ),
@@ -696,8 +696,8 @@ class _DatePickerPremium extends StatelessWidget {
                 Icon(
                   Icons.calendar_today_rounded,
                   color: hasDate
-                      ? SaasPalette.brand600
-                      : SaasPalette.textTertiary,
+                      ? context.saas.brand600
+                      : context.saas.textTertiary,
                   size: 18,
                 ),
                 const SizedBox(width: 12),
@@ -706,8 +706,8 @@ class _DatePickerPremium extends StatelessWidget {
                     text,
                     style: TextStyle(
                       color: hasDate
-                          ? SaasPalette.textPrimary
-                          : SaasPalette.textTertiary,
+                          ? context.saas.textPrimary
+                          : context.saas.textTertiary,
                       fontSize: 14,
                     ),
                   ),

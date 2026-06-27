@@ -30,7 +30,7 @@ class _PoliticaReservaListScreenState extends State<PoliticaReservaListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       body: BlocBuilder<PoliticaReservaBloc, PoliticaReservaState>(
         builder: (context, state) {
           final authState = context.watch<AuthBloc>().state;
@@ -58,7 +58,7 @@ class _PoliticaReservaListScreenState extends State<PoliticaReservaListScreen> {
           return RefreshIndicator(
             onRefresh: () async =>
                 context.read<PoliticaReservaBloc>().add(LoadPoliticas()),
-            color: SaasPalette.brand600,
+            color: context.saas.brand600,
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
@@ -169,11 +169,11 @@ class _PoliticaHeader extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Políticas de Reserva',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -183,7 +183,7 @@ class _PoliticaHeader extends StatelessWidget {
                   Text(
                     'Define los términos, condiciones y políticas de cancelación.',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 14,
                     ),
                   ),
@@ -239,10 +239,10 @@ class _PoliticaCardState extends State<_PoliticaCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
+              color: _hovered ? context.saas.brand600 : context.saas.border,
               width: _hovered ? 1.5 : 1,
             ),
             boxShadow: [
@@ -269,12 +269,12 @@ class _PoliticaCardState extends State<_PoliticaCard> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: SaasPalette.brand50,
+                      color: context.saas.brand50,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.policy_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 24,
                     ),
                   ),
@@ -288,8 +288,8 @@ class _PoliticaCardState extends State<_PoliticaCard> {
                             Expanded(
                               child: Text(
                                 p.titulo,
-                                style: const TextStyle(
-                                  color: SaasPalette.textPrimary,
+                                style: TextStyle(
+                                  color: context.saas.textPrimary,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -304,8 +304,8 @@ class _PoliticaCardState extends State<_PoliticaCard> {
                           p.descripcion,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                             fontSize: 13,
                           ),
                         ),
@@ -319,14 +319,14 @@ class _PoliticaCardState extends State<_PoliticaCard> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: SaasPalette.bgApp,
+                                color: context.saas.bgApp,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: SaasPalette.border),
+                                border: Border.all(color: context.saas.border),
                               ),
                               child: Text(
                                 p.tipoPolitica.toUpperCase(),
-                                style: const TextStyle(
-                                  color: SaasPalette.brand600,
+                                style: TextStyle(
+                                  color: context.saas.brand600,
                                   fontWeight: FontWeight.w800,
                                   fontSize: 10,
                                   letterSpacing: 0.5,
@@ -366,12 +366,12 @@ class _PoliticaActionMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: const Icon(
+      icon: Icon(
         Icons.more_horiz_rounded,
-        color: SaasPalette.textTertiary,
+        color: context.saas.textTertiary,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: SaasPalette.bgCanvas,
+      color: context.saas.bgCanvas,
       elevation: 4,
       onSelected: (value) {
         if (value == 'edit') onEdit();
@@ -381,11 +381,11 @@ class _PoliticaActionMenu extends StatelessWidget {
         PopupMenuItem(
           value: 'edit',
           child: Row(
-            children: const [
+            children: [
               Icon(
                 Icons.edit_outlined,
                 size: 18,
-                color: SaasPalette.textPrimary,
+                color: context.saas.textPrimary,
               ),
               SizedBox(width: 12),
               Text('Editar política', style: TextStyle(fontSize: 13)),
@@ -396,16 +396,16 @@ class _PoliticaActionMenu extends StatelessWidget {
         PopupMenuItem(
           value: 'delete',
           child: Row(
-            children: const [
+            children: [
               Icon(
                 Icons.delete_outline_rounded,
                 size: 18,
-                color: SaasPalette.danger,
+                color: context.saas.danger,
               ),
               SizedBox(width: 12),
               Text(
                 'Eliminar',
-                style: TextStyle(color: SaasPalette.danger, fontSize: 13),
+                style: TextStyle(color: context.saas.danger, fontSize: 13),
               ),
             ],
           ),

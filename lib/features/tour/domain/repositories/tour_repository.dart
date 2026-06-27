@@ -1,6 +1,7 @@
 import '../entities/tour.dart';
 import '../entities/tour_detalle.dart';
 import '../entities/tour_precio.dart';
+import '../entities/tour_salida.dart';
 
 /// Abstract contract for tour CRUD operations.
 abstract class TourRepository {
@@ -16,4 +17,6 @@ abstract class TourRepository {
   Future<void> duplicarTour(String id);
   Future<List<String>> getAgentesForBus(String tourId, int busLayoutId);
   Future<void> updateAgentesForBus(String tourId, int busLayoutId, List<String> asientos);
+  Future<List<TourSalida>> getTourSalidas(String tourId);
+  Future<TourSalida> addTourSalida(String tourId, TourSalida salida);
 }

@@ -7,6 +7,7 @@ import '../../domain/entities/tour.dart';
 import '../../domain/entities/tour_detalle.dart';
 import '../../domain/entities/tour_precio.dart';
 import '../../domain/entities/precio_grupal.dart';
+import '../../domain/entities/tour_salida.dart';
 import '../../domain/repositories/tour_repository.dart';
 
 class ApiTourRepository implements TourRepository {
@@ -66,6 +67,29 @@ class ApiTourRepository implements TourRepository {
   }
 
   @override
+  Future<List<TourSalida>> getTourSalidas(String tourId) async {
+    final url = '$_baseUrl/$tourId/salidas';
+    final response = await client.get(Uri.parse(url), headers: _headers);
+    if (response.statusCode != 200) throw ApiException.fromResponse(response);
+    final data = json.decode(response.body) as List<dynamic>;
+    return data.map((s) => TourSalida.fromJson(s as Map<String, dynamic>)).toList();
+  }
+
+  @override
+  Future<TourSalida> addTourSalida(String tourId, TourSalida salida) async {
+    final url = '$_baseUrl/$tourId/salidas';
+    final response = await client.post(
+      Uri.parse(url),
+      headers: _headers,
+      body: json.encode(salida.toJson()),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw ApiException.fromResponse(response);
+    }
+    return TourSalida.fromJson(json.decode(response.body) as Map<String, dynamic>);
+  }
+
+  @override
   Future<String> createTour(Tour tour) async {
     final payload = _toJson(tour);
     if (tour.modoPrecio == 'grupal') {
@@ -73,6 +97,11 @@ class ApiTourRepository implements TourRepository {
           tour.preciosGrupales.map((p) => p.toJson()).toList();
     } else {
       payload['precios'] = tour.precios.map((p) => p.toJson()).toList();
+    }
+    if (tour.disponibilidadTipo == 'multiples_fechas' &&
+        tour.salidas != null &&
+        tour.salidas!.isNotEmpty) {
+      payload['salidas'] = tour.salidas!.map((s) => s.toJson()).toList();
     }
     final body = json.encode(payload);
     debugPrint('📤 [ApiTourRepository] Creating tour: $body');
@@ -260,6 +289,14 @@ class ApiTourRepository implements TourRepository {
       imagenes: (json['imagenes'] as List? ?? [])
           .whereType<String>()
           .toList(),
+      disponibilidadTipo: json['disponibilidad_tipo']?.toString() ?? 'fecha_fija',
+      salidas: json['salidas'] != null
+          ? (json['salidas'] as List)
+                .map((s) => TourSalida.fromJson(s as Map<String, dynamic>))
+                .toList()
+          : null,
+      descripcion: json['descripcion']?.toString(),
+      recomendaciones: json['recomendaciones']?.toString(),
     );
   }
 
@@ -269,8 +306,9 @@ class ApiTourRepository implements TourRepository {
       'id_tour': tour.idTour,
       'nombre_tour': tour.name,
       'agencia': tour.agency,
-      'fecha_inicio': tour.startDate!.toIso8601String(),
-      'fecha_fin': tour.endDate!.toIso8601String(),
+      'disponibilidad_tipo': tour.disponibilidadTipo,
+      if (tour.startDate != null) 'fecha_inicio': tour.startDate!.toIso8601String(),
+      if (tour.endDate != null) 'fecha_fin': tour.endDate!.toIso8601String(),
       if (!isGrupal) 'precio': tour.price,
       'modo_precio': tour.modoPrecio ?? 'individual',
       'punto_partida': tour.departurePoint,
@@ -298,6 +336,10 @@ class ApiTourRepository implements TourRepository {
       'bus_layout_ids': tour.busLayoutIds,
       if (tour.tipoTour != null) 'tipo_tour': tour.tipoTour,
       'imagenes': tour.imagenes,
+      if (tour.descripcion != null && tour.descripcion!.isNotEmpty)
+        'descripcion': tour.descripcion,
+      if (tour.recomendaciones != null && tour.recomendaciones!.isNotEmpty)
+        'recomendaciones': tour.recomendaciones,
     };
   }
 }

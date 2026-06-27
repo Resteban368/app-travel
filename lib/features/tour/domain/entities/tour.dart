@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'tour_precio.dart';
 import 'precio_grupal.dart';
+import 'tour_salida.dart';
 
 /// Represents a day in the tour itinerary.
 class ItineraryDay extends Equatable {
@@ -56,6 +57,10 @@ class Tour extends Equatable {
   final String? modoPrecio;
   final List<PrecioGrupal> preciosGrupales;
   final List<String> imagenes;
+  final String disponibilidadTipo; // 'fecha_fija' | 'multiples_fechas' | 'permanente'
+  final List<TourSalida>? salidas;
+  final String? descripcion;
+  final String? recomendaciones;
 
   const Tour({
     required this.id,
@@ -86,6 +91,10 @@ class Tour extends Equatable {
     this.modoPrecio,
     this.preciosGrupales = const [],
     this.imagenes = const [],
+    this.disponibilidadTipo = 'fecha_fija',
+    this.salidas,
+    this.descripcion,
+    this.recomendaciones,
   });
 
   Tour copyWith({
@@ -117,6 +126,10 @@ class Tour extends Equatable {
     String? modoPrecio,
     List<PrecioGrupal>? preciosGrupales,
     List<String>? imagenes,
+    String? disponibilidadTipo,
+    List<TourSalida>? salidas,
+    String? descripcion,
+    String? recomendaciones,
   }) {
     return Tour(
       id: id ?? this.id,
@@ -147,6 +160,10 @@ class Tour extends Equatable {
       modoPrecio: modoPrecio ?? this.modoPrecio,
       preciosGrupales: preciosGrupales ?? this.preciosGrupales,
       imagenes: imagenes ?? this.imagenes,
+      disponibilidadTipo: disponibilidadTipo ?? this.disponibilidadTipo,
+      salidas: salidas ?? this.salidas,
+      descripcion: descripcion ?? this.descripcion,
+      recomendaciones: recomendaciones ?? this.recomendaciones,
     );
   }
 
@@ -180,5 +197,9 @@ class Tour extends Equatable {
     modoPrecio,
     preciosGrupales,
     imagenes,
+    disponibilidadTipo,
+    salidas,
+    descripcion,
+    recomendaciones,
   ];
 }

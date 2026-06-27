@@ -366,7 +366,7 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
     Widget body;
 
     if (_loadingHistorial) {
-      body = const Padding(
+      body = Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
         child: Center(
           child: Row(
@@ -377,14 +377,14 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
                 height: 16,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                 ),
               ),
               SizedBox(width: 10),
               Text(
                 'Cargando historial...',
                 style: TextStyle(
-                  color: SaasPalette.textSecondary,
+                  color: context.saas.textSecondary,
                   fontSize: 13,
                 ),
               ),
@@ -396,26 +396,26 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
       body = Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: SaasPalette.danger.withValues(alpha: 0.07),
+          color: context.saas.danger.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: SaasPalette.danger.withValues(alpha: 0.2)),
+          border: Border.all(color: context.saas.danger.withValues(alpha: 0.2)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.error_outline_rounded,
-                color: SaasPalette.danger, size: 18),
+            Icon(Icons.error_outline_rounded,
+                color: context.saas.danger, size: 18),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 'Error al cargar el historial',
-                style: const TextStyle(
-                  color: SaasPalette.danger, fontSize: 13),
+                style: TextStyle(
+                  color: context.saas.danger, fontSize: 13),
               ),
             ),
             TextButton(
               onPressed: _loadHistorial,
-              child: const Text('Reintentar',
-                  style: TextStyle(color: SaasPalette.brand600, fontSize: 12)),
+              child: Text('Reintentar',
+                  style: TextStyle(color: context.saas.brand600, fontSize: 12)),
             ),
           ],
         ),
@@ -529,27 +529,27 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: SaasPalette.brand50,
+                              color: context.saas.brand50,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: SaasPalette.brand600.withValues(
+                                color: context.saas.brand600.withValues(
                                   alpha: 0.3,
                                 ),
                               ),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
                                   Icons.directions_bus_rounded,
-                                  color: SaasPalette.brand600,
+                                  color: context.saas.brand600,
                                   size: 16,
                                 ),
                                 SizedBox(width: 8),
                                 Text(
                                   'CONFIGURACIÓN DEL BUS',
                                   style: TextStyle(
-                                    color: SaasPalette.brand600,
+                                    color: context.saas.brand600,
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -615,8 +615,8 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
                                       child: Text(
                                         '$_filasPassajeros',
                                         textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          color: SaasPalette.textPrimary,
+                                        style: TextStyle(
+                                          color: context.saas.textPrimary,
                                           fontSize: 18,
                                           fontWeight: FontWeight.w800,
                                         ),
@@ -691,10 +691,10 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
                                 const SizedBox(height: 12),
                                 Row(
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.touch_app_rounded,
                                       size: 16,
-                                      color: SaasPalette.textTertiary,
+                                      color: context.saas.textTertiary,
                                     ),
                                     const SizedBox(width: 6),
                                                                     Expanded(
@@ -708,8 +708,8 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
                                             : _paintMode == _PaintMode.conductor
                                             ? 'Toca una esquina del frente del bus para el conductor'
                                             : 'Toca un asiento para restaurarlo como normal',
-                                        style: const TextStyle(
-                                          color: SaasPalette.textTertiary,
+                                        style: TextStyle(
+                                          color: context.saas.textTertiary,
                                           fontSize: 12,
                                         ),
                                       ),
@@ -779,9 +779,9 @@ class _PaintModeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       padding: const EdgeInsets.all(4),
       child: Column(
@@ -791,7 +791,7 @@ class _PaintModeSelector extends StatelessWidget {
               _ModeTab(
                 label: 'Normal',
                 icon: Icons.event_seat_rounded,
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
                 selected: mode == _PaintMode.normal,
                 onTap: () => onChanged(_PaintMode.normal),
               ),
@@ -875,7 +875,7 @@ class _ModeTab extends StatelessWidget {
               Icon(
                 icon,
                 size: 14,
-                color: selected ? color : SaasPalette.textTertiary,
+                color: selected ? color : context.saas.textTertiary,
               ),
               const SizedBox(width: 5),
               Text(
@@ -883,7 +883,7 @@ class _ModeTab extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? color : SaasPalette.textTertiary,
+                  color: selected ? color : context.saas.textTertiary,
                 ),
               ),
             ],
@@ -921,12 +921,12 @@ class _SeatSetPanel extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: seats.isNotEmpty ? bgColor : SaasPalette.bgSubtle,
+        color: seats.isNotEmpty ? bgColor : context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: seats.isNotEmpty
               ? color.withValues(alpha: 0.4)
-              : SaasPalette.border,
+              : context.saas.border,
         ),
       ),
       child: Column(
@@ -949,8 +949,8 @@ class _SeatSetPanel extends StatelessWidget {
                   children: [
                     Text(
                       label,
-                      style: const TextStyle(
-                        color: SaasPalette.textPrimary,
+                      style: TextStyle(
+                        color: context.saas.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -958,8 +958,8 @@ class _SeatSetPanel extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       hint,
-                      style: const TextStyle(
-                        color: SaasPalette.textTertiary,
+                      style: TextStyle(
+                        color: context.saas.textTertiary,
                         fontSize: 12,
                       ),
                     ),
@@ -1063,9 +1063,9 @@ class _ColumnaConfigSelector extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1075,23 +1075,23 @@ class _ColumnaConfigSelector extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: SaasPalette.brand50,
+                  color: context.saas.brand50,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.view_column_rounded,
                   size: 18,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                 ),
               ),
               const SizedBox(width: 14),
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Distribución de asientos',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1100,7 +1100,7 @@ class _ColumnaConfigSelector extends StatelessWidget {
                   Text(
                     'Columnas por lado del pasillo',
                     style: TextStyle(
-                      color: SaasPalette.textTertiary,
+                      color: context.saas.textTertiary,
                       fontSize: 12,
                     ),
                   ),
@@ -1124,13 +1124,13 @@ class _ColumnaConfigSelector extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: selected
-                          ? SaasPalette.brand600
-                          : SaasPalette.bgApp,
+                          ? context.saas.brand600
+                          : context.saas.bgApp,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: selected
-                            ? SaasPalette.brand600
-                            : SaasPalette.border,
+                            ? context.saas.brand600
+                            : context.saas.border,
                       ),
                     ),
                     child: Column(
@@ -1143,7 +1143,7 @@ class _ColumnaConfigSelector extends StatelessWidget {
                           style: TextStyle(
                             color: selected
                                 ? Colors.white
-                                : SaasPalette.textPrimary,
+                                : context.saas.textPrimary,
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                           ),
@@ -1154,7 +1154,7 @@ class _ColumnaConfigSelector extends StatelessWidget {
                           style: TextStyle(
                             color: selected
                                 ? Colors.white.withValues(alpha: 0.8)
-                                : SaasPalette.textTertiary,
+                                : context.saas.textTertiary,
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
                           ),
@@ -1187,14 +1187,14 @@ class _StepButton extends StatelessWidget {
         height: 32,
         decoration: BoxDecoration(
           color: onPressed != null
-              ? SaasPalette.brand600
-              : SaasPalette.bgSubtle,
+              ? context.saas.brand600
+              : context.saas.bgSubtle,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           icon,
           size: 16,
-          color: onPressed != null ? Colors.white : SaasPalette.textTertiary,
+          color: onPressed != null ? Colors.white : context.saas.textTertiary,
         ),
       ),
     );
@@ -1219,19 +1219,19 @@ class _ConfigOption extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: SaasPalette.brand50,
+              color: context.saas.brand50,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, size: 18, color: SaasPalette.brand600),
+            child: Icon(icon, size: 18, color: context.saas.brand600),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -1240,8 +1240,8 @@ class _ConfigOption extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1249,8 +1249,8 @@ class _ConfigOption extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  style: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 12,
                   ),
                 ),
@@ -1275,8 +1275,8 @@ class _ResumenCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            SaasPalette.brand600,
-            SaasPalette.brand600.withValues(alpha: 0.8),
+            context.saas.brand600,
+            context.saas.brand600.withValues(alpha: 0.8),
           ],
         ),
         borderRadius: BorderRadius.circular(14),
@@ -1556,9 +1556,9 @@ class _HistorialItemCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1570,8 +1570,8 @@ class _HistorialItemCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   item.nombreTour,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1601,13 +1601,13 @@ class _HistorialItemCard extends StatelessWidget {
           // Fechas
           Row(
             children: [
-              const Icon(Icons.calendar_today_rounded,
-                  size: 12, color: SaasPalette.textTertiary),
+              Icon(Icons.calendar_today_rounded,
+                  size: 12, color: context.saas.textTertiary),
               const SizedBox(width: 5),
               Text(
                 '$inicio → $fin',
-                style: const TextStyle(
-                  color: SaasPalette.textSecondary,
+                style: TextStyle(
+                  color: context.saas.textSecondary,
                   fontSize: 12,
                 ),
               ),
@@ -1645,7 +1645,7 @@ class _HistorialItemCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: ocup,
                     minHeight: 6,
-                    backgroundColor: SaasPalette.border,
+                    backgroundColor: context.saas.border,
                     valueColor: AlwaysStoppedAnimation<Color>(
                       item.porcentajeOcupacion >= 90
                           ? const Color(0xFFEF4444)
@@ -1659,8 +1659,8 @@ class _HistorialItemCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 '${item.porcentajeOcupacion}%',
-                style: const TextStyle(
-                  color: SaasPalette.textSecondary,
+                style: TextStyle(
+                  color: context.saas.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1683,19 +1683,19 @@ class _StatChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 11, color: SaasPalette.textTertiary),
+          Icon(icon, size: 11, color: context.saas.textTertiary),
           const SizedBox(width: 4),
           Text(
             label,
-            style: const TextStyle(
-              color: SaasPalette.textSecondary,
+            style: TextStyle(
+              color: context.saas.textSecondary,
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
@@ -1727,8 +1727,8 @@ class _LeyendaItem extends StatelessWidget {
         const SizedBox(width: 5),
         Text(
           label,
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
+          style: TextStyle(
+            color: context.saas.textSecondary,
             fontSize: 12,
           ),
         ),

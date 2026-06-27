@@ -93,6 +93,7 @@ import '../../features/gallery/presentation/bloc/gallery_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../network/auth_client.dart';
+import '../theme/theme_cubit.dart';
 
 final sl = GetIt.instance;
 
@@ -101,6 +102,9 @@ void initDependencies() {
   // ─── Network ──────────────────────────────────────────
   sl.registerLazySingleton(() => const FlutterSecureStorage());
   sl.registerLazySingleton(() => SessionExpiredNotifier());
+
+  // ─── Theme ────────────────────────────────────────────
+  sl.registerLazySingleton(() => ThemeCubit(sl()));
   sl.registerLazySingleton<http.Client>(
     () => AuthClient(http.Client(), sl(), sl()),
   );

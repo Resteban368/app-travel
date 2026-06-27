@@ -29,6 +29,8 @@ import '../bloc/reserva_state.dart';
 import '../../../../features/tour/presentation/bloc/tour_bloc.dart';
 import '../../../../features/tour/domain/entities/tour.dart';
 import '../../../../features/tour/domain/entities/tour_precio.dart';
+import '../../../../features/tour/domain/entities/tour_salida.dart';
+import '../../../../features/tour/domain/repositories/tour_repository.dart';
 import '../../../../features/service/presentation/bloc/service_bloc.dart';
 import '../../../../features/service/presentation/bloc/service_event.dart';
 import '../../../../features/service/presentation/bloc/service_state.dart';
@@ -85,6 +87,15 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   int? _selectedBusLayoutId;
   List<Map<String, dynamic>> _busesDisponibilidad = [];
   bool _loadingBuses = false;
+
+  // Salidas (multiples_fechas tours)
+  List<TourSalida> _tourSalidas = [];
+  int? _selectedSalidaId;
+  bool _loadingSalidas = false;
+
+  // Fechas personalizadas (permanente tours)
+  DateTime? _fechaInicioPersonalizada;
+  DateTime? _fechaFinPersonalizada;
 
   /// Prices per person: key -1 = responsable, key 0,1,2... = integrante index
   Map<int, TourPrecio?> _preciosPorPersona = {};
@@ -202,10 +213,14 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       // 2. Poblar datos básicos (saltando carga automática de buses para controlarla aquí)
       _populateFromReserva(fresh, skipBuses: true);
 
-      // 3. Cargar buses sincronizadamente si es un tour
-      final tourIdInt = int.tryParse(fresh.idTour ?? '');
+      // 3. Cargar buses y salidas si es un tour
+      final tourId = fresh.idTour;
+      final tourIdInt = int.tryParse(tourId ?? '');
       if (tourIdInt != null) {
         await _loadBusesDisponibilidad(tourIdInt);
+      }
+      if (tourId != null && fresh.tour?.disponibilidadTipo == 'multiples_fechas') {
+        _loadTourSalidas(tourId, preserveSelection: true);
       }
     } catch (e) {
       debugPrint('❌ [ReservaForm] _loadInitialData: $e');
@@ -225,6 +240,13 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         ? r.idTour
         : null;
     _selectedBusLayoutId = r.busLayoutId;
+    _selectedSalidaId = r.idTourSalida;
+    if (r.tourSalida != null &&
+        !_tourSalidas.any((s) => s.id == r.tourSalida!.id)) {
+      _tourSalidas = [r.tourSalida!];
+    }
+    _fechaInicioPersonalizada = r.fechaInicioPersonalizada;
+    _fechaFinPersonalizada = r.fechaFinPersonalizada;
     _precioResponsableId = r.precioResponsableId;
     _descuentoPorPersona = r.descuentoPorPersona ?? 0.0;
 
@@ -371,6 +393,47 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     }
   }
 
+  Future<void> _loadTourSalidas(
+    String tourId, {
+    bool preserveSelection = false,
+  }) async {
+    final savedSalidaId = preserveSelection ? _selectedSalidaId : null;
+    final savedSalidas = preserveSelection ? List<TourSalida>.from(_tourSalidas) : <TourSalida>[];
+    setState(() {
+      _loadingSalidas = true;
+      if (!preserveSelection) {
+        _tourSalidas = [];
+        _selectedSalidaId = null;
+      }
+    });
+    try {
+      final salidas = await sl<TourRepository>().getTourSalidas(tourId);
+      if (mounted) {
+        final active = salidas.where((s) => s.isActive).toList();
+        // Merge pre-loaded salidas so the selected one is always visible
+        final merged = [
+          ...active,
+          for (final s in savedSalidas)
+            if (!active.any((a) => a.id == s.id)) s,
+        ];
+        setState(() {
+          _tourSalidas = merged;
+          if (savedSalidaId != null) _selectedSalidaId = savedSalidaId;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ [ReservaForm] loadSalidas: $e');
+      if (mounted) {
+        setState(() {
+          _tourSalidas = savedSalidas;
+          if (savedSalidaId != null) _selectedSalidaId = savedSalidaId;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _loadingSalidas = false);
+    }
+  }
+
   Future<void> _generateAndShowPdf() async {
     final reserva = _currentReserva ?? widget.reserva;
     if (reserva == null) return;
@@ -389,6 +452,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       final allServices = await sl<ServiceRepository>().getServices();
       final bytes = await ReservaPdfGenerator.generate(
         fullReserva,
+        pagos: _pagos,
         servicios: allServices,
       );
       if (!mounted) return;
@@ -427,7 +491,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         context: context,
         builder: (ctx) => Dialog(
           insetPadding: const EdgeInsets.all(32),
-          backgroundColor: Colors.white,
+          backgroundColor: ctx.saas.bgCanvas,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -436,25 +500,28 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.picture_as_pdf_rounded,
                   size: 48,
-                  color: Color(0xFF2563EB),
+                  color: ctx.saas.brand600,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   filename,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A1A),
+                    color: ctx.saas.textPrimary,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'El PDF fue generado exitosamente.',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: ctx.saas.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -465,8 +532,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       icon: const Icon(Icons.open_in_new_rounded, size: 16),
                       label: const Text('Ver PDF'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF2563EB),
-                        side: const BorderSide(color: Color(0xFF2563EB)),
+                        foregroundColor: ctx.saas.brand600,
+                        side: BorderSide(color: ctx.saas.brand600),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
                           vertical: 12,
@@ -479,7 +546,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       icon: const Icon(Icons.download_rounded, size: 16),
                       label: const Text('Descargar'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
+                        backgroundColor: ctx.saas.brand600,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -492,9 +559,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text(
+                  child: Text(
                     'Cerrar',
-                    style: TextStyle(color: Color(0xFF6B7280)),
+                    style: TextStyle(color: ctx.saas.textSecondary),
                   ),
                 ),
               ],
@@ -510,7 +577,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error generando PDF: $e'),
-          backgroundColor: const Color(0xFFDC2626),
+          backgroundColor: context.saas.danger,
         ),
       );
     } finally {
@@ -613,21 +680,21 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       width: double.infinity,
       child: OutlinedButton.icon(
         onPressed: () => _confirmCancelReserva(ctx),
-        icon: const Icon(
+        icon: Icon(
           Icons.cancel_outlined,
           size: 18,
-          color: SaasPalette.warning,
+          color: context.saas.warning,
         ),
-        label: const Text(
+        label: Text(
           'CANCELAR RESERVA',
           style: TextStyle(
-            color: SaasPalette.warning,
+            color: context.saas.warning,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.5,
           ),
         ),
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: SaasPalette.warning),
+          side: BorderSide(color: context.saas.warning),
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -688,6 +755,39 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         'Debe agregar al menos un tour, vuelo u hotel.',
       );
       return;
+    }
+
+    // Salida obligatoria si el tour tiene múltiples fechas
+    if (_selectedTourId != null && _tourSalidas.isNotEmpty && _selectedSalidaId == null) {
+      SaasSnackBar.showWarning(context, 'Debe seleccionar una salida para este tour.');
+      return;
+    }
+
+    // Fechas personalizadas obligatorias si el tour es permanente
+    if (_selectedTourId != null) {
+      final tourState = context.read<TourBloc>().state;
+      List<Tour> allToursForValidation = [];
+      if (tourState is ToursLoaded) allToursForValidation = tourState.tours;
+      else if (tourState is TourSaving && tourState.tours != null) allToursForValidation = tourState.tours!;
+      else if (tourState is TourSaved && tourState.tours != null) allToursForValidation = tourState.tours!;
+      final tourForValidation = allToursForValidation.cast<Tour?>().firstWhere(
+        (t) => t?.id == _selectedTourId,
+        orElse: () => _currentReserva?.tour ?? widget.reserva?.tour,
+      );
+      if (tourForValidation?.disponibilidadTipo == 'permanente') {
+        if (_fechaInicioPersonalizada == null) {
+          SaasSnackBar.showWarning(context, 'Debe seleccionar la fecha de inicio.');
+          return;
+        }
+        if (_fechaFinPersonalizada == null) {
+          SaasSnackBar.showWarning(context, 'Debe seleccionar la fecha de fin.');
+          return;
+        }
+        if (_fechaFinPersonalizada!.isBefore(_fechaInicioPersonalizada!)) {
+          SaasSnackBar.showWarning(context, 'La fecha de fin debe ser igual o posterior a la fecha de inicio.');
+          return;
+        }
+      }
     }
 
     // Bus obligatorio si el tour tiene buses asignados
@@ -895,6 +995,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       precioResponsableId: catResponsable?.id,
       precioResponsableAplicado: catResponsable?.precio ?? selectedTour?.price,
       busLayoutId: _selectedBusLayoutId,
+      idTourSalida: _selectedSalidaId,
+      fechaInicioPersonalizada: _fechaInicioPersonalizada,
+      fechaFinPersonalizada: _fechaFinPersonalizada,
     );
 
     if (_isEditing) {
@@ -926,7 +1029,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 content: Text(
                   _isEditing ? 'Reserva actualizada' : 'Reserva creada',
                 ),
-                backgroundColor: SaasPalette.success,
+                backgroundColor: context.saas.success,
               ),
             );
           }
@@ -941,10 +1044,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               child: Container(
                 padding: const EdgeInsets.all(28),
                 decoration: BoxDecoration(
-                  color: SaasPalette.bgCanvas,
+                  color: context.saas.bgCanvas,
                   borderRadius: BorderRadius.circular(28),
                   border: Border.all(
-                    color: SaasPalette.danger.withValues(alpha: 0.4),
+                    color: context.saas.danger.withValues(alpha: 0.4),
                   ),
                 ),
                 child: Column(
@@ -954,12 +1057,12 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: SaasPalette.danger.withValues(alpha: 0.12),
+                        color: context.saas.danger.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.error_rounded,
-                        color: SaasPalette.danger,
+                        color: context.saas.danger,
                         size: 32,
                       ),
                     ),
@@ -976,8 +1079,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     Text(
                       state.message,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: SaasPalette.textSecondary,
+                      style: TextStyle(
+                        color: context.saas.textSecondary,
                         fontSize: 13,
                       ),
                     ),
@@ -986,7 +1089,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       width: double.infinity,
                       child: TextButton(
                         style: TextButton.styleFrom(
-                          backgroundColor: SaasPalette.danger,
+                          backgroundColor: context.saas.danger,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -1011,17 +1114,17 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: SaasPalette.bgApp,
+        backgroundColor: context.saas.bgApp,
         body: Stack(
           children: [
             if (_loadingReserva)
-              const Positioned.fill(
+              Positioned.fill(
                 child: AbsorbPointer(
                   child: ColoredBox(
                     color: Colors.black12,
                     child: Center(
                       child: CircularProgressIndicator(
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                         strokeWidth: 3,
                       ),
                     ),
@@ -1158,7 +1261,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           Text(
             'ASIENTOS ASIGNADOS',
             style: TextStyle(
-              color: SaasPalette.textPrimary,
+              color: context.saas.textPrimary,
               fontSize: 11,
               fontWeight: FontWeight.w900,
             ),
@@ -1174,25 +1277,25 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: SaasPalette.brand600.withValues(alpha: 0.08),
+                  color: context.saas.brand600.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: SaasPalette.brand600.withValues(alpha: 0.2),
+                    color: context.saas.brand600.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.event_seat_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 14,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       asiento,
-                      style: const TextStyle(
-                        color: SaasPalette.brand600,
+                      style: TextStyle(
+                        color: context.saas.brand600,
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                       ),
@@ -1206,24 +1309,24 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: SaasPalette.danger.withValues(alpha: 0.08),
+              color: context.saas.danger.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: SaasPalette.danger.withValues(alpha: 0.2),
+                color: context.saas.danger.withValues(alpha: 0.2),
               ),
             ),
-            child: const Row(
+            child: Row(
               children: [
                 Icon(
                   Icons.warning_amber_rounded,
-                  color: SaasPalette.danger,
+                  color: context.saas.danger,
                   size: 18,
                 ),
                 const SizedBox(width: 12),
                 Text(
                   'Falta por asignar asientos',
                   style: TextStyle(
-                    color: SaasPalette.danger,
+                    color: context.saas.danger,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1237,7 +1340,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           Text(
             'LINK DE SELECCIÓN',
             style: TextStyle(
-              color: SaasPalette.textPrimary,
+              color: context.saas.textPrimary,
               fontSize: 11,
               fontWeight: FontWeight.w900,
             ),
@@ -1246,25 +1349,25 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: SaasPalette.brand50,
+              color: context.saas.brand50,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: SaasPalette.brand600.withValues(alpha: 0.2),
+                color: context.saas.brand600.withValues(alpha: 0.2),
               ),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.link_rounded,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   size: 18,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     res.seleccionLink!,
-                    style: const TextStyle(
-                      color: SaasPalette.brand600,
+                    style: TextStyle(
+                      color: context.saas.brand600,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
@@ -1288,9 +1391,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     },
                     child: Container(
                       padding: const EdgeInsets.all(8),
-                      child: const Icon(
+                      child: Icon(
                         Icons.copy_rounded,
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                         size: 18,
                       ),
                     ),
@@ -1311,7 +1414,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         Text(
           'Tour o Promoción (opcional)',
           style: TextStyle(
-            color: SaasPalette.textPrimary,
+            color: context.saas.textPrimary,
             fontSize: 11,
             fontWeight: FontWeight.w900,
           ),
@@ -1348,22 +1451,25 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             final selectedTour = _selectedTourId != null
                 ? tours.firstWhere(
                     (t) => t.id == _selectedTourId,
-                    orElse: () => Tour(
-                      id: _selectedTourId!,
-                      idTour: 0,
-                      name: _tourSearchCtrl.text,
-                      agency: '',
-                      startDate: DateTime.now(),
-                      endDate: DateTime.now(),
-                      price: 0,
-                      departurePoint: '',
-                      departureTime: '',
-                      arrival: '',
-                      pdfLink: '',
-                      inclusions: [],
-                      exclusions: [],
-                      itinerary: [],
-                    ),
+                    orElse: () =>
+                        _currentReserva?.tour ??
+                        widget.reserva?.tour ??
+                        Tour(
+                          id: _selectedTourId!,
+                          idTour: 0,
+                          name: _tourSearchCtrl.text,
+                          agency: '',
+                          startDate: DateTime.now(),
+                          endDate: DateTime.now(),
+                          price: 0,
+                          departurePoint: '',
+                          departureTime: '',
+                          arrival: '',
+                          pdfLink: '',
+                          inclusions: [],
+                          exclusions: [],
+                          itinerary: [],
+                        ),
                   )
                 : null;
             final isTourFound =
@@ -1400,11 +1506,18 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                     _preciosPorPersona = {};
                                     _selectedBusLayoutId = null;
                                     _busesDisponibilidad = [];
+                                    _tourSalidas = [];
+                                    _selectedSalidaId = null;
+                                    _fechaInicioPersonalizada = null;
+                                    _fechaFinPersonalizada = null;
                                   });
                                   field.didChange(result.id);
                                   final tourIdInt = int.tryParse(result.id);
                                   if (tourIdInt != null) {
                                     _loadBusesDisponibilidad(tourIdInt);
+                                  }
+                                  if (result.disponibilidadTipo == 'multiples_fechas') {
+                                    _loadTourSalidas(result.id);
                                   }
                                 }
                               },
@@ -1415,14 +1528,14 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                             vertical: 14,
                           ),
                           decoration: BoxDecoration(
-                            color: SaasPalette.bgSubtle,
+                            color: context.saas.bgSubtle,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: field.hasError
-                                  ? SaasPalette.danger
+                                  ? context.saas.danger
                                   : isTourFound
-                                  ? SaasPalette.brand600
-                                  : SaasPalette.border,
+                                  ? context.saas.brand600
+                                  : context.saas.border,
                             ),
                           ),
                           child: Row(
@@ -1432,10 +1545,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                     ? Icons.error_outline_rounded
                                     : Icons.tour_rounded,
                                 color: isError
-                                    ? SaasPalette.danger
+                                    ? context.saas.danger
                                     : isTourFound
-                                    ? SaasPalette.brand600
-                                    : SaasPalette.textTertiary,
+                                    ? context.saas.brand600
+                                    : context.saas.textTertiary,
                                 size: 18,
                               ),
                               const SizedBox(width: 12),
@@ -1450,22 +1563,22 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                       : 'Seleccionar tour...',
                                   style: TextStyle(
                                     color: isError
-                                        ? SaasPalette.danger
+                                        ? context.saas.danger
                                         : isTourFound
-                                        ? SaasPalette.textPrimary
-                                        : SaasPalette.textTertiary,
+                                        ? context.saas.textPrimary
+                                        : context.saas.textTertiary,
                                     fontSize: 14,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (isLoading)
-                                const SizedBox(
+                                SizedBox(
                                   width: 16,
                                   height: 16,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: SaasPalette.brand600,
+                                    color: context.saas.brand600,
                                   ),
                                 )
                               else if (isTourFound)
@@ -1475,16 +1588,16 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                     _tourSearchCtrl.clear();
                                     _preciosPorPersona = {};
                                   }),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.close_rounded,
-                                    color: SaasPalette.textTertiary,
+                                    color: context.saas.textTertiary,
                                     size: 18,
                                   ),
                                 )
                               else ...[
-                                const Icon(
+                                Icon(
                                   Icons.keyboard_arrow_down_rounded,
-                                  color: SaasPalette.textTertiary,
+                                  color: context.saas.textTertiary,
                                   size: 18,
                                 ),
                                 const SizedBox(width: 8),
@@ -1497,7 +1610,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                     onPressed: () => context
                                         .read<TourBloc>()
                                         .add(LoadTours()),
-                                    color: SaasPalette.textTertiary,
+                                    color: context.saas.textTertiary,
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
                                     tooltip: 'Refrescar tours',
@@ -1512,8 +1625,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           padding: const EdgeInsets.only(top: 8, left: 4),
                           child: Text(
                             errorMessage,
-                            style: const TextStyle(
-                              color: SaasPalette.danger,
+                            style: TextStyle(
+                              color: context.saas.danger,
                               fontSize: 11,
                             ),
                           ),
@@ -1522,8 +1635,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                         const SizedBox(height: 6),
                         Text(
                           field.errorText!,
-                          style: const TextStyle(
-                            color: SaasPalette.danger,
+                          style: TextStyle(
+                            color: context.saas.danger,
                             fontSize: 12,
                           ),
                         ),
@@ -1536,6 +1649,16 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 if (isTourFound) ...[
                   const SizedBox(height: 16),
                   _buildTourInfoCard(selectedTour),
+                  // Salida picker for multiples_fechas tours
+                  if (selectedTour.disponibilidadTipo == 'multiples_fechas') ...[
+                    const SizedBox(height: 12),
+                    _buildSalidaPicker(),
+                  ],
+                  // Fechas personalizadas para tours permanentes
+                  if (selectedTour.disponibilidadTipo == 'permanente') ...[
+                    const SizedBox(height: 12),
+                    _buildFechasPersonalizadasPicker(),
+                  ],
                   // Selector de categoría solo cuando hay precios individuales y no es modo grupal
                   if (selectedTour.precios.isNotEmpty &&
                       !(selectedTour.modoPrecio == 'grupal' && selectedTour.preciosGrupales.isNotEmpty)) ...[
@@ -1550,6 +1673,214 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               ],
             );
           },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSalidaPicker() {
+    final salidas = _tourSalidas;
+    final fmt = DateFormat('dd/MM/yyyy');
+
+    if (_loadingSalidas) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: context.saas.bgSubtle,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: context.saas.border),
+        ),
+        child: Row(
+          children: [
+            SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: context.saas.brand600)),
+            SizedBox(width: 12),
+            Text('Cargando salidas...', style: TextStyle(color: context.saas.textSecondary, fontSize: 14)),
+          ],
+        ),
+      );
+    }
+
+    if (salidas.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: context.saas.bgSubtle,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: context.saas.border),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline_rounded, color: context.saas.textTertiary, size: 16),
+            SizedBox(width: 8),
+            Text('Sin salidas disponibles', style: TextStyle(color: context.saas.textSecondary, fontSize: 13)),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'SELECCIONAR SALIDA *',
+          style: TextStyle(color: context.saas.textSecondary, fontSize: 11, fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 8),
+        ...salidas.map((salida) {
+          final isSelected = _selectedSalidaId == salida.id;
+          final label = salida.label?.isNotEmpty == true ? salida.label! : null;
+          final fechas = '${fmt.format(DateTime.parse(salida.fechaInicio))} – ${fmt.format(DateTime.parse(salida.fechaFin))}';
+          final cuposText = salida.cuposDisponibles != null
+              ? '${salida.cuposDisponibles} cupos disponibles'
+              : (salida.cupos != null ? '${salida.cupos} cupos' : 'Sin límite');
+
+          return GestureDetector(
+            onTap: () => setState(() => _selectedSalidaId = salida.id),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: isSelected ? context.saas.brand600.withValues(alpha: 0.08) : context.saas.bgSubtle,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isSelected ? context.saas.brand600 : context.saas.border,
+                  width: isSelected ? 1.5 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
+                    color: isSelected ? context.saas.brand600 : context.saas.textTertiary,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (label != null)
+                          Text(label, style: TextStyle(color: context.saas.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+                        Text(fechas, style: TextStyle(color: label != null ? context.saas.textSecondary : context.saas.textPrimary, fontSize: 13, fontWeight: label == null ? FontWeight.w600 : FontWeight.normal)),
+                        Text(cuposText, style: TextStyle(color: context.saas.textTertiary, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildFechasPersonalizadasPicker() {
+    final fmt = DateFormat('dd/MM/yyyy');
+
+    Widget dateTile({
+      required String label,
+      required DateTime? value,
+      required VoidCallback onTap,
+    }) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: context.saas.bgSubtle,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: value != null ? context.saas.brand600 : context.saas.border,
+              width: value != null ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.calendar_today_rounded,
+                color: value != null ? context.saas.brand600 : context.saas.textTertiary,
+                size: 16,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  value != null ? fmt.format(value) : label,
+                  style: TextStyle(
+                    color: value != null ? context.saas.textPrimary : context.saas.textTertiary,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              Icon(Icons.edit_calendar_rounded, color: context.saas.textTertiary, size: 16),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Future<void> pickInicio() async {
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: _fechaInicioPersonalizada ?? DateTime.now(),
+        firstDate: DateTime(2020),
+        lastDate: DateTime(2100),
+        builder: (context, child) => Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: context.saas.brand600,
+              onPrimary: Colors.white,
+              surface: context.saas.bgCanvas,
+              onSurface: context.saas.textPrimary,
+            ),
+            dialogTheme: DialogThemeData(backgroundColor: context.saas.bgCanvas),
+          ),
+          child: child!,
+        ),
+      );
+      if (picked != null && mounted) setState(() => _fechaInicioPersonalizada = picked);
+    }
+
+    Future<void> pickFin() async {
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: _fechaFinPersonalizada ?? _fechaInicioPersonalizada ?? DateTime.now(),
+        firstDate: _fechaInicioPersonalizada ?? DateTime(2020),
+        lastDate: DateTime(2100),
+        builder: (context, child) => Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: context.saas.brand600,
+              onPrimary: Colors.white,
+              surface: context.saas.bgCanvas,
+              onSurface: context.saas.textPrimary,
+            ),
+            dialogTheme: DialogThemeData(backgroundColor: context.saas.bgCanvas),
+          ),
+          child: child!,
+        ),
+      );
+      if (picked != null && mounted) setState(() => _fechaFinPersonalizada = picked);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'FECHAS DE LA RESERVA *',
+          style: TextStyle(color: context.saas.textSecondary, fontSize: 11, fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 8),
+        dateTile(
+          label: 'Fecha de inicio *',
+          value: _fechaInicioPersonalizada,
+          onTap: pickInicio,
+        ),
+        const SizedBox(height: 8),
+        dateTile(
+          label: 'Fecha de fin *',
+          value: _fechaFinPersonalizada,
+          onTap: pickFin,
         ),
       ],
     );
@@ -1571,10 +1902,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: selected != null ? SaasPalette.brand600 : SaasPalette.border,
+          color: selected != null ? context.saas.brand600 : context.saas.border,
           width: selected != null ? 1.5 : 1,
         ),
       ),
@@ -1583,8 +1914,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           Icon(
             Icons.sell_rounded,
             color: selected != null
-                ? SaasPalette.brand600
-                : SaasPalette.textTertiary,
+                ? context.saas.brand600
+                : context.saas.textTertiary,
             size: 15,
           ),
           const SizedBox(width: 8),
@@ -1594,8 +1925,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               children: [
                 Text(
                   label.toUpperCase(),
-                  style: const TextStyle(
-                    color: SaasPalette.textSecondary,
+                  style: TextStyle(
+                    color: context.saas.textSecondary,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.4,
@@ -1607,14 +1938,14 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     value: selected,
                     isExpanded: true,
                     isDense: true,
-                    dropdownColor: SaasPalette.bgCanvas,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    dropdownColor: context.saas.bgCanvas,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 13,
                     ),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 18,
                     ),
                     items: [
@@ -1622,8 +1953,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                         value: null,
                         child: Text(
                           'Base — ${currencyFmt.format(tour.price)}$unit',
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1636,8 +1967,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           value: p,
                           child: Text(
                             '${p.descripcion}$edadStr — ${currencyFmt.format(p.precio)}',
-                            style: const TextStyle(
-                              color: SaasPalette.textPrimary,
+                            style: TextStyle(
+                              color: context.saas.textPrimary,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1663,10 +1994,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'BUS ASIGNADO *',
           style: TextStyle(
-            color: SaasPalette.textSecondary,
+            color: context.saas.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
@@ -1688,27 +2019,27 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 )
                 ? _selectedBusLayoutId
                 : null,
-            dropdownColor: SaasPalette.bgCanvas,
-            style: const TextStyle(
-              color: SaasPalette.textPrimary,
+            dropdownColor: context.saas.bgCanvas,
+            style: TextStyle(
+              color: context.saas.textPrimary,
               fontSize: 14,
             ),
             decoration: InputDecoration(
-              prefixIcon: const Icon(
+              prefixIcon: Icon(
                 Icons.directions_bus_rounded,
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
                 size: 18,
               ),
               filled: true,
-              fillColor: SaasPalette.bgCanvas,
+              fillColor: context.saas.bgCanvas,
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: SaasPalette.border),
+                borderSide: BorderSide(color: context.saas.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(
-                  color: SaasPalette.brand600,
+                borderSide: BorderSide(
+                  color: context.saas.brand600,
                   width: 1.5,
                 ),
               ),
@@ -1717,9 +2048,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 vertical: 12,
               ),
             ),
-            hint: const Text(
+            hint: Text(
               'Selecciona un bus',
-              style: TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
+              style: TextStyle(color: context.saas.textTertiary, fontSize: 13),
             ),
             items: _busesDisponibilidad.map((bus) {
               final disponibles = (bus['disponibles'] as num?)?.toInt() ?? 0;
@@ -1784,9 +2115,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
 
     return Container(
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -1812,19 +2143,19 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     if (tour.isPromotion)
                       _TourBadge(
                         label: 'PROMO',
-                        color: SaasPalette.warning,
+                        color: context.saas.warning,
                         icon: Icons.star_rounded,
                       ),
                     if (tour.precioPorPareja)
                       _TourBadge(
                         label: 'POR PAREJA',
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                         icon: Icons.people_rounded,
                       ),
                     if (!tour.isActive)
                       _TourBadge(
                         label: 'INACTIVO',
-                        color: SaasPalette.danger,
+                        color: context.saas.danger,
                         icon: Icons.block_rounded,
                       ),
                   ],
@@ -1832,8 +2163,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 const SizedBox(height: 12),
                 Text(
                   tour.name,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
@@ -1841,7 +2172,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 const SizedBox(height: 16),
 
                 // ── Precios ──────────────────────────────────
-                const Divider(color: SaasPalette.border),
+                Divider(color: context.saas.border),
                 const SizedBox(height: 12),
 
                 if (tour.modoPrecio == 'grupal') ...[
@@ -1856,15 +2187,15 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: SaasPalette.brand600.withValues(alpha: 0.12),
+                          color: context.saas.brand600.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Modo grupal',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                           ),
                         ),
                       ),
@@ -1872,11 +2203,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   ),
                   const SizedBox(height: 8),
                   if (tour.preciosGrupales.isEmpty)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.only(bottom: 8),
                       child: Text(
                         'Sin tramos de precio configurados',
-                        style: TextStyle(color: SaasPalette.textSecondary, fontSize: 13),
+                        style: TextStyle(color: context.saas.textSecondary, fontSize: 13),
                       ),
                     )
                   else
@@ -1900,15 +2231,15 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: SaasPalette.success.withValues(alpha: 0.12),
+                          color: context.saas.success.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           tour.precioPorPareja ? 'Por pareja' : 'Individual',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: SaasPalette.success,
+                            color: context.saas.success,
                           ),
                         ),
                       ),
@@ -1946,7 +2277,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   const SizedBox(height: 12),
                 ],
 
-                const Divider(color: SaasPalette.border),
+                Divider(color: context.saas.border),
                 const SizedBox(height: 12),
 
                 // ── Datos logísticos ─────────────────────────
@@ -1959,8 +2290,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 _TourInfoRow(
                   icon: Icons.date_range_rounded,
                   label: 'Fechas',
-                  value:
-                      '${dateFmt.format(tour.startDate ?? DateTime.now())} → ${dateFmt.format(tour.endDate ?? DateTime.now())}',
+                  value: tour.disponibilidadTipo == 'multiples_fechas'
+                      ? 'Múltiples salidas'
+                      : tour.disponibilidadTipo == 'permanente'
+                          ? 'Permanente'
+                          : '${dateFmt.format(tour.startDate ?? DateTime.now())} → ${dateFmt.format(tour.endDate ?? DateTime.now())}',
                 ),
                 const SizedBox(height: 10),
                 _TourInfoRow(
@@ -1991,8 +2325,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     children: [
                       Text(
                         _tourCardExpanded ? 'Ver menos' : 'Ver más detalles',
-                        style: const TextStyle(
-                          color: SaasPalette.brand600,
+                        style: TextStyle(
+                          color: context.saas.brand600,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -2001,9 +2335,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       AnimatedRotation(
                         turns: _tourCardExpanded ? 0.5 : 0,
                         duration: const Duration(milliseconds: 250),
-                        child: const Icon(
+                        child: Icon(
                           Icons.keyboard_arrow_down_rounded,
-                          color: SaasPalette.brand600,
+                          color: context.saas.brand600,
                           size: 20,
                         ),
                       ),
@@ -2016,11 +2350,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   // ── Inclusiones ────────────────────────────
                   if (tour.inclusions.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    const Divider(color: SaasPalette.border),
+                    Divider(color: context.saas.border),
                     const SizedBox(height: 12),
                     _buildListSection(
                       title: 'INCLUYE',
-                      color: SaasPalette.success,
+                      color: context.saas.success,
                       icon: Icons.check_circle_outline_rounded,
                       items: tour.inclusions,
                     ),
@@ -2031,7 +2365,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     const SizedBox(height: 16),
                     _buildListSection(
                       title: 'NO INCLUYE',
-                      color: SaasPalette.danger,
+                      color: context.saas.danger,
                       icon: Icons.cancel_outlined,
                       items: tour.exclusions,
                     ),
@@ -2040,7 +2374,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   // ── Itinerario ─────────────────────────────
                   if (tour.itinerary.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    const Divider(color: SaasPalette.border),
+                    Divider(color: context.saas.border),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -2048,7 +2382,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           width: 3,
                           height: 12,
                           decoration: BoxDecoration(
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -2056,7 +2390,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                         Text(
                           'ITINERARIO',
                           style: TextStyle(
-                            color: SaasPalette.textTertiary,
+                            color: context.saas.textTertiary,
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1,
@@ -2075,7 +2409,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                               width: 28,
                               height: 28,
                               decoration: BoxDecoration(
-                                color: SaasPalette.brand600.withValues(
+                                color: context.saas.brand600.withValues(
                                   alpha: 0.15,
                                 ),
                                 shape: BoxShape.circle,
@@ -2083,8 +2417,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                               child: Center(
                                 child: Text(
                                   '${day.dayNumber}',
-                                  style: const TextStyle(
-                                    color: SaasPalette.brand600,
+                                  style: TextStyle(
+                                    color: context.saas.brand600,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w900,
                                   ),
@@ -2098,8 +2432,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                 children: [
                                   Text(
                                     day.title,
-                                    style: const TextStyle(
-                                      color: SaasPalette.textPrimary,
+                                    style: TextStyle(
+                                      color: context.saas.textPrimary,
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -2109,7 +2443,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                     Text(
                                       day.description,
                                       style: TextStyle(
-                                        color: SaasPalette.textSecondary,
+                                        color: context.saas.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -2126,7 +2460,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   // ── PDF link ───────────────────────────────
                   if (tour.pdfLink.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    const Divider(color: SaasPalette.border),
+                    Divider(color: context.saas.border),
                     const SizedBox(height: 12),
                     GestureDetector(
                       onTap: () async {
@@ -2137,19 +2471,19 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       },
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.picture_as_pdf_rounded,
-                            color: SaasPalette.danger,
+                            color: context.saas.danger,
                             size: 18,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Ver PDF del tour',
                             style: TextStyle(
-                              color: SaasPalette.brand600,
+                              color: context.saas.brand600,
                               fontSize: 13,
                               decoration: TextDecoration.underline,
-                              decorationColor: SaasPalette.brand600,
+                              decorationColor: context.saas.brand600,
                             ),
                           ),
                         ],
@@ -2188,7 +2522,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             Text(
               title,
               style: TextStyle(
-                color: SaasPalette.textTertiary,
+                color: context.saas.textTertiary,
                 fontSize: 10,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1,
@@ -2208,8 +2542,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 Expanded(
                   child: Text(
                     item,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 13,
                     ),
                   ),
@@ -2224,18 +2558,18 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
 
   InputDecoration _inputDecoration(IconData icon, String hint) {
     return InputDecoration(
-      prefixIcon: Icon(icon, color: SaasPalette.textPrimary, size: 18),
+      prefixIcon: Icon(icon, color: context.saas.textPrimary, size: 18),
       hintText: hint,
-      hintStyle: const TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
+      hintStyle: TextStyle(color: context.saas.textTertiary, fontSize: 13),
       filled: true,
-      fillColor: SaasPalette.bgSubtle,
+      fillColor: context.saas.bgSubtle,
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: SaasPalette.border),
+        borderSide: BorderSide(color: context.saas.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: SaasPalette.brand600),
+        borderSide: BorderSide(color: context.saas.brand600),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );
@@ -2248,7 +2582,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         Text(
           'Estado *',
           style: TextStyle(
-            color: SaasPalette.textPrimary,
+            color: context.saas.textPrimary,
             fontSize: 11,
             fontWeight: FontWeight.w900,
           ),
@@ -2257,7 +2591,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         DropdownButtonFormField<String>(
           initialValue: _estado,
           dropdownColor: D.white,
-          style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
+          style: TextStyle(color: context.saas.textPrimary, fontSize: 14),
           decoration: _inputDecoration(
             Icons.label_outline_rounded,
             'Estado de la reserva',
@@ -2286,8 +2620,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             DropdownMenuItem(
               value: 'cancelado',
               child: Row(
-                children: const [
-                  Icon(Icons.circle, color: SaasPalette.danger, size: 12),
+                children: [
+                  Icon(Icons.circle, color: context.saas.danger, size: 12),
                   SizedBox(width: 8),
                   Text('Cancelado'),
                 ],
@@ -2296,8 +2630,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             DropdownMenuItem(
               value: 'cancelada',
               child: Row(
-                children: const [
-                  Icon(Icons.circle, color: SaasPalette.danger, size: 12),
+                children: [
+                  Icon(Icons.circle, color: context.saas.danger, size: 12),
                   SizedBox(width: 8),
                   Text('Cancelada'),
                 ],
@@ -2603,13 +2937,13 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           icon: precioPorPareja
                               ? Icons.people_rounded
                               : Icons.person_rounded,
-                          iconColor: SaasPalette.brand600,
+                          iconColor: context.saas.brand600,
                         ),
                       ),
                     ),
                     if (tourBreakdown.length > 1) ...[
-                      const Divider(
-                        color: SaasPalette.border,
+                      Divider(
+                        color: context.saas.border,
                         height: 12,
                         indent: 22,
                       ),
@@ -2644,7 +2978,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                         currencyFmt,
                         isSubtitle: true,
                         icon: Icons.room_service_rounded,
-                        iconColor: SaasPalette.success,
+                        iconColor: context.saas.success,
                       ),
                     );
                   }),
@@ -2666,7 +3000,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                         currencyFmt,
                         isSubtitle: true,
                         icon: Icons.hotel_rounded,
-                        iconColor: SaasPalette.brand600,
+                        iconColor: context.saas.brand600,
                       ),
                     );
                   }),
@@ -2697,8 +3031,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                             ? Icons.flight_land_rounded
                             : Icons.flight_takeoff_rounded,
                         iconColor: esVuelta
-                            ? SaasPalette.warning
-                            : SaasPalette.brand600,
+                            ? context.saas.warning
+                            : context.saas.brand600,
                       ),
                     );
                   }),
@@ -2713,8 +3047,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           precioPorPareja
                               ? '− Descuento por pareja'
                               : '− Descuento por persona',
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -2723,7 +3057,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                       const SizedBox(width: 8),
                       Container(
                         decoration: BoxDecoration(
-                          color: SaasPalette.bgSubtle,
+                          color: context.saas.bgSubtle,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         width: 130,
@@ -2734,15 +3068,15 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                             FilteringTextInputFormatter.digitsOnly,
                           ],
                           textAlign: TextAlign.right,
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 13,
                           ),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             isDense: true,
                             prefixText: '\$ ',
                             prefixStyle: TextStyle(
-                              color: SaasPalette.textTertiary,
+                              color: context.saas.textTertiary,
                               fontSize: 13,
                             ),
                             border: InputBorder.none,
@@ -2761,24 +3095,24 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Divider(color: SaasPalette.border),
+                  Divider(color: context.saas.border),
                   if (descuentoTotal > 0) ...[
                     const SizedBox(height: 4),
                     Align(
                       alignment: Alignment.centerRight,
                       child: Text(
                         '− ${currencyFmt.format(descuentoTotal)} total ($currentUnits ${precioPorPareja ? "pareja${currentUnits != 1 ? "s" : ""}" : "persona${currentUnits != 1 ? "s" : ""}"})',
-                        style: const TextStyle(
-                          color: SaasPalette.danger,
+                        style: TextStyle(
+                          color: context.saas.danger,
                           fontSize: 11,
                         ),
                       ),
                     ),
                   ],
                 ],
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(color: SaasPalette.border),
+                  child: Divider(color: context.saas.border),
                 ),
                 _buildResumenRow(
                   'TOTAL DE LA RESERVA',
@@ -2793,11 +3127,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     totalValidado,
                     currencyFmt,
                     isSubtitle: true,
-                    valueColor: SaasPalette.danger,
+                    valueColor: context.saas.danger,
                   ),
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Divider(color: SaasPalette.border),
+                    child: Divider(color: context.saas.border),
                   ),
                   _buildResumenRow(
                     'SALDO PENDIENTE',
@@ -2805,21 +3139,21 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     currencyFmt,
                     isTotal: true,
                     valueColor: saldoPendiente <= 0
-                        ? SaasPalette.success
-                        : SaasPalette.warning,
+                        ? context.saas.success
+                        : context.saas.warning,
                   ),
                 ],
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(color: SaasPalette.border),
+                  child: Divider(color: context.saas.border),
                 ),
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Utilidad',
                         style: TextStyle(
-                          color: SaasPalette.textSecondary,
+                          color: context.saas.textSecondary,
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
@@ -2828,7 +3162,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     const SizedBox(width: 8),
                     Container(
                       decoration: BoxDecoration(
-                        color: SaasPalette.bgSubtle,
+                        color: context.saas.bgSubtle,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       width: 130,
@@ -2843,15 +3177,15 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           ),
                         ],
                         textAlign: TextAlign.right,
-                        style: const TextStyle(
-                          color: SaasPalette.textPrimary,
+                        style: TextStyle(
+                          color: context.saas.textPrimary,
                           fontSize: 13,
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           isDense: true,
                           prefixText: '\$ ',
                           prefixStyle: TextStyle(
-                            color: SaasPalette.textTertiary,
+                            color: context.saas.textTertiary,
                             fontSize: 13,
                           ),
                           border: InputBorder.none,
@@ -2887,7 +3221,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         if (icon != null) ...[
-          Icon(icon, size: 14, color: iconColor ?? SaasPalette.textTertiary),
+          Icon(icon, size: 14, color: iconColor ?? context.saas.textTertiary),
           const SizedBox(width: 6),
         ],
         Expanded(
@@ -2895,8 +3229,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             label,
             style: TextStyle(
               color: isTotal
-                  ? SaasPalette.textPrimary
-                  : SaasPalette.textSecondary,
+                  ? context.saas.textPrimary
+                  : context.saas.textSecondary,
               fontSize: isTotal ? 15 : 13,
               fontWeight: isTotal ? FontWeight.w800 : FontWeight.w500,
             ),
@@ -2908,7 +3242,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           style: TextStyle(
             color:
                 valueColor ??
-                (isTotal ? SaasPalette.success : SaasPalette.textSecondary),
+                (isTotal ? context.saas.success : context.saas.textSecondary),
             fontSize: isTotal ? 16 : 13,
             fontWeight: isTotal ? FontWeight.w800 : FontWeight.w600,
           ),
@@ -2963,7 +3297,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text('Agregar Hotel'),
               style: TextButton.styleFrom(
-                foregroundColor: SaasPalette.brand600,
+                foregroundColor: context.saas.brand600,
               ),
             ),
           ],
@@ -2978,10 +3312,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       icon: Icons.payments_rounded,
       children: [
         if (_loadingPagos)
-          const Center(
+          Center(
             child: Padding(
               padding: EdgeInsets.all(24),
-              child: CircularProgressIndicator(color: SaasPalette.brand600),
+              child: CircularProgressIndicator(color: context.saas.brand600),
             ),
           )
         else if (_pagos.isEmpty)
@@ -2995,7 +3329,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _pagos.length,
             separatorBuilder: (_, __) =>
-                const Divider(color: SaasPalette.border, height: 1),
+                Divider(color: context.saas.border, height: 1),
             itemBuilder: (context, index) {
               final pago = _pagos[index];
               return _PagoCard(pago: pago);
@@ -3009,13 +3343,13 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: SaasPalette.brand600, size: 14),
+        Icon(icon, color: context.saas.brand600, size: 14),
         const SizedBox(width: 8),
         Flexible(
           child: Text(
             text,
-            style: const TextStyle(
-              color: SaasPalette.textSecondary,
+            style: TextStyle(
+              color: context.saas.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -3072,15 +3406,15 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   ),
                 );
               },
-              icon: const Icon(
+              icon: Icon(
                 Icons.add_rounded,
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
                 size: 18,
               ),
-              label: const Text(
+              label: Text(
                 'Agregar',
                 style: TextStyle(
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -3097,9 +3431,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _integrantes.length,
-            separatorBuilder: (_, __) => const Padding(
+            separatorBuilder: (_, __) => Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
-              child: Divider(color: SaasPalette.border, height: 1),
+              child: Divider(color: context.saas.border, height: 1),
             ),
             itemBuilder: (context, index) {
               return _IntegranteFormFields(
@@ -3140,15 +3474,15 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               onPressed: () {
                 setState(() => _servicios.add(0));
               },
-              icon: const Icon(
+              icon: Icon(
                 Icons.add_rounded,
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
                 size: 18,
               ),
-              label: const Text(
+              label: Text(
                 'Agregar',
                 style: TextStyle(
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -3182,26 +3516,26 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                             initialValue: _servicios[index] == 0
                                 ? null
                                 : _servicios[index],
-                            dropdownColor: SaasPalette.bgCanvas,
+                            dropdownColor: context.saas.bgCanvas,
                             isExpanded: true,
-                            style: const TextStyle(
-                              color: SaasPalette.textPrimary,
+                            style: TextStyle(
+                              color: context.saas.textPrimary,
                               fontSize: 14,
                             ),
-                            hint: const Text(
+                            hint: Text(
                               'Seleccionar servicio',
                               style: TextStyle(
-                                color: SaasPalette.textTertiary,
+                                color: context.saas.textTertiary,
                                 fontSize: 14,
                               ),
                             ),
                             decoration: InputDecoration(
-                              prefixIcon: const Icon(
+                              prefixIcon: Icon(
                                 Icons.room_service_outlined,
-                                color: SaasPalette.brand600,
+                                color: context.saas.brand600,
                               ),
                               filled: true,
-                              fillColor: SaasPalette.bgSubtle,
+                              fillColor: context.saas.bgSubtle,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide.none,
@@ -3227,9 +3561,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                         ),
                         const SizedBox(width: 8),
                         IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.delete_outline_rounded,
-                            color: SaasPalette.danger,
+                            color: context.saas.danger,
                           ),
                           onPressed: () =>
                               setState(() => _servicios.removeAt(index)),
@@ -3255,7 +3589,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           children: [
             Text(
               'Vuelos (opcionales)',
-              style: TextStyle(color: SaasPalette.textSecondary, fontSize: 12),
+              style: TextStyle(color: context.saas.textSecondary, fontSize: 12),
             ),
             TextButton.icon(
               onPressed: () {
@@ -3274,15 +3608,15 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   ),
                 );
               },
-              icon: const Icon(
+              icon: Icon(
                 Icons.add_rounded,
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
                 size: 18,
               ),
-              label: const Text(
+              label: Text(
                 'Agregar vuelo',
                 style: TextStyle(
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -3299,9 +3633,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _vuelos.length,
-            separatorBuilder: (_, __) => const Padding(
+            separatorBuilder: (_, __) => Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
-              child: Divider(color: SaasPalette.border, height: 1),
+              child: Divider(color: context.saas.border, height: 1),
             ),
             itemBuilder: (context, index) {
               return _VueloFormFields(
@@ -3447,9 +3781,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           return Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: SaasPalette.bgCanvas,
+              color: context.saas.bgCanvas,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: SaasPalette.border),
+              border: Border.all(color: context.saas.border),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.03),
@@ -3466,8 +3800,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     children: [
                       Text(
                         displayCliente.nombre,
-                        style: const TextStyle(
-                          color: SaasPalette.textPrimary,
+                        style: TextStyle(
+                          color: context.saas.textPrimary,
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                         ),
@@ -3502,9 +3836,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.swap_horiz_rounded,
-                    color: SaasPalette.brand600,
+                    color: context.saas.brand600,
                     size: 20,
                   ),
                   onPressed: isLoading ? null : openPicker,
@@ -3520,10 +3854,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: SaasPalette.brand50,
+              color: context.saas.brand50,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: SaasPalette.brand600.withValues(alpha: 0.2),
+                color: context.saas.brand600.withValues(alpha: 0.2),
               ),
             ),
             child: Row(
@@ -3532,26 +3866,26 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: SaasPalette.brand600.withValues(alpha: 0.1),
+                    color: context.saas.brand600.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Center(
+                  child: Center(
                     child: SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: const Text(
+                  child: Text(
                     'Cargando responsable...',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 14,
                     ),
                   ),
@@ -3577,19 +3911,19 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     vertical: 14,
                   ),
                   decoration: BoxDecoration(
-                    color: SaasPalette.bgSubtle,
+                    color: context.saas.bgSubtle,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: field.hasError
-                          ? SaasPalette.danger
-                          : SaasPalette.border,
+                          ? context.saas.danger
+                          : context.saas.border,
                     ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.person_search_rounded,
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                         size: 18,
                       ),
                       const SizedBox(width: 12),
@@ -3598,25 +3932,25 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           isLoading
                               ? 'Cargando clientes...'
                               : 'Seleccionar cliente *',
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                             fontSize: 14,
                           ),
                         ),
                       ),
                       if (isLoading)
-                        const SizedBox(
+                        SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                           ),
                         )
                       else
-                        const Icon(
+                        Icon(
                           Icons.search_rounded,
-                          color: SaasPalette.textTertiary,
+                          color: context.saas.textTertiary,
                           size: 18,
                         ),
                     ],
@@ -3627,8 +3961,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 const SizedBox(height: 6),
                 Text(
                   field.errorText!,
-                  style: const TextStyle(
-                    color: SaasPalette.danger,
+                  style: TextStyle(
+                    color: context.saas.danger,
                     fontSize: 12,
                   ),
                 ),
@@ -3760,13 +4094,13 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
       builder: (context, child) {
         return Theme(
           data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: SaasPalette.brand600,
+            colorScheme: ColorScheme.light(
+              primary: context.saas.brand600,
               onPrimary: Colors.white,
-              surface: SaasPalette.bgCanvas,
-              onSurface: SaasPalette.textPrimary,
+              surface: context.saas.bgCanvas,
+              onSurface: context.saas.textPrimary,
             ),
-            dialogTheme: DialogThemeData(backgroundColor: SaasPalette.bgCanvas),
+            dialogTheme: DialogThemeData(backgroundColor: context.saas.bgCanvas),
           ),
           child: child!,
         );
@@ -3790,10 +4124,10 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: selected != null ? SaasPalette.brand600 : SaasPalette.border,
+          color: selected != null ? context.saas.brand600 : context.saas.border,
           width: selected != null ? 1.5 : 1,
         ),
       ),
@@ -3802,8 +4136,8 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
           Icon(
             Icons.sell_rounded,
             color: selected != null
-                ? SaasPalette.brand600
-                : SaasPalette.textTertiary,
+                ? context.saas.brand600
+                : context.saas.textTertiary,
             size: 15,
           ),
           const SizedBox(width: 8),
@@ -3811,10 +4145,10 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'PRECIO',
                   style: TextStyle(
-                    color: SaasPalette.textSecondary,
+                    color: context.saas.textSecondary,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.4,
@@ -3826,14 +4160,14 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
                     value: selected,
                     isExpanded: true,
                     isDense: true,
-                    dropdownColor: SaasPalette.bgCanvas,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    dropdownColor: context.saas.bgCanvas,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 13,
                     ),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 18,
                     ),
                     items: [
@@ -3841,8 +4175,8 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
                         value: null,
                         child: Text(
                           'Base — ${currencyFmt.format(basePrice)}',
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -3855,8 +4189,8 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
                           value: p,
                           child: Text(
                             '${p.descripcion}$edadStr — ${currencyFmt.format(p.precio)}',
-                            style: const TextStyle(
-                              color: SaasPalette.textPrimary,
+                            style: TextStyle(
+                              color: context.saas.textPrimary,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -3883,16 +4217,16 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.person_outline,
-                  color: SaasPalette.warning,
+                  color: context.saas.warning,
                   size: 18,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Acompañante',
                   style: TextStyle(
-                    color: SaasPalette.warning,
+                    color: context.saas.warning,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -3918,10 +4252,10 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'TIPO DE DOCUMENTO',
                   style: TextStyle(
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.8,
@@ -3945,21 +4279,21 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
                         ),
                         decoration: BoxDecoration(
                           color: selected
-                              ? SaasPalette.brand50
-                              : SaasPalette.bgSubtle,
+                              ? context.saas.brand50
+                              : context.saas.bgSubtle,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: selected
-                                ? SaasPalette.brand600.withValues(alpha: 0.6)
-                                : SaasPalette.border,
+                                ? context.saas.brand600.withValues(alpha: 0.6)
+                                : context.saas.border,
                           ),
                         ),
                         child: Text(
                           tipo,
                           style: TextStyle(
                             color: selected
-                                ? SaasPalette.brand600
-                                : SaasPalette.textSecondary,
+                                ? context.saas.brand600
+                                : context.saas.textSecondary,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -3989,10 +4323,10 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'OCUPA ASIENTO',
                   style: TextStyle(
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.8,
@@ -4026,10 +4360,10 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'FECHA DE NACIMIENTO',
                   style: TextStyle(
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.8,
@@ -4046,14 +4380,14 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
                     ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: SaasPalette.border),
-                      color: SaasPalette.bgSubtle,
+                      border: Border.all(color: context.saas.border),
+                      color: context.saas.bgSubtle,
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.cake_rounded,
-                          color: SaasPalette.brand600,
+                          color: context.saas.brand600,
                           size: 18,
                         ),
                         const SizedBox(width: 12),
@@ -4061,8 +4395,8 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
                           _dob != null
                               ? '${_dob!.day}/${_dob!.month}/${_dob!.year}'
                               : 'Seleccionar fecha (Opcional)',
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 13,
                           ),
                         ),
@@ -4079,9 +4413,9 @@ class _IntegranteFormFieldsState extends State<_IntegranteFormFields> {
             top: 0,
             right: 0,
             child: IconButton(
-              icon: const Icon(
+              icon: Icon(
                 Icons.delete_outline_rounded,
-                color: SaasPalette.danger,
+                color: context.saas.danger,
                 size: 22,
               ),
               onPressed: widget.onDelete,
@@ -4111,20 +4445,20 @@ class _AsientoChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? SaasPalette.brand50 : SaasPalette.bgSubtle,
+          color: selected ? context.saas.brand50 : context.saas.bgSubtle,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected
-                ? SaasPalette.brand600.withValues(alpha: 0.6)
-                : SaasPalette.border,
+                ? context.saas.brand600.withValues(alpha: 0.6)
+                : context.saas.border,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
             color: selected
-                ? SaasPalette.brand600
-                : SaasPalette.textSecondary,
+                ? context.saas.brand600
+                : context.saas.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
@@ -4178,9 +4512,9 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
           return Container(
             constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
             decoration: BoxDecoration(
-              color: SaasPalette.bgCanvas,
+              color: context.saas.bgCanvas,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: SaasPalette.border),
+              border: Border.all(color: context.saas.border),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
@@ -4196,17 +4530,17 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                   padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.person_search_rounded,
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                         size: 20,
                       ),
                       const SizedBox(width: 10),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Seleccionar Cliente',
                           style: TextStyle(
-                            color: SaasPalette.textPrimary,
+                            color: context.saas.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -4214,9 +4548,9 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                       ),
 
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.close_rounded,
-                          color: SaasPalette.textTertiary,
+                          color: context.saas.textTertiary,
                           size: 20,
                         ),
                         onPressed: () => Navigator.pop(context),
@@ -4230,32 +4564,32 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                   child: TextField(
                     controller: _searchCtrl,
                     autofocus: true,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 14,
                     ),
                     onChanged: (v) => _onSearch(v, context),
                     decoration: InputDecoration(
                       hintText: 'Buscar por nombre, correo o documento...',
-                      hintStyle: const TextStyle(
-                        color: SaasPalette.textTertiary,
+                      hintStyle: TextStyle(
+                        color: context.saas.textTertiary,
                         fontSize: 13,
                       ),
-                      prefixIcon: const Icon(
+                      prefixIcon: Icon(
                         Icons.search_rounded,
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                         size: 18,
                       ),
                       filled: true,
-                      fillColor: SaasPalette.bgSubtle,
+                      fillColor: context.saas.bgSubtle,
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: SaasPalette.border),
+                        borderSide: BorderSide(color: context.saas.border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(
-                          color: SaasPalette.brand600,
+                        borderSide: BorderSide(
+                          color: context.saas.brand600,
                         ),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
@@ -4269,9 +4603,9 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                 // List
                 Expanded(
                   child: isSearching
-                      ? const Center(
+                      ? Center(
                           child: CircularProgressIndicator(
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                             strokeWidth: 2,
                           ),
                         )
@@ -4280,7 +4614,7 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                           child: Text(
                             'Sin resultados',
                             style: TextStyle(
-                              color: SaasPalette.textTertiary,
+                              color: context.saas.textTertiary,
                               fontSize: 13,
                             ),
                           ),
@@ -4308,7 +4642,7 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: SaasPalette.textPrimary.withValues(
+                                      color: context.saas.textPrimary.withValues(
                                         alpha: 0.05,
                                       ),
                                     ),
@@ -4319,7 +4653,7 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                                         width: 36,
                                         height: 36,
                                         decoration: BoxDecoration(
-                                          color: SaasPalette.brand600
+                                          color: context.saas.brand600
                                               .withValues(alpha: 0.1),
                                           shape: BoxShape.circle,
                                         ),
@@ -4328,8 +4662,8 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                                             c.nombre.isNotEmpty
                                                 ? c.nombre[0].toUpperCase()
                                                 : '?',
-                                            style: const TextStyle(
-                                              color: SaasPalette.brand600,
+                                            style: TextStyle(
+                                              color: context.saas.brand600,
                                               fontSize: 14,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -4344,8 +4678,8 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                                           children: [
                                             Text(
                                               c.nombre,
-                                              style: const TextStyle(
-                                                color: SaasPalette.textPrimary,
+                                              style: TextStyle(
+                                                color: context.saas.textPrimary,
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 14,
                                               ),
@@ -4354,7 +4688,7 @@ class _ClientePickerDialogState extends State<_ClientePickerDialog> {
                                               '${c.tipoDocumento} ${c.documento}',
                                               style: TextStyle(
                                                 color:
-                                                    SaasPalette.textSecondary,
+                                                    context.saas.textSecondary,
                                                 fontSize: 12,
                                               ),
                                             ),
@@ -4425,9 +4759,9 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
       child: Container(
         constraints: const BoxConstraints(maxWidth: 520, maxHeight: 640),
         decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
+          color: context.saas.bgCanvas,
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: SaasPalette.border),
+          border: Border.all(color: context.saas.border),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
@@ -4443,26 +4777,26 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
               padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.tour_rounded,
-                    color: SaasPalette.brand600,
+                    color: context.saas.brand600,
                     size: 20,
                   ),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Seleccionar Tour',
                       style: TextStyle(
-                        color: SaasPalette.textPrimary,
+                        color: context.saas.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close_rounded,
-                      color: SaasPalette.textTertiary,
+                      color: context.saas.textTertiary,
                       size: 20,
                     ),
                     onPressed: () => Navigator.pop(context),
@@ -4476,30 +4810,30 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
               child: TextField(
                 controller: _searchCtrl,
                 autofocus: true,
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
+                style: TextStyle(
+                  color: context.saas.textPrimary,
                   fontSize: 14,
                 ),
                 decoration: InputDecoration(
                   hintText: 'Buscar por nombre del tour...',
-                  hintStyle: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  hintStyle: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 13,
                   ),
-                  prefixIcon: const Icon(
+                  prefixIcon: Icon(
                     Icons.search_rounded,
-                    color: SaasPalette.brand600,
+                    color: context.saas.brand600,
                     size: 18,
                   ),
                   filled: true,
-                  fillColor: SaasPalette.bgSubtle,
+                  fillColor: context.saas.bgSubtle,
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: SaasPalette.border),
+                    borderSide: BorderSide(color: context.saas.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: SaasPalette.brand600),
+                    borderSide: BorderSide(color: context.saas.brand600),
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -4516,7 +4850,7 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
                       child: Text(
                         'Sin resultados',
                         style: TextStyle(
-                          color: SaasPalette.textTertiary,
+                          color: context.saas.textTertiary,
                           fontSize: 13,
                         ),
                       ),
@@ -4558,7 +4892,7 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: SaasPalette.border.withValues(alpha: 0.5),
+                                  color: context.saas.border.withValues(alpha: 0.5),
                                 ),
                               ),
                               child: Column(
@@ -4568,17 +4902,17 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
                                   Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      const Icon(
+                                      Icon(
                                         Icons.tour_rounded,
-                                        color: SaasPalette.brand600,
+                                        color: context.saas.brand600,
                                         size: 15,
                                       ),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
                                           t.name,
-                                          style: const TextStyle(
-                                            color: SaasPalette.textPrimary,
+                                          style: TextStyle(
+                                            color: context.saas.textPrimary,
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -4593,19 +4927,19 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
                                             vertical: 2,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: SaasPalette.brand600
+                                            color: context.saas.brand600
                                                 .withValues(alpha: 0.1),
                                             borderRadius:
                                                 BorderRadius.circular(6),
                                             border: Border.all(
-                                              color: SaasPalette.brand600
+                                              color: context.saas.brand600
                                                   .withValues(alpha: 0.25),
                                             ),
                                           ),
                                           child: Text(
                                             t.tipoTour!,
-                                            style: const TextStyle(
-                                              color: SaasPalette.brand600,
+                                            style: TextStyle(
+                                              color: context.saas.brand600,
                                               fontSize: 10,
                                               fontWeight: FontWeight.w700,
                                             ),
@@ -4620,10 +4954,10 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
                                     const SizedBox(height: 6),
                                     Row(
                                       children: [
-                                        const Icon(
+                                        Icon(
                                           Icons.calendar_today_rounded,
                                           size: 11,
-                                          color: SaasPalette.textTertiary,
+                                          color: context.saas.textTertiary,
                                         ),
                                         const SizedBox(width: 5),
                                         Text(
@@ -4631,8 +4965,8 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
                                                   fechaFin != fechaInicio
                                               ? '$fechaInicio → $fechaFin'
                                               : fechaInicio,
-                                          style: const TextStyle(
-                                            color: SaasPalette.textSecondary,
+                                          style: TextStyle(
+                                            color: context.saas.textSecondary,
                                             fontSize: 11,
                                           ),
                                         ),
@@ -4663,7 +4997,7 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
                                         _CupoChip(
                                           icon: Icons.format_list_numbered_rounded,
                                           label: '$total total',
-                                          color: SaasPalette.textTertiary,
+                                          color: context.saas.textTertiary,
                                         ),
                                       ],
                                     ),
@@ -4674,7 +5008,7 @@ class _TourPickerDialogState extends State<_TourPickerDialog> {
                                       child: LinearProgressIndicator(
                                         value: ocupPct,
                                         minHeight: 4,
-                                        backgroundColor: SaasPalette.border,
+                                        backgroundColor: context.saas.border,
                                         valueColor:
                                             AlwaysStoppedAnimation<Color>(
                                           ocupColor,
@@ -4709,12 +5043,12 @@ class _PrecioSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: SaasPalette.brand600, size: 14),
+        Icon(icon, color: context.saas.brand600, size: 14),
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
+          style: TextStyle(
+            color: context.saas.textSecondary,
             fontSize: 10,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.6,
@@ -4752,7 +5086,7 @@ class _PrecioRow extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    color: SaasPalette.textPrimary,
+                    color: context.saas.textPrimary,
                     fontSize: 13,
                     fontWeight: destacado ? FontWeight.w700 : FontWeight.w500,
                   ),
@@ -4760,8 +5094,8 @@ class _PrecioRow extends StatelessWidget {
                 if (sublabel != null)
                   Text(
                     sublabel!,
-                    style: const TextStyle(
-                      color: SaasPalette.textTertiary,
+                    style: TextStyle(
+                      color: context.saas.textTertiary,
                       fontSize: 11,
                     ),
                   ),
@@ -4771,7 +5105,7 @@ class _PrecioRow extends StatelessWidget {
           Text(
             precio,
             style: TextStyle(
-              color: SaasPalette.success,
+              color: context.saas.success,
               fontSize: destacado ? 15 : 13,
               fontWeight: FontWeight.w700,
             ),
@@ -4840,9 +5174,9 @@ class _PagoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Row(
         children: [
@@ -4851,15 +5185,15 @@ class _PagoCard extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               color: pago.isValidated
-                  ? SaasPalette.success.withValues(alpha: 0.1)
-                  : SaasPalette.textTertiary.withValues(alpha: 0.1),
+                  ? context.saas.success.withValues(alpha: 0.1)
+                  : context.saas.textTertiary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               pago.isValidated ? Icons.verified_rounded : Icons.history_rounded,
               color: pago.isValidated
-                  ? SaasPalette.success
-                  : SaasPalette.textTertiary,
+                  ? context.saas.success
+                  : context.saas.textTertiary,
               size: 20,
             ),
           ),
@@ -4872,8 +5206,8 @@ class _PagoCard extends StatelessWidget {
                   pago.metodoPago.isNotEmpty
                       ? pago.metodoPago
                       : 'Pago #${pago.id}',
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -4882,8 +5216,8 @@ class _PagoCard extends StatelessWidget {
                   pago.referencia.isNotEmpty
                       ? pago.referencia
                       : 'Sin referencia',
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -4892,8 +5226,8 @@ class _PagoCard extends StatelessWidget {
                   pago.fechaDocumento.isNotEmpty
                       ? pago.fechaDocumento
                       : 'Sin fecha',
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  style: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 11,
                   ),
                 ),
@@ -4902,8 +5236,8 @@ class _PagoCard extends StatelessWidget {
           ),
           Text(
             currencyFmt.format(pago.monto),
-            style: const TextStyle(
-              color: SaasPalette.success,
+            style: TextStyle(
+              color: context.saas.success,
               fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
@@ -4930,14 +5264,14 @@ class _TourInfoRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: SaasPalette.textTertiary, size: 15),
+        Icon(icon, color: context.saas.textTertiary, size: 15),
         const SizedBox(width: 10),
         SizedBox(
           width: 110,
           child: Text(
             label,
-            style: const TextStyle(
-              color: SaasPalette.textSecondary,
+            style: TextStyle(
+              color: context.saas.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -4946,8 +5280,8 @@ class _TourInfoRow extends StatelessWidget {
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
-              color: SaasPalette.textPrimary,
+            style: TextStyle(
+              color: context.saas.textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -5088,11 +5422,11 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
       lastDate: DateTime(2035),
       builder: (context, child) => Theme(
         data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
+          colorScheme:  ColorScheme.dark(
             primary: D.royalBlue,
-            onPrimary: Colors.white,
-            surface: D.surface,
-            onSurface: Colors.white,
+            onPrimary: context.saas.bgApp,
+            surface: context.saas.textPrimary,
+            onSurface: context.saas.bgApp,
           ),
         ),
         child: child!,
@@ -5105,18 +5439,18 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
   }
 
   InputDecoration _dec(String hint, IconData icon) => InputDecoration(
-    prefixIcon: Icon(icon, color: SaasPalette.brand600, size: 18),
+    prefixIcon: Icon(icon, color: context.saas.brand600, size: 18),
     hintText: hint,
-    hintStyle: const TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
+    hintStyle: TextStyle(color: context.saas.textTertiary, fontSize: 13),
     filled: true,
-    fillColor: SaasPalette.bgSubtle,
+    fillColor: context.saas.bgSubtle,
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: SaasPalette.border),
+      borderSide: BorderSide(color: context.saas.border),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: SaasPalette.brand600),
+      borderSide: BorderSide(color: context.saas.brand600),
     ),
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
   );
@@ -5130,16 +5464,16 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.flight_rounded,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   size: 16,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'Vuelo ${widget.index + 1}',
-                  style: const TextStyle(
-                    color: SaasPalette.brand600,
+                  style: TextStyle(
+                    color: context.saas.brand600,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
@@ -5151,8 +5485,8 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
             // Aerolínea Selector
             Text(
               'Aerolínea *',
-              style: const TextStyle(
-                color: SaasPalette.textSecondary,
+              style: TextStyle(
+                color: context.saas.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -5166,9 +5500,9 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: SaasPalette.bgSubtle,
+                  color: context.saas.bgSubtle,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: SaasPalette.border),
+                  border: Border.all(color: context.saas.border),
                 ),
                 child: Row(
                   children: [
@@ -5185,9 +5519,9 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                           if (a != null) {
                             return _AerolineaLogo(aerolinea: a, size: 28);
                           }
-                          return const Icon(
+                          return Icon(
                             Icons.business_rounded,
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                             size: 18,
                           );
                         },
@@ -5200,8 +5534,8 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                                   .firstWhere((al) => al?.id == _aerolineaId)
                                   ?.nombre ??
                               'Seleccionar aerolínea',
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 14,
                           ),
                           overflow: TextOverflow.ellipsis,
@@ -5210,7 +5544,7 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                     ] else ...[
                       Icon(
                         Icons.business_rounded,
-                        color: SaasPalette.textTertiary.withValues(alpha: 0.5),
+                        color: context.saas.textTertiary.withValues(alpha: 0.5),
                         size: 18,
                       ),
                       const SizedBox(width: 12),
@@ -5219,16 +5553,16 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                           widget.loadingAerolineas
                               ? 'Cargando aerolíneas...'
                               : 'Seleccionar aerolínea',
-                          style: const TextStyle(
-                            color: SaasPalette.textTertiary,
+                          style: TextStyle(
+                            color: context.saas.textTertiary,
                             fontSize: 14,
                           ),
                         ),
                       ),
                     ],
-                    const Icon(
+                    Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      color: SaasPalette.textTertiary,
+                      color: context.saas.textTertiary,
                       size: 20,
                     ),
                   ],
@@ -5239,8 +5573,8 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
             // Número de vuelo
             TextField(
               controller: _numeroCtrl,
-              style: const TextStyle(
-                color: SaasPalette.textPrimary,
+              style: TextStyle(
+                color: context.saas.textPrimary,
                 fontSize: 14,
               ),
               decoration: _dec(
@@ -5256,8 +5590,8 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                 Expanded(
                   child: TextField(
                     controller: _origenCtrl,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 14,
                     ),
                     decoration: _dec('Origen', Icons.flight_takeoff_rounded),
@@ -5265,17 +5599,17 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Icon(
+                Icon(
                   Icons.arrow_forward_rounded,
-                  color: SaasPalette.textTertiary,
+                  color: context.saas.textTertiary,
                   size: 18,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
                     controller: _destinoCtrl,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 14,
                     ),
                     decoration: _dec('Destino', Icons.flight_land_rounded),
@@ -5334,8 +5668,8 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                 Expanded(
                   child: TextField(
                     controller: _horaSalidaCtrl,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 14,
                     ),
                     decoration: _dec(
@@ -5349,8 +5683,8 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
                 Expanded(
                   child: TextField(
                     controller: _horaLlegadaCtrl,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 14,
                     ),
                     decoration: _dec('Hora llegada', Icons.schedule_rounded),
@@ -5363,9 +5697,9 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
             // Clase
             DropdownButtonFormField<String>(
               initialValue: _clase,
-              dropdownColor: SaasPalette.bgCanvas,
-              style: const TextStyle(
-                color: SaasPalette.textPrimary,
+              dropdownColor: context.saas.bgCanvas,
+              style: TextStyle(
+                color: context.saas.textPrimary,
                 fontSize: 14,
               ),
               decoration: _dec(
@@ -5392,10 +5726,10 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Tipo de vuelo *',
                   style: TextStyle(
-                    color: SaasPalette.textSecondary,
+                    color: context.saas.textSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -5432,7 +5766,7 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
             // TextFormField(
             //   controller: _precioCtrl,
             //   style: const TextStyle(
-            //     color: SaasPalette.textPrimary,
+            //     color: context.saas.textPrimary,
             //     fontSize: 14,
             //   ),
             //   decoration: _dec('Precio del vuelo ', Icons.attach_money_rounded),
@@ -5458,8 +5792,8 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
             // Reserva vuelo (obligatorio)
             TextFormField(
               controller: _reservaVueloCtrl,
-              style: const TextStyle(
-                color: SaasPalette.textPrimary,
+              style: TextStyle(
+                color: context.saas.textPrimary,
                 fontSize: 14,
               ),
               decoration: _dec(
@@ -5477,9 +5811,9 @@ class _VueloFormFieldsState extends State<_VueloFormFields> {
           top: 0,
           right: 0,
           child: IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.delete_outline_rounded,
-              color: SaasPalette.danger,
+              color: context.saas.danger,
               size: 22,
             ),
             onPressed: widget.onDelete,
@@ -5538,7 +5872,7 @@ class _AerolineaPickerDialogState extends State<_AerolineaPickerDialog> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
           child: Container(
-            color: Colors.white.withValues(alpha: 0.95),
+            color: context.saas.bgCanvas.withValues(alpha: 0.97),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -5546,28 +5880,28 @@ class _AerolineaPickerDialogState extends State<_AerolineaPickerDialog> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: D.bg)),
+                    border: Border(bottom: BorderSide(color: context.saas.border)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.business_rounded,
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                       ),
                       const SizedBox(width: 12),
-                      const Text(
+                      Text(
                         'Seleccionar Aerolínea',
                         style: TextStyle(
-                          color: D.bg,
+                          color: context.saas.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const Spacer(),
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.close_rounded,
-                          color: D.slate400,
+                          color: context.saas.textTertiary,
                         ),
                         onPressed: () => Navigator.pop(context),
                       ),
@@ -5580,23 +5914,23 @@ class _AerolineaPickerDialogState extends State<_AerolineaPickerDialog> {
                   padding: const EdgeInsets.all(16),
                   child: TextField(
                     controller: _searchCtrl,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 14,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Buscar por nombre o código IATA...',
-                      hintStyle: const TextStyle(
-                        color: SaasPalette.textTertiary,
+                      hintStyle: TextStyle(
+                        color: context.saas.textTertiary,
                         fontSize: 13,
                       ),
-                      prefixIcon: const Icon(
+                      prefixIcon: Icon(
                         Icons.search_rounded,
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                         size: 20,
                       ),
                       filled: true,
-                      fillColor: SaasPalette.bgSubtle,
+                      fillColor: context.saas.bgSubtle,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -5636,9 +5970,7 @@ class _AerolineaPickerDialogState extends State<_AerolineaPickerDialog> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.05,
-                                      ),
+                                      color: context.saas.border,
                                     ),
                                   ),
                                   child: Row(
@@ -5653,17 +5985,17 @@ class _AerolineaPickerDialogState extends State<_AerolineaPickerDialog> {
                                           children: [
                                             Text(
                                               a.nombre,
-                                              style: const TextStyle(
-                                                color: SaasPalette.textPrimary,
+                                              style: TextStyle(
+                                                color: context.saas.textPrimary,
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 14,
                                               ),
                                             ),
                                             Text(
                                               a.pais ?? 'Internacional',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 color:
-                                                    SaasPalette.textSecondary,
+                                                    context.saas.textSecondary,
                                                 fontSize: 12,
                                               ),
                                             ),
@@ -5676,15 +6008,15 @@ class _AerolineaPickerDialogState extends State<_AerolineaPickerDialog> {
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: SaasPalette.brand50,
+                                          color: context.saas.brand50,
                                           borderRadius: BorderRadius.circular(
                                             6,
                                           ),
                                         ),
                                         child: Text(
                                           a.codigoIata,
-                                          style: const TextStyle(
-                                            color: SaasPalette.brand600,
+                                          style: TextStyle(
+                                            color: context.saas.brand600,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 12,
                                           ),
@@ -5755,14 +6087,14 @@ class _IataBadge extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: SaasPalette.brand50,
+        color: context.saas.brand50,
         borderRadius: BorderRadius.circular(4),
       ),
       alignment: Alignment.center,
       child: Text(
         iata,
         style: TextStyle(
-          color: SaasPalette.brand600,
+          color: context.saas.brand600,
           fontSize: size * 0.38,
           fontWeight: FontWeight.w900,
           letterSpacing: -0.5,
@@ -5796,10 +6128,10 @@ class _TipoVueloChip extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? SaasPalette.brand600 : SaasPalette.bgSubtle,
+          color: selected ? context.saas.brand600 : context.saas.bgSubtle,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? SaasPalette.brand600 : SaasPalette.border,
+            color: selected ? context.saas.brand600 : context.saas.border,
           ),
         ),
         child: Row(
@@ -5808,13 +6140,13 @@ class _TipoVueloChip extends StatelessWidget {
             Icon(
               icon,
               size: 15,
-              color: selected ? Colors.white : SaasPalette.textSecondary,
+              color: selected ? Colors.white : context.saas.textSecondary,
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : SaasPalette.textSecondary,
+                color: selected ? Colors.white : context.saas.textSecondary,
                 fontSize: 13,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               ),
@@ -6003,33 +6335,33 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
   }
 
   InputDecoration _dec(String hint, IconData icon) => InputDecoration(
-        prefixIcon: Icon(icon, color: SaasPalette.brand600, size: 18),
+        prefixIcon: Icon(icon, color: context.saas.brand600, size: 18),
         hintText: hint,
-        hintStyle: const TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
+        hintStyle: TextStyle(color: context.saas.textTertiary, fontSize: 13),
         filled: true,
-        fillColor: SaasPalette.bgSubtle,
+        fillColor: context.saas.bgSubtle,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: SaasPalette.border),
+          borderSide: BorderSide(color: context.saas.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: SaasPalette.brand600),
+          borderSide: BorderSide(color: context.saas.brand600),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: SaasPalette.danger),
+          borderSide: BorderSide(color: context.saas.danger),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: SaasPalette.danger),
+          borderSide: BorderSide(color: context.saas.danger),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       );
 
   Widget _buildHabitacionesSection() {
     if (_loadingHotel) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: 12),
         child: Center(
           child: Row(
@@ -6040,14 +6372,14 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                 height: 16,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                 ),
               ),
               SizedBox(width: 10),
               Text(
                 'Cargando habitaciones...',
                 style: TextStyle(
-                  color: SaasPalette.textSecondary,
+                  color: context.saas.textSecondary,
                   fontSize: 13,
                 ),
               ),
@@ -6079,9 +6411,9 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: SaasPalette.bgSubtle,
+            color: context.saas.bgSubtle,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: SaasPalette.border),
+            border: Border.all(color: context.saas.border),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -6093,20 +6425,20 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                   Container(
                     padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
-                      color: SaasPalette.brand600.withValues(alpha: 0.1),
+                      color: context.saas.brand600.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(7),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.bed_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 14,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'HABITACIONES',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.4,
@@ -6128,13 +6460,13 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? SaasPalette.brand600.withValues(alpha: 0.06)
-                        : SaasPalette.bgCanvas,
+                        ? context.saas.brand600.withValues(alpha: 0.06)
+                        : context.saas.bgCanvas,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isSelected
-                          ? SaasPalette.brand600.withValues(alpha: 0.3)
-                          : SaasPalette.border,
+                          ? context.saas.brand600.withValues(alpha: 0.3)
+                          : context.saas.border,
                     ),
                   ),
                   child: Column(
@@ -6148,8 +6480,8 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                             Icons.bed_rounded,
                             size: 16,
                             color: isSelected
-                                ? SaasPalette.brand600
-                                : SaasPalette.textTertiary,
+                                ? context.saas.brand600
+                                : context.saas.textTertiary,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -6160,8 +6492,8 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                                   label,
                                   style: TextStyle(
                                     color: isSelected
-                                        ? SaasPalette.textPrimary
-                                        : SaasPalette.textSecondary,
+                                        ? context.saas.textPrimary
+                                        : context.saas.textSecondary,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -6173,8 +6505,8 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                                       _currFmt.format(hab.precio),
                                       style: TextStyle(
                                         color: isSelected
-                                            ? SaasPalette.brand600
-                                            : SaasPalette.textTertiary,
+                                            ? context.saas.brand600
+                                            : context.saas.textTertiary,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -6186,25 +6518,25 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                                         vertical: 2,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: SaasPalette.bgSubtle,
+                                        color: context.saas.bgSubtle,
                                         borderRadius: BorderRadius.circular(4),
                                         border: Border.all(
-                                          color: SaasPalette.border,
+                                          color: context.saas.border,
                                         ),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(
+                                          Icon(
                                             Icons.person_rounded,
                                             size: 10,
-                                            color: SaasPalette.textTertiary,
+                                            color: context.saas.textTertiary,
                                           ),
                                           const SizedBox(width: 3),
                                           Text(
                                             '$personasCount pers.',
-                                            style: const TextStyle(
-                                              color: SaasPalette.textTertiary,
+                                            style: TextStyle(
+                                              color: context.saas.textTertiary,
                                               fontSize: 10,
                                             ),
                                           ),
@@ -6229,16 +6561,16 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: SaasPalette.bgSubtle,
+                                      color: context.saas.bgSubtle,
                                       borderRadius: BorderRadius.circular(4),
                                       border: Border.all(
-                                        color: SaasPalette.border,
+                                        color: context.saas.border,
                                       ),
                                     ),
                                     child: Text(
                                       s,
-                                      style: const TextStyle(
-                                        color: SaasPalette.textTertiary,
+                                      style: TextStyle(
+                                        color: context.saas.textTertiary,
                                         fontSize: 10,
                                       ),
                                     ),
@@ -6266,8 +6598,8 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         color: cant > 0
-                                            ? SaasPalette.textPrimary
-                                            : SaasPalette.textTertiary,
+                                            ? context.saas.textPrimary
+                                            : context.saas.textTertiary,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -6286,8 +6618,8 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                                 cant == 1 ? 'habitación' : 'habitaciones',
                                 style: TextStyle(
                                   color: isSelected
-                                      ? SaasPalette.brand600
-                                      : SaasPalette.textTertiary,
+                                      ? context.saas.brand600
+                                      : context.saas.textTertiary,
                                   fontSize: 9,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -6326,32 +6658,32 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: SaasPalette.success.withValues(alpha: 0.07),
+                    color: context.saas.success.withValues(alpha: 0.07),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: SaasPalette.success.withValues(alpha: 0.2),
+                      color: context.saas.success.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.calculate_rounded,
-                        color: SaasPalette.success,
+                        color: context.saas.success,
                         size: 15,
                       ),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'Precio calculado:',
                         style: TextStyle(
-                          color: SaasPalette.textSecondary,
+                          color: context.saas.textSecondary,
                           fontSize: 12,
                         ),
                       ),
                       const Spacer(),
                       Text(
                         _currFmt.format(_precioCalculado),
-                        style: const TextStyle(
-                          color: SaasPalette.success,
+                        style: TextStyle(
+                          color: context.saas.success,
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                         ),
@@ -6375,9 +6707,9 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: SaasPalette.border),
+            border: Border.all(color: context.saas.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -6388,20 +6720,20 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: SaasPalette.brand600.withValues(alpha: 0.12),
+                      color: context.saas.brand600.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.hotel_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 14,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'Hotel Reserva',
                     style: TextStyle(
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -6432,20 +6764,20 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                             vertical: 12,
                           ),
                           decoration: BoxDecoration(
-                            color: SaasPalette.bgSubtle,
+                            color: context.saas.bgSubtle,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
                               color: field.hasError
-                                  ? SaasPalette.danger
-                                  : SaasPalette.border,
+                                  ? context.saas.danger
+                                  : context.saas.border,
                             ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.hotel_rounded,
                                 size: 18,
-                                color: SaasPalette.brand600,
+                                color: context.saas.brand600,
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -6456,33 +6788,33 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                                         children: [
                                           Text(
                                             selectedHotel.nombre,
-                                            style: const TextStyle(
-                                              color: SaasPalette.textPrimary,
+                                            style: TextStyle(
+                                              color: context.saas.textPrimary,
                                               fontSize: 14,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
                                           Text(
                                             selectedHotel.ciudad,
-                                            style: const TextStyle(
-                                              color: SaasPalette.textSecondary,
+                                            style: TextStyle(
+                                              color: context.saas.textSecondary,
                                               fontSize: 12,
                                             ),
                                           ),
                                         ],
                                       )
-                                    : const Text(
+                                    : Text(
                                         'Seleccionar hotel',
                                         style: TextStyle(
-                                          color: SaasPalette.textTertiary,
+                                          color: context.saas.textTertiary,
                                           fontSize: 13,
                                         ),
                                       ),
                               ),
-                              const Icon(
+                              Icon(
                                 Icons.search_rounded,
                                 size: 18,
-                                color: SaasPalette.brand600,
+                                color: context.saas.brand600,
                               ),
                             ],
                           ),
@@ -6494,8 +6826,8 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                           padding: const EdgeInsets.only(left: 14),
                           child: Text(
                             field.errorText!,
-                            style: const TextStyle(
-                              color: SaasPalette.danger,
+                            style: TextStyle(
+                              color: context.saas.danger,
                               fontSize: 11,
                             ),
                           ),
@@ -6513,8 +6845,8 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
               // Número de reserva
               TextFormField(
                 controller: _numeroCtrl,
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
+                style: TextStyle(
+                  color: context.saas.textPrimary,
                   fontSize: 14,
                 ),
                 decoration: _dec(
@@ -6553,8 +6885,8 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                       child: AbsorbPointer(
                         child: TextFormField(
                           controller: _checkinCtrl,
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 14,
                           ),
                           decoration: _dec(
@@ -6575,8 +6907,8 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                       child: AbsorbPointer(
                         child: TextFormField(
                           controller: _checkoutCtrl,
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 14,
                           ),
                           decoration: _dec(
@@ -6600,9 +6932,9 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
           top: 8,
           right: 8,
           child: IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.delete_outline_rounded,
-              color: SaasPalette.danger,
+              color: context.saas.danger,
               size: 20,
             ),
             onPressed: widget.onRemove,
@@ -6637,19 +6969,19 @@ class _StepperBtn extends StatelessWidget {
         height: 28,
         decoration: BoxDecoration(
           color: enabled
-              ? SaasPalette.brand600.withValues(alpha: 0.1)
-              : SaasPalette.bgSubtle,
+              ? context.saas.brand600.withValues(alpha: 0.1)
+              : context.saas.bgSubtle,
           borderRadius: BorderRadius.circular(7),
           border: Border.all(
             color: enabled
-                ? SaasPalette.brand600.withValues(alpha: 0.3)
-                : SaasPalette.border,
+                ? context.saas.brand600.withValues(alpha: 0.3)
+                : context.saas.border,
           ),
         ),
         child: Icon(
           icon,
           size: 14,
-          color: enabled ? SaasPalette.brand600 : SaasPalette.textTertiary,
+          color: enabled ? context.saas.brand600 : context.saas.textTertiary,
         ),
       ),
     );
@@ -6680,20 +7012,20 @@ class _HabImageThumb extends StatelessWidget {
                     url,
                     fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) => Container(
-                      color: SaasPalette.bgCanvas,
+                      color: context.saas.bgCanvas,
                       padding: const EdgeInsets.all(32),
-                      child: const Column(
+                      child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.broken_image_rounded,
-                            color: SaasPalette.textTertiary,
+                            color: context.saas.textTertiary,
                             size: 48,
                           ),
                           SizedBox(height: 8),
                           Text(
                             'Error al cargar imagen',
-                            style: TextStyle(color: SaasPalette.textTertiary),
+                            style: TextStyle(color: context.saas.textTertiary),
                           ),
                         ],
                       ),
@@ -6728,8 +7060,8 @@ class _HabImageThumb extends StatelessWidget {
         height: 62,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: SaasPalette.border),
-          color: SaasPalette.bgSubtle,
+          border: Border.all(color: context.saas.border),
+          color: context.saas.bgSubtle,
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
@@ -6740,21 +7072,21 @@ class _HabImageThumb extends StatelessWidget {
               fit: BoxFit.cover,
               loadingBuilder: (_, child, progress) {
                 if (progress == null) return child;
-                return const Center(
+                return Center(
                   child: SizedBox(
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                     ),
                   ),
                 );
               },
-              errorBuilder: (_, __, ___) => const Center(
+              errorBuilder: (_, __, ___) => Center(
                 child: Icon(
                   Icons.broken_image_rounded,
-                  color: SaasPalette.textTertiary,
+                  color: context.saas.textTertiary,
                   size: 22,
                 ),
               ),
@@ -6834,30 +7166,30 @@ class _HotelPickerDialogState extends State<_HotelPickerDialog> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
           child: Container(
-            color: Colors.white.withValues(alpha: 0.95),
+            color: context.saas.bgCanvas.withValues(alpha: 0.97),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Header
                 Container(
                   padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     border: Border(
-                      bottom: BorderSide(color: SaasPalette.border),
+                      bottom: BorderSide(color: context.saas.border),
                     ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.hotel_rounded,
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Seleccionar Hotel',
                           style: TextStyle(
-                            color: SaasPalette.textPrimary,
+                            color: context.saas.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -6873,7 +7205,7 @@ class _HotelPickerDialogState extends State<_HotelPickerDialog> {
                         icon: const Icon(Icons.add_rounded, size: 16),
                         label: const Text('Nuevo'),
                         style: TextButton.styleFrom(
-                          foregroundColor: SaasPalette.brand600,
+                          foregroundColor: context.saas.brand600,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 6,
@@ -6885,9 +7217,9 @@ class _HotelPickerDialogState extends State<_HotelPickerDialog> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.close_rounded,
-                          color: SaasPalette.textSecondary,
+                          color: context.saas.textSecondary,
                         ),
                         onPressed: () => Navigator.pop(context),
                       ),
@@ -6901,23 +7233,23 @@ class _HotelPickerDialogState extends State<_HotelPickerDialog> {
                   child: TextField(
                     controller: _searchCtrl,
                     autofocus: true,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 14,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Buscar por nombre o ciudad...',
-                      hintStyle: const TextStyle(
-                        color: SaasPalette.textTertiary,
+                      hintStyle: TextStyle(
+                        color: context.saas.textTertiary,
                         fontSize: 13,
                       ),
-                      prefixIcon: const Icon(
+                      prefixIcon: Icon(
                         Icons.search_rounded,
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                         size: 20,
                       ),
                       filled: true,
-                      fillColor: SaasPalette.bgSubtle,
+                      fillColor: context.saas.bgSubtle,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -6957,7 +7289,7 @@ class _HotelPickerDialogState extends State<_HotelPickerDialog> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: SaasPalette.border,
+                                      color: context.saas.border,
                                     ),
                                   ),
                                   child: Row(
@@ -6966,14 +7298,14 @@ class _HotelPickerDialogState extends State<_HotelPickerDialog> {
                                         width: 40,
                                         height: 40,
                                         decoration: BoxDecoration(
-                                          color: SaasPalette.brand50,
+                                          color: context.saas.brand50,
                                           borderRadius: BorderRadius.circular(
                                             10,
                                           ),
                                         ),
-                                        child: const Icon(
+                                        child: Icon(
                                           Icons.hotel_rounded,
-                                          color: SaasPalette.brand600,
+                                          color: context.saas.brand600,
                                           size: 20,
                                         ),
                                       ),
@@ -6985,26 +7317,26 @@ class _HotelPickerDialogState extends State<_HotelPickerDialog> {
                                           children: [
                                             Text(
                                               h.nombre,
-                                              style: const TextStyle(
-                                                color: SaasPalette.textPrimary,
+                                              style: TextStyle(
+                                                color: context.saas.textPrimary,
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 14,
                                               ),
                                             ),
                                             Text(
                                               h.ciudad,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 color:
-                                                    SaasPalette.textSecondary,
+                                                    context.saas.textSecondary,
                                                 fontSize: 12,
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                      const Icon(
+                                      Icon(
                                         Icons.chevron_right_rounded,
-                                        color: SaasPalette.textTertiary,
+                                        color: context.saas.textTertiary,
                                         size: 18,
                                       ),
                                     ],
@@ -7062,7 +7394,7 @@ class _ReservaCreatedDialogState extends State<_ReservaCreatedDialog> {
     final link = r.seleccionLink ?? '';
 
     return Dialog(
-      backgroundColor: SaasPalette.bgCanvas,
+      backgroundColor: context.saas.bgCanvas,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
@@ -7075,20 +7407,20 @@ class _ReservaCreatedDialogState extends State<_ReservaCreatedDialog> {
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  color: SaasPalette.success.withValues(alpha: 0.12),
+                  color: context.saas.success.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.check_circle_rounded,
-                  color: SaasPalette.success,
+                  color: context.saas.success,
                   size: 36,
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 '¡Reserva Creada!',
                 style: TextStyle(
-                  color: SaasPalette.textPrimary,
+                  color: context.saas.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
                 ),
@@ -7096,8 +7428,8 @@ class _ReservaCreatedDialogState extends State<_ReservaCreatedDialog> {
               const SizedBox(height: 4),
               Text(
                 r.idReserva ?? '',
-                style: const TextStyle(
-                  color: SaasPalette.textTertiary,
+                style: TextStyle(
+                  color: context.saas.textTertiary,
                   fontSize: 13,
                 ),
               ),
@@ -7106,9 +7438,9 @@ class _ReservaCreatedDialogState extends State<_ReservaCreatedDialog> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: SaasPalette.bgSubtle,
+                  color: context.saas.bgSubtle,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: SaasPalette.border),
+                  border: Border.all(color: context.saas.border),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -7136,16 +7468,16 @@ class _ReservaCreatedDialogState extends State<_ReservaCreatedDialog> {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.event_seat_rounded,
                             size: 14,
-                            color: SaasPalette.textTertiary,
+                            color: context.saas.textTertiary,
                           ),
                           const SizedBox(width: 8),
-                          const Text(
+                          Text(
                             'Asientos: ',
                             style: TextStyle(
-                              color: SaasPalette.textSecondary,
+                              color: context.saas.textSecondary,
                               fontSize: 13,
                             ),
                           ),
@@ -7161,19 +7493,19 @@ class _ReservaCreatedDialogState extends State<_ReservaCreatedDialog> {
                                         vertical: 2,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: SaasPalette.brand600.withValues(
+                                        color: context.saas.brand600.withValues(
                                           alpha: 0.1,
                                         ),
                                         borderRadius: BorderRadius.circular(6),
                                         border: Border.all(
-                                          color: SaasPalette.brand600
+                                          color: context.saas.brand600
                                               .withValues(alpha: 0.4),
                                         ),
                                       ),
                                       child: Text(
                                         asiento,
-                                        style: const TextStyle(
-                                          color: SaasPalette.brand600,
+                                        style: TextStyle(
+                                          color: context.saas.brand600,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w700,
                                         ),
@@ -7191,12 +7523,12 @@ class _ReservaCreatedDialogState extends State<_ReservaCreatedDialog> {
               ),
               const SizedBox(height: 20),
               if (link.isNotEmpty) ...[
-                const Align(
+                Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Link de Selección de Asientos',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -7209,25 +7541,25 @@ class _ReservaCreatedDialogState extends State<_ReservaCreatedDialog> {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: SaasPalette.brand50,
+                    color: context.saas.brand50,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: SaasPalette.brand600.withValues(alpha: 0.3),
+                      color: context.saas.brand600.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.link_rounded,
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                         size: 16,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           link,
-                          style: const TextStyle(
-                            color: SaasPalette.brand600,
+                          style: TextStyle(
+                            color: context.saas.brand600,
                             fontSize: 12,
                           ),
                           maxLines: 1,
@@ -7249,12 +7581,12 @@ class _ReservaCreatedDialogState extends State<_ReservaCreatedDialog> {
                         label: Text(_copied ? 'Copiado' : 'Copiar link'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: _copied
-                              ? SaasPalette.success
-                              : SaasPalette.brand600,
+                              ? context.saas.success
+                              : context.saas.brand600,
                           side: BorderSide(
                             color: _copied
-                                ? SaasPalette.success
-                                : SaasPalette.brand600,
+                                ? context.saas.success
+                                : context.saas.brand600,
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -7270,7 +7602,7 @@ class _ReservaCreatedDialogState extends State<_ReservaCreatedDialog> {
                         icon: const Icon(Icons.open_in_new_rounded, size: 16),
                         label: const Text('Abrir link'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: SaasPalette.brand600,
+                          backgroundColor: context.saas.brand600,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -7288,9 +7620,9 @@ class _ReservaCreatedDialogState extends State<_ReservaCreatedDialog> {
                 width: double.infinity,
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
+                  child: Text(
                     'Cerrar',
-                    style: TextStyle(color: SaasPalette.textTertiary),
+                    style: TextStyle(color: context.saas.textTertiary),
                   ),
                 ),
               ),
@@ -7334,20 +7666,20 @@ class _DialogInfoRowState extends State<_DialogInfoRow> {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(widget.icon, size: 14, color: SaasPalette.textTertiary),
+        Icon(widget.icon, size: 14, color: context.saas.textTertiary),
         const SizedBox(width: 8),
         Text(
           '${widget.label}: ',
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
+          style: TextStyle(
+            color: context.saas.textSecondary,
             fontSize: 13,
           ),
         ),
         Flexible(
           child: Text(
             widget.value,
-            style: const TextStyle(
-              color: SaasPalette.textPrimary,
+            style: TextStyle(
+              color: context.saas.textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -7363,7 +7695,7 @@ class _DialogInfoRowState extends State<_DialogInfoRow> {
               child: Icon(
                 _copied ? Icons.check_rounded : Icons.copy_rounded,
                 size: 14,
-                color: _copied ? SaasPalette.success : SaasPalette.textTertiary,
+                color: _copied ? context.saas.success : context.saas.textTertiary,
               ),
             ),
           ),

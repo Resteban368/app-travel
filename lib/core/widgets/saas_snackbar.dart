@@ -10,7 +10,7 @@ class SaasSnackBar {
     _show(
       context,
       message: message,
-      backgroundColor: SaasPalette.success,
+      backgroundColor: context.saas.success,
       icon: Icons.check_circle_rounded,
     );
   }
@@ -19,7 +19,7 @@ class SaasSnackBar {
     _show(
       context,
       message: message,
-      backgroundColor: SaasPalette.danger,
+      backgroundColor: context.saas.danger,
       icon: Icons.error_outline_rounded,
     );
   }
@@ -28,7 +28,7 @@ class SaasSnackBar {
     _show(
       context,
       message: message,
-      backgroundColor: SaasPalette.warning,
+      backgroundColor: context.saas.warning,
       icon: Icons.warning_amber_rounded,
     );
   }
@@ -37,7 +37,7 @@ class SaasSnackBar {
     _show(
       context,
       message: message,
-      backgroundColor: SaasPalette.brand600,
+      backgroundColor: context.saas.brand600,
       icon: Icons.info_outline_rounded,
     );
   }
@@ -169,10 +169,10 @@ class _NotificacionToastState extends State<_NotificacionToast>
     super.dispose();
   }
 
-  static (IconData, Color) _resolve(String tipo) => switch (tipo) {
+  static (IconData, Color) _resolve(BuildContext context, String tipo) => switch (tipo) {
     'cotizacion' => (Icons.request_quote_rounded, const Color(0xFF7C3AED)),
     'pago'       => (Icons.payments_rounded,       const Color(0xFF059669)),
-    'reserva'    => (Icons.airplane_ticket_rounded, SaasPalette.brand600),
+    'reserva'    => (Icons.airplane_ticket_rounded, context.saas.brand600),
     'sistema'    => (Icons.settings_rounded,        const Color(0xFF6B7280)),
     _            => (Icons.campaign_rounded,         const Color(0xFFD97706)),
   };
@@ -187,7 +187,7 @@ class _NotificacionToastState extends State<_NotificacionToast>
 
   @override
   Widget build(BuildContext context) {
-    final (icon, color) = _resolve(widget.notificacion.tipo);
+    final (icon, color) = _resolve(context, widget.notificacion.tipo);
 
     return Positioned(
       bottom: 28,

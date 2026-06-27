@@ -146,7 +146,7 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: SaasPalette.bgApp,
+        backgroundColor: context.saas.bgApp,
         body: BlocConsumer<PagoRealizadoBloc, PagoRealizadoState>(
           listener: (context, state) {
             if (_deletingId != null) {
@@ -183,7 +183,7 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
 
             return RefreshIndicator(
               onRefresh: () async => _loadFirstPage(),
-              color: SaasPalette.brand600,
+              color: context.saas.brand600,
               child: CustomScrollView(
                 controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -229,9 +229,9 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
 
                   // ── Content ──────────────────────────────────────────────
                   if (isLoadingFirst)
-                    const SliverFillRemaining(
+                    SliverFillRemaining(
                       child: Center(
-                        child: CircularProgressIndicator(color: SaasPalette.brand600),
+                        child: CircularProgressIndicator(color: context.saas.brand600),
                       ),
                     )
                   else if (pagos.isEmpty)
@@ -267,13 +267,13 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
                       ),
                     ),
                     if (state is PagosRealizadosLoaded && !state.hasReachedMax)
-                      const SliverToBoxAdapter(
+                      SliverToBoxAdapter(
                         child: Padding(
                           padding: EdgeInsets.all(32),
                           child: Center(
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: SaasPalette.brand600,
+                              color: context.saas.brand600,
                             ),
                           ),
                         ),
@@ -309,11 +309,11 @@ class _PagoHeader extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Pagos Realizados',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -323,7 +323,7 @@ class _PagoHeader extends StatelessWidget {
                   Text(
                     'Seguimiento y conciliación de comprobantes de pago.',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 14,
                     ),
                   ),
@@ -361,10 +361,10 @@ class _DateFilterBar extends StatelessWidget {
     final dateFormat = DateFormat('dd MMM yyyy');
     return Container(
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: range != null ? SaasPalette.brand600 : SaasPalette.border,
+          color: range != null ? context.saas.brand600 : context.saas.border,
           width: range != null ? 1.5 : 1,
         ),
       ),
@@ -388,8 +388,8 @@ class _DateFilterBar extends StatelessWidget {
                       Icons.calendar_month_rounded,
                       size: 18,
                       color: range != null
-                          ? SaasPalette.brand600
-                          : SaasPalette.textTertiary,
+                          ? context.saas.brand600
+                          : context.saas.textTertiary,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -399,8 +399,8 @@ class _DateFilterBar extends StatelessWidget {
                             : '${dateFormat.format(range!.start)} - ${dateFormat.format(range!.end)}',
                         style: TextStyle(
                           color: range != null
-                              ? SaasPalette.textPrimary
-                              : SaasPalette.textSecondary,
+                              ? context.saas.textPrimary
+                              : context.saas.textSecondary,
                           fontSize: 13,
                           fontWeight: range != null
                               ? FontWeight.w600
@@ -425,13 +425,13 @@ class _DateFilterBar extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: SaasPalette.bgSubtle,
+                      color: context.saas.bgSubtle,
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.close_rounded,
                       size: 16,
-                      color: SaasPalette.textTertiary,
+                      color: context.saas.textTertiary,
                     ),
                   ),
                 ),
@@ -484,10 +484,10 @@ class _ChatGroupCardState extends State<_ChatGroupCard> {
       padding: const EdgeInsets.only(bottom: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
+          color: context.saas.bgCanvas,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _isExpanded ? SaasPalette.brand600 : SaasPalette.border,
+            color: _isExpanded ? context.saas.brand600 : context.saas.border,
             width: _isExpanded ? 1.5 : 1,
           ),
           boxShadow: [
@@ -514,13 +514,13 @@ class _ChatGroupCardState extends State<_ChatGroupCard> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(10),
-                          decoration: const BoxDecoration(
-                            color: SaasPalette.brand50,
+                          decoration: BoxDecoration(
+                            color: context.saas.brand50,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.person_rounded,
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                             size: 22,
                           ),
                         ),
@@ -532,10 +532,10 @@ class _ChatGroupCardState extends State<_ChatGroupCard> {
                               width: 12,
                               height: 12,
                               decoration: BoxDecoration(
-                                color: SaasPalette.warning,
+                                color: context.saas.warning,
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: SaasPalette.bgCanvas,
+                                  color: context.saas.bgCanvas,
                                   width: 2,
                                 ),
                               ),
@@ -550,16 +550,16 @@ class _ChatGroupCardState extends State<_ChatGroupCard> {
                         children: [
                           Text(
                             widget.chatId,
-                            style: const TextStyle(
-                              color: SaasPalette.textPrimary,
+                            style: TextStyle(
+                              color: context.saas.textPrimary,
                               fontWeight: FontWeight.w700,
                               fontSize: 16,
                             ),
                           ),
                           Text(
                             '${widget.pagos.length} pagos registrados',
-                            style: const TextStyle(
-                              color: SaasPalette.textTertiary,
+                            style: TextStyle(
+                              color: context.saas.textTertiary,
                               fontSize: 12,
                             ),
                           ),
@@ -569,18 +569,18 @@ class _ChatGroupCardState extends State<_ChatGroupCard> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        const Text(
+                        Text(
                           'TOTAL',
                           style: TextStyle(
-                            color: SaasPalette.textTertiary,
+                            color: context.saas.textTertiary,
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
                         Text(
                           currencyFormat.format(total),
-                          style: const TextStyle(
-                            color: SaasPalette.success,
+                          style: TextStyle(
+                            color: context.saas.success,
                             fontWeight: FontWeight.w800,
                             fontSize: 15,
                           ),
@@ -591,9 +591,9 @@ class _ChatGroupCardState extends State<_ChatGroupCard> {
                     AnimatedRotation(
                       turns: _isExpanded ? 0.5 : 0.0,
                       duration: const Duration(milliseconds: 200),
-                      child: const Icon(
+                      child: Icon(
                         Icons.expand_more_rounded,
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                       ),
                     ),
                   ],
@@ -604,7 +604,7 @@ class _ChatGroupCardState extends State<_ChatGroupCard> {
               firstChild: const SizedBox(width: double.infinity),
               secondChild: Column(
                 children: [
-                  const Divider(height: 1, color: SaasPalette.border),
+                  Divider(height: 1, color: context.saas.border),
                   ...widget.pagos.map((p) => _PagoItem(pago: p, canDelete: widget.canDelete, onDelete: widget.onDelete)),
                   const SizedBox(height: 8),
                 ],
@@ -646,9 +646,9 @@ class _PagoItem extends StatelessWidget {
       ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(color: SaasPalette.border, width: 0.5),
+            bottom: BorderSide(color: context.saas.border, width: 0.5),
           ),
         ),
         child: Row(
@@ -661,23 +661,23 @@ class _PagoItem extends StatelessWidget {
                     pago.proveedorComercio.isNotEmpty
                         ? pago.proveedorComercio
                         : pago.concepto ?? pago.entidadTipo,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
                     ),
                   ),
                   Text(
                     '${pago.tipoDocumento} • ${pago.metodoPago}',
-                    style: const TextStyle(
-                      color: SaasPalette.textTertiary,
+                    style: TextStyle(
+                      color: context.saas.textTertiary,
                       fontSize: 11,
                     ),
                   ),
                   Text(
                     'Ref: ${pago.referencia}',
-                    style: const TextStyle(
-                      color: SaasPalette.textTertiary,
+                    style: TextStyle(
+                      color: context.saas.textTertiary,
                       fontSize: 10,
                       fontStyle: FontStyle.italic,
                     ),
@@ -685,16 +685,16 @@ class _PagoItem extends StatelessWidget {
                   if (pago.sedeName != null || pago.sedeId != null)
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.business_rounded,
                           size: 10,
-                          color: SaasPalette.brand600,
+                          color: context.saas.brand600,
                         ),
                         const SizedBox(width: 3),
                         Text(
                           pago.sedeName ?? pago.sedeId!,
-                          style: const TextStyle(
-                            color: SaasPalette.brand600,
+                          style: TextStyle(
+                            color: context.saas.brand600,
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                           ),
@@ -710,16 +710,16 @@ class _PagoItem extends StatelessWidget {
               children: [
                 Text(
                   currencyFormat.format(pago.monto),
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
                 ),
                 Text(
                   pago.fechaDocumento,
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  style: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 11,
                   ),
                 ),
@@ -731,9 +731,9 @@ class _PagoItem extends StatelessWidget {
               const SizedBox(width: 8),
               IconButton(
                 onPressed: () => onDelete(pago),
-                icon: const Icon(
+                icon: Icon(
                   Icons.delete_outline_rounded,
-                  color: SaasPalette.danger,
+                  color: context.saas.danger,
                   size: 20,
                 ),
                 padding: EdgeInsets.zero,
@@ -742,9 +742,9 @@ class _PagoItem extends StatelessWidget {
               ),
             ],
             const SizedBox(width: 8),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
-              color: SaasPalette.textTertiary,
+              color: context.saas.textTertiary,
               size: 20,
             ),
           ],
@@ -761,14 +761,14 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String label = 'Por validar';
-    Color color = SaasPalette.warning;
+    Color color = context.saas.warning;
 
     if (pago.isValidated) {
       label = 'Validado';
-      color = SaasPalette.success;
+      color = context.saas.success;
     } else if (pago.isRechazado) {
       label = 'Rechazado';
-      color = SaasPalette.danger;
+      color = context.saas.danger;
     }
 
     return Container(

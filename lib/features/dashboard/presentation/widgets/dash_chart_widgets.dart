@@ -40,9 +40,9 @@ class ChartCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,8 +62,8 @@ class ChartCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -71,7 +71,7 @@ class ChartCard extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(color: SaasPalette.border, height: 1),
+          Divider(color: context.saas.border, height: 1),
           SizedBox(height: height, child: child),
         ],
       ),
@@ -89,8 +89,8 @@ class _EmptyChart extends StatelessWidget {
     return Center(
       child: Text(
         text,
-        style: const TextStyle(
-          color: SaasPalette.textTertiary,
+        style: TextStyle(
+          color: context.saas.textTertiary,
           fontSize: 13,
         ),
       ),
@@ -104,19 +104,19 @@ class RendimientoAgenteChart extends StatelessWidget {
 
   const RendimientoAgenteChart({super.key, required this.data});
 
-  static const _barColors = [
-    SaasPalette.brand600,
-    SaasPalette.warning,
-    Color(0xFF7C3AED),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final barColors = [
+      context.saas.brand600,
+      context.saas.warning,
+      const Color(0xFF7C3AED),
+    ];
+
     if (data.isEmpty) {
       return ChartCard(
         title: 'Rendimiento por agente',
         icon: Icons.people_alt_rounded,
-        color: SaasPalette.brand600,
+        color: context.saas.brand600,
         child: const _EmptyChart(text: 'Sin datos en este período'),
       );
     }
@@ -138,9 +138,9 @@ class RendimientoAgenteChart extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,17 +153,17 @@ class RendimientoAgenteChart extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
-                    color: SaasPalette.brand600.withAlpha(26),
+                    color: context.saas.brand600.withAlpha(26),
                     borderRadius: BorderRadius.circular(9),
                   ),
-                  child: const Icon(Icons.people_alt_rounded,
-                      color: SaasPalette.brand600, size: 16),
+                  child: Icon(Icons.people_alt_rounded,
+                      color: context.saas.brand600, size: 16),
                 ),
                 const SizedBox(width: 10),
-                const Text(
+                Text(
                   'Rendimiento por agente',
                   style: TextStyle(
-                    color: SaasPalette.textPrimary,
+                    color: context.saas.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -171,7 +171,7 @@ class RendimientoAgenteChart extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(color: SaasPalette.border, height: 1),
+          Divider(color: context.saas.border, height: 1),
 
           // ── Gráfico scrollable horizontal ────────────────────────────────────
           SingleChildScrollView(
@@ -189,6 +189,7 @@ class RendimientoAgenteChart extends StatelessWidget {
                   painter: _BarGridPainter(
                     steps: 4,
                     chartHeight: chartHeight,
+                    gridColor: context.saas.border,
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -216,7 +217,7 @@ class RendimientoAgenteChart extends StatelessWidget {
                                   final barH =
                                       (pct * (chartHeight - labelReserved))
                                           .clamp(4.0, chartHeight - labelReserved);
-                                  final color = _barColors[i];
+                                  final color = barColors[i];
 
                                   return Padding(
                                     padding: EdgeInsets.only(
@@ -228,8 +229,8 @@ class RendimientoAgenteChart extends StatelessWidget {
                                           '$val',
                                           style: TextStyle(
                                             color: val > 0
-                                                ? SaasPalette.textPrimary
-                                                : SaasPalette.textTertiary
+                                                ? context.saas.textPrimary
+                                                : context.saas.textTertiary
                                                     .withAlpha(100),
                                             fontSize: 11,
                                             fontWeight: FontWeight.w800,
@@ -256,7 +257,7 @@ class RendimientoAgenteChart extends StatelessWidget {
                                                 : null,
                                             color: val > 0
                                                 ? null
-                                                : SaasPalette.bgSubtle,
+                                                : context.saas.bgSubtle,
                                             borderRadius:
                                                 const BorderRadius.vertical(
                                               top: Radius.circular(5),
@@ -277,8 +278,8 @@ class RendimientoAgenteChart extends StatelessWidget {
                                 ag.agenteNombre,
                                 textAlign: TextAlign.center,
                                 maxLines: 2,
-                                style: const TextStyle(
-                                  color: SaasPalette.textSecondary,
+                                style: TextStyle(
+                                  color: context.saas.textSecondary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -320,8 +321,8 @@ class _YAxis extends StatelessWidget {
           final val = ((maxVal * (steps - i)) / steps).round();
           return Text(
             '$val',
-            style: const TextStyle(
-              color: SaasPalette.textTertiary,
+            style: TextStyle(
+              color: context.saas.textTertiary,
               fontSize: 9,
             ),
           );
@@ -335,12 +336,13 @@ class _YAxis extends StatelessWidget {
 class _BarGridPainter extends CustomPainter {
   final int steps;
   final double chartHeight;
-  const _BarGridPainter({this.steps = 4, required this.chartHeight});
+  final Color gridColor;
+  const _BarGridPainter({this.steps = 4, required this.chartHeight, required this.gridColor});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = SaasPalette.border
+      ..color = gridColor
       ..strokeWidth = 1;
     for (int i = 0; i <= steps; i++) {
       final y = chartHeight * i / steps;
@@ -372,7 +374,7 @@ class IngresosPorTourChart extends StatelessWidget {
       return ChartCard(
         title: 'Ingresos por tour',
         icon: Icons.monetization_on_rounded,
-        color: SaasPalette.success,
+        color: context.saas.success,
         child: const _EmptyChart(text: 'Sin ingresos en este período'),
       );
     }
@@ -384,7 +386,7 @@ class IngresosPorTourChart extends StatelessWidget {
     return ChartCard(
       title: 'Ingresos por tour',
       icon: Icons.monetization_on_rounded,
-      color: SaasPalette.success,
+      color: context.saas.success,
       height: 260,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 20, 24, 8),
@@ -402,8 +404,8 @@ class IngresosPorTourChart extends StatelessWidget {
                   final t = topN[group.x];
                   return BarTooltipItem(
                     currFmt.format(t.montoRecaudado),
-                    const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
                     ),
@@ -427,8 +429,8 @@ class IngresosPorTourChart extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
                         label,
-                        style: const TextStyle(
-                          color: SaasPalette.textTertiary,
+                        style: TextStyle(
+                          color: context.saas.textTertiary,
                           fontSize: 9,
                         ),
                         textAlign: TextAlign.center,
@@ -442,7 +444,7 @@ class IngresosPorTourChart extends StatelessWidget {
             gridData: FlGridData(
               drawVerticalLine: false,
               getDrawingHorizontalLine: (_) =>
-                  const FlLine(color: SaasPalette.border, strokeWidth: 1),
+                  FlLine(color: context.saas.border, strokeWidth: 1),
             ),
             borderData: FlBorderData(show: false),
             barGroups: List.generate(topN.length, (i) {
@@ -454,8 +456,8 @@ class IngresosPorTourChart extends StatelessWidget {
                     toY: topN[i].montoRecaudado,
                     gradient: LinearGradient(
                       colors: [
-                        SaasPalette.success,
-                        SaasPalette.success.withValues(alpha: 0.6),
+                        context.saas.success,
+                        context.saas.success.withValues(alpha: 0.6),
                       ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -489,7 +491,7 @@ class ToursMasVendidosChart extends StatelessWidget {
       return ChartCard(
         title: 'Tours más vendidos',
         icon: Icons.emoji_events_rounded,
-        color: SaasPalette.warning,
+        color: context.saas.warning,
         child: const _EmptyChart(text: 'Sin ventas en este período'),
       );
     }
@@ -497,7 +499,7 @@ class ToursMasVendidosChart extends StatelessWidget {
     return ChartCard(
       title: 'Tours más vendidos',
       icon: Icons.emoji_events_rounded,
-      color: SaasPalette.warning,
+      color: context.saas.warning,
       height: 40.0 + topN.length * 56,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -516,8 +518,8 @@ class ToursMasVendidosChart extends StatelessWidget {
                     height: 22,
                     decoration: BoxDecoration(
                       color: i == 0
-                          ? SaasPalette.warning
-                          : SaasPalette.bgSubtle,
+                          ? context.saas.warning
+                          : context.saas.bgSubtle,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Center(
@@ -526,7 +528,7 @@ class ToursMasVendidosChart extends StatelessWidget {
                         style: TextStyle(
                           color: i == 0
                               ? Colors.white
-                              : SaasPalette.textSecondary,
+                              : context.saas.textSecondary,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
@@ -540,8 +542,8 @@ class ToursMasVendidosChart extends StatelessWidget {
                       children: [
                         Text(
                           t.tourNombre,
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -553,7 +555,7 @@ class ToursMasVendidosChart extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
                             value: pct,
-                            backgroundColor: SaasPalette.bgSubtle,
+                            backgroundColor: context.saas.bgSubtle,
                             color: _colorAt(i),
                             minHeight: 6,
                           ),
@@ -564,8 +566,8 @@ class ToursMasVendidosChart extends StatelessWidget {
                   const SizedBox(width: 10),
                   Text(
                     '${t.totalReservas}',
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -678,8 +680,8 @@ class _DestinosPieChartState extends State<DestinosPieChart> {
                         Expanded(
                           child: Text(
                             _capitalize(topN[i].destino),
-                            style: const TextStyle(
-                              color: SaasPalette.textSecondary,
+                            style: TextStyle(
+                              color: context.saas.textSecondary,
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
                             ),
@@ -688,8 +690,8 @@ class _DestinosPieChartState extends State<DestinosPieChart> {
                         ),
                         Text(
                           '${topN[i].total}',
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
@@ -750,8 +752,8 @@ class ServiciosChart extends StatelessWidget {
                     width: 20,
                     child: Text(
                       '${i + 1}',
-                      style: const TextStyle(
-                        color: SaasPalette.textTertiary,
+                      style: TextStyle(
+                        color: context.saas.textTertiary,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
@@ -764,8 +766,8 @@ class ServiciosChart extends StatelessWidget {
                       children: [
                         Text(
                           s.nombre,
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -777,7 +779,7 @@ class ServiciosChart extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
                             value: pct,
-                            backgroundColor: SaasPalette.bgSubtle,
+                            backgroundColor: context.saas.bgSubtle,
                             color: const Color(0xFF0891B2),
                             minHeight: 6,
                           ),
@@ -788,8 +790,8 @@ class ServiciosChart extends StatelessWidget {
                   const SizedBox(width: 10),
                   Text(
                     '×${s.vecesContratado}',
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -816,7 +818,7 @@ class OcupacionTourChart extends StatelessWidget {
       return ChartCard(
         title: 'Ocupación por tour',
         icon: Icons.event_seat_rounded,
-        color: SaasPalette.danger,
+        color: context.saas.danger,
         child: const _EmptyChart(text: 'Sin tours activos con cupos'),
       );
     }
@@ -824,9 +826,9 @@ class OcupacionTourChart extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -838,20 +840,20 @@ class OcupacionTourChart extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
-                    color: SaasPalette.danger.withValues(alpha: 0.1),
+                    color: context.saas.danger.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(9),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.event_seat_rounded,
-                    color: SaasPalette.danger,
+                    color: context.saas.danger,
                     size: 16,
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Text(
+                Text(
                   'Ocupación por tour',
                   style: TextStyle(
-                    color: SaasPalette.textPrimary,
+                    color: context.saas.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -859,17 +861,17 @@ class OcupacionTourChart extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(color: SaasPalette.border, height: 1),
+          Divider(color: context.saas.border, height: 1),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: data.take(8).map((t) {
                 final pct = t.porcentajeOcupacion / 100;
                 final color = pct >= 0.9
-                    ? SaasPalette.danger
+                    ? context.saas.danger
                     : pct >= 0.6
-                        ? SaasPalette.warning
-                        : SaasPalette.success;
+                        ? context.saas.warning
+                        : context.saas.success;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: Column(
@@ -880,8 +882,8 @@ class OcupacionTourChart extends StatelessWidget {
                           Expanded(
                             child: Text(
                               t.tourNombre,
-                              style: const TextStyle(
-                                color: SaasPalette.textPrimary,
+                              style: TextStyle(
+                                color: context.saas.textPrimary,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -915,7 +917,7 @@ class OcupacionTourChart extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                         child: LinearProgressIndicator(
                           value: pct.clamp(0.0, 1.0),
-                          backgroundColor: SaasPalette.bgSubtle,
+                          backgroundColor: context.saas.bgSubtle,
                           color: color,
                           minHeight: 8,
                         ),
@@ -923,8 +925,8 @@ class OcupacionTourChart extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         '${t.cuposOcupados} ocupados · ${t.cuposDisponibles} disponibles de ${t.cuposTotales}',
-                        style: const TextStyle(
-                          color: SaasPalette.textTertiary,
+                        style: TextStyle(
+                          color: context.saas.textTertiary,
                           fontSize: 10,
                         ),
                       ),
@@ -952,7 +954,7 @@ class EvolucionReservasChart extends StatelessWidget {
       return ChartCard(
         title: 'Evolución de reservas',
         icon: Icons.show_chart_rounded,
-        color: SaasPalette.brand600,
+        color: context.saas.brand600,
         child: const _EmptyChart(text: 'Sin reservas en este período'),
       );
     }
@@ -966,7 +968,7 @@ class EvolucionReservasChart extends StatelessWidget {
     return ChartCard(
       title: 'Evolución de reservas',
       icon: Icons.show_chart_rounded,
-      color: SaasPalette.brand600,
+      color: context.saas.brand600,
       height: 220,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 20, 20, 8),
@@ -976,7 +978,7 @@ class EvolucionReservasChart extends StatelessWidget {
             maxY: (maxY * 1.3).ceilToDouble(),
             lineTouchData: LineTouchData(
               touchTooltipData: LineTouchTooltipData(
-                getTooltipColor: (_) => SaasPalette.textPrimary,
+                getTooltipColor: (_) => context.saas.textPrimary,
                 getTooltipItems: (spots) => spots.map((s) {
                   final d = data[s.x.toInt()];
                   final parts = d.fecha.split('-');
@@ -992,7 +994,7 @@ class EvolucionReservasChart extends StatelessWidget {
               drawVerticalLine: false,
               horizontalInterval: maxY > 0 ? (maxY / 4).ceilToDouble() : 1,
               getDrawingHorizontalLine: (_) =>
-                  const FlLine(color: SaasPalette.border, strokeWidth: 1),
+                  FlLine(color: context.saas.border, strokeWidth: 1),
             ),
             borderData: FlBorderData(show: false),
             titlesData: FlTitlesData(
@@ -1002,8 +1004,8 @@ class EvolucionReservasChart extends StatelessWidget {
                   reservedSize: 28,
                   getTitlesWidget: (v, _) => Text(
                     '${v.toInt()}',
-                    style: const TextStyle(
-                        color: SaasPalette.textTertiary, fontSize: 9),
+                    style: TextStyle(
+                        color: context.saas.textTertiary, fontSize: 9),
                   ),
                 ),
               ),
@@ -1021,8 +1023,8 @@ class EvolucionReservasChart extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
                         '${parts[2]}/${parts[1]}',
-                        style: const TextStyle(
-                            color: SaasPalette.textTertiary, fontSize: 9),
+                        style: TextStyle(
+                            color: context.saas.textTertiary, fontSize: 9),
                       ),
                     );
                   },
@@ -1033,13 +1035,13 @@ class EvolucionReservasChart extends StatelessWidget {
               LineChartBarData(
                 spots: spots,
                 isCurved: true,
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
                 barWidth: 2.5,
                 dotData: FlDotData(
                   show: data.length <= 15,
                   getDotPainter: (_, _, _, _) => FlDotCirclePainter(
                     radius: 3,
-                    color: SaasPalette.brand600,
+                    color: context.saas.brand600,
                     strokeWidth: 1.5,
                     strokeColor: Colors.white,
                   ),
@@ -1048,8 +1050,8 @@ class EvolucionReservasChart extends StatelessWidget {
                   show: true,
                   gradient: LinearGradient(
                     colors: [
-                      SaasPalette.brand600.withAlpha(51),
-                      SaasPalette.brand600.withAlpha(0),
+                      context.saas.brand600.withAlpha(51),
+                      context.saas.brand600.withAlpha(0),
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -1077,7 +1079,7 @@ class EvolucionPagosChart extends StatelessWidget {
       return ChartCard(
         title: 'Evolución de pagos',
         icon: Icons.trending_up_rounded,
-        color: SaasPalette.success,
+        color: context.saas.success,
         child: const _EmptyChart(text: 'Sin pagos en este período'),
       );
     }
@@ -1090,7 +1092,7 @@ class EvolucionPagosChart extends StatelessWidget {
     return ChartCard(
       title: 'Evolución de pagos',
       icon: Icons.trending_up_rounded,
-      color: SaasPalette.success,
+      color: context.saas.success,
       height: 220,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 20, 20, 8),
@@ -1100,7 +1102,7 @@ class EvolucionPagosChart extends StatelessWidget {
             maxY: maxY * 1.3,
             lineTouchData: LineTouchData(
               touchTooltipData: LineTouchTooltipData(
-                getTooltipColor: (_) => SaasPalette.textPrimary,
+                getTooltipColor: (_) => context.saas.textPrimary,
                 getTooltipItems: (spots) => spots.map((s) {
                   final d = data[s.x.toInt()];
                   final parts = d.fecha.split('-');
@@ -1114,7 +1116,7 @@ class EvolucionPagosChart extends StatelessWidget {
             gridData: FlGridData(
               drawVerticalLine: false,
               getDrawingHorizontalLine: (_) =>
-                  const FlLine(color: SaasPalette.border, strokeWidth: 1),
+                  FlLine(color: context.saas.border, strokeWidth: 1),
             ),
             borderData: FlBorderData(show: false),
             titlesData: FlTitlesData(
@@ -1133,8 +1135,8 @@ class EvolucionPagosChart extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
                         '${parts[2]}/${parts[1]}',
-                        style: const TextStyle(
-                            color: SaasPalette.textTertiary, fontSize: 9),
+                        style: TextStyle(
+                            color: context.saas.textTertiary, fontSize: 9),
                       ),
                     );
                   },
@@ -1145,13 +1147,13 @@ class EvolucionPagosChart extends StatelessWidget {
               LineChartBarData(
                 spots: spots,
                 isCurved: true,
-                color: SaasPalette.success,
+                color: context.saas.success,
                 barWidth: 2.5,
                 dotData: FlDotData(
                   show: data.length <= 15,
                   getDotPainter: (_, _, _, _) => FlDotCirclePainter(
                     radius: 3,
-                    color: SaasPalette.success,
+                    color: context.saas.success,
                     strokeWidth: 1.5,
                     strokeColor: Colors.white,
                   ),
@@ -1160,8 +1162,8 @@ class EvolucionPagosChart extends StatelessWidget {
                   show: true,
                   gradient: LinearGradient(
                     colors: [
-                      SaasPalette.success.withAlpha(51),
-                      SaasPalette.success.withAlpha(0),
+                      context.saas.success.withAlpha(51),
+                      context.saas.success.withAlpha(0),
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -1194,7 +1196,7 @@ class CotizacionesPorDiaChart extends StatelessWidget {
     return ChartCard(
       title: 'Cotizaciones por día',
       icon: Icons.calendar_month_rounded,
-      color: SaasPalette.warning,
+      color: context.saas.warning,
       height: 240,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 20, 20, 8),
@@ -1213,8 +1215,8 @@ class CotizacionesPorDiaChart extends StatelessWidget {
                   if (total == 0) return null;
                   return BarTooltipItem(
                     '$total',
-                    const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1225,7 +1227,7 @@ class CotizacionesPorDiaChart extends StatelessWidget {
             gridData: FlGridData(
               drawVerticalLine: false,
               getDrawingHorizontalLine: (_) =>
-                  const FlLine(color: SaasPalette.border, strokeWidth: 1),
+                  FlLine(color: context.saas.border, strokeWidth: 1),
             ),
             borderData: FlBorderData(show: false),
             titlesData: FlTitlesData(
@@ -1242,8 +1244,8 @@ class CotizacionesPorDiaChart extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
                         abrev[data[i].diaIndex],
-                        style: const TextStyle(
-                            color: SaasPalette.textTertiary, fontSize: 10),
+                        style: TextStyle(
+                            color: context.saas.textTertiary, fontSize: 10),
                       ),
                     );
                   },
@@ -1258,7 +1260,7 @@ class CotizacionesPorDiaChart extends StatelessWidget {
                 barRods: [
                   BarChartRodData(
                     toY: data[i].total.toDouble(),
-                    color: isMax ? SaasPalette.warning : SaasPalette.warning.withAlpha(140),
+                    color: isMax ? context.saas.warning : context.saas.warning.withAlpha(140),
                     width: 28,
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
                   ),
@@ -1292,9 +1294,9 @@ class ToursProximosCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1313,10 +1315,10 @@ class ToursProximosCard extends StatelessWidget {
                       color: Color(0xFF0891B2), size: 16),
                 ),
                 const SizedBox(width: 10),
-                const Text(
+                Text(
                   'Tours próximos (30 días)',
                   style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700),
                 ),
@@ -1338,19 +1340,19 @@ class ToursProximosCard extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(color: SaasPalette.border, height: 1),
+          Divider(color: context.saas.border, height: 1),
           ...data.map((t) {
             final pct = t.porcentajeOcupacion / 100;
             final color = pct >= 0.9
-                ? SaasPalette.danger
+                ? context.saas.danger
                 : pct >= 0.6
-                    ? SaasPalette.warning
-                    : SaasPalette.success;
+                    ? context.saas.warning
+                    : context.saas.success;
             final urgente = t.diasRestantes <= 7;
             return Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: SaasPalette.border)),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: context.saas.border)),
               ),
               child: Row(
                 children: [
@@ -1360,8 +1362,8 @@ class ToursProximosCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     decoration: BoxDecoration(
                       color: urgente
-                          ? SaasPalette.danger.withAlpha(20)
-                          : SaasPalette.bgSubtle,
+                          ? context.saas.danger.withAlpha(20)
+                          : context.saas.bgSubtle,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
@@ -1370,8 +1372,8 @@ class ToursProximosCard extends StatelessWidget {
                           '${t.diasRestantes}',
                           style: TextStyle(
                             color: urgente
-                                ? SaasPalette.danger
-                                : SaasPalette.textPrimary,
+                                ? context.saas.danger
+                                : context.saas.textPrimary,
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                           ),
@@ -1380,8 +1382,8 @@ class ToursProximosCard extends StatelessWidget {
                           'días',
                           style: TextStyle(
                             color: urgente
-                                ? SaasPalette.danger
-                                : SaasPalette.textTertiary,
+                                ? context.saas.danger
+                                : context.saas.textTertiary,
                             fontSize: 9,
                           ),
                         ),
@@ -1395,8 +1397,8 @@ class ToursProximosCard extends StatelessWidget {
                       children: [
                         Text(
                           t.tourNombre,
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1408,7 +1410,7 @@ class ToursProximosCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
                             value: pct.clamp(0.0, 1.0),
-                            backgroundColor: SaasPalette.bgSubtle,
+                            backgroundColor: context.saas.bgSubtle,
                             color: color,
                             minHeight: 6,
                           ),
@@ -1416,8 +1418,8 @@ class ToursProximosCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '${t.cuposOcupados}/${t.cuposTotales} cupos · ${t.porcentajeOcupacion}%',
-                          style: const TextStyle(
-                              color: SaasPalette.textTertiary, fontSize: 10),
+                          style: TextStyle(
+                              color: context.saas.textTertiary, fontSize: 10),
                         ),
                       ],
                     ),
@@ -1445,9 +1447,9 @@ class ToursCuposCriticosCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.danger.withAlpha(80)),
+        border: Border.all(color: context.saas.danger.withAlpha(80)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1459,17 +1461,17 @@ class ToursCuposCriticosCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
-                    color: SaasPalette.danger.withAlpha(20),
+                    color: context.saas.danger.withAlpha(20),
                     borderRadius: BorderRadius.circular(9),
                   ),
-                  child: const Icon(Icons.warning_amber_rounded,
-                      color: SaasPalette.danger, size: 16),
+                  child: Icon(Icons.warning_amber_rounded,
+                      color: context.saas.danger, size: 16),
                 ),
                 const SizedBox(width: 10),
-                const Text(
+                Text(
                   'Cupos críticos (>80%)',
                   style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700),
                 ),
@@ -1478,13 +1480,13 @@ class ToursCuposCriticosCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: SaasPalette.danger.withAlpha(20),
+                    color: context.saas.danger.withAlpha(20),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     '${data.length}',
-                    style: const TextStyle(
-                        color: SaasPalette.danger,
+                    style: TextStyle(
+                        color: context.saas.danger,
                         fontSize: 12,
                         fontWeight: FontWeight.w700),
                   ),
@@ -1492,7 +1494,7 @@ class ToursCuposCriticosCard extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(color: SaasPalette.border, height: 1),
+          Divider(color: context.saas.border, height: 1),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -1500,7 +1502,7 @@ class ToursCuposCriticosCard extends StatelessWidget {
                 final pct = t.porcentajeOcupacion / 100;
                 final color = t.porcentajeOcupacion >= 100
                     ? const Color(0xFF7C3AED)
-                    : SaasPalette.danger;
+                    : context.saas.danger;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: Column(
@@ -1511,8 +1513,8 @@ class ToursCuposCriticosCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               t.tourNombre,
-                              style: const TextStyle(
-                                  color: SaasPalette.textPrimary,
+                              style: TextStyle(
+                                  color: context.saas.textPrimary,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600),
                               maxLines: 1,
@@ -1542,7 +1544,7 @@ class ToursCuposCriticosCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                         child: LinearProgressIndicator(
                           value: pct.clamp(0.0, 1.0),
-                          backgroundColor: SaasPalette.bgSubtle,
+                          backgroundColor: context.saas.bgSubtle,
                           color: color,
                           minHeight: 8,
                         ),
@@ -1550,8 +1552,8 @@ class ToursCuposCriticosCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         '${t.cuposDisponibles} cupos libres de ${t.cuposTotales}',
-                        style: const TextStyle(
-                            color: SaasPalette.textTertiary, fontSize: 10),
+                        style: TextStyle(
+                            color: context.saas.textTertiary, fontSize: 10),
                       ),
                     ],
                   ),
@@ -1574,17 +1576,17 @@ class RendimientoLegend extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _dot(SaasPalette.brand600),
+        _dot(context.saas.brand600),
         const SizedBox(width: 4),
-        const Text('Tour', style: TextStyle(fontSize: 11, color: SaasPalette.textSecondary)),
+        Text('Tour', style: TextStyle(fontSize: 11, color: context.saas.textSecondary)),
         const SizedBox(width: 16),
-        _dot(SaasPalette.warning),
+        _dot(context.saas.warning),
         const SizedBox(width: 4),
-        const Text('Vuelo', style: TextStyle(fontSize: 11, color: SaasPalette.textSecondary)),
+        Text('Vuelo', style: TextStyle(fontSize: 11, color: context.saas.textSecondary)),
         const SizedBox(width: 16),
         _dot(Color(0xFF7C3AED)),
         const SizedBox(width: 4),
-        const Text('Cotizaciones', style: TextStyle(fontSize: 11, color: SaasPalette.textSecondary)),
+        Text('Cotizaciones', style: TextStyle(fontSize: 11, color: context.saas.textSecondary)),
       ],
     );
   }

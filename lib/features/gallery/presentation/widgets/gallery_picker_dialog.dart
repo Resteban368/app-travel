@@ -300,7 +300,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
           width: dialogWidth,
           height: dialogHeight,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.saas.bgApp,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -316,7 +316,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
               children: [
                 _buildHeader(),
                 _buildToolbar(),
-                const Divider(height: 1, color: SaasPalette.border),
+                Divider(height: 1, color: context.saas.border),
                 Expanded(child: _buildContent()),
                 _buildFooter(),
               ],
@@ -333,8 +333,8 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
     final atRoot = _atRoot;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 18, 12, 18),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: SaasPalette.border)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.saas.border)),
       ),
       child: Row(
         children: [
@@ -342,7 +342,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
             IconButton(
               onPressed: _navigateUp,
               icon: const Icon(Icons.arrow_back_rounded),
-              color: SaasPalette.textSecondary,
+              color: context.saas.textSecondary,
               iconSize: 20,
               padding: const EdgeInsets.all(6),
               constraints: const BoxConstraints(),
@@ -353,18 +353,18 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: SaasPalette.brand600.withValues(alpha: 0.1),
+                color: context.saas.brand600.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.photo_library_rounded,
-                  color: SaasPalette.brand600, size: 18),
+              child: Icon(Icons.photo_library_rounded,
+                  color: context.saas.brand600, size: 18),
             ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               _formatPath(_currentFolder),
-              style: const TextStyle(
-                color: SaasPalette.textPrimary,
+              style: TextStyle(
+                color: context.saas.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),
@@ -374,7 +374,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
           IconButton(
             onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
             icon: const Icon(Icons.close_rounded),
-            color: SaasPalette.textSecondary,
+            color: context.saas.textSecondary,
             iconSize: 20,
             padding: const EdgeInsets.all(6),
             constraints: const BoxConstraints(),
@@ -402,38 +402,38 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
               hintText: 'Buscar imagen...',
-              hintStyle: const TextStyle(
-                  color: SaasPalette.textTertiary, fontSize: 13),
-              prefixIcon: const Icon(Icons.search_rounded,
-                  size: 18, color: SaasPalette.textTertiary),
+              hintStyle: TextStyle(
+                  color: context.saas.textTertiary, fontSize: 13),
+              prefixIcon: Icon(Icons.search_rounded,
+                  size: 18, color: context.saas.textTertiary),
               suffixIcon: _search.isNotEmpty
                   ? IconButton(
                       onPressed: () => setState(() {
                         _search = '';
                         _searchCtrl.clear();
                       }),
-                      icon: const Icon(Icons.close_rounded,
-                          size: 16, color: SaasPalette.textTertiary),
+                      icon: Icon(Icons.close_rounded,
+                          size: 16, color: context.saas.textTertiary),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     )
                   : null,
               filled: true,
-              fillColor: Colors.white,
+              fillColor: context.saas.bgApp,
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: SaasPalette.border),
+                borderSide: BorderSide(color: context.saas.border),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: SaasPalette.border),
+                borderSide: BorderSide(color: context.saas.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(
-                    color: SaasPalette.brand600, width: 1.5),
+                borderSide: BorderSide(
+                    color: context.saas.brand600, width: 1.5),
               ),
             ),
           ),
@@ -441,7 +441,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
 
         return Container(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-          color: const Color(0xFFF9FAFB),
+          color: context.saas.bgApp,
           child: LayoutBuilder(
             builder: (_, constraints) {
               final narrow = constraints.maxWidth < 520;
@@ -456,8 +456,8 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
                               ? null
                               : () => _showCreateFolderDialog(context),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: SaasPalette.textSecondary,
-                            side: const BorderSide(color: SaasPalette.border),
+                            foregroundColor: context.saas.textSecondary,
+                            side: BorderSide(color: context.saas.border),
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 11, vertical: 8),
                             shape: RoundedRectangleBorder(
@@ -466,12 +466,12 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                           icon: creando
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 13,
                                   height: 13,
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: SaasPalette.textSecondary))
+                                      color: context.saas.textSecondary))
                               : const Icon(Icons.create_new_folder_rounded,
                                   size: 15),
                           label: Text(
@@ -485,7 +485,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
                         FilledButton.icon(
                           onPressed: subiendo ? null : _pickAndUpload,
                           style: FilledButton.styleFrom(
-                            backgroundColor: SaasPalette.brand600,
+                            backgroundColor: context.saas.brand600,
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 8),
                             shape: RoundedRectangleBorder(
@@ -498,7 +498,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
                                   width: 13,
                                   height: 13,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Colors.white))
+                                      strokeWidth: 2, ))
                               : const Icon(Icons.upload_rounded, size: 15),
                           label: Text(
                             subiendo ? 'Subiendo...' : 'Subir',
@@ -544,9 +544,9 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
     return BlocBuilder<GalleryBloc, GalleryState>(
       builder: (context, state) {
         if (state is GalleryCargando) {
-          return const Center(
+          return Center(
             child: CircularProgressIndicator(
-                color: SaasPalette.brand600, strokeWidth: 2),
+                color: context.saas.brand600, strokeWidth: 2),
           );
         }
 
@@ -555,12 +555,12 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.cloud_off_rounded,
-                    size: 48, color: SaasPalette.textTertiary),
+                Icon(Icons.cloud_off_rounded,
+                    size: 48, color: context.saas.textTertiary),
                 const SizedBox(height: 12),
                 Text(state.mensaje,
-                    style: const TextStyle(
-                        color: SaasPalette.textSecondary, fontSize: 14)),
+                    style: TextStyle(
+                        color: context.saas.textSecondary, fontSize: 14)),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: () => context
@@ -624,8 +624,8 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
                   ),
                 ),
               ),
-              const SliverToBoxAdapter(
-                child: Divider(height: 1, color: SaasPalette.border),
+              SliverToBoxAdapter(
+                child: Divider(height: 1, color: context.saas.border),
               ),
             ],
 
@@ -650,24 +650,24 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
                             ? Icons.search_off_rounded
                             : Icons.photo_library_outlined,
                         size: 48,
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                       ),
                       const SizedBox(height: 12),
                       Text(
                         _search.isNotEmpty
                             ? 'Sin resultados para "$_search"'
                             : 'No hay imágenes en esta carpeta',
-                        style: const TextStyle(
-                          color: SaasPalette.textSecondary,
+                        style: TextStyle(
+                          color: context.saas.textSecondary,
                           fontSize: 14,
                         ),
                       ),
                       if (_search.isEmpty && widget.isAdmin) ...[
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           'Usa "Subir" para agregar la primera',
                           style: TextStyle(
-                            color: SaasPalette.textTertiary,
+                            color: context.saas.textTertiary,
                             fontSize: 12,
                           ),
                         ),
@@ -740,8 +740,8 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
           children: [
             Text(
               title,
-              style: const TextStyle(
-                color: SaasPalette.textSecondary,
+              style: TextStyle(
+                color: context.saas.textSecondary,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
@@ -753,14 +753,14 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: SaasPalette.bgSubtle,
+                  color: context.saas.bgSubtle,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: SaasPalette.border),
+                  border: Border.all(color: context.saas.border),
                 ),
                 child: Text(
                   '$count',
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  style: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                   ),
@@ -771,8 +771,8 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
               const SizedBox(width: 6),
               Text(
                 subtitle,
-                style: const TextStyle(
-                  color: SaasPalette.textTertiary,
+                style: TextStyle(
+                  color: context.saas.textTertiary,
                   fontSize: 11,
                 ),
               ),
@@ -788,9 +788,9 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
   Widget _buildFooter() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF9FAFB),
-        border: Border(top: BorderSide(color: SaasPalette.border)),
+      decoration: BoxDecoration(
+        color: context.saas.bgApp,
+        border: Border(top: BorderSide(color: context.saas.border)),
       ),
       child: LayoutBuilder(
         builder: (_, constraints) {
@@ -810,8 +810,8 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
                     ? () => _selectAndClose(_selected!)
                     : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: SaasPalette.brand600,
-                  disabledBackgroundColor: SaasPalette.border,
+                  backgroundColor: context.saas.brand600,
+                  disabledBackgroundColor: context.saas.border,
                   padding: const EdgeInsets.symmetric(
                       horizontal: 20, vertical: 10),
                   shape: RoundedRectangleBorder(
@@ -839,7 +839,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(5),
                         border: Border.all(
-                            color: SaasPalette.brand600, width: 1.5),
+                            color: context.saas.brand600, width: 1.5),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(4),
@@ -851,17 +851,17 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
                     Expanded(
                       child: Text(
                         _selected!.filename,
-                        style: const TextStyle(
-                            color: SaasPalette.textSecondary, fontSize: 12),
+                        style: TextStyle(
+                            color: context.saas.textSecondary, fontSize: 12),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 )
-              : const Text(
+              : Text(
                   'Selecciona una imagen para usarla',
                   style: TextStyle(
-                      color: SaasPalette.textTertiary, fontSize: 12),
+                      color: context.saas.textTertiary, fontSize: 12),
                 );
 
           if (narrow) {
@@ -922,11 +922,11 @@ class _FolderChipState extends State<_FolderChip> {
           width: 80,
           decoration: BoxDecoration(
             color: _hovered
-                ? SaasPalette.brand600.withValues(alpha: 0.05)
-                : Colors.white,
+                ? context.saas.brand600.withValues(alpha: 0.05)
+                : context.saas.bgApp,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
+              color: _hovered ? context.saas.brand600 : context.saas.border,
               width: _hovered ? 1.5 : 1,
             ),
           ),
@@ -940,7 +940,7 @@ class _FolderChipState extends State<_FolderChip> {
                     Icons.folder_rounded,
                     size: 30,
                     color: _hovered
-                        ? SaasPalette.brand600
+                        ? context.saas.brand600
                         : const Color(0xFFFBBF24),
                   ),
                   const SizedBox(height: 4),
@@ -950,8 +950,8 @@ class _FolderChipState extends State<_FolderChip> {
                       widget.nombre,
                       style: TextStyle(
                         color: _hovered
-                            ? SaasPalette.brand600
-                            : SaasPalette.textPrimary,
+                            ? context.saas.brand600
+                            : context.saas.textPrimary,
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                       ),
@@ -977,12 +977,12 @@ class _FolderChipState extends State<_FolderChip> {
                         width: 20,
                         height: 20,
                         decoration: BoxDecoration(
-                          color: SaasPalette.danger.withValues(alpha: 0.9),
+                          color: context.saas.danger.withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(5),
                         ),
-                        child: const Icon(
+                        child:  Icon(
                           Icons.delete_outline_rounded,
-                          color: Colors.white,
+                          color: context.saas.bgApp,
                           size: 12,
                         ),
                       ),
@@ -1038,7 +1038,7 @@ class _CreateFolderDialogState extends State<_CreateFolderDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: context.saas.bgApp,
       shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
@@ -1058,19 +1058,19 @@ class _CreateFolderDialogState extends State<_CreateFolderDialog> {
                       height: 40,
                       decoration: BoxDecoration(
                         color:
-                            SaasPalette.brand600.withValues(alpha: 0.1),
+                            context.saas.brand600.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.create_new_folder_rounded,
-                          color: SaasPalette.brand600, size: 20),
+                      child: Icon(Icons.create_new_folder_rounded,
+                          color: context.saas.brand600, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Text(
                       widget.parentPath != null
                           ? 'Nueva subcarpeta'
                           : 'Nueva carpeta',
-                      style: const TextStyle(
-                        color: SaasPalette.textPrimary,
+                      style: TextStyle(
+                        color: context.saas.textPrimary,
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                       ),
@@ -1078,10 +1078,10 @@ class _CreateFolderDialogState extends State<_CreateFolderDialog> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'Ruta',
                   style: TextStyle(
-                    color: SaasPalette.textSecondary,
+                    color: context.saas.textSecondary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1096,31 +1096,31 @@ class _CreateFolderDialogState extends State<_CreateFolderDialog> {
                     hintText: widget.parentPath != null
                         ? '${widget.parentPath}/nombre'
                         : 'ej. tours/colombia-2026',
-                    hintStyle: const TextStyle(
-                        color: SaasPalette.textTertiary, fontSize: 13),
+                    hintStyle: TextStyle(
+                        color: context.saas.textTertiary, fontSize: 13),
                     counterText: '',
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 12),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide:
-                            const BorderSide(color: SaasPalette.border)),
+                            BorderSide(color: context.saas.border)),
                     enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide:
-                            const BorderSide(color: SaasPalette.border)),
+                            BorderSide(color: context.saas.border)),
                     focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(
-                            color: SaasPalette.brand600, width: 1.5)),
+                        borderSide: BorderSide(
+                            color: context.saas.brand600, width: 1.5)),
                     errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide:
-                            const BorderSide(color: SaasPalette.danger)),
+                            BorderSide(color: context.saas.danger)),
                     focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(
-                            color: SaasPalette.danger, width: 1.5)),
+                        borderSide: BorderSide(
+                            color: context.saas.danger, width: 1.5)),
                   ),
                   onFieldSubmitted: (_) => _submit(),
                   validator: (v) {
@@ -1133,10 +1133,10 @@ class _CreateFolderDialogState extends State<_CreateFolderDialog> {
                   },
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'Usa / para crear subcarpetas  ·  Solo letras, números, - y _',
                   style: TextStyle(
-                      color: SaasPalette.textTertiary, fontSize: 11),
+                      color: context.saas.textTertiary, fontSize: 11),
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -1145,8 +1145,8 @@ class _CreateFolderDialogState extends State<_CreateFolderDialog> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(context).pop(null),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: SaasPalette.textSecondary,
-                          side: const BorderSide(color: SaasPalette.border),
+                          foregroundColor: context.saas.textSecondary,
+                          side: BorderSide(color: context.saas.border),
                           padding: const EdgeInsets.symmetric(vertical: 13),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10)),
@@ -1161,7 +1161,7 @@ class _CreateFolderDialogState extends State<_CreateFolderDialog> {
                       child: FilledButton(
                         onPressed: _submit,
                         style: FilledButton.styleFrom(
-                          backgroundColor: SaasPalette.brand600,
+                          backgroundColor: context.saas.brand600,
                           padding: const EdgeInsets.symmetric(vertical: 13),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10)),
@@ -1243,20 +1243,20 @@ class _ImageCardState extends State<_ImageCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.saas.bgApp,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: widget.isSelected
-                  ? SaasPalette.brand600
+                  ? context.saas.brand600
                   : _hovered
                   ? const Color(0xFFCBD5E1)
-                  : SaasPalette.border,
+                  : context.saas.border,
               width: widget.isSelected ? 2.0 : 1.0,
             ),
             boxShadow: [
               BoxShadow(
                 color: widget.isSelected
-                    ? SaasPalette.brand600.withValues(alpha: 0.12)
+                    ? context.saas.brand600.withValues(alpha: 0.12)
                     : _hovered
                     ? Colors.black.withValues(alpha: 0.08)
                     : Colors.black.withValues(alpha: 0.04),
@@ -1294,8 +1294,8 @@ class _ImageCardState extends State<_ImageCard> {
                                 color: Colors.black.withValues(alpha: 0.55),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.zoom_in_rounded,
-                                  color: Colors.white, size: 20),
+                              child:  Icon(Icons.zoom_in_rounded,
+                                  color: context.saas.bgApp, size: 20),
                             ),
                           ),
                         ),
@@ -1307,12 +1307,12 @@ class _ImageCardState extends State<_ImageCard> {
                           child: Container(
                             width: 22,
                             height: 22,
-                            decoration: const BoxDecoration(
-                              color: SaasPalette.brand600,
+                            decoration: BoxDecoration(
+                              color: context.saas.brand600,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.check_rounded,
-                                color: Colors.white, size: 14),
+                            child:  Icon(Icons.check_rounded,
+                                color: context.saas.bgApp, size: 14),
                           ),
                         ),
                       if (widget.isAdmin)
@@ -1328,13 +1328,13 @@ class _ImageCardState extends State<_ImageCard> {
                                 width: 26,
                                 height: 26,
                                 decoration: BoxDecoration(
-                                  color: SaasPalette.danger
+                                  color: context.saas.danger
                                       .withValues(alpha: 0.9),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Icon(
+                                child:  Icon(
                                     Icons.delete_outline_rounded,
-                                    color: Colors.white,
+                                    color: context.saas.bgApp,
                                     size: 14),
                               ),
                             ),
@@ -1345,16 +1345,16 @@ class _ImageCardState extends State<_ImageCard> {
                 ),
                 Container(
                   padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-                  decoration: const BoxDecoration(
-                    border: Border(top: BorderSide(color: SaasPalette.border)),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: context.saas.border)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         _shortName(widget.image.filename),
-                        style: const TextStyle(
-                          color: SaasPalette.textPrimary,
+                        style: TextStyle(
+                          color: context.saas.textPrimary,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1364,8 +1364,8 @@ class _ImageCardState extends State<_ImageCard> {
                       const SizedBox(height: 1),
                       Text(
                         _formatDate(widget.image.uploadedAt),
-                        style: const TextStyle(
-                            color: SaasPalette.textTertiary, fontSize: 10),
+                        style: TextStyle(
+                            color: context.saas.textTertiary, fontSize: 10),
                       ),
                       const SizedBox(height: 5),
                       _SmallActionButton(
@@ -1405,19 +1405,19 @@ class _SmallActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
         decoration: BoxDecoration(
-          color: SaasPalette.bgSubtle,
+          color: context.saas.bgSubtle,
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: SaasPalette.border),
+          border: Border.all(color: context.saas.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 11, color: SaasPalette.textSecondary),
+            Icon(icon, size: 11, color: context.saas.textSecondary),
             const SizedBox(width: 3),
             Text(
               label,
-              style: const TextStyle(
-                color: SaasPalette.textSecondary,
+              style: TextStyle(
+                color: context.saas.textSecondary,
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
               ),
@@ -1480,8 +1480,8 @@ class _ImagePreviewDialog extends StatelessWidget {
                     Expanded(
                       child: Text(
                         _shortName(image.filename),
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style:  TextStyle(
+                            color: context.saas.bgApp,
                             fontSize: 14,
                             fontWeight: FontWeight.w600),
                         overflow: TextOverflow.ellipsis,
@@ -1575,7 +1575,7 @@ class _ImagePreviewDialog extends StatelessWidget {
                         FilledButton.icon(
                           onPressed: onUse,
                           style: FilledButton.styleFrom(
-                            backgroundColor: SaasPalette.brand600,
+                            backgroundColor: context.saas.brand600,
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 9),
                             shape: RoundedRectangleBorder(
@@ -1629,7 +1629,7 @@ class _ConfirmDeleteFolderDialog extends StatelessWidget {
     final isNested = folder.contains('/');
 
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: context.saas.bgApp,
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
@@ -1643,17 +1643,17 @@ class _ConfirmDeleteFolderDialog extends StatelessWidget {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: SaasPalette.danger.withValues(alpha: 0.08),
+                  color: context.saas.danger.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.folder_delete_outlined,
-                    color: SaasPalette.danger, size: 28),
+                child: Icon(Icons.folder_delete_outlined,
+                    color: context.saas.danger, size: 28),
               ),
               const SizedBox(height: 18),
               Text(
                 '¿Eliminar carpeta "$leafName"?',
-                style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.w700),
                 textAlign: TextAlign.center,
@@ -1663,8 +1663,8 @@ class _ConfirmDeleteFolderDialog extends StatelessWidget {
                 isNested
                     ? 'Se eliminarán permanentemente esta subcarpeta y todas las imágenes que contiene.\nEsta acción no se puede deshacer.'
                     : 'Se eliminarán permanentemente esta carpeta, todas sus subcarpetas e imágenes.\nEsta acción no se puede deshacer.',
-                style: const TextStyle(
-                    color: SaasPalette.textSecondary,
+                style: TextStyle(
+                    color: context.saas.textSecondary,
                     fontSize: 13,
                     height: 1.5),
                 textAlign: TextAlign.center,
@@ -1674,22 +1674,22 @@ class _ConfirmDeleteFolderDialog extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: SaasPalette.danger.withValues(alpha: 0.06),
+                  color: context.saas.danger.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: SaasPalette.danger.withValues(alpha: 0.2)),
+                      color: context.saas.danger.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.warning_amber_rounded,
-                        color: SaasPalette.danger, size: 14),
+                    Icon(Icons.warning_amber_rounded,
+                        color: context.saas.danger, size: 14),
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
                         folder,
-                        style: const TextStyle(
-                            color: SaasPalette.danger,
+                        style: TextStyle(
+                            color: context.saas.danger,
                             fontSize: 12,
                             fontWeight: FontWeight.w600),
                         overflow: TextOverflow.ellipsis,
@@ -1705,8 +1705,8 @@ class _ConfirmDeleteFolderDialog extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(false),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: SaasPalette.textSecondary,
-                        side: const BorderSide(color: SaasPalette.border),
+                        foregroundColor: context.saas.textSecondary,
+                        side: BorderSide(color: context.saas.border),
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
@@ -1721,7 +1721,7 @@ class _ConfirmDeleteFolderDialog extends StatelessWidget {
                     child: FilledButton(
                       onPressed: () => Navigator.of(context).pop(true),
                       style: FilledButton.styleFrom(
-                        backgroundColor: SaasPalette.danger,
+                        backgroundColor: context.saas.danger,
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
@@ -1766,7 +1766,7 @@ class _ConfirmDeleteDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: context.saas.bgApp,
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
@@ -1780,24 +1780,24 @@ class _ConfirmDeleteDialog extends StatelessWidget {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: SaasPalette.danger.withValues(alpha: 0.08),
+                  color: context.saas.danger.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.delete_outline_rounded,
-                    color: SaasPalette.danger, size: 28),
+                child: Icon(Icons.delete_outline_rounded,
+                    color: context.saas.danger, size: 28),
               ),
               const SizedBox(height: 18),
-              const Text('¿Eliminar imagen?',
+              Text('¿Eliminar imagen?',
                   style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.w700),
                   textAlign: TextAlign.center),
               const SizedBox(height: 8),
               Text(
                 'Se eliminará permanentemente\n"${_shortName(filename)}".\nEsta acción no se puede deshacer.',
-                style: const TextStyle(
-                    color: SaasPalette.textSecondary,
+                style: TextStyle(
+                    color: context.saas.textSecondary,
                     fontSize: 13,
                     height: 1.5),
                 textAlign: TextAlign.center,
@@ -1809,8 +1809,8 @@ class _ConfirmDeleteDialog extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(false),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: SaasPalette.textSecondary,
-                        side: const BorderSide(color: SaasPalette.border),
+                        foregroundColor: context.saas.textSecondary,
+                        side: BorderSide(color: context.saas.border),
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
@@ -1825,7 +1825,7 @@ class _ConfirmDeleteDialog extends StatelessWidget {
                     child: FilledButton(
                       onPressed: () => Navigator.of(context).pop(true),
                       style: FilledButton.styleFrom(
-                        backgroundColor: SaasPalette.danger,
+                        backgroundColor: context.saas.danger,
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),

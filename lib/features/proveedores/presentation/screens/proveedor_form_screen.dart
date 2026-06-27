@@ -206,27 +206,27 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen>
                                 vertical: 8,
                               ),
                               decoration: BoxDecoration(
-                                color: SaasPalette.brand50,
+                                color: context.saas.brand50,
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: SaasPalette.brand600.withValues(
+                                  color: context.saas.brand600.withValues(
                                     alpha: 0.3,
                                   ),
                                 ),
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
                                     Icons.business_rounded,
-                                    color: SaasPalette.brand600,
+                                    color: context.saas.brand600,
                                     size: 16,
                                   ),
                                   SizedBox(width: 8),
                                   Text(
                                     'DATOS DEL PROVEEDOR',
                                     style: TextStyle(
-                                      color: SaasPalette.brand600,
+                                      color: context.saas.brand600,
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -318,31 +318,31 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen>
                                 children: [
                                   Container(
                                     decoration: BoxDecoration(
-                                      color: SaasPalette.bgSubtle,
+                                      color: context.saas.bgSubtle,
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: SaasPalette.border),
+                                      border: Border.all(color: context.saas.border),
                                     ),
                                     child: SwitchListTile(
-                                      title: const Text(
+                                      title: Text(
                                         'Proveedor Activo',
                                         style: TextStyle(
-                                          color: SaasPalette.textPrimary,
+                                          color: context.saas.textPrimary,
                                           fontSize: 14,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      subtitle: const Text(
+                                      subtitle: Text(
                                         'Disponible para asignar a servicios',
                                         style: TextStyle(
-                                          color: SaasPalette.textTertiary,
+                                          color: context.saas.textTertiary,
                                           fontSize: 12,
                                         ),
                                       ),
                                       value: _isActive,
-                                      activeThumbColor: SaasPalette.success,
-                                      activeTrackColor: SaasPalette.success.withValues(alpha: 0.25),
-                                      inactiveThumbColor: SaasPalette.textTertiary,
-                                      inactiveTrackColor: SaasPalette.bgSubtle,
+                                      activeThumbColor: context.saas.success,
+                                      activeTrackColor: context.saas.success.withValues(alpha: 0.25),
+                                      inactiveThumbColor: context.saas.textTertiary,
+                                      inactiveTrackColor: context.saas.bgSubtle,
                                       onChanged: canWrite ? (v) => setState(() => _isActive = v) : null,
                                     ),
                                   ),
@@ -386,10 +386,10 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'TIPO DE PROVEEDOR *',
           style: TextStyle(
-            color: SaasPalette.textSecondary,
+            color: context.saas.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
@@ -398,29 +398,29 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen>
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _tipo,
-          dropdownColor: SaasPalette.bgCanvas,
+          dropdownColor: context.saas.bgCanvas,
           isExpanded: true,
-          style: const TextStyle(
-            color: SaasPalette.textPrimary,
+          style: TextStyle(
+            color: context.saas.textPrimary,
             fontSize: 14,
           ),
           decoration: InputDecoration(
             filled: true,
-            fillColor: SaasPalette.bgCanvas,
-            prefixIcon: const Icon(
+            fillColor: context.saas.bgCanvas,
+            prefixIcon: Icon(
               Icons.category_rounded,
-              color: SaasPalette.brand600,
+              color: context.saas.brand600,
               size: 18,
             ),
-            hintStyle: const TextStyle(color: SaasPalette.textTertiary),
+            hintStyle: TextStyle(color: context.saas.textTertiary),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: SaasPalette.border),
+              borderSide: BorderSide(color: context.saas.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                color: SaasPalette.brand600,
+              borderSide: BorderSide(
+                color: context.saas.brand600,
                 width: 1.5,
               ),
             ),

@@ -38,7 +38,7 @@ class _ClienteHistorialScreenState extends State<ClienteHistorialScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       body: BlocBuilder<ClienteHistorialBloc, ClienteHistorialState>(
         builder: (context, state) {
           return CustomScrollView(
@@ -51,8 +51,8 @@ class _ClienteHistorialScreenState extends State<ClienteHistorialScreen> {
                 ),
               ),
               if (state is ClienteHistorialLoading)
-                const SliverFillRemaining(
-                  child: Center(child: CircularProgressIndicator(color: SaasPalette.brand600)),
+                SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator(color: context.saas.brand600)),
                 )
               else if (state is ClienteHistorialError)
                 SliverFillRemaining(
@@ -60,14 +60,14 @@ class _ClienteHistorialScreenState extends State<ClienteHistorialScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline_rounded, color: SaasPalette.danger, size: 48),
+                        Icon(Icons.error_outline_rounded, color: context.saas.danger, size: 48),
                         const SizedBox(height: 16),
                         Text(
                           'Error al cargar historial',
-                          style: TextStyle(color: SaasPalette.textPrimary, fontWeight: FontWeight.bold, fontSize: 18),
+                          style: TextStyle(color: context.saas.textPrimary, fontWeight: FontWeight.bold, fontSize: 18),
                         ),
                         const SizedBox(height: 8),
-                        Text(state.message, style: const TextStyle(color: SaasPalette.textSecondary)),
+                        Text(state.message, style: TextStyle(color: context.saas.textSecondary)),
                         const SizedBox(height: 24),
                         SaasButton(
                           label: 'Reintentar',
@@ -108,7 +108,7 @@ class _ClienteHistorialScreenState extends State<ClienteHistorialScreen> {
                   label: 'Total Viajes',
                   value: historial.totalViajes.toString(),
                   icon: Icons.flight_takeoff_rounded,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                 ),
                 const SizedBox(width: 12),
                 _StatCard(
@@ -126,7 +126,7 @@ class _ClienteHistorialScreenState extends State<ClienteHistorialScreen> {
                   label: 'Total Pagado',
                   value: currency.format(historial.totalPagado),
                   icon: Icons.payments_rounded,
-                  color: SaasPalette.success,
+                  color: context.saas.success,
                 ),
                 const SizedBox(width: 12),
                 _StatCard(
@@ -135,7 +135,7 @@ class _ClienteHistorialScreenState extends State<ClienteHistorialScreen> {
                     historial.reservas.fold<double>(0, (s, r) => s + (r.saldoPendiente ?? 0)),
                   ),
                   icon: Icons.pending_actions_rounded,
-                  color: SaasPalette.warning,
+                  color: context.saas.warning,
                 ),
               ],
             ),
@@ -190,10 +190,10 @@ class _ClienteHistorialScreenState extends State<ClienteHistorialScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Text(
+                Text(
                   'Historial de Pagos',
                   style: TextStyle(
-                    color: SaasPalette.textPrimary,
+                    color: context.saas.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
@@ -244,9 +244,9 @@ class _StatCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
+          color: context.saas.bgCanvas,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: SaasPalette.border),
+          border: Border.all(color: context.saas.border),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.02),
@@ -272,8 +272,8 @@ class _StatCard extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
-                      color: SaasPalette.textTertiary,
+                    style: TextStyle(
+                      color: context.saas.textTertiary,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -282,8 +282,8 @@ class _StatCard extends StatelessWidget {
                   ),
                   Text(
                     value,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                     ),
@@ -339,7 +339,7 @@ class _HistorialCardState extends State<_HistorialCard> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error generando PDF: $e'),
-          backgroundColor: SaasPalette.danger,
+          backgroundColor: context.saas.danger,
         ),
       );
     } finally {
@@ -380,7 +380,7 @@ class _HistorialCardState extends State<_HistorialCard> {
       context: context,
       useRootNavigator: true,
       builder: (ctx) => Dialog(
-        backgroundColor: SaasPalette.bgCanvas,
+        backgroundColor: context.saas.bgCanvas,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
           padding: const EdgeInsets.all(28),
@@ -389,31 +389,31 @@ class _HistorialCardState extends State<_HistorialCard> {
             children: [
               Container(
                 padding: const EdgeInsets.all(14),
-                decoration: const BoxDecoration(
-                  color: SaasPalette.brand50,
+                decoration: BoxDecoration(
+                  color: context.saas.brand50,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.picture_as_pdf_rounded,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   size: 32,
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'PDF Listo',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: SaasPalette.textPrimary,
+                  color: context.saas.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 filename,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: SaasPalette.textTertiary,
+                  color: context.saas.textTertiary,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -425,8 +425,8 @@ class _HistorialCardState extends State<_HistorialCard> {
                       icon: const Icon(Icons.open_in_new_rounded, size: 18),
                       label: const Text('Ver PDF'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: SaasPalette.brand600,
-                        side: const BorderSide(color: SaasPalette.brand600),
+                        foregroundColor: context.saas.brand600,
+                        side: BorderSide(color: context.saas.brand600),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -441,7 +441,7 @@ class _HistorialCardState extends State<_HistorialCard> {
                       icon: const Icon(Icons.download_rounded, size: 18),
                       label: const Text('Descargar'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: SaasPalette.brand600,
+                        backgroundColor: context.saas.brand600,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -456,9 +456,9 @@ class _HistorialCardState extends State<_HistorialCard> {
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text(
+                child: Text(
                   'Cerrar',
-                  style: TextStyle(color: SaasPalette.textTertiary),
+                  style: TextStyle(color: context.saas.textTertiary),
                 ),
               ),
             ],
@@ -477,25 +477,25 @@ class _HistorialCardState extends State<_HistorialCard> {
     switch (widget.reserva.estado.toLowerCase()) {
       case 'al dia':
       case 'al día':
-        statusColor = SaasPalette.success;
+        statusColor = context.saas.success;
         break;
       case 'pendiente':
-        statusColor = SaasPalette.warning;
+        statusColor = context.saas.warning;
         break;
       case 'cancelado':
-        statusColor = SaasPalette.danger;
+        statusColor = context.saas.danger;
         break;
       default:
-        statusColor = SaasPalette.textTertiary;
+        statusColor = context.saas.textTertiary;
     }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -508,15 +508,15 @@ class _HistorialCardState extends State<_HistorialCard> {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              color: SaasPalette.bgSubtle,
+            decoration: BoxDecoration(
+              color: context.saas.bgSubtle,
               shape: BoxShape.circle,
             ),
             child: Icon(
               widget.reserva.tipoReserva == 'tour'
                   ? Icons.map_outlined
                   : Icons.flight_outlined,
-              color: SaasPalette.brand600,
+              color: context.saas.brand600,
             ),
           ),
           const SizedBox(width: 20),
@@ -529,9 +529,9 @@ class _HistorialCardState extends State<_HistorialCard> {
                     Flexible(
                       child: Text(
                         widget.reserva.idReserva ?? 'ID: ${widget.reserva.id}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: SaasPalette.textPrimary,
+                          color: context.saas.textPrimary,
                           fontSize: 15,
                         ),
                         maxLines: 1,
@@ -565,8 +565,8 @@ class _HistorialCardState extends State<_HistorialCard> {
                       (widget.reserva.tipoReserva == 'tour'
                           ? 'Tour'
                           : 'Reserva de Vuelos'),
-                  style: const TextStyle(
-                    color: SaasPalette.textSecondary,
+                  style: TextStyle(
+                    color: context.saas.textSecondary,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -574,8 +574,8 @@ class _HistorialCardState extends State<_HistorialCard> {
                 const SizedBox(height: 2),
                 Text(
                   'Creado el $date',
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  style: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 12,
                   ),
                 ),
@@ -588,10 +588,10 @@ class _HistorialCardState extends State<_HistorialCard> {
             children: [
               Text(
                 currency.format(widget.reserva.valorTotal ?? 0),
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 18,
-                  color: SaasPalette.textPrimary,
+                  color: context.saas.textPrimary,
                 ),
               ),
               if ((widget.reserva.saldoPendiente ?? 0) > 0)
@@ -599,8 +599,8 @@ class _HistorialCardState extends State<_HistorialCard> {
                   margin: const EdgeInsets.only(top: 4),
                   child: Text(
                     'Saldo: ${currency.format(widget.reserva.saldoPendiente)}',
-                    style: const TextStyle(
-                      color: SaasPalette.danger,
+                    style: TextStyle(
+                      color: context.saas.danger,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -613,17 +613,17 @@ class _HistorialCardState extends State<_HistorialCard> {
                 child: Padding(
                   padding: const EdgeInsets.all(4),
                   child: _generatingPdf
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                           ),
                         )
-                      : const Icon(
+                      : Icon(
                           Icons.picture_as_pdf_rounded,
-                          color: SaasPalette.brand600,
+                          color: context.saas.brand600,
                           size: 22,
                         ),
                 ),
@@ -656,15 +656,15 @@ class _PagoHistorialCard extends StatelessWidget {
     String statusLabel;
     IconData statusIcon;
     if (pago.isValidated) {
-      statusColor = SaasPalette.success;
+      statusColor = context.saas.success;
       statusLabel = 'Validado';
       statusIcon = Icons.check_circle_rounded;
     } else if (pago.isRechazado) {
-      statusColor = SaasPalette.danger;
+      statusColor = context.saas.danger;
       statusLabel = 'Rechazado';
       statusIcon = Icons.cancel_rounded;
     } else {
-      statusColor = SaasPalette.warning;
+      statusColor = context.saas.warning;
       statusLabel = 'Pendiente';
       statusIcon = Icons.hourglass_empty_rounded;
     }
@@ -688,9 +688,9 @@ class _PagoHistorialCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -721,8 +721,8 @@ class _PagoHistorialCard extends StatelessWidget {
                         pago.metodoPago.isNotEmpty
                             ? _metodoLabel(pago.metodoPago)
                             : 'Pago',
-                        style: const TextStyle(
-                          color: SaasPalette.textPrimary,
+                        style: TextStyle(
+                          color: context.saas.textPrimary,
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
                         ),
@@ -764,8 +764,8 @@ class _PagoHistorialCard extends StatelessWidget {
                 if (pago.referencia.isNotEmpty)
                   Text(
                     'Ref: ${pago.referencia}',
-                    style: const TextStyle(
-                      color: SaasPalette.textTertiary,
+                    style: TextStyle(
+                      color: context.saas.textTertiary,
                       fontSize: 11,
                       fontStyle: FontStyle.italic,
                     ),
@@ -773,8 +773,8 @@ class _PagoHistorialCard extends StatelessWidget {
                 if (dateStr.isNotEmpty)
                   Text(
                     dateStr,
-                    style: const TextStyle(
-                      color: SaasPalette.textTertiary,
+                    style: TextStyle(
+                      color: context.saas.textTertiary,
                       fontSize: 11,
                     ),
                   ),
@@ -784,8 +784,8 @@ class _PagoHistorialCard extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             currency.format(pago.monto),
-            style: const TextStyle(
-              color: SaasPalette.textPrimary,
+            style: TextStyle(
+              color: context.saas.textPrimary,
               fontWeight: FontWeight.w800,
               fontSize: 15,
             ),

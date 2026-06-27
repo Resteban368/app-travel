@@ -111,7 +111,7 @@ class _CatalogueFormScreenState extends State<CatalogueFormScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: isError ? D.rose : D.emerald,
+        backgroundColor: isError ? context.saas.danger : context.saas.success,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -176,25 +176,25 @@ class _CatalogueFormScreenState extends State<CatalogueFormScreen>
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: D.skyBlue.withOpacity(0.1),
+                                    color: context.saas.brand600.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: D.skyBlue.withOpacity(0.3),
+                                      color: context.saas.brand600.withValues(alpha: 0.3),
                                     ),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
                                         Icons.info_outline_rounded,
-                                        color: D.skyBlue,
+                                        color: context.saas.brand600,
                                         size: 16,
                                       ),
-                                      SizedBox(width: 8),
+                                      const SizedBox(width: 8),
                                       Text(
                                         'Completa los detalles del PDF',
                                         style: TextStyle(
-                                          color: D.skyBlue,
+                                          color: context.saas.brand600,
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -277,20 +277,20 @@ class _CatalogueFormScreenState extends State<CatalogueFormScreen>
     return BlocBuilder<SedeBloc, SedeState>(
       builder: (context, state) {
         if (state is SedeLoading || state is SedeInitial) {
-          return const Column(
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'SEDE / SUCURSAL *',
                 style: TextStyle(
-                  color: D.slate400,
+                  color: context.saas.textTertiary,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
                 ),
               ),
-              SizedBox(height: 16),
-              CircularProgressIndicator(color: D.skyBlue),
+              const SizedBox(height: 16),
+              CircularProgressIndicator(color: context.saas.brand600),
             ],
           );
         }
@@ -307,10 +307,10 @@ class _CatalogueFormScreenState extends State<CatalogueFormScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'SEDE / SUCURSAL *',
               style: TextStyle(
-                color: D.slate400,
+                color: context.saas.textTertiary,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
@@ -324,15 +324,15 @@ class _CatalogueFormScreenState extends State<CatalogueFormScreen>
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  color: D.surfaceHigh.withOpacity(0.5),
+                  color: context.saas.bgSubtle,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  border: Border.all(color: context.saas.border),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.business_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 20,
                     ),
                     const SizedBox(width: 12),
@@ -350,7 +350,10 @@ class _CatalogueFormScreenState extends State<CatalogueFormScreen>
                             ),
                           )
                           .nombreSede,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      style: TextStyle(
+                        color: context.saas.textPrimary,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -361,24 +364,29 @@ class _CatalogueFormScreenState extends State<CatalogueFormScreen>
                     sedes.any((s) => int.tryParse(s.id) == _selectedSedeId)
                     ? _selectedSedeId
                     : null,
-                dropdownColor: D.white,
-                style: const TextStyle(color: Colors.black, fontSize: 14),
+                dropdownColor: context.saas.bgCanvas,
+                style: TextStyle(
+                  color: context.saas.textPrimary,
+                  fontSize: 14,
+                ),
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(
+                  prefixIcon: Icon(
                     Icons.business_rounded,
-                    color: SaasPalette.brand600,
+                    color: context.saas.brand600,
                     size: 20,
                   ),
                   filled: true,
+                  fillColor: context.saas.bgSubtle,
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: Colors.black.withOpacity(0.08),
-                    ),
+                    borderSide: BorderSide(color: context.saas.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: D.skyBlue, width: 1.5),
+                    borderSide: BorderSide(
+                      color: context.saas.brand600,
+                      width: 1.5,
+                    ),
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -403,37 +411,31 @@ class _CatalogueFormScreenState extends State<CatalogueFormScreen>
   }
 
   Widget _buildVisibilitySwitch({required bool canWrite}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          decoration: BoxDecoration(
-            color: D.bg,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
-          ),
-          child: SwitchListTile(
-            title: const Text(
-              'Estado del Catálogo',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            subtitle: Text(
-              _isActive ? 'Activo y visible' : 'Oculto para usuarios',
-              style: const TextStyle(color: D.slate400, fontSize: 12),
-            ),
-            value: _isActive,
-            activeThumbColor: D.emerald,
-            activeTrackColor: D.emerald.withOpacity(0.3),
-            inactiveThumbColor: D.slate400,
-            inactiveTrackColor: D.bg.withOpacity(0.5),
-            onChanged: canWrite ? (v) => setState(() => _isActive = v) : null,
+    return Container(
+      decoration: BoxDecoration(
+        color: context.saas.bgSubtle,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.saas.border),
+      ),
+      child: SwitchListTile(
+        title: Text(
+          'Estado del Catálogo',
+          style: TextStyle(
+            color: context.saas.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
           ),
         ),
+        subtitle: Text(
+          _isActive ? 'Activo y visible' : 'Oculto para usuarios',
+          style: TextStyle(color: context.saas.textSecondary, fontSize: 12),
+        ),
+        value: _isActive,
+        activeThumbColor: context.saas.success,
+        activeTrackColor: context.saas.success.withValues(alpha: 0.3),
+        inactiveThumbColor: context.saas.textTertiary,
+        inactiveTrackColor: context.saas.bgSubtle,
+        onChanged: canWrite ? (v) => setState(() => _isActive = v) : null,
       ),
     );
   }

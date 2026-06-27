@@ -76,10 +76,10 @@ class _DashboardBodyState extends State<DashboardScreen> {
             final isLoading = tourState is TourLoading;
 
             return Scaffold(
-              backgroundColor: SaasPalette.bgApp,
+              backgroundColor: context.saas.bgApp,
               body: RefreshIndicator(
                 onRefresh: () async => _refreshAll(),
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
                 child: CustomScrollView(
                   physics: const BouncingScrollPhysics(),
                   slivers: [

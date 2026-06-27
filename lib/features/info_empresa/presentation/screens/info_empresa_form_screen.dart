@@ -95,7 +95,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: isError ? SaasPalette.danger : SaasPalette.success,
+        backgroundColor: isError ? context.saas.danger : context.saas.success,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -144,7 +144,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
     ),
     _SocialPlatform('WhatsApp', Icons.chat_rounded, Color(0xFF25D366)),
     _SocialPlatform('Telegram', Icons.send_rounded, Color(0xFF2CA5E0)),
-    _SocialPlatform('Otro', Icons.link_rounded, SaasPalette.brand600),
+    _SocialPlatform('Otro', Icons.link_rounded, SaasPalette.brand600), // TODO: dark mode
   ];
 
   void _addRedSocial() {
@@ -192,9 +192,9 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
             child: Container(
               constraints: const BoxConstraints(maxWidth: 460),
               decoration: BoxDecoration(
-                color: SaasPalette.bgCanvas,
+                color: context.saas.bgCanvas,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: SaasPalette.border),
+                border: Border.all(color: context.saas.border),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.08),
@@ -210,9 +210,9 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                   // ── Header ──────────────────────────────────────
                   Container(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [SaasPalette.brand600, SaasPalette.brand900],
+                        colors: [context.saas.brand600, context.saas.brand900],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -278,10 +278,10 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // ── Selector de plataforma ───────────────
-                        const Text(
+                        Text(
                           'PLATAFORMA',
                           style: TextStyle(
-                            color: SaasPalette.textSecondary,
+                            color: context.saas.textSecondary,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
@@ -304,12 +304,12 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                                 decoration: BoxDecoration(
                                   color: isSelected
                                       ? p.color.withValues(alpha: 0.1)
-                                      : SaasPalette.bgSubtle,
+                                      : context.saas.bgSubtle,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: isSelected
                                         ? p.color.withValues(alpha: 0.5)
-                                        : SaasPalette.border,
+                                        : context.saas.border,
                                     width: isSelected ? 1.5 : 1,
                                   ),
                                 ),
@@ -321,7 +321,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                                       size: 14,
                                       color: isSelected
                                           ? p.color
-                                          : SaasPalette.textTertiary,
+                                          : context.saas.textTertiary,
                                     ),
                                     const SizedBox(width: 5),
                                     Text(
@@ -333,7 +333,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                                             : FontWeight.w500,
                                         color: isSelected
                                             ? p.color
-                                            : SaasPalette.textSecondary,
+                                            : context.saas.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -365,16 +365,16 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                               const SizedBox(height: 6),
                               Row(
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.error_outline_rounded,
                                     size: 13,
-                                    color: SaasPalette.danger,
+                                    color: context.saas.danger,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     urlError!,
-                                    style: const TextStyle(
-                                      color: SaasPalette.danger,
+                                    style: TextStyle(
+                                      color: context.saas.danger,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -395,17 +395,17 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 12,
                                   ),
-                                  side: const BorderSide(
-                                    color: SaasPalette.border,
+                                  side: BorderSide(
+                                    color: context.saas.border,
                                   ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'Cancelar',
                                   style: TextStyle(
-                                    color: SaasPalette.textSecondary,
+                                    color: context.saas.textSecondary,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -417,7 +417,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                                 onPressed: tryAdd,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor:
-                                      selected?.color ?? SaasPalette.brand600,
+                                      selected?.color ?? context.saas.brand600,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 12,
@@ -511,27 +511,27 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: SaasPalette.brand50,
+                                    color: context.saas.brand50,
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: SaasPalette.brand600.withValues(
+                                      color: context.saas.brand600.withValues(
                                         alpha: 0.3,
                                       ),
                                     ),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
                                         Icons.business_rounded,
-                                        color: SaasPalette.brand600,
+                                        color: context.saas.brand600,
                                         size: 16,
                                       ),
                                       SizedBox(width: 8),
                                       Text(
                                         'PERFIL EMPRESARIAL',
                                         style: TextStyle(
-                                          color: SaasPalette.brand600,
+                                          color: context.saas.brand600,
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -717,7 +717,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
     }
     if (n.contains('whatsapp')) return const Color(0xFF25D366);
     if (n.contains('telegram')) return const Color(0xFF2CA5E0);
-    return SaasPalette.brand600;
+    return context.saas.brand600;
   }
 
   Widget _buildRedesSocialesSection({required bool canWrite}) {
@@ -725,9 +725,9 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -744,21 +744,21 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: SaasPalette.brand50,
+                  color: context.saas.brand50,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.share_rounded,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   size: 18,
                 ),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'PRESENCIA DIGITAL',
                   style: TextStyle(
-                    color: SaasPalette.textPrimary,
+                    color: context.saas.textPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.8,
@@ -769,14 +769,14 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                 TextButton.icon(
                   onPressed: _addRedSocial,
                   style: TextButton.styleFrom(
-                    foregroundColor: SaasPalette.brand600,
+                    foregroundColor: context.saas.brand600,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 8,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
-                      side: const BorderSide(color: SaasPalette.border),
+                      side: BorderSide(color: context.saas.border),
                     ),
                   ),
                   icon: const Icon(Icons.add_rounded, size: 16),
@@ -788,23 +788,23 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
             ],
           ),
           const SizedBox(height: 16),
-          const Divider(color: SaasPalette.border),
+          Divider(color: context.saas.border),
           const SizedBox(height: 12),
           if (_redesSociales.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Row(
                 children: [
                   Icon(
                     Icons.info_outline_rounded,
                     size: 16,
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                   ),
                   SizedBox(width: 8),
                   Text(
                     'No hay redes sociales configuradas',
                     style: TextStyle(
-                      color: SaasPalette.textTertiary,
+                      color: context.saas.textTertiary,
                       fontSize: 13,
                       fontStyle: FontStyle.italic,
                     ),
@@ -823,9 +823,9 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: SaasPalette.bgSubtle,
+                  color: context.saas.bgSubtle,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: SaasPalette.border),
+                  border: Border.all(color: context.saas.border),
                 ),
                 child: Row(
                   children: [
@@ -844,8 +844,8 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                         children: [
                           Text(
                             e.value.nombre,
-                            style: const TextStyle(
-                              color: SaasPalette.textPrimary,
+                            style: TextStyle(
+                              color: context.saas.textPrimary,
                               fontWeight: FontWeight.w700,
                               fontSize: 13,
                             ),
@@ -853,8 +853,8 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                           const SizedBox(height: 2),
                           Text(
                             e.value.link,
-                            style: const TextStyle(
-                              color: SaasPalette.textTertiary,
+                            style: TextStyle(
+                              color: context.saas.textTertiary,
                               fontSize: 12,
                             ),
                             maxLines: 1,
@@ -867,9 +867,9 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                       IconButton(
                         onPressed: () =>
                             setState(() => _redesSociales.removeAt(e.key)),
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.delete_outline_rounded,
-                          color: SaasPalette.danger,
+                          color: context.saas.danger,
                           size: 18,
                         ),
                         tooltip: 'Eliminar',

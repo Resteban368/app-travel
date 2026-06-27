@@ -44,7 +44,7 @@ class _PaymentMethodListBodyState extends State<_PaymentMethodListBody> {
         authState.user.canWrite('paymentMethods');
 
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       body: BlocBuilder<PaymentMethodBloc, PaymentMethodState>(
         builder: (context, state) {
           List<PaymentMethod> list = [];
@@ -58,7 +58,7 @@ class _PaymentMethodListBodyState extends State<_PaymentMethodListBody> {
           return RefreshIndicator(
             onRefresh: () async =>
                 context.read<PaymentMethodBloc>().add(LoadPaymentMethods()),
-            color: SaasPalette.brand600,
+            color: context.saas.brand600,
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
@@ -178,11 +178,11 @@ class _PaymentHeader extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Métodos de Pago',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -192,7 +192,7 @@ class _PaymentHeader extends StatelessWidget {
                   Text(
                     'Gestiona cuentas bancarias y canales de cobro oficiales.',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 14,
                     ),
                   ),
@@ -258,10 +258,10 @@ class _PaymentMethodCardState extends State<_PaymentMethodCard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
+          color: context.saas.bgCanvas,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _hover ? SaasPalette.brand600 : SaasPalette.border,
+            color: _hover ? context.saas.brand600 : context.saas.border,
             width: _hover ? 1.5 : 1,
           ),
           boxShadow: [
@@ -287,15 +287,15 @@ class _PaymentMethodCardState extends State<_PaymentMethodCard> {
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: isActive
-                            ? SaasPalette.brand50
-                            : SaasPalette.bgSubtle,
+                            ? context.saas.brand50
+                            : context.saas.bgSubtle,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         widget.icon,
                         color: isActive
-                            ? SaasPalette.brand600
-                            : SaasPalette.textTertiary,
+                            ? context.saas.brand600
+                            : context.saas.textTertiary,
                         size: 24,
                       ),
                     ),
@@ -307,9 +307,9 @@ class _PaymentMethodCardState extends State<_PaymentMethodCard> {
                         onToggle: widget.onToggle,
                       )
                     else
-                      const Icon(
+                      Icon(
                         Icons.visibility_outlined,
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                         size: 20,
                       ),
                   ],
@@ -317,16 +317,16 @@ class _PaymentMethodCardState extends State<_PaymentMethodCard> {
                 const Spacer(),
                 Text(
                   m.name,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
                   m.paymentType,
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  style: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -337,8 +337,8 @@ class _PaymentMethodCardState extends State<_PaymentMethodCard> {
                     Expanded(
                       child: Text(
                         m.accountNumber,
-                        style: const TextStyle(
-                          color: SaasPalette.textPrimary,
+                        style: TextStyle(
+                          color: context.saas.textPrimary,
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.2,
@@ -351,8 +351,8 @@ class _PaymentMethodCardState extends State<_PaymentMethodCard> {
                 const SizedBox(height: 4),
                 Text(
                   m.accountHolder.toUpperCase(),
-                  style: const TextStyle(
-                    color: SaasPalette.textSecondary,
+                  style: TextStyle(
+                    color: context.saas.textSecondary,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
@@ -383,12 +383,12 @@ class _CardActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: const Icon(
+      icon: Icon(
         Icons.more_vert_rounded,
-        color: SaasPalette.textTertiary,
+        color: context.saas.textTertiary,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: SaasPalette.bgCanvas,
+      color: context.saas.bgCanvas,
       elevation: 4,
       onSelected: (v) {
         if (v == 'edit') onEdit();
@@ -399,16 +399,16 @@ class _CardActions extends StatelessWidget {
         PopupMenuItem(
           value: 'edit',
           child: Row(
-            children: const [
+            children: [
               Icon(
                 Icons.edit_outlined,
                 size: 18,
-                color: SaasPalette.textPrimary,
+                color: context.saas.textPrimary,
               ),
               SizedBox(width: 12),
               Text(
                 'Editar cuenta',
-                style: TextStyle(color: SaasPalette.textPrimary, fontSize: 13),
+                style: TextStyle(color: context.saas.textPrimary, fontSize: 13),
               ),
             ],
           ),
@@ -422,13 +422,13 @@ class _CardActions extends StatelessWidget {
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
                 size: 18,
-                color: isActive ? SaasPalette.warning : SaasPalette.success,
+                color: isActive ? context.saas.warning : context.saas.success,
               ),
               const SizedBox(width: 12),
               Text(
                 isActive ? 'Desactivar' : 'Activar',
                 style: TextStyle(
-                  color: isActive ? SaasPalette.warning : SaasPalette.success,
+                  color: isActive ? context.saas.warning : context.saas.success,
                   fontSize: 13,
                 ),
               ),
@@ -439,16 +439,16 @@ class _CardActions extends StatelessWidget {
         PopupMenuItem(
           value: 'delete',
           child: Row(
-            children: const [
+            children: [
               Icon(
                 Icons.delete_outline_rounded,
                 size: 18,
-                color: SaasPalette.danger,
+                color: context.saas.danger,
               ),
               SizedBox(width: 12),
               Text(
                 'Eliminar',
-                style: TextStyle(color: SaasPalette.danger, fontSize: 13),
+                style: TextStyle(color: context.saas.danger, fontSize: 13),
               ),
             ],
           ),

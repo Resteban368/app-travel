@@ -28,4 +28,13 @@ class AppColors {
   static const Color sidebarBg = navy;
   static const Color sidebarActive = cobalt;
   static const Color sidebarHover = Color(0xFF162536);
+
+  // Dark mode surfaces
+  static const Color darkBg = Color(0xFF0B1520);
+  static const Color darkSurface = Color(0xFF162030);
+  static const Color darkElevated = Color(0xFF1B2838);
+  static const Color onDark = Color(0xFFDFECF4);
+  static const Color onDarkMuted = Color(0xFF8CAEC4);
+  static const Color darkDivider = Color(0xFF1E3045);
+  static const Color errorDark = Color(0xFFEF5350);
 }

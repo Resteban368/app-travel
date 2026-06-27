@@ -48,7 +48,7 @@ class _BusLayoutListBodyState extends State<_BusLayoutListBody> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
-              backgroundColor: SaasPalette.danger,
+              backgroundColor: context.saas.danger,
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -73,7 +73,7 @@ class _BusLayoutListBodyState extends State<_BusLayoutListBody> {
               }).toList();
 
         return RefreshIndicator(
-          color: SaasPalette.brand600,
+          color: context.saas.brand600,
           onRefresh: () async =>
               context.read<BusLayoutBloc>().add(const LoadBusLayouts()),
           child: CustomScrollView(
@@ -117,7 +117,7 @@ class _BusLayoutListBodyState extends State<_BusLayoutListBody> {
                         Icon(
                           Icons.directions_bus_rounded,
                           size: 56,
-                          color: SaasPalette.textTertiary.withValues(
+                          color: context.saas.textTertiary.withValues(
                             alpha: 0.4,
                           ),
                         ),
@@ -126,8 +126,8 @@ class _BusLayoutListBodyState extends State<_BusLayoutListBody> {
                           _search.isEmpty
                               ? 'No hay layouts de bus registrados'
                               : 'Sin resultados para "$_search"',
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                             fontSize: 15,
                           ),
                         ),
@@ -180,21 +180,21 @@ class _BusLayoutHeader extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: SaasPalette.brand50,
+                      color: context.saas.brand50,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.directions_bus_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 20,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Diseños de Bus',
                       style: TextStyle(
-                        color: SaasPalette.textPrimary,
+                        color: context.saas.textPrimary,
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                       ),
@@ -212,7 +212,7 @@ class _BusLayoutHeader extends StatelessWidget {
                     icon: const Icon(Icons.add_rounded, size: 18),
                     label: const Text('Nuevo Diseño'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: SaasPalette.brand600,
+                      backgroundColor: context.saas.brand600,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -237,20 +237,20 @@ class _BusLayoutHeader extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: SaasPalette.brand50,
+                          color: context.saas.brand50,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.directions_bus_rounded,
-                          color: SaasPalette.brand600,
+                          color: context.saas.brand600,
                           size: 20,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
+                      Text(
                         'Diseños de Bus',
                         style: TextStyle(
-                          color: SaasPalette.textPrimary,
+                          color: context.saas.textPrimary,
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                         ),
@@ -258,10 +258,10 @@ class _BusLayoutHeader extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Configuraciones de distribución de asientos',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 13,
                     ),
                   ),
@@ -275,7 +275,7 @@ class _BusLayoutHeader extends StatelessWidget {
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: const Text('Nuevo Diseño'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: SaasPalette.brand600,
+                  backgroundColor: context.saas.brand600,
                   foregroundColor: Colors.white,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -310,25 +310,25 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: SaasPalette.bgCanvas,
+        backgroundColor: context.saas.bgCanvas,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
+        title: Text(
           '¿Eliminar layout?',
           style: TextStyle(
-            color: SaasPalette.textPrimary,
+            color: context.saas.textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           'Se desactivará "${widget.layout.nombre}".',
-          style: const TextStyle(color: SaasPalette.textSecondary),
+          style: TextStyle(color: context.saas.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
+            child: Text(
               'Cancelar',
-              style: TextStyle(color: SaasPalette.textSecondary),
+              style: TextStyle(color: context.saas.textSecondary),
             ),
           ),
           ElevatedButton(
@@ -339,7 +339,7 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: SaasPalette.danger,
+              backgroundColor: context.saas.danger,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -361,17 +361,17 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
+          color: context.saas.bgCanvas,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: _hovered
-                ? SaasPalette.brand600.withValues(alpha: 0.3)
-                : SaasPalette.border,
+                ? context.saas.brand600.withValues(alpha: 0.3)
+                : context.saas.border,
           ),
           boxShadow: _hovered
               ? [
                   BoxShadow(
-                    color: SaasPalette.brand600.withValues(alpha: 0.06),
+                    color: context.saas.brand600.withValues(alpha: 0.06),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -396,12 +396,12 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: SaasPalette.brand50,
+                    color: context.saas.brand50,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.directions_bus_rounded,
-                    color: SaasPalette.brand600,
+                    color: context.saas.brand600,
                     size: 22,
                   ),
                 ),
@@ -412,8 +412,8 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
                     children: [
                       Text(
                         layout.nombre,
-                        style: const TextStyle(
-                          color: SaasPalette.textPrimary,
+                        style: TextStyle(
+                          color: context.saas.textPrimary,
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
                         ),
@@ -422,8 +422,8 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
                         const SizedBox(height: 4),
                         Text(
                           layout.descripcion,
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                             fontSize: 12,
                           ),
                           maxLines: 2,
@@ -442,10 +442,10 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: SaasPalette.brand50,
+                              color: context.saas.brand50,
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color: SaasPalette.brand600.withValues(
+                                color: context.saas.brand600.withValues(
                                   alpha: 0.2,
                                 ),
                               ),
@@ -453,16 +453,16 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.event_seat_rounded,
                                   size: 11,
-                                  color: SaasPalette.brand600,
+                                  color: context.saas.brand600,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${layout.totalAsientosCliente} asientos',
-                                  style: const TextStyle(
-                                    color: SaasPalette.brand600,
+                                  style: TextStyle(
+                                    color: context.saas.brand600,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -473,8 +473,8 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
                           if (layout.configuracion != null)
                             Text(
                               '${layout.configuracion!.filas} filas × ${layout.configuracion!.columnas} col.',
-                              style: const TextStyle(
-                                color: SaasPalette.textTertiary,
+                              style: TextStyle(
+                                color: context.saas.textTertiary,
                                 fontSize: 11,
                               ),
                             ),
@@ -488,12 +488,12 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
                 if (widget.canWrite) ...[
                   const SizedBox(width: 8),
                   PopupMenuButton<String>(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.more_vert_rounded,
-                      color: SaasPalette.textTertiary,
+                      color: context.saas.textTertiary,
                       size: 18,
                     ),
-                    color: SaasPalette.bgCanvas,
+                    color: context.saas.bgCanvas,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -509,36 +509,36 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
                       }
                     },
                     itemBuilder: (_) => [
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'edit',
                         child: Row(
                           children: [
                             Icon(
                               Icons.edit_rounded,
                               size: 16,
-                              color: SaasPalette.brand600,
+                              color: context.saas.brand600,
                             ),
                             SizedBox(width: 8),
                             Text(
                               'Editar',
-                              style: TextStyle(color: SaasPalette.textPrimary),
+                              style: TextStyle(color: context.saas.textPrimary),
                             ),
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'delete',
                         child: Row(
                           children: [
                             Icon(
                               Icons.delete_outline_rounded,
                               size: 16,
-                              color: SaasPalette.danger,
+                              color: context.saas.danger,
                             ),
                             SizedBox(width: 8),
                             Text(
                               'Eliminar',
-                              style: TextStyle(color: SaasPalette.danger),
+                              style: TextStyle(color: context.saas.danger),
                             ),
                           ],
                         ),

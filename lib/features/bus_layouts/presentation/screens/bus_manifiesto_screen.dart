@@ -127,7 +127,7 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
       appBar: AppBar(
-        backgroundColor: SaasPalette.brand600,
+        backgroundColor: context.saas.brand600,
         foregroundColor: Colors.white,
         title: const Text(
           'Manifiesto de Bus',
@@ -345,7 +345,7 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
                 icon: const Icon(Icons.auto_fix_high_rounded, size: 16),
                 label: const Text('Auto-asignar', style: TextStyle(fontSize: 13)),
                 style: FilledButton.styleFrom(
-                  backgroundColor: SaasPalette.brand600,
+                  backgroundColor: context.saas.brand600,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -394,7 +394,7 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
         isScrollable: true,
         labelColor: Colors.white,
         unselectedLabelColor: Colors.white54,
-        indicatorColor: SaasPalette.brand600,
+        indicatorColor: context.saas.brand600,
         tabs: buses.map((b) {
           return Tab(
             icon: Row(
@@ -440,10 +440,10 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
                 length: 2,
                 child: Column(
                   children: [
-                    const TabBar(
-                      labelColor: SaasPalette.brand600,
+                    TabBar(
+                      labelColor: context.saas.brand600,
                       unselectedLabelColor: Color(0xFF64748B),
-                      indicatorColor: SaasPalette.brand600,
+                      indicatorColor: context.saas.brand600,
                       tabs: [
                         Tab(text: 'Mapa del bus'),
                         Tab(text: 'Reservas'),
@@ -766,10 +766,10 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
             color: Colors.white,
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.people_rounded,
                   size: 18,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -933,7 +933,7 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
     await showDialog(
       context: context,
       builder: (ctx) => Dialog(
-        backgroundColor: SaasPalette.bgCanvas,
+        backgroundColor: context.saas.bgCanvas,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
           padding: const EdgeInsets.all(28),
@@ -943,30 +943,30 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: SaasPalette.brand600.withValues(alpha: 0.1),
+                  color: context.saas.brand600.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.picture_as_pdf_rounded,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   size: 32,
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'PDF Listo',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: SaasPalette.textPrimary,
+                  color: context.saas.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 filename,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: SaasPalette.textTertiary,
+                  color: context.saas.textTertiary,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -978,8 +978,8 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
                       icon: const Icon(Icons.open_in_new_rounded, size: 18),
                       label: const Text('Ver PDF'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: SaasPalette.brand600,
-                        side: const BorderSide(color: SaasPalette.brand600),
+                        foregroundColor: context.saas.brand600,
+                        side: BorderSide(color: context.saas.brand600),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -994,7 +994,7 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
                       icon: const Icon(Icons.download_rounded, size: 18),
                       label: const Text('Descargar'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: SaasPalette.brand600,
+                        backgroundColor: context.saas.brand600,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -1009,9 +1009,9 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text(
+                child: Text(
                   'Cerrar',
-                  style: TextStyle(color: SaasPalette.textTertiary),
+                  style: TextStyle(color: context.saas.textTertiary),
                 ),
               ),
             ],
@@ -1315,7 +1315,7 @@ class _AsignarAsientoDialogState extends State<_AsignarAsientoDialog>
         ),
         child: Container(
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -1324,8 +1324,8 @@ class _AsignarAsientoDialogState extends State<_AsignarAsientoDialog>
               // Header
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: SaasPalette.border)),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: context.saas.border)),
                 ),
                 child: Row(
                   children: [
@@ -1336,18 +1336,18 @@ class _AsignarAsientoDialogState extends State<_AsignarAsientoDialog>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Asignar Asiento',
                             style: TextStyle(
-                              color: SaasPalette.textPrimary,
+                              color: context.saas.textPrimary,
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           Text(
                             widget.reserva.responsable?.nombre ?? widget.reserva.idReserva,
-                            style: const TextStyle(
-                              color: SaasPalette.textSecondary,
+                            style: TextStyle(
+                              color: context.saas.textSecondary,
                               fontSize: 12,
                             ),
                           ),
@@ -1356,8 +1356,8 @@ class _AsignarAsientoDialogState extends State<_AsignarAsientoDialog>
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close_rounded,
-                          color: SaasPalette.textTertiary),
+                      icon: Icon(Icons.close_rounded,
+                          color: context.saas.textTertiary),
                     ),
                   ],
                 ),
@@ -1400,8 +1400,8 @@ class _AsignarAsientoDialogState extends State<_AsignarAsientoDialog>
                     Expanded(
                       child: Text(
                         'Toca un asiento libre (gris) · necesitas $seatsNeeded asiento${seatsNeeded == 1 ? '' : 's'}',
-                        style: const TextStyle(
-                          color: SaasPalette.textSecondary,
+                        style: TextStyle(
+                          color: context.saas.textSecondary,
                           fontSize: 12,
                         ),
                       ),
@@ -1457,8 +1457,8 @@ class _AsignarAsientoDialogState extends State<_AsignarAsientoDialog>
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: SaasPalette.textSecondary,
-                          side: const BorderSide(color: SaasPalette.border),
+                          foregroundColor: context.saas.textSecondary,
+                          side: BorderSide(color: context.saas.border),
                           padding:
                               const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -1516,7 +1516,7 @@ class _TourInfoCard extends StatelessWidget {
     final fmt = DateFormat('dd MMM yyyy', 'es');
     return Container(
       width: double.infinity,
-      color: SaasPalette.brand600,
+      color: context.saas.brand600,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1629,10 +1629,10 @@ class _BusStatsBar extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.directions_bus_rounded,
                 size: 16,
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
               ),
               const SizedBox(width: 6),
               Text(
@@ -1680,7 +1680,7 @@ class _BusStatsBar extends StatelessWidget {
               const Spacer(),
               _StatPill(
                 label: '${bus.asientosOcupados} ocupados',
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
               ),
               const SizedBox(width: 6),
               _StatPill(
@@ -1701,7 +1701,7 @@ class _BusStatsBar extends StatelessWidget {
                     ? Colors.red
                     : pct > 0.5
                     ? Colors.orange
-                    : SaasPalette.brand600,
+                    : context.saas.brand600,
               ),
             ),
           ),

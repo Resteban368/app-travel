@@ -76,7 +76,7 @@ class _SaldoPendienteScreenState extends State<SaldoPendienteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       body: Column(
         children: [
           _Header(
@@ -88,9 +88,9 @@ class _SaldoPendienteScreenState extends State<SaldoPendienteScreen> {
             child: BlocBuilder<SaldoPendienteBloc, SaldoPendienteState>(
               builder: (context, state) {
                 if (state is SaldoPendienteLoading) {
-                  return const Center(
+                  return Center(
                     child: CircularProgressIndicator(
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                     ),
                   );
                 }
@@ -142,7 +142,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: SaasPalette.bgCanvas,
+      color: context.saas.bgCanvas,
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,20 +152,20 @@ class _Header extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: SaasPalette.warning.withValues(alpha: 0.1),
+                  color: context.saas.warning.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.account_balance_wallet_rounded,
-                  color: SaasPalette.warning,
+                  color: context.saas.warning,
                   size: 20,
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 'Saldos Pendientes',
                 style: TextStyle(
-                  color: SaasPalette.textPrimary,
+                  color: context.saas.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
                 ),
@@ -174,7 +174,7 @@ class _Header extends StatelessWidget {
               IconButton(
                 onPressed: onRefresh,
                 icon: const Icon(Icons.refresh_rounded),
-                color: SaasPalette.textSecondary,
+                color: context.saas.textSecondary,
                 tooltip: 'Actualizar',
               ),
             ],
@@ -183,36 +183,36 @@ class _Header extends StatelessWidget {
           Container(
             height: 40,
             decoration: BoxDecoration(
-              color: SaasPalette.bgApp,
+              color: context.saas.bgApp,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: SaasPalette.border),
+              border: Border.all(color: context.saas.border),
             ),
             child: Row(
               children: [
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(horizontal: 10),
                   child: Icon(
                     Icons.search_rounded,
                     size: 18,
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                   ),
                 ),
                 Expanded(
                   child: TextField(
                     controller: searchController,
                     onChanged: onSearch,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Buscar por nombre de tour…',
                       hintStyle: TextStyle(
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                         fontSize: 13,
                       ),
                       border: InputBorder.none,
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
                     ),
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 13,
                     ),
                   ),
@@ -247,10 +247,10 @@ class _Body extends StatelessWidget {
       itemCount: loaded.tours.length + (isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == loaded.tours.length) {
-          return const Padding(
+          return Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
             child: Center(
-              child: CircularProgressIndicator(color: SaasPalette.brand600),
+              child: CircularProgressIndicator(color: context.saas.brand600),
             ),
           );
         }
@@ -277,9 +277,9 @@ class _TourCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -297,12 +297,12 @@ class _TourCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: SaasPalette.brand600.withValues(alpha: 0.1),
+                  color: context.saas.brand600.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.tour_rounded,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   size: 20,
                 ),
               ),
@@ -313,8 +313,8 @@ class _TourCard extends StatelessWidget {
                   children: [
                     Text(
                       tour.tourNombre,
-                      style: const TextStyle(
-                        color: SaasPalette.textPrimary,
+                      style: TextStyle(
+                        color: context.saas.textPrimary,
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
@@ -323,31 +323,31 @@ class _TourCard extends StatelessWidget {
                     Row(
                       children: [
                         if (tour.fechaTour != null) ...[
-                          const Icon(
+                          Icon(
                             Icons.calendar_today_rounded,
                             size: 12,
-                            color: SaasPalette.textTertiary,
+                            color: context.saas.textTertiary,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             _formatFecha(tour.fechaTour),
-                            style: const TextStyle(
-                              color: SaasPalette.textTertiary,
+                            style: TextStyle(
+                              color: context.saas.textTertiary,
                               fontSize: 12,
                             ),
                           ),
                           const SizedBox(width: 12),
                         ],
-                        const Icon(
+                        Icon(
                           Icons.people_rounded,
                           size: 12,
-                          color: SaasPalette.textTertiary,
+                          color: context.saas.textTertiary,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${tour.totalReservas} reserva${tour.totalReservas != 1 ? 's' : ''}',
-                          style: const TextStyle(
-                            color: SaasPalette.textTertiary,
+                          style: TextStyle(
+                            color: context.saas.textTertiary,
                             fontSize: 12,
                           ),
                         ),
@@ -361,16 +361,16 @@ class _TourCard extends StatelessWidget {
                 children: [
                   Text(
                     currFmt.format(tour.totalSaldoPendiente),
-                    style: const TextStyle(
-                      color: SaasPalette.danger,
+                    style: TextStyle(
+                      color: context.saas.danger,
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const Text(
+                  Text(
                     'Saldo total',
                     style: TextStyle(
-                      color: SaasPalette.textTertiary,
+                      color: context.saas.textTertiary,
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
                     ),
@@ -379,16 +379,16 @@ class _TourCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       currFmt.format(tour.totalPorValidar),
-                      style: const TextStyle(
-                        color: SaasPalette.warning,
+                      style: TextStyle(
+                        color: context.saas.warning,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const Text(
+                    Text(
                       'Por validar',
                       style: TextStyle(
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                         fontSize: 9,
                         fontWeight: FontWeight.w600,
                       ),
@@ -397,9 +397,9 @@ class _TourCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(width: 8),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: SaasPalette.textTertiary,
+                color: context.saas.textTertiary,
               ),
             ],
           ),
@@ -420,16 +420,16 @@ class _EmptyView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.check_circle_outline_rounded,
-              size: 64, color: SaasPalette.success.withValues(alpha: 0.2)),
+              size: 64, color: context.saas.success.withValues(alpha: 0.2)),
           const SizedBox(height: 16),
-          const Text('No hay saldos pendientes',
+          Text('No hay saldos pendientes',
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: SaasPalette.textPrimary)),
+                  color: context.saas.textPrimary)),
           const SizedBox(height: 8),
-          const Text('¡Todo está al día!',
-              style: TextStyle(color: SaasPalette.textSecondary)),
+          Text('¡Todo está al día!',
+              style: TextStyle(color: context.saas.textSecondary)),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: onRefresh,
@@ -455,12 +455,12 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 48, color: SaasPalette.danger),
+            Icon(Icons.error_outline_rounded,
+                size: 48, color: context.saas.danger),
             const SizedBox(height: 16),
             Text(message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: SaasPalette.textPrimary)),
+                style: TextStyle(color: context.saas.textPrimary)),
             const SizedBox(height: 24),
             ElevatedButton(onPressed: onRetry, child: const Text('Reintentar')),
           ],

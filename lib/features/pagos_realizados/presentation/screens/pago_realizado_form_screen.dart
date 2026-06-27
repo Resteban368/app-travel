@@ -265,11 +265,11 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       lastDate: DateTime(2100),
       builder: (context, child) => Theme(
         data: ThemeData.light().copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: SaasPalette.brand600,
+          colorScheme: ColorScheme.light(
+            primary: context.saas.brand600,
             onPrimary: Colors.white,
-            surface: SaasPalette.bgCanvas,
-            onSurface: SaasPalette.textPrimary,
+            surface: context.saas.bgCanvas,
+            onSurface: context.saas.textPrimary,
           ),
         ),
         child: child!,
@@ -286,15 +286,15 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
+          color: context.saas.bgCanvas,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: SaasPalette.border),
+          border: Border.all(color: context.saas.border),
         ),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.event_note_rounded,
-              color: SaasPalette.brand600,
+              color: context.saas.brand600,
               size: 20,
             ),
             const SizedBox(width: 12),
@@ -305,16 +305,16 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     : 'Fecha del Documento *',
                 style: TextStyle(
                   color: _fechaDocumento != null
-                      ? SaasPalette.textPrimary
-                      : SaasPalette.textTertiary,
+                      ? context.saas.textPrimary
+                      : context.saas.textTertiary,
                   fontSize: 14,
                 ),
               ),
             ),
             if (canWrite)
-              const Icon(
+              Icon(
                 Icons.calendar_today_rounded,
-                color: SaasPalette.textTertiary,
+                color: context.saas.textTertiary,
                 size: 16,
               ),
           ],
@@ -697,24 +697,24 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                                                     is PagoRealizadoSaving
                                                 ? null
                                                 : _confirmDelete,
-                                            icon: const Icon(
+                                            icon: Icon(
                                               Icons.delete_outline_rounded,
                                               size: 18,
-                                              color: SaasPalette.danger,
+                                              color: context.saas.danger,
                                             ),
-                                            label: const Text(
+                                            label: Text(
                                               'ELIMINAR PAGO',
                                               style: TextStyle(
-                                                color: SaasPalette.danger,
+                                                color: context.saas.danger,
                                                 fontWeight: FontWeight.w700,
                                                 letterSpacing: 0.5,
                                               ),
                                             ),
                                             style: OutlinedButton.styleFrom(
                                               foregroundColor:
-                                                  SaasPalette.danger,
-                                              side: const BorderSide(
-                                                color: SaasPalette.danger,
+                                                  context.saas.danger,
+                                              side: BorderSide(
+                                                color: context.saas.danger,
                                               ),
                                               padding:
                                                   const EdgeInsets.symmetric(
@@ -752,9 +752,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     final directUrl = _getDirectImageUrl(_urlImagenCtrl.text);
     return Container(
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -763,21 +763,21 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(
-              color: SaasPalette.brand50,
-              border: Border(bottom: BorderSide(color: SaasPalette.border)),
+              color: context.saas.brand50,
+              border: Border(bottom: BorderSide(color: context.saas.border)),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.receipt_long_rounded,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   size: 20,
                 ),
                 const SizedBox(width: 12),
-                const Text(
+                Text(
                   'COMPROBANTE ADJUNTO',
                   style: TextStyle(
-                    color: SaasPalette.textPrimary,
+                    color: context.saas.textPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.2,
@@ -785,10 +785,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                 ),
                 const Spacer(),
                 if (!kIsWeb)
-                  const Text(
+                  Text(
                     'Toque para ampliar',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 11,
                     ),
                   ),
@@ -807,11 +807,11 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                 errorBuilder: (_, _, _) => _ImageError(),
                 loadingBuilder: (_, child, p) => p == null
                     ? child
-                    : const Center(
+                    : Center(
                         child: Padding(
                           padding: EdgeInsets.all(40),
                           child: CircularProgressIndicator(
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                           ),
                         ),
                       ),
@@ -827,24 +827,24 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       padding: const EdgeInsets.all(32),
       child: Column(
         children: [
-          const Icon(
+          Icon(
             Icons.image_rounded,
             size: 64,
-            color: SaasPalette.textTertiary,
+            color: context.saas.textTertiary,
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Visualización en Web',
             style: TextStyle(
-              color: SaasPalette.textPrimary,
+              color: context.saas.textPrimary,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Debido a políticas de seguridad, abre el enlace original.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: SaasPalette.textSecondary, fontSize: 13),
+            style: TextStyle(color: context.saas.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 24),
           Row(
@@ -952,10 +952,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'RESERVA VINCULADA *',
               style: TextStyle(
-                color: SaasPalette.textSecondary,
+                color: context.saas.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.3,
@@ -971,10 +971,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: SaasPalette.brand50,
+                  color: context.saas.brand50,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: SaasPalette.brand600.withValues(alpha: 0.3),
+                    color: context.saas.brand600.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -982,12 +982,12 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: SaasPalette.brand600.withValues(alpha: 0.12),
+                        color: context.saas.brand600.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.airplane_ticket_rounded,
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                         size: 18,
                       ),
                     ),
@@ -998,25 +998,25 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                         children: [
                           Text(
                             lbl,
-                            style: const TextStyle(
-                              color: SaasPalette.textPrimary,
+                            style: TextStyle(
+                              color: context.saas.textPrimary,
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const Text(
+                          Text(
                             'Reserva vinculada',
                             style: TextStyle(
-                              color: SaasPalette.brand600,
+                              color: context.saas.brand600,
                               fontSize: 11,
                             ),
                           ),
                           if (selectedReserva?.responsable?.documento != null)
                             Text(
                               'Documento: ${selectedReserva!.responsable!.documento}',
-                              style: const TextStyle(
-                                color: SaasPalette.textSecondary,
+                              style: TextStyle(
+                                color: context.saas.textSecondary,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -1029,7 +1029,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                       TextButton(
                         onPressed: openPicker,
                         style: TextButton.styleFrom(
-                          foregroundColor: SaasPalette.brand600,
+                          foregroundColor: context.saas.brand600,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 4,
@@ -1048,9 +1048,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                           _selectedReservaId = null;
                           _reservaSearchCtrl.clear();
                         }),
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.close_rounded,
-                          color: SaasPalette.textTertiary,
+                          color: context.saas.textTertiary,
                           size: 16,
                         ),
                         padding: EdgeInsets.zero,
@@ -1071,40 +1071,40 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     vertical: 14,
                   ),
                   decoration: BoxDecoration(
-                    color: SaasPalette.bgCanvas,
+                    color: context.saas.bgCanvas,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: SaasPalette.border),
+                    border: Border.all(color: context.saas.border),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.search_rounded,
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                         size: 18,
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Buscar y seleccionar reserva...',
                           style: TextStyle(
-                            color: SaasPalette.textTertiary,
+                            color: context.saas.textTertiary,
                             fontSize: 14,
                           ),
                         ),
                       ),
                       if (isLoading)
-                        const SizedBox(
+                        SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                           ),
                         )
                       else
-                        const Icon(
+                        Icon(
                           Icons.unfold_more_rounded,
-                          color: SaasPalette.textTertiary,
+                          color: context.saas.textTertiary,
                           size: 18,
                         ),
                     ],
@@ -1128,10 +1128,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'MÉTODO DE PAGO *',
           style: TextStyle(
-            color: SaasPalette.textSecondary,
+            color: context.saas.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
@@ -1140,20 +1140,20 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: _metodosPagoValues.contains(_metodoPago) ? _metodoPago : 'transferencia',
-          dropdownColor: SaasPalette.bgCanvas,
+          dropdownColor: context.saas.bgCanvas,
           isExpanded: true,
-          style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
+          style: TextStyle(color: context.saas.textPrimary, fontSize: 14),
           decoration: InputDecoration(
             filled: true,
-            fillColor: SaasPalette.bgCanvas,
+            fillColor: context.saas.bgCanvas,
             
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: SaasPalette.border),
+              borderSide: BorderSide(color: context.saas.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: SaasPalette.brand600, width: 1.5),
+              borderSide: BorderSide(color: context.saas.brand600, width: 1.5),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),
@@ -1162,7 +1162,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     value: m.$1,
                     child: Row(
                       children: [
-                        Icon(m.$3, size: 16, color: SaasPalette.brand600),
+                        Icon(m.$3, size: 16, color: context.saas.brand600),
                         const SizedBox(width: 10),
                         Text(m.$2),
                       ],
@@ -1205,10 +1205,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'PROVEEDOR *',
               style: TextStyle(
-                color: SaasPalette.textSecondary,
+                color: context.saas.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.3,
@@ -1219,10 +1219,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: SaasPalette.brand50,
+                  color: context.saas.brand50,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: SaasPalette.brand600.withValues(alpha: 0.3),
+                    color: context.saas.brand600.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -1230,12 +1230,12 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: SaasPalette.brand600.withValues(alpha: 0.12),
+                        color: context.saas.brand600.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.store_rounded,
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                         size: 18,
                       ),
                     ),
@@ -1246,8 +1246,8 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                         children: [
                           Text(
                             selected?.nombre ?? 'Proveedor #$_selectedProveedorId',
-                            style: const TextStyle(
-                              color: SaasPalette.textPrimary,
+                            style: TextStyle(
+                              color: context.saas.textPrimary,
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
                             ),
@@ -1256,8 +1256,8 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                           if (selected != null)
                             Text(
                               '${selected.tipo.toUpperCase()}${selected.nit != null ? ' · ${selected.nit}' : ''}',
-                              style: const TextStyle(
-                                color: SaasPalette.brand600,
+                              style: TextStyle(
+                                color: context.saas.brand600,
                                 fontSize: 11,
                               ),
                             ),
@@ -1269,7 +1269,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                       TextButton(
                         onPressed: openPicker,
                         style: TextButton.styleFrom(
-                          foregroundColor: SaasPalette.brand600,
+                          foregroundColor: context.saas.brand600,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4,
                           ),
@@ -1281,9 +1281,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                       ),
                       IconButton(
                         onPressed: () => setState(() => _selectedProveedorId = null),
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.close_rounded,
-                          color: SaasPalette.textTertiary,
+                          color: context.saas.textTertiary,
                           size: 16,
                         ),
                         padding: EdgeInsets.zero,
@@ -1302,40 +1302,40 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     horizontal: 14, vertical: 14,
                   ),
                   decoration: BoxDecoration(
-                    color: SaasPalette.bgCanvas,
+                    color: context.saas.bgCanvas,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: SaasPalette.border),
+                    border: Border.all(color: context.saas.border),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.search_rounded,
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                         size: 18,
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Buscar y seleccionar proveedor...',
                           style: TextStyle(
-                            color: SaasPalette.textTertiary,
+                            color: context.saas.textTertiary,
                             fontSize: 14,
                           ),
                         ),
                       ),
                       if (isLoading)
-                        const SizedBox(
+                        SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                           ),
                         )
                       else
-                        const Icon(
+                        Icon(
                           Icons.unfold_more_rounded,
-                          color: SaasPalette.textTertiary,
+                          color: context.saas.textTertiary,
                           size: 18,
                         ),
                     ],
@@ -1360,10 +1360,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'SEDE *',
           style: TextStyle(
-            color: SaasPalette.textSecondary,
+            color: context.saas.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
@@ -1374,17 +1374,17 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: SaasPalette.bgSubtle,
+              color: context.saas.bgSubtle,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: SaasPalette.border),
+              border: Border.all(color: context.saas.border),
             ),
             child: Row(
               children: [
-                const Icon(Icons.business_rounded, color: SaasPalette.brand600, size: 18),
+                Icon(Icons.business_rounded, color: context.saas.brand600, size: 18),
                 const SizedBox(width: 12),
                 Text(
                   sedesLoading ? 'Cargando...' : sedeLabel,
-                  style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
+                  style: TextStyle(color: context.saas.textPrimary, fontSize: 14),
                 ),
               ],
             ),
@@ -1392,25 +1392,25 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         else
           DropdownButtonFormField<String>(
             value: sedes.any((s) => s.id == _selectedSedeId) ? _selectedSedeId : null,
-            dropdownColor: SaasPalette.bgCanvas,
-            style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
+            dropdownColor: context.saas.bgCanvas,
+            style: TextStyle(color: context.saas.textPrimary, fontSize: 14),
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.business_rounded, color: SaasPalette.brand600, size: 18),
+              prefixIcon: Icon(Icons.business_rounded, color: context.saas.brand600, size: 18),
               filled: true,
-              fillColor: SaasPalette.bgCanvas,
+              fillColor: context.saas.bgCanvas,
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: SaasPalette.border),
+                borderSide: BorderSide(color: context.saas.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: SaasPalette.brand600, width: 1.5),
+                borderSide: BorderSide(color: context.saas.brand600, width: 1.5),
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
             hint: Text(
               sedesLoading ? 'Cargando...' : 'Selecciona una sede',
-              style: const TextStyle(color: SaasPalette.textTertiary, fontSize: 13),
+              style: TextStyle(color: context.saas.textTertiary, fontSize: 13),
             ),
             items: sedes
                 .map((s) => DropdownMenuItem(value: s.id, child: Text(s.nombreSede)))
@@ -1431,10 +1431,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'TIPO DE PAGO *',
           style: TextStyle(
-            color: SaasPalette.textSecondary,
+            color: context.saas.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
@@ -1467,13 +1467,13 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                   ),
                   decoration: BoxDecoration(
                     color: selected
-                        ? SaasPalette.brand600
-                        : SaasPalette.bgSubtle,
+                        ? context.saas.brand600
+                        : context.saas.bgSubtle,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: selected
-                          ? SaasPalette.brand600
-                          : SaasPalette.border,
+                          ? context.saas.brand600
+                          : context.saas.border,
                       width: selected ? 1.5 : 1,
                     ),
                   ),
@@ -1485,7 +1485,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                         size: 20,
                         color: selected
                             ? Colors.white
-                            : SaasPalette.textSecondary,
+                            : context.saas.textSecondary,
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -1493,7 +1493,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                         style: TextStyle(
                           color: selected
                               ? Colors.white
-                              : SaasPalette.textSecondary,
+                              : context.saas.textSecondary,
                           fontSize: 12,
                           fontWeight: selected
                               ? FontWeight.w700
@@ -1519,9 +1519,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   }
 
   Color _getEstadoColor(PagoRealizado? pago) {
-    if (pago == null) return SaasPalette.textSecondary;
-    if (pago.isValidated) return SaasPalette.success;
-    if (pago.isRechazado) return SaasPalette.danger;
+    if (pago == null) return context.saas.textSecondary;
+    if (pago.isValidated) return context.saas.success;
+    if (pago.isRechazado) return context.saas.danger;
     return const Color(0xFFF59E0B);
   }
 
@@ -1572,26 +1572,26 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: SaasPalette.danger.withValues(alpha: 0.08),
+              color: context.saas.danger.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: SaasPalette.danger.withValues(alpha: 0.2),
+                color: context.saas.danger.withValues(alpha: 0.2),
               ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
+                Icon(
                   Icons.info_outline_rounded,
-                  color: SaasPalette.danger,
+                  color: context.saas.danger,
                   size: 16,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     pago!.motivoRechazo!,
-                    style: const TextStyle(
-                      color: SaasPalette.textSecondary,
+                    style: TextStyle(
+                      color: context.saas.textSecondary,
                       fontSize: 13,
                     ),
                   ),
@@ -1613,7 +1613,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     icon: const Icon(Icons.check_circle_rounded, size: 18),
                     label: const Text('Validar'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: SaasPalette.success,
+                      backgroundColor: context.saas.success,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -1631,7 +1631,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     icon: const Icon(Icons.cancel_rounded, size: 18),
                     label: const Text('Rechazar'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: SaasPalette.danger,
+                      backgroundColor: context.saas.danger,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -1650,9 +1650,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     icon: const Icon(Icons.refresh_rounded, size: 18),
                     label: const Text('Resetear'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: SaasPalette.textSecondary,
-                      side: const BorderSide(
-                        color: SaasPalette.border,
+                      foregroundColor: context.saas.textSecondary,
+                      side: BorderSide(
+                        color: context.saas.border,
                         width: 1.5,
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1675,24 +1675,24 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: SaasPalette.bgCanvas,
-        title: const Text(
+        backgroundColor: context.saas.bgCanvas,
+        title: Text(
           'Resetear Pago',
           style: TextStyle(
-            color: SaasPalette.textPrimary,
+            color: context.saas.textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
-        content: const Text(
+        content: Text(
           '¿Estás seguro de que deseas resetear este pago? Se desvinculará de la reserva actual y volverá a estado "Pendiente".',
-          style: TextStyle(color: SaasPalette.textSecondary),
+          style: TextStyle(color: context.saas.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
+            child: Text(
               'Cancelar',
-              style: TextStyle(color: SaasPalette.textSecondary),
+              style: TextStyle(color: context.saas.textSecondary),
             ),
           ),
           ElevatedButton(
@@ -1705,7 +1705,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: SaasPalette.brand600,
+              backgroundColor: context.saas.brand600,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -1756,27 +1756,27 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         child: Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: SaasPalette.border),
+            border: Border.all(color: context.saas.border),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Motivo de Rechazo',
                 style: TextStyle(
-                  color: SaasPalette.textPrimary,
+                  color: context.saas.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Indica el motivo por el que se rechaza este pago.',
                 style: TextStyle(
-                  color: SaasPalette.textSecondary,
+                  color: context.saas.textSecondary,
                   fontSize: 13,
                 ),
               ),
@@ -1785,25 +1785,25 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                 controller: motivoCtrl,
                 maxLines: 3,
                 autofocus: true,
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
+                style: TextStyle(
+                  color: context.saas.textPrimary,
                   fontSize: 14,
                 ),
                 decoration: InputDecoration(
                   hintText: 'Ej: Comprobante ilegible, monto incorrecto...',
-                  hintStyle: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  hintStyle: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 13,
                   ),
                   filled: true,
-                  fillColor: SaasPalette.bgSubtle,
+                  fillColor: context.saas.bgSubtle,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: SaasPalette.brand600),
+                    borderSide: BorderSide(color: context.saas.brand600),
                   ),
                 ),
               ),
@@ -1813,10 +1813,10 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                   Expanded(
                     child: TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text(
+                      child: Text(
                         'Cancelar',
                         style: TextStyle(
-                          color: SaasPalette.textSecondary,
+                          color: context.saas.textSecondary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1837,7 +1837,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: SaasPalette.danger,
+                        backgroundColor: context.saas.danger,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -1864,28 +1864,28 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
   Widget _buildSwitch({required bool canWrite}) {
     return Container(
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: SwitchListTile(
-        title: const Text(
+        title: Text(
           'Validar Pago',
           style: TextStyle(
-            color: SaasPalette.textPrimary,
+            color: context.saas.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.bold,
           ),
         ),
-        subtitle: const Text(
+        subtitle: Text(
           'Confirma el recibo y envía comprobante por WhatsApp',
-          style: TextStyle(color: SaasPalette.textTertiary, fontSize: 12),
+          style: TextStyle(color: context.saas.textTertiary, fontSize: 12),
         ),
         value: _isValidated,
-        activeThumbColor: SaasPalette.success,
-        activeTrackColor: SaasPalette.success.withValues(alpha: 0.25),
-        inactiveThumbColor: SaasPalette.textTertiary,
-        inactiveTrackColor: SaasPalette.bgSubtle,
+        activeThumbColor: context.saas.success,
+        activeTrackColor: context.saas.success.withValues(alpha: 0.25),
+        inactiveThumbColor: context.saas.textTertiary,
+        inactiveTrackColor: context.saas.bgSubtle,
         onChanged: canWrite ? (v) => setState(() => _isValidated = v) : null,
       ),
     );
@@ -2071,27 +2071,27 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: SaasPalette.brand50,
+          color: context.saas.brand50,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: SaasPalette.brand600.withValues(alpha: 0.3),
+            color: context.saas.brand600.withValues(alpha: 0.3),
           ),
         ),
-        child: const Row(
+        child: Row(
           children: [
             SizedBox(
               width: 16,
               height: 16,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
               ),
             ),
             SizedBox(width: 12),
             Text(
               'Analizando comprobante con IA...',
               style: TextStyle(
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -2105,23 +2105,23 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: SaasPalette.success.withValues(alpha: 0.08),
+          color: context.saas.success.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: SaasPalette.success.withValues(alpha: 0.3)),
+          border: Border.all(color: context.saas.success.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.check_circle_rounded,
-              color: SaasPalette.success,
+              color: context.saas.success,
               size: 18,
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 _pendingImageOriginalName ?? 'Imagen seleccionada',
-                style: const TextStyle(
-                  color: SaasPalette.success,
+                style: TextStyle(
+                  color: context.saas.success,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -2134,9 +2134,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                 _pendingImageMimeType = null;
                 _pendingImageOriginalName = null;
               }),
-              child: const Icon(
+              child: Icon(
                 Icons.close_rounded,
-                color: SaasPalette.textTertiary,
+                color: context.saas.textTertiary,
                 size: 18,
               ),
             ),
@@ -2152,8 +2152,8 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         icon: const Icon(Icons.upload_file_rounded, size: 18),
         label: const Text('Seleccionar imagen / comprobante'),
         style: OutlinedButton.styleFrom(
-          foregroundColor: SaasPalette.brand600,
-          side: const BorderSide(color: SaasPalette.brand600),
+          foregroundColor: context.saas.brand600,
+          side: BorderSide(color: context.saas.brand600),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -2205,11 +2205,11 @@ class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
   Color _tipoColor(String tipo) {
     switch (tipo.toLowerCase()) {
       case 'hotel':
-        return SaasPalette.brand600;
+        return context.saas.brand600;
       case 'aerolinea':
         return const Color(0xFF6366F1);
       case 'seguro':
-        return SaasPalette.success;
+        return context.saas.success;
       case 'transporte':
       case 'transfer':
       case 'alquiler_vehiculo':
@@ -2229,7 +2229,7 @@ class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
       case 'parque_atraccion':
         return const Color(0xFFEC4899);
       default:
-        return SaasPalette.textSecondary;
+        return context.saas.textSecondary;
     }
   }
 
@@ -2247,18 +2247,18 @@ class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
           child: Container(
             constraints: const BoxConstraints(maxWidth: 560, maxHeight: 580),
             decoration: BoxDecoration(
-              color: SaasPalette.bgCanvas,
+              color: context.saas.bgCanvas,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: SaasPalette.border),
+              border: Border.all(color: context.saas.border),
             ),
             child: Column(
               children: [
                 // Header
                 Container(
                   padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [SaasPalette.brand600, SaasPalette.brand900],
+                      colors: [context.saas.brand600, context.saas.brand900],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -2308,43 +2308,43 @@ class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
                   child: TextField(
                     controller: _searchCtrl,
                     autofocus: true,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 14,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Buscar por nombre, tipo o NIT...',
-                      hintStyle: const TextStyle(
-                        color: SaasPalette.textTertiary,
+                      hintStyle: TextStyle(
+                        color: context.saas.textTertiary,
                         fontSize: 13,
                       ),
-                      prefixIcon: const Icon(
+                      prefixIcon: Icon(
                         Icons.search_rounded,
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                         size: 18,
                       ),
                       suffixIcon: isLoading
-                          ? const Padding(
+                          ? Padding(
                               padding: EdgeInsets.all(12),
                               child: SizedBox(
                                 width: 16,
                                 height: 16,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: SaasPalette.brand600,
+                                  color: context.saas.brand600,
                                 ),
                               ),
                             )
                           : null,
                       filled: true,
-                      fillColor: SaasPalette.bgSubtle,
+                      fillColor: context.saas.bgSubtle,
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: SaasPalette.border),
+                        borderSide: BorderSide(color: context.saas.border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: SaasPalette.brand600),
+                        borderSide: BorderSide(color: context.saas.brand600),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -2360,8 +2360,8 @@ class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       '${proveedores.length} resultado${proveedores.length != 1 ? 's' : ''}',
-                      style: const TextStyle(
-                        color: SaasPalette.textTertiary,
+                      style: TextStyle(
+                        color: context.saas.textTertiary,
                         fontSize: 11,
                       ),
                     ),
@@ -2370,17 +2370,17 @@ class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
                 // List
                 Expanded(
                   child: (proveedores.isEmpty && !isLoading)
-                      ? const Center(
+                      ? Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.store_rounded,
-                                  color: SaasPalette.textTertiary, size: 40),
+                                  color: context.saas.textTertiary, size: 40),
                               SizedBox(height: 8),
                               Text(
                                 'Sin resultados',
                                 style: TextStyle(
-                                  color: SaasPalette.textSecondary,
+                                  color: context.saas.textSecondary,
                                   fontSize: 13,
                                 ),
                               ),
@@ -2406,9 +2406,9 @@ class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
                                     horizontal: 14, vertical: 12,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: SaasPalette.bgSubtle,
+                                    color: context.saas.bgSubtle,
                                     borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: SaasPalette.border),
+                                    border: Border.all(color: context.saas.border),
                                   ),
                                   child: Row(
                                     children: [
@@ -2437,8 +2437,8 @@ class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
                                           children: [
                                             Text(
                                               p.nombre,
-                                              style: const TextStyle(
-                                                color: SaasPalette.textPrimary,
+                                              style: TextStyle(
+                                                color: context.saas.textPrimary,
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w600,
                                               ),
@@ -2447,8 +2447,8 @@ class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
                                             if (p.nit != null)
                                               Text(
                                                 'NIT: ${p.nit}',
-                                                style: const TextStyle(
-                                                  color: SaasPalette.textSecondary,
+                                                style: TextStyle(
+                                                  color: context.saas.textSecondary,
                                                   fontSize: 11,
                                                 ),
                                               ),
@@ -2456,10 +2456,10 @@ class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
                                         ),
                                       ),
                                       if (p.email != null)
-                                        const Icon(
+                                        Icon(
                                           Icons.email_rounded,
                                           size: 14,
-                                          color: SaasPalette.textTertiary,
+                                          color: context.saas.textTertiary,
                                         ),
                                     ],
                                   ),
@@ -2542,11 +2542,11 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
   Color _estadoColor(String estado) {
     final e = estado.toLowerCase();
     if (e.contains('al dia') || e.contains('al día')) {
-      return SaasPalette.success;
+      return context.saas.success;
     }
-    if (e.contains('pendiente')) return SaasPalette.warning;
-    if (e.contains('cancelado')) return SaasPalette.danger;
-    return SaasPalette.textTertiary;
+    if (e.contains('pendiente')) return context.saas.warning;
+    if (e.contains('cancelado')) return context.saas.danger;
+    return context.saas.textTertiary;
   }
 
   @override
@@ -2571,18 +2571,18 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
           child: Container(
             constraints: const BoxConstraints(maxWidth: 620, maxHeight: 660),
             decoration: BoxDecoration(
-              color: SaasPalette.bgCanvas,
+              color: context.saas.bgCanvas,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: SaasPalette.border),
+              border: Border.all(color: context.saas.border),
             ),
             child: Column(
               children: [
                 // Gradient header
                 Container(
                   padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [SaasPalette.brand600, SaasPalette.brand900],
+                      colors: [context.saas.brand600, context.saas.brand900],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -2641,44 +2641,44 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                   child: TextField(
                     controller: _searchCtrl,
                     autofocus: true,
-                    style: const TextStyle(
-                      color: SaasPalette.textPrimary,
+                    style: TextStyle(
+                      color: context.saas.textPrimary,
                       fontSize: 14,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Buscar por ID, correo o responsable...',
-                      hintStyle: const TextStyle(
-                        color: SaasPalette.textTertiary,
+                      hintStyle: TextStyle(
+                        color: context.saas.textTertiary,
                         fontSize: 13,
                       ),
-                      prefixIcon: const Icon(
+                      prefixIcon: Icon(
                         Icons.search_rounded,
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                         size: 18,
                       ),
                       suffixIcon: isLoading
-                          ? const Padding(
+                          ? Padding(
                               padding: EdgeInsets.all(12),
                               child: SizedBox(
                                 width: 16,
                                 height: 16,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: SaasPalette.brand600,
+                                  color: context.saas.brand600,
                                 ),
                               ),
                             )
                           : null,
                       filled: true,
-                      fillColor: SaasPalette.bgSubtle,
+                      fillColor: context.saas.bgSubtle,
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: SaasPalette.border),
+                        borderSide: BorderSide(color: context.saas.border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: SaasPalette.brand600,
+                        borderSide: BorderSide(
+                          color: context.saas.brand600,
                         ),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
@@ -2698,8 +2698,8 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       '${reservas.length} resultado${reservas.length != 1 ? 's' : ''}',
-                      style: const TextStyle(
-                        color: SaasPalette.textTertiary,
+                      style: TextStyle(
+                        color: context.saas.textTertiary,
                         fontSize: 11,
                       ),
                     ),
@@ -2708,20 +2708,20 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                 // List
                 Expanded(
                   child: (reservas.isEmpty && !isLoading)
-                      ? const Center(
+                      ? Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.search_off_rounded,
-                                color: SaasPalette.textTertiary,
+                                color: context.saas.textTertiary,
                                 size: 40,
                               ),
                               SizedBox(height: 8),
                               Text(
                                 'Sin resultados',
                                 style: TextStyle(
-                                  color: SaasPalette.textSecondary,
+                                  color: context.saas.textSecondary,
                                   fontSize: 13,
                                 ),
                               ),
@@ -2739,12 +2739,12 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                               const SizedBox(height: 6),
                           itemBuilder: (_, index) {
                             if (index >= reservas.length) {
-                              return const Center(
+                              return Center(
                                 child: Padding(
                                   padding: EdgeInsets.all(16),
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: SaasPalette.brand600,
+                                    color: context.saas.brand600,
                                   ),
                                 ),
                               );
@@ -2763,10 +2763,10 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                                     vertical: 12,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: SaasPalette.bgSubtle,
+                                    color: context.saas.bgSubtle,
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: SaasPalette.border,
+                                      color: context.saas.border,
                                     ),
                                   ),
                                   child: Row(
@@ -2777,15 +2777,15 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                                           vertical: 5,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: SaasPalette.brand50,
+                                          color: context.saas.brand50,
                                           borderRadius: BorderRadius.circular(
                                             6,
                                           ),
                                         ),
                                         child: Text(
                                           label,
-                                          style: const TextStyle(
-                                            color: SaasPalette.brand600,
+                                          style: TextStyle(
+                                            color: context.saas.brand600,
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -2802,15 +2802,15 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                                                 Icon(
                                                   Icons.person,
                                                   size: 13,
-                                                  color: SaasPalette.brand600,
+                                                  color: context.saas.brand600,
                                                 ),
                                                 SizedBox(width: 4),
                                                 Text(
                                                   responsable ??
                                                       'Sin responsable',
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     color:
-                                                        SaasPalette.textPrimary,
+                                                        context.saas.textPrimary,
                                                     fontSize: 13,
                                                   ),
                                                   overflow:
@@ -2823,14 +2823,14 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                                                 Icon(
                                                   Icons.tour,
                                                   size: 13,
-                                                  color: SaasPalette.brand600,
+                                                  color: context.saas.brand600,
                                                 ),
                                                 SizedBox(width: 4),
                                                 Text(
                                                   r.tour?.name ?? 'Sin tour',
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     color:
-                                                        SaasPalette.textPrimary,
+                                                        context.saas.textPrimary,
                                                     fontSize: 13,
                                                   ),
                                                   overflow:
@@ -2843,7 +2843,7 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                                                 Icon(
                                                   Icons.date_range,
                                                   size: 13,
-                                                  color: SaasPalette.brand600,
+                                                  color: context.saas.brand600,
                                                 ),
                                                 SizedBox(width: 4),
                                                 Text(
@@ -2854,9 +2854,9 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                                                     r.tour?.startDate ??
                                                         DateTime.now(),
                                                   ),
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     color:
-                                                        SaasPalette.textPrimary,
+                                                        context.saas.textPrimary,
                                                     fontSize: 13,
                                                   ),
                                                   overflow:
@@ -2916,9 +2916,9 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
       child: Container(
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
+          color: context.saas.bgCanvas,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: SaasPalette.border),
+          border: Border.all(color: context.saas.border),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2926,7 +2926,7 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: SaasPalette.success.withValues(alpha: 0.1),
+                color: context.saas.success.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Image.asset(
@@ -2936,19 +2936,19 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Confirmación de Pago',
               style: TextStyle(
-                color: SaasPalette.textPrimary,
+                color: context.saas.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Notificaremos al cliente sobre su validación por WhatsApp.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: SaasPalette.textSecondary, fontSize: 14),
+              style: TextStyle(color: context.saas.textSecondary, fontSize: 14),
             ),
             const SizedBox(height: 24),
             TextFormField(
@@ -2956,23 +2956,23 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
               maxLines: 4,
               minLines: 2,
               onChanged: (_) => setState(() {}),
-              style: const TextStyle(
-                color: SaasPalette.textPrimary,
+              style: TextStyle(
+                color: context.saas.textPrimary,
                 fontSize: 14,
               ),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: SaasPalette.bgSubtle,
+                fillColor: context.saas.bgSubtle,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: SaasPalette.brand600),
+                  borderSide: BorderSide(color: context.saas.brand600),
                 ),
                 hintText: 'Escribe el mensaje...',
-                hintStyle: const TextStyle(color: SaasPalette.textTertiary),
+                hintStyle: TextStyle(color: context.saas.textTertiary),
               ),
             ),
             const SizedBox(height: 24),
@@ -2983,10 +2983,10 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
                 Expanded(
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text(
+                    child: Text(
                       'Cancelar',
                       style: TextStyle(
-                        color: SaasPalette.textSecondary,
+                        color: context.saas.textSecondary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -2998,7 +2998,7 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
                     onPressed: () => widget.onConfirm(widget.messageCtrl.text),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: SaasPalette.success,
+                      backgroundColor: context.saas.success,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -3031,7 +3031,7 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
 
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: SaasPalette.brand600,
+                backgroundColor: context.saas.brand600,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -3059,7 +3059,7 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
       decoration: BoxDecoration(
         color: const Color(0xff152d24),
         borderRadius: BorderRadius.circular(16).copyWith(topRight: Radius.zero),
-        border: Border.all(color: SaasPalette.success.withValues(alpha: 0.2)),
+        border: Border.all(color: context.saas.success.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3076,14 +3076,14 @@ class _PremiumWhatsAppDialogState extends State<_PremiumWhatsAppDialog> {
               Text(
                 'Ahora',
                 style: TextStyle(
-                  color: SaasPalette.success.withValues(alpha: 0.8),
+                  color: context.saas.success.withValues(alpha: 0.8),
                   fontSize: 10,
                 ),
               ),
               const SizedBox(width: 4),
-              const Icon(
+              Icon(
                 Icons.done_all_rounded,
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
                 size: 14,
               ),
             ],
@@ -3110,8 +3110,8 @@ class _ActionBtn extends StatelessWidget {
       icon: Icon(icon, size: 16),
       label: Text(label, style: const TextStyle(fontSize: 12)),
       style: OutlinedButton.styleFrom(
-        foregroundColor: SaasPalette.brand600,
-        side: const BorderSide(color: SaasPalette.brand600),
+        foregroundColor: context.saas.brand600,
+        side: BorderSide(color: context.saas.brand600),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
@@ -3123,15 +3123,15 @@ class _ImageError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 200,
-      color: SaasPalette.bgSubtle,
-      child: const Column(
+      color: context.saas.bgSubtle,
+      child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.broken_image_rounded, color: SaasPalette.danger, size: 48),
+          Icon(Icons.broken_image_rounded, color: context.saas.danger, size: 48),
           SizedBox(height: 12),
           Text(
             'Error al cargar comprobante',
-            style: TextStyle(color: SaasPalette.textSecondary, fontSize: 12),
+            style: TextStyle(color: context.saas.textSecondary, fontSize: 12),
           ),
         ],
       ),

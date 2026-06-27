@@ -42,6 +42,44 @@ class _TourListScreenState extends State<TourListScreen> {
     super.dispose();
   }
 
+  List<Tour> _sortByDate(List<Tour> tours) {
+    final now = DateTime.now();
+
+    DateTime? effectiveDate(Tour t) {
+      if (t.disponibilidadTipo == 'fecha_fija') return t.startDate;
+      if (t.disponibilidadTipo == 'multiples_fechas' &&
+          t.salidas != null &&
+          t.salidas!.isNotEmpty) {
+        final dates = t.salidas!
+            .where((s) => s.isActive)
+            .map((s) => DateTime.tryParse(s.fechaInicio))
+            .whereType<DateTime>()
+            .toList();
+        final upcoming = dates.where((d) => d.isAfter(now)).toList()..sort();
+        if (upcoming.isNotEmpty) return upcoming.first;
+        final past = dates..sort((a, b) => b.compareTo(a));
+        return past.isNotEmpty ? past.first : null;
+      }
+      return null; // permanente → va al final
+    }
+
+    return [...tours]..sort((a, b) {
+      final da = effectiveDate(a);
+      final db = effectiveDate(b);
+
+      if (da == null && db == null) return 0;
+      if (da == null) return 1;
+      if (db == null) return -1;
+
+      final aUpcoming = !da.isBefore(now);
+      final bUpcoming = !db.isBefore(now);
+
+      if (aUpcoming && bUpcoming) return da.compareTo(db);
+      if (!aUpcoming && !bUpcoming) return db.compareTo(da);
+      return aUpcoming ? -1 : 1;
+    });
+  }
+
   void _applyFilters() {
     setState(() => _filtersVisible = false);
     context.read<TourBloc>().add(
@@ -65,7 +103,7 @@ class _TourListScreenState extends State<TourListScreen> {
     final isDesktop = width >= 800;
 
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       body: BlocBuilder<TourBloc, TourState>(
         builder: (context, state) {
           final authState = context.watch<AuthBloc>().state;
@@ -94,6 +132,7 @@ class _TourListScreenState extends State<TourListScreen> {
             } else if (_activeTab == 'Promos') {
               tours = tours.where((t) => t.isPromotion!).toList();
             }
+            tours = _sortByDate(tours);
           }
 
           return CustomScrollView(
@@ -153,11 +192,11 @@ class _TourListScreenState extends State<TourListScreen> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Catálogo de aventuras',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -167,7 +206,7 @@ class _TourListScreenState extends State<TourListScreen> {
                   Text(
                     'Explora y administra los tours mundiales disponibles para tus clientes.',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 14,
                     ),
                   ),
@@ -213,31 +252,31 @@ class _TourListScreenState extends State<TourListScreen> {
         child: Container(
           height: 44,
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: SaasPalette.border),
+            border: Border.all(color: context.saas.border),
           ),
           child: Row(
             children: [
               const SizedBox(width: 12),
-              const Icon(
+              Icon(
                 Icons.search,
                 size: 18,
-                color: SaasPalette.textTertiary,
+                color: context.saas.textTertiary,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
                   controller: _searchCtrl,
                   onChanged: (v) => setState(() => _searchQuery = v),
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 14,
                   ),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Buscar experiencia...',
                     hintStyle: TextStyle(
-                      color: SaasPalette.textTertiary,
+                      color: context.saas.textTertiary,
                       fontSize: 14,
                     ),
                     border: InputBorder.none,
@@ -254,7 +293,7 @@ class _TourListScreenState extends State<TourListScreen> {
         height: 44,
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: SaasPalette.bgSubtle,
+          color: context.saas.bgSubtle,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -273,7 +312,7 @@ class _TourListScreenState extends State<TourListScreen> {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? SaasPalette.bgCanvas
+                        ? context.saas.bgCanvas
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: isSelected
@@ -290,8 +329,8 @@ class _TourListScreenState extends State<TourListScreen> {
                     tab,
                     style: TextStyle(
                       color: isSelected
-                          ? SaasPalette.textPrimary
-                          : SaasPalette.textTertiary,
+                          ? context.saas.textPrimary
+                          : context.saas.textTertiary,
                       fontSize: 13,
                       fontWeight: isSelected
                           ? FontWeight.w600
@@ -321,18 +360,18 @@ class _TourListScreenState extends State<TourListScreen> {
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Filtrar por fecha',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: SaasPalette.textPrimary,
+              color: context.saas.textPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -348,24 +387,24 @@ class _TourListScreenState extends State<TourListScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                border: Border.all(color: SaasPalette.border),
+                border: Border.all(color: context.saas.border),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.calendar_today,
                     size: 16,
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                   ),
                   const SizedBox(width: 12),
                   Text(
                     _dateRange == null
                         ? 'Seleccionar rango'
                         : '${DateFormat('dd/MM').format(_dateRange!.start)} - ${DateFormat('dd/MM').format(_dateRange!.end)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                     ),
                   ),
                 ],
@@ -414,12 +453,12 @@ class _TourListScreenState extends State<TourListScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline_rounded, size: 56, color: SaasPalette.danger),
+              Icon(Icons.error_outline_rounded, size: 56, color: context.saas.danger),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Error al cargar los tours',
                 style: TextStyle(
-                  color: SaasPalette.textPrimary,
+                  color: context.saas.textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -428,7 +467,7 @@ class _TourListScreenState extends State<TourListScreen> {
               Text(
                 state.message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: SaasPalette.textSecondary, fontSize: 13),
+                style: TextStyle(color: context.saas.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 24),
               SaasButton(
@@ -509,15 +548,16 @@ class _TourRowState extends State<_TourRow> {
     final isPromo = tour.isPromotion ?? false;
 
     final Color typeColor = isPromo ?? false
-        ? SaasPalette.warning.withValues(alpha: 0.12)
-        : SaasPalette.brand50;
+        ? context.saas.warning.withValues(alpha: 0.12)
+        : context.saas.brand50;
     final Color typeText = isPromo ?? false
-        ? SaasPalette.warning
-        : SaasPalette.brand600;
+        ? context.saas.warning
+        : context.saas.brand600;
 
+    final isPermanente = tour.disponibilidadTipo == 'permanente';
     final ocupados = (tour.cupos ?? 0) - (tour.cuposDisponibles ?? 0);
     final total = tour.cupos ?? 1;
-    final double progress = (ocupados / total).clamp(0.0, 1.0);
+    final double progress = isPermanente ? 0.0 : (ocupados / total).clamp(0.0, 1.0);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -526,10 +566,10 @@ class _TourRowState extends State<_TourRow> {
         duration: const Duration(milliseconds: 180),
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
+          color: context.saas.bgCanvas,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
+            color: _hovered ? context.saas.brand600 : context.saas.border,
           ),
           boxShadow: [
             BoxShadow(
@@ -598,8 +638,8 @@ class _TourRowState extends State<_TourRow> {
                                   Flexible(
                                     child: Text(
                                       tour.name ?? "",
-                                      style: const TextStyle(
-                                        color: SaasPalette.textPrimary,
+                                      style: TextStyle(
+                                        color: context.saas.textPrimary,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -643,18 +683,22 @@ class _TourRowState extends State<_TourRow> {
                                           child: Icon(
                                             Icons.calendar_today_outlined,
                                             size: 12,
-                                            color: SaasPalette.textTertiary,
+                                            color: context.saas.textTertiary,
                                           ),
                                         ),
                                         const WidgetSpan(
                                           child: SizedBox(width: 4),
                                         ),
                                         TextSpan(
-                                          text: tour.startDate != null && tour.endDate != null
-                                              ? '${DateFormat('dd MMM').format(tour.startDate!)} — ${DateFormat('dd MMM yyyy').format(tour.endDate!)}'
-                                              : 'Fecha por confirmar',
-                                          style: const TextStyle(
-                                            color: SaasPalette.textSecondary,
+                                          text: tour.disponibilidadTipo == 'permanente'
+                                              ? 'Disponible todo el año'
+                                              : tour.disponibilidadTipo == 'multiples_fechas'
+                                              ? 'Múltiples salidas'
+                                              : (tour.startDate != null && tour.endDate != null
+                                                  ? '${DateFormat('dd MMM').format(tour.startDate!)} — ${DateFormat('dd MMM yyyy').format(tour.endDate!)}'
+                                                  : 'Fecha por confirmar'),
+                                          style: TextStyle(
+                                            color: context.saas.textSecondary,
                                             fontSize: 12,
                                           ),
                                         ),
@@ -670,7 +714,7 @@ class _TourRowState extends State<_TourRow> {
                                           child: Icon(
                                             Icons.location_on_outlined,
                                             size: 12,
-                                            color: SaasPalette.textTertiary,
+                                            color: context.saas.textTertiary,
                                           ),
                                         ),
                                         const WidgetSpan(
@@ -678,8 +722,8 @@ class _TourRowState extends State<_TourRow> {
                                         ),
                                         TextSpan(
                                           text: tour.departurePoint,
-                                          style: const TextStyle(
-                                            color: SaasPalette.textSecondary,
+                                          style: TextStyle(
+                                            color: context.saas.textSecondary,
                                             fontSize: 12,
                                           ),
                                         ),
@@ -698,8 +742,8 @@ class _TourRowState extends State<_TourRow> {
                               children: [
                                 Text(
                                   widget.currencyFormat.format(tour.price),
-                                  style: const TextStyle(
-                                    color: SaasPalette.brand600,
+                                  style: TextStyle(
+                                    color: context.saas.brand600,
                                     fontSize: 16,
                                     fontWeight: FontWeight.w800,
                                   ),
@@ -712,15 +756,15 @@ class _TourRowState extends State<_TourRow> {
                                           Icons.delete_outline_rounded,
                                           size: 20,
                                         ),
-                                        color: SaasPalette.danger,
+                                        color: context.saas.danger,
                                         onPressed: () =>
                                             _confirmDelete(context),
                                         constraints: const BoxConstraints(),
                                         padding: const EdgeInsets.all(4),
                                       ),
-                                    const Icon(
+                                    Icon(
                                       Icons.chevron_right_rounded,
-                                      color: SaasPalette.textTertiary,
+                                      color: context.saas.textTertiary,
                                       size: 20,
                                     ),
                                   ],
@@ -730,34 +774,42 @@ class _TourRowState extends State<_TourRow> {
                           ],
 
                           const SizedBox(height: 8),
-                          // Progress bar
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: LinearProgressIndicator(
-                                    value: progress,
-                                    minHeight: 5,
-                                    backgroundColor: SaasPalette.bgSubtle,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      progress > 0.8
-                                          ? SaasPalette.warning
-                                          : SaasPalette.brand600,
+                          if (isPermanente)
+                            Text(
+                              'Sin límite de cupos',
+                              style: TextStyle(
+                                color: context.saas.textTertiary,
+                                fontSize: 11,
+                              ),
+                            )
+                          else
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: LinearProgressIndicator(
+                                      value: progress,
+                                      minHeight: 5,
+                                      backgroundColor: context.saas.bgSubtle,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        progress > 0.8
+                                            ? context.saas.warning
+                                            : context.saas.brand600,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '$ocupados/$total cupos',
-                                style: const TextStyle(
-                                  color: SaasPalette.textTertiary,
-                                  fontSize: 11,
+                                const SizedBox(width: 8),
+                                Text(
+                                  '$ocupados/$total cupos',
+                                  style: TextStyle(
+                                    color: context.saas.textTertiary,
+                                    fontSize: 11,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
                         ],
                       ),
                     ),
@@ -767,8 +819,8 @@ class _TourRowState extends State<_TourRow> {
                       // Price
                       Text(
                         widget.currencyFormat.format(tour.price),
-                        style: const TextStyle(
-                          color: SaasPalette.textPrimary,
+                        style: TextStyle(
+                          color: context.saas.textPrimary,
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                         ),
@@ -779,19 +831,19 @@ class _TourRowState extends State<_TourRow> {
                         InkWell(
                           onTap: () => _confirmDelete(context),
                           borderRadius: BorderRadius.circular(8),
-                          child: const Padding(
+                          child: Padding(
                             padding: EdgeInsets.all(6),
                             child: Icon(
                               Icons.delete_outline_rounded,
-                              color: SaasPalette.danger,
+                              color: context.saas.danger,
                               size: 18,
                             ),
                           ),
                         ),
                       const SizedBox(width: 4),
-                      const Icon(
+                      Icon(
                         Icons.chevron_right_rounded,
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                         size: 20,
                       ),
                     ],
@@ -812,9 +864,9 @@ class _SkelCard extends StatelessWidget {
     height: 120,
     margin: const EdgeInsets.only(bottom: 16),
     decoration: BoxDecoration(
-      color: SaasPalette.bgCanvas,
+      color: context.saas.bgCanvas,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: SaasPalette.border),
+      border: Border.all(color: context.saas.border),
     ),
   );
 }
@@ -830,15 +882,15 @@ class _EmptyState extends StatelessWidget {
         Icon(
           isSearch ? Icons.search_off_rounded : Icons.tour_rounded,
           size: 64,
-          color: SaasPalette.textTertiary,
+          color: context.saas.textTertiary,
         ),
         const SizedBox(height: 16),
         Text(
           isSearch
               ? 'No se encontraron resultados'
               : 'No hay tours disponibles',
-          style: const TextStyle(
-            color: SaasPalette.textPrimary,
+          style: TextStyle(
+            color: context.saas.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -848,8 +900,8 @@ class _EmptyState extends StatelessWidget {
           isSearch
               ? 'Intenta con otros términos o filtros.'
               : 'Pronto tendremos nuevas aventuras para ti.',
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
+          style: TextStyle(
+            color: context.saas.textSecondary,
             fontSize: 14,
           ),
         ),
@@ -874,9 +926,9 @@ class _SaaSConfirmDialog extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       constraints: const BoxConstraints(maxWidth: 400),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -884,20 +936,20 @@ class _SaaSConfirmDialog extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: SaasPalette.danger.withOpacity(0.1),
+              color: context.saas.danger.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.warning_amber_rounded,
-              color: SaasPalette.danger,
+              color: context.saas.danger,
               size: 32,
             ),
           ),
           const SizedBox(height: 20),
           Text(
             title,
-            style: const TextStyle(
-              color: SaasPalette.textPrimary,
+            style: TextStyle(
+              color: context.saas.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -906,8 +958,8 @@ class _SaaSConfirmDialog extends StatelessWidget {
           Text(
             content,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: SaasPalette.textSecondary,
+            style: TextStyle(
+              color: context.saas.textSecondary,
               fontSize: 14,
             ),
           ),
@@ -917,9 +969,9 @@ class _SaaSConfirmDialog extends StatelessWidget {
               Expanded(
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
+                  child: Text(
                     'Cancelar',
-                    style: TextStyle(color: SaasPalette.textTertiary),
+                    style: TextStyle(color: context.saas.textTertiary),
                   ),
                 ),
               ),

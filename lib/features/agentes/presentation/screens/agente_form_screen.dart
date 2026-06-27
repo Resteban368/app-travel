@@ -252,25 +252,25 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: SaasPalette.brand600.withValues(alpha: 0.1),
+                                        color: context.saas.brand600.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
-                                          color: SaasPalette.brand600.withValues(alpha: 0.2),
+                                          color: context.saas.brand600.withValues(alpha: 0.2),
                                         ),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
-                                        children: const [
+                                        children: [
                                           Icon(
                                             Icons.admin_panel_settings_rounded,
-                                            color: SaasPalette.brand600,
+                                            color: context.saas.brand600,
                                             size: 14,
                                           ),
                                           SizedBox(width: 8),
                                           Text(
                                             'ADMINISTRACIÓN / AGENTES',
                                             style: TextStyle(
-                                              color: SaasPalette.brand600,
+                                              color: context.saas.brand600,
                                               fontSize: 10,
                                               fontWeight: FontWeight.w900,
                                               letterSpacing: 1,
@@ -328,7 +328,7 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                                     Text(
                                       'Define a qué módulos podrá acceder y qué acciones podrá realizar.',
                                       style: TextStyle(
-                                        color: SaasPalette.textSecondary,
+                                        color: context.saas.textSecondary,
                                         fontSize: 13,
                                       ),
                                     ),
@@ -338,13 +338,13 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                                         _LegendBadge(
                                           icon: Icons.visibility_rounded,
                                           label: 'Ver solo',
-                                          color: SaasPalette.brand600,
+                                          color: context.saas.brand600,
                                         ),
                                         const SizedBox(width: 16),
                                         _LegendBadge(
                                           icon: Icons.edit_rounded,
                                           label: 'Ver y Editar',
-                                          color: SaasPalette.success,
+                                          color: context.saas.success,
                                         ),
                                       ],
                                     ),
@@ -389,9 +389,9 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
   Widget _buildActiveToggle() {
     return Container(
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -401,10 +401,10 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Estado de Acceso',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
@@ -414,8 +414,8 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                     _isActive ? 'Habilitado' : 'Bloqueado',
                     style: TextStyle(
                       color: _isActive
-                          ? SaasPalette.success
-                          : SaasPalette.danger,
+                          ? context.saas.success
+                          : context.saas.danger,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -425,10 +425,10 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
             ),
             Switch(
               value: _isActive,
-              activeThumbColor: SaasPalette.success,
-              activeTrackColor: SaasPalette.success.withValues(alpha: 0.2),
-              inactiveThumbColor: SaasPalette.danger,
-              inactiveTrackColor: SaasPalette.danger.withValues(alpha: 0.2),
+              activeThumbColor: context.saas.success,
+              activeTrackColor: context.saas.success.withValues(alpha: 0.2),
+              inactiveThumbColor: context.saas.danger,
+              inactiveTrackColor: context.saas.danger.withValues(alpha: 0.2),
               onChanged: (v) => setState(() => _isActive = v),
             ),
           ],
@@ -443,15 +443,15 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
     final isCompleto = level == 'completo';
 
     // Colores dinámicos basados en el estado
-    final activeColor = isCompleto ? SaasPalette.success : SaasPalette.brand600;
+    final activeColor = isCompleto ? context.saas.success : context.saas.brand600;
     final rowBg = enabled
         ? (isCompleto
-              ? SaasPalette.success.withValues(alpha: 0.05)
-              : SaasPalette.brand50)
-        : SaasPalette.bgCanvas;
+              ? context.saas.success.withValues(alpha: 0.05)
+              : context.saas.brand50)
+        : context.saas.bgCanvas;
     final rowBorder = enabled
         ? activeColor.withValues(alpha: 0.15)
-        : SaasPalette.border;
+        : context.saas.border;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -472,12 +472,12 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                   decoration: BoxDecoration(
                     color: enabled
                         ? activeColor.withValues(alpha: 0.1)
-                        : SaasPalette.bgSubtle,
+                        : context.saas.bgSubtle,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     module.icon,
-                    color: enabled ? activeColor : SaasPalette.textTertiary,
+                    color: enabled ? activeColor : context.saas.textTertiary,
                     size: 20,
                   ),
                 ),
@@ -487,8 +487,8 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                     module.label,
                     style: TextStyle(
                       color: enabled
-                          ? SaasPalette.textPrimary
-                          : SaasPalette.textSecondary,
+                          ? context.saas.textPrimary
+                          : context.saas.textSecondary,
                       fontSize: 14,
                       fontWeight: enabled ? FontWeight.w700 : FontWeight.w500,
                     ),
@@ -513,7 +513,7 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                     label: 'Lectura',
                     icon: Icons.visibility_rounded,
                     active: level == 'lectura',
-                    color: SaasPalette.brand600,
+                    color: context.saas.brand600,
                     onTap: () => _setLevel(module.key, 'lectura'),
                   ),
                   const SizedBox(width: 8),
@@ -521,7 +521,7 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                     label: 'Completo',
                     icon: Icons.edit_rounded,
                     active: level == 'completo',
-                    color: SaasPalette.success,
+                    color: context.saas.success,
                     onTap: () => _setLevel(module.key, 'completo'),
                   ),
                 ],
@@ -559,7 +559,7 @@ class _LevelChip extends StatelessWidget {
           color: active ? color.withValues(alpha: 0.12) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: active ? color.withValues(alpha: 0.3) : SaasPalette.border,
+            color: active ? color.withValues(alpha: 0.3) : context.saas.border,
           ),
         ),
         child: Row(
@@ -567,14 +567,14 @@ class _LevelChip extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: active ? color : SaasPalette.textTertiary,
+              color: active ? color : context.saas.textTertiary,
               size: 14,
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: active ? color : SaasPalette.textTertiary,
+                color: active ? color : context.saas.textTertiary,
                 fontSize: 12,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w500,
               ),
@@ -605,8 +605,8 @@ class _LegendBadge extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
+          style: TextStyle(
+            color: context.saas.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),

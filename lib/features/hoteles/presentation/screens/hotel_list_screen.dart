@@ -42,7 +42,7 @@ class _HotelListBodyState extends State<_HotelListBody> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
-              backgroundColor: SaasPalette.danger,
+              backgroundColor: context.saas.danger,
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -69,7 +69,7 @@ class _HotelListBodyState extends State<_HotelListBody> {
               }).toList();
 
         return RefreshIndicator(
-          color: SaasPalette.brand600,
+          color: context.saas.brand600,
           onRefresh: () async =>
               context.read<HotelBloc>().add(const LoadHoteles()),
           child: CustomScrollView(
@@ -113,7 +113,7 @@ class _HotelListBodyState extends State<_HotelListBody> {
                         Icon(
                           Icons.hotel_rounded,
                           size: 56,
-                          color: SaasPalette.textTertiary.withValues(
+                          color: context.saas.textTertiary.withValues(
                             alpha: 0.4,
                           ),
                         ),
@@ -122,8 +122,8 @@ class _HotelListBodyState extends State<_HotelListBody> {
                           _search.isEmpty
                               ? 'No hay hoteles registrados'
                               : 'Sin resultados para "$_search"',
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                             fontSize: 15,
                           ),
                         ),
@@ -172,21 +172,21 @@ class _HotelHeader extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: SaasPalette.brand50,
+                      color: context.saas.brand50,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.hotel_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 20,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Hoteles',
                       style: TextStyle(
-                        color: SaasPalette.textPrimary,
+                        color: context.saas.textPrimary,
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                       ),
@@ -203,7 +203,7 @@ class _HotelHeader extends StatelessWidget {
                     icon: const Icon(Icons.add_rounded, size: 18),
                     label: const Text('Nuevo Hotel'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: SaasPalette.brand600,
+                      backgroundColor: context.saas.brand600,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -228,20 +228,20 @@ class _HotelHeader extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: SaasPalette.brand50,
+                          color: context.saas.brand50,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.hotel_rounded,
-                          color: SaasPalette.brand600,
+                          color: context.saas.brand600,
                           size: 20,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
+                      Text(
                         'Hoteles',
                         style: TextStyle(
-                          color: SaasPalette.textPrimary,
+                          color: context.saas.textPrimary,
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                         ),
@@ -249,10 +249,10 @@ class _HotelHeader extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Gestión de hoteles disponibles',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 13,
                     ),
                   ),
@@ -265,7 +265,7 @@ class _HotelHeader extends StatelessWidget {
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: const Text('Nuevo Hotel'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: SaasPalette.brand600,
+                  backgroundColor: context.saas.brand600,
                   foregroundColor: Colors.white,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -299,25 +299,25 @@ class _HotelCardState extends State<_HotelCard> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: SaasPalette.bgCanvas,
+        backgroundColor: context.saas.bgCanvas,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
+        title: Text(
           '¿Eliminar hotel?',
           style: TextStyle(
-            color: SaasPalette.textPrimary,
+            color: context.saas.textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           'Se eliminará "${widget.hotel.nombre}" permanentemente.',
-          style: const TextStyle(color: SaasPalette.textSecondary),
+          style: TextStyle(color: context.saas.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
+            child: Text(
               'Cancelar',
-              style: TextStyle(color: SaasPalette.textSecondary),
+              style: TextStyle(color: context.saas.textSecondary),
             ),
           ),
           ElevatedButton(
@@ -326,7 +326,7 @@ class _HotelCardState extends State<_HotelCard> {
               context.read<HotelBloc>().add(DeleteHotel(widget.hotel.id!));
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: SaasPalette.danger,
+              backgroundColor: context.saas.danger,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -359,17 +359,17 @@ class _HotelCardState extends State<_HotelCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: _hovered
-                  ? SaasPalette.brand600.withValues(alpha: 0.3)
-                  : SaasPalette.border,
+                  ? context.saas.brand600.withValues(alpha: 0.3)
+                  : context.saas.border,
             ),
             boxShadow: _hovered
                 ? [
                     BoxShadow(
-                      color: SaasPalette.brand600.withValues(alpha: 0.06),
+                      color: context.saas.brand600.withValues(alpha: 0.06),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -383,12 +383,12 @@ class _HotelCardState extends State<_HotelCard> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: SaasPalette.brand50,
+                    color: context.saas.brand50,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.hotel_rounded,
-                    color: SaasPalette.brand600,
+                    color: context.saas.brand600,
                     size: 22,
                   ),
                 ),
@@ -399,8 +399,8 @@ class _HotelCardState extends State<_HotelCard> {
                     children: [
                       Text(
                         hotel.nombre,
-                        style: const TextStyle(
-                          color: SaasPalette.textPrimary,
+                        style: TextStyle(
+                          color: context.saas.textPrimary,
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
                         ),
@@ -413,16 +413,16 @@ class _HotelCardState extends State<_HotelCard> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.location_city_rounded,
                                 size: 12,
-                                color: SaasPalette.textTertiary,
+                                color: context.saas.textTertiary,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 hotel.ciudad,
-                                style: const TextStyle(
-                                  color: SaasPalette.textSecondary,
+                                style: TextStyle(
+                                  color: context.saas.textSecondary,
                                   fontSize: 12,
                                 ),
                               ),
@@ -431,16 +431,16 @@ class _HotelCardState extends State<_HotelCard> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.phone_rounded,
                                 size: 12,
-                                color: SaasPalette.textTertiary,
+                                color: context.saas.textTertiary,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 hotel.telefono,
-                                style: const TextStyle(
-                                  color: SaasPalette.textSecondary,
+                                style: TextStyle(
+                                  color: context.saas.textSecondary,
                                   fontSize: 12,
                                 ),
                               ),
@@ -451,17 +451,17 @@ class _HotelCardState extends State<_HotelCard> {
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.location_on_rounded,
                             size: 12,
-                            color: SaasPalette.textTertiary,
+                            color: context.saas.textTertiary,
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               hotel.direccion,
-                              style: const TextStyle(
-                                color: SaasPalette.textTertiary,
+                              style: TextStyle(
+                                color: context.saas.textTertiary,
                                 fontSize: 11,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -500,12 +500,12 @@ class _HotelCardState extends State<_HotelCard> {
                 SaasStatusBadge(active: hotel.isActive),
                 const SizedBox(width: 8),
                 PopupMenuButton<String>(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.more_vert_rounded,
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                     size: 18,
                   ),
-                  color: SaasPalette.bgCanvas,
+                  color: context.saas.bgCanvas,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -525,36 +525,36 @@ class _HotelCardState extends State<_HotelCard> {
                     }
                   },
                   itemBuilder: (_) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'edit',
                       child: Row(
                         children: [
                           Icon(
                             Icons.edit_rounded,
                             size: 16,
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                           ),
                           SizedBox(width: 8),
                           Text(
                             'Editar',
-                            style: TextStyle(color: SaasPalette.textPrimary),
+                            style: TextStyle(color: context.saas.textPrimary),
                           ),
                         ],
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'delete',
                       child: Row(
                         children: [
                           Icon(
                             Icons.delete_outline_rounded,
                             size: 16,
-                            color: SaasPalette.danger,
+                            color: context.saas.danger,
                           ),
                           SizedBox(width: 8),
                           Text(
                             'Eliminar',
-                            style: TextStyle(color: SaasPalette.danger),
+                            style: TextStyle(color: context.saas.danger),
                           ),
                         ],
                       ),
@@ -580,21 +580,21 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: SaasPalette.brand600.withValues(alpha: 0.08),
+        color: context.saas.brand600.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: SaasPalette.brand600.withValues(alpha: 0.15),
+          color: context.saas.brand600.withValues(alpha: 0.15),
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 11, color: SaasPalette.brand600),
+          Icon(icon, size: 11, color: context.saas.brand600),
           const SizedBox(width: 4),
           Text(
             label,
-            style: const TextStyle(
-              color: SaasPalette.brand600,
+            style: TextStyle(
+              color: context.saas.brand600,
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),

@@ -299,10 +299,10 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Gestión de Cotizaciones',
                                     style: TextStyle(
-                                      color: SaasPalette.textPrimary,
+                                      color: context.saas.textPrimary,
                                       fontSize: 24,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: -0.5,
@@ -321,11 +321,11 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Expanded(
+                                  Expanded(
                                     child: Text(
                                       'Gestión de Cotizaciones',
                                       style: TextStyle(
-                                        color: SaasPalette.textPrimary,
+                                        color: context.saas.textPrimary,
                                         fontSize: 26,
                                         fontWeight: FontWeight.w700,
                                         letterSpacing: -0.5,
@@ -462,19 +462,19 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
     return Container(
       height: 48,
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: TabBar(
         isScrollable: true,
         indicator: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
-          color: SaasPalette.brand600.withOpacity(0.1),
+          color: context.saas.brand600.withOpacity(0.1),
         ),
         indicatorPadding: const EdgeInsets.all(4),
-        labelColor: SaasPalette.brand600,
-        unselectedLabelColor: SaasPalette.textSecondary,
+        labelColor: context.saas.brand600,
+        unselectedLabelColor: context.saas.textSecondary,
         labelStyle: const TextStyle(fontWeight: FontWeight.bold),
         tabs: const [
           Tab(text: 'Sin Respuesta'),
@@ -500,7 +500,7 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
     return RefreshIndicator(
       onRefresh: () async =>
           context.read<CotizacionBloc>().add(const LoadAllData()),
-      color: SaasPalette.brand600,
+      color: context.saas.brand600,
       child: CustomScrollView(
         controller: scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
@@ -517,16 +517,16 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.error_outline_rounded,
                       size: 48,
-                      color: SaasPalette.danger,
+                      color: context.saas.danger,
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'Error al cargar cotizaciones',
                       style: TextStyle(
-                        color: SaasPalette.textPrimary,
+                        color: context.saas.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -536,8 +536,8 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
                       padding: const EdgeInsets.symmetric(horizontal: 32),
                       child: Text(
                         state.message,
-                        style: const TextStyle(
-                          color: SaasPalette.textSecondary,
+                        style: TextStyle(
+                          color: context.saas.textSecondary,
                           fontSize: 12,
                         ),
                         textAlign: TextAlign.center,
@@ -656,10 +656,10 @@ class _CotizacionCardState extends State<_CotizacionCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _hover ? SaasPalette.brand600 : SaasPalette.border,
+              color: _hover ? context.saas.brand600 : context.saas.border,
               width: _hover ? 1.5 : 1,
             ),
             boxShadow: [
@@ -681,12 +681,12 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: SaasPalette.brand600.withOpacity(0.1),
+                      color: context.saas.brand600.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       Icons.mark_as_unread_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 24,
                     ),
                   ),
@@ -700,8 +700,8 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                             Expanded(
                               child: Text(
                                 c.nombreCompleto,
-                                style: const TextStyle(
-                                  color: SaasPalette.textPrimary,
+                                style: TextStyle(
+                                  color: context.saas.textPrimary,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -717,12 +717,12 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                                   vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: SaasPalette.warning.withValues(
+                                  color: context.saas.warning.withValues(
                                     alpha: 0.12,
                                   ),
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color: SaasPalette.warning.withValues(
+                                    color: context.saas.warning.withValues(
                                       alpha: 0.4,
                                     ),
                                     width: 1,
@@ -730,17 +730,17 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
-                                  children: const [
+                                  children: [
                                     Icon(
                                       Icons.hourglass_empty_rounded,
                                       size: 10,
-                                      color: SaasPalette.warning,
+                                      color: context.saas.warning,
                                     ),
                                     SizedBox(width: 3),
                                     Text(
                                       'Sin respuesta',
                                       style: TextStyle(
-                                        color: SaasPalette.warning,
+                                        color: context.saas.warning,
                                         fontSize: 10,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -754,16 +754,16 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.phone_rounded,
                               size: 12,
-                              color: SaasPalette.textSecondary,
+                              color: context.saas.textSecondary,
                             ),
                             const SizedBox(width: 3),
                             Text(
                               c.telefono ?? '',
-                              style: const TextStyle(
-                                color: SaasPalette.textSecondary,
+                              style: TextStyle(
+                                color: context.saas.textSecondary,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -774,13 +774,13 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                             //eliminar
                             IconButton(
                               onPressed: () => _confirmDelete(context, c),
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.delete_outline_rounded,
-                                color: SaasPalette.danger,
+                                color: context.saas.danger,
                               ),
                               tooltip: 'Eliminar',
                               style: IconButton.styleFrom(
-                                backgroundColor: SaasPalette.danger.withValues(
+                                backgroundColor: context.saas.danger.withValues(
                                   alpha: 0.08,
                                 ),
                                 shape: RoundedRectangleBorder(
@@ -794,16 +794,16 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.support_agent_rounded,
                                 size: 12,
-                                color: SaasPalette.brand600,
+                                color: context.saas.brand600,
                               ),
                               const SizedBox(width: 3),
                               Text(
                                 c.asesorNombre!,
-                                style: const TextStyle(
-                                  color: SaasPalette.brand600,
+                                style: TextStyle(
+                                  color: context.saas.brand600,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -814,8 +814,8 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                         const SizedBox(height: 4),
                         Text(
                           c.detallesPlan,
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                             fontSize: 13,
                           ),
                           maxLines: 1,
@@ -824,9 +824,9 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.access_time_rounded,
-                              color: SaasPalette.textTertiary,
+                              color: context.saas.textTertiary,
                               size: 13,
                             ),
                             const SizedBox(width: 4),
@@ -834,8 +834,8 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                               DateFormat(
                                 'dd MMM, hh:mm a',
                               ).format(c.createdAt.toLocal()),
-                              style: const TextStyle(
-                                color: SaasPalette.textTertiary,
+                              style: TextStyle(
+                                color: context.saas.textTertiary,
                                 fontSize: 12,
                               ),
                             ),
@@ -847,13 +847,13 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                             //       vertical: 2,
                             //     ),
                             //     decoration: BoxDecoration(
-                            //       color: SaasPalette.brand600.withOpacity(0.1),
+                            //       color: context.saas.brand600.withOpacity(0.1),
                             //       borderRadius: BorderRadius.circular(4),
                             //     ),
                             //     child: const Text(
                             //       'NUEVA',
                             //       style: TextStyle(
-                            //         color: SaasPalette.brand600,
+                            //         color: context.saas.brand600,
                             //         fontSize: 9,
                             //         fontWeight: FontWeight.w700,
                             //       ),
@@ -930,14 +930,14 @@ class _RespuestaCardState extends State<_RespuestaCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: r.anclada
-                  ? SaasPalette.brand600
+                  ? context.saas.brand600
                   : _hover
-                  ? SaasPalette.warning
-                  : SaasPalette.border,
+                  ? context.saas.warning
+                  : context.saas.border,
               width: r.anclada || _hover ? 1.5 : 1,
             ),
             boxShadow: [
@@ -963,12 +963,12 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: SaasPalette.warning.withOpacity(0.1),
+                          color: context.saas.warning.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.forward_to_inbox_rounded,
-                          color: SaasPalette.warning,
+                          color: context.saas.warning,
                           size: 24,
                         ),
                       ),
@@ -982,8 +982,8 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                                 Expanded(
                                   child: Text(
                                     r.tituloViaje,
-                                    style: const TextStyle(
-                                      color: SaasPalette.textPrimary,
+                                    style: TextStyle(
+                                      color: context.saas.textPrimary,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -1008,8 +1008,8 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                                   : r.cotizacionId != null
                                   ? 'Respuesta a Cotización #${r.cotizacionId}'
                                   : 'Propuesta Independiente',
-                              style: const TextStyle(
-                                color: SaasPalette.textSecondary,
+                              style: TextStyle(
+                                color: context.saas.textSecondary,
                                 fontSize: 13,
                               ),
                               maxLines: 1,
@@ -1019,17 +1019,17 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                             if (r.creadoPorNombre != null) ...[
                               Row(
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.person_rounded,
-                                    color: SaasPalette.brand900,
+                                    color: context.saas.brand900,
                                     size: 13,
                                   ),
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
                                       "${r.creadoPorNombre}",
-                                      style: const TextStyle(
-                                        color: SaasPalette.textSecondary,
+                                      style: TextStyle(
+                                        color: context.saas.textSecondary,
                                         fontSize: 13,
                                       ),
                                       maxLines: 1,
@@ -1042,9 +1042,9 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                             ],
                             Row(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.access_time_rounded,
-                                  color: SaasPalette.textTertiary,
+                                  color: context.saas.textTertiary,
                                   size: 13,
                                 ),
                                 const SizedBox(width: 4),
@@ -1052,23 +1052,23 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                                   DateFormat(
                                     'dd MMM, hh:mm a',
                                   ).format(r.createdAt.toLocal()),
-                                  style: const TextStyle(
-                                    color: SaasPalette.textTertiary,
+                                  style: TextStyle(
+                                    color: context.saas.textTertiary,
                                     fontSize: 12,
                                   ),
                                 ),
                                 if (r.totalVistas != null && r.totalVistas! > 0) ...[
                                   const SizedBox(width: 10),
-                                  const Icon(
+                                  Icon(
                                     Icons.visibility_rounded,
-                                    color: SaasPalette.brand600,
+                                    color: context.saas.brand600,
                                     size: 13,
                                   ),
                                   const SizedBox(width: 3),
                                   Text(
                                     '${r.totalVistas} vista${r.totalVistas! != 1 ? 's' : ''}',
-                                    style: const TextStyle(
-                                      color: SaasPalette.brand600,
+                                    style: TextStyle(
+                                      color: context.saas.brand600,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -1080,16 +1080,16 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.remove_red_eye_outlined,
-                                    color: SaasPalette.success,
+                                    color: context.saas.success,
                                     size: 13,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     'Última vista: ${DateFormat('dd MMM, hh:mm a').format(r.ultimaVista!.toLocal())}',
-                                    style: const TextStyle(
-                                      color: SaasPalette.success,
+                                    style: TextStyle(
+                                      color: context.saas.success,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -1103,9 +1103,9 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                       if (!isNarrow) ...[
                         const SizedBox(width: 12),
                         _buildActions(context, r),
-                        const Icon(
+                        Icon(
                           Icons.chevron_right_rounded,
-                          color: SaasPalette.textTertiary,
+                          color: context.saas.textTertiary,
                         ),
                       ],
                     ],
@@ -1116,15 +1116,15 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                       children: [
                         content,
                         const SizedBox(height: 12),
-                        const Divider(height: 1, color: SaasPalette.border),
+                        Divider(height: 1, color: context.saas.border),
                         const SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             _buildActions(context, r),
-                            const Icon(
+                            Icon(
                               Icons.chevron_right_rounded,
-                              color: SaasPalette.textTertiary,
+                              color: context.saas.textTertiary,
                             ),
                           ],
                         ),
@@ -1149,12 +1149,12 @@ class _RespuestaCardState extends State<_RespuestaCard> {
           onPressed: widget.onToggleAnclada,
           icon: Icon(
             r.anclada ? Icons.push_pin_rounded : Icons.push_pin_outlined,
-            color: r.anclada ? SaasPalette.brand600 : SaasPalette.textTertiary,
+            color: r.anclada ? context.saas.brand600 : context.saas.textTertiary,
           ),
           tooltip: r.anclada ? 'Desanclar' : 'Anclar',
           style: IconButton.styleFrom(
             backgroundColor: r.anclada
-                ? SaasPalette.brand600.withValues(alpha: 0.1)
+                ? context.saas.brand600.withValues(alpha: 0.1)
                 : Colors.transparent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -1171,13 +1171,13 @@ class _RespuestaCardState extends State<_RespuestaCard> {
         const SizedBox(width: 4),
         IconButton(
           onPressed: () => _confirmDelete(context),
-          icon: const Icon(
+          icon: Icon(
             Icons.delete_outline_rounded,
-            color: SaasPalette.danger,
+            color: context.saas.danger,
           ),
           tooltip: 'Eliminar',
           style: IconButton.styleFrom(
-            backgroundColor: SaasPalette.danger.withValues(alpha: 0.08),
+            backgroundColor: context.saas.danger.withValues(alpha: 0.08),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -1208,9 +1208,9 @@ class _PaginationBar extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
+          color: context.saas.bgCanvas,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: SaasPalette.border),
+          border: Border.all(color: context.saas.border),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
@@ -1232,8 +1232,8 @@ class _PaginationBar extends StatelessWidget {
               children: [
                 Text(
                   'Página $page de $totalPages',
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
@@ -1241,8 +1241,8 @@ class _PaginationBar extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '$total resultados',
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  style: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 12,
                   ),
                 ),
@@ -1281,16 +1281,16 @@ class _PageBtn extends StatelessWidget {
         height: 38,
         decoration: BoxDecoration(
           color: enabled
-              ? SaasPalette.brand600.withOpacity(0.08)
+              ? context.saas.brand600.withOpacity(0.08)
               : Colors.white,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: enabled ? SaasPalette.brand600 : SaasPalette.border,
+            color: enabled ? context.saas.brand600 : context.saas.border,
           ),
         ),
         child: Icon(
           icon,
-          color: enabled ? SaasPalette.brand600 : SaasPalette.textTertiary,
+          color: enabled ? context.saas.brand600 : context.saas.textTertiary,
           size: 24,
         ),
       ),

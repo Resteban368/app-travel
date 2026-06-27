@@ -20,19 +20,19 @@ class SaasBreadcrumbs extends StatelessWidget {
               entry.value,
               style: TextStyle(
                 color: isLast
-                    ? SaasPalette.textPrimary
-                    : SaasPalette.textTertiary,
+                    ? context.saas.textPrimary
+                    : context.saas.textTertiary,
                 fontSize: 12,
                 fontWeight: isLast ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
             if (!isLast)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 4),
                 child: Icon(
                   Icons.chevron_right,
                   size: 14,
-                  color: SaasPalette.textTertiary,
+                  color: context.saas.textTertiary,
                 ),
               ),
           ],
@@ -64,9 +64,9 @@ class SaasStatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: SingleChildScrollView(
         physics: const NeverScrollableScrollPhysics(),
@@ -76,8 +76,8 @@ class SaasStatCard extends StatelessWidget {
           children: [
             Text(
               label.toUpperCase(),
-              style: const TextStyle(
-                color: SaasPalette.textTertiary,
+              style: TextStyle(
+                color: context.saas.textTertiary,
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
@@ -89,7 +89,7 @@ class SaasStatCard extends StatelessWidget {
             Text(
               value,
               style: TextStyle(
-                color: color ?? SaasPalette.textPrimary,
+                color: color ?? context.saas.textPrimary,
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
               ),
@@ -100,8 +100,8 @@ class SaasStatCard extends StatelessWidget {
                 trend!,
                 style: TextStyle(
                   color: isPositiveTrend
-                      ? SaasPalette.textTertiary
-                      : SaasPalette.danger,
+                      ? context.saas.textTertiary
+                      : context.saas.danger,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -133,9 +133,9 @@ class SaasButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isPrimary ? SaasPalette.brand600 : SaasPalette.bgCanvas;
-    final fgColor = isPrimary ? Colors.white : SaasPalette.textPrimary;
-    final border = isPrimary ? null : Border.all(color: SaasPalette.border);
+    final bgColor = isPrimary ? context.saas.brand600 : context.saas.bgCanvas;
+    final fgColor = isPrimary ? Colors.white : context.saas.textPrimary;
+    final border = isPrimary ? null : Border.all(color: context.saas.border);
 
     return InkWell(
       onTap: onPressed,
@@ -149,7 +149,7 @@ class SaasButton extends StatelessWidget {
           boxShadow: isPrimary
               ? [
                   BoxShadow(
-                    color: SaasPalette.brand600.withOpacity(0.2),
+                    color: context.saas.brand600.withOpacity(0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -219,13 +219,13 @@ class _SaasSearchFieldState extends State<SaasSearchField> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(10),
 
         boxShadow: _focused
             ? [
                 BoxShadow(
-                  color: SaasPalette.brand600.withOpacity(0.08),
+                  color: context.saas.brand600.withOpacity(0.08),
                   blurRadius: 10,
                 ),
               ]
@@ -235,21 +235,21 @@ class _SaasSearchFieldState extends State<SaasSearchField> {
         controller: widget.controller,
         focusNode: _focus,
         onChanged: widget.onChanged,
-        style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
+        style: TextStyle(color: context.saas.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: widget.hintText,
-          hintStyle: const TextStyle(color: SaasPalette.textTertiary),
+          hintStyle: TextStyle(color: context.saas.textTertiary),
           prefixIcon: Icon(
             Icons.search_rounded,
-            color: _focused ? SaasPalette.brand600 : SaasPalette.textTertiary,
+            color: _focused ? context.saas.brand600 : context.saas.textTertiary,
             size: 20,
           ),
           suffixIcon: widget.controller.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.close_rounded,
                     size: 18,
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                   ),
                   onPressed: widget.onClear,
                 )
@@ -278,7 +278,7 @@ class SaasStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? SaasPalette.success : SaasPalette.textTertiary;
+    final color = active ? context.saas.success : context.saas.textTertiary;
     final label = active
         ? (activeLabel ?? 'Activo')
         : (inactiveLabel ?? 'Inactivo');
@@ -336,16 +336,16 @@ class SaasEmptyState extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: SaasPalette.bgSubtle,
+              color: context.saas.bgSubtle,
               borderRadius: BorderRadius.circular(24),
             ),
-            child: Icon(icon, size: 36, color: SaasPalette.textTertiary),
+            child: Icon(icon, size: 36, color: context.saas.textTertiary),
           ),
           const SizedBox(height: 20),
           Text(
             title,
-            style: const TextStyle(
-              color: SaasPalette.textPrimary,
+            style: TextStyle(
+              color: context.saas.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
@@ -354,8 +354,8 @@ class SaasEmptyState extends StatelessWidget {
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: SaasPalette.textSecondary,
+            style: TextStyle(
+              color: context.saas.textSecondary,
               fontSize: 14,
             ),
           ),
@@ -379,9 +379,9 @@ class SaasListSkeleton extends StatelessWidget {
       child: Container(
         height: height,
         decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
+          color: context.saas.bgCanvas,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: SaasPalette.border),
+          border: Border.all(color: context.saas.border),
         ),
         child: Row(
           children: [
@@ -390,7 +390,7 @@ class SaasListSkeleton extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: SaasPalette.bgSubtle,
+                color: context.saas.bgSubtle,
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
@@ -404,7 +404,7 @@ class SaasListSkeleton extends StatelessWidget {
                     height: 13,
                     width: 160,
                     decoration: BoxDecoration(
-                      color: SaasPalette.bgSubtle,
+                      color: context.saas.bgSubtle,
                       borderRadius: BorderRadius.circular(6),
                     ),
                   ),
@@ -413,7 +413,7 @@ class SaasListSkeleton extends StatelessWidget {
                     height: 10,
                     width: 110,
                     decoration: BoxDecoration(
-                      color: SaasPalette.bgSubtle,
+                      color: context.saas.bgSubtle,
                       borderRadius: BorderRadius.circular(6),
                     ),
                   ),
@@ -438,9 +438,9 @@ class SaasBannerSkeleton extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: SaasPalette.brand600.withOpacity(0.05),
+        color: context.saas.brand600.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.brand600.withOpacity(0.1)),
+        border: Border.all(color: context.saas.brand600.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -451,7 +451,7 @@ class SaasBannerSkeleton extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: SaasPalette.brand600.withOpacity(0.1),
+                  color: context.saas.brand600.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -463,7 +463,7 @@ class SaasBannerSkeleton extends StatelessWidget {
                     width: 150,
                     height: 14,
                     decoration: BoxDecoration(
-                      color: SaasPalette.brand600.withOpacity(0.1),
+                      color: context.saas.brand600.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -472,7 +472,7 @@ class SaasBannerSkeleton extends StatelessWidget {
                     width: 100,
                     height: 10,
                     decoration: BoxDecoration(
-                      color: SaasPalette.brand600.withOpacity(0.1),
+                      color: context.saas.brand600.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -485,7 +485,7 @@ class SaasBannerSkeleton extends StatelessWidget {
             width: double.infinity,
             height: 12,
             decoration: BoxDecoration(
-              color: SaasPalette.brand600.withOpacity(0.05),
+              color: context.saas.brand600.withOpacity(0.05),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -494,7 +494,7 @@ class SaasBannerSkeleton extends StatelessWidget {
             width: 200,
             height: 12,
             decoration: BoxDecoration(
-              color: SaasPalette.brand600.withOpacity(0.05),
+              color: context.saas.brand600.withOpacity(0.05),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -530,9 +530,9 @@ class SaasConfirmDialog extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: SaasPalette.border),
+            border: Border.all(color: context.saas.border),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
@@ -550,12 +550,12 @@ class SaasConfirmDialog extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: SaasPalette.danger.withOpacity(0.1),
+                      color: context.saas.danger.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.delete_outline_rounded,
-                      color: SaasPalette.danger,
+                      color: context.saas.danger,
                       size: 22,
                     ),
                   ),
@@ -563,8 +563,8 @@ class SaasConfirmDialog extends StatelessWidget {
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(
-                        color: SaasPalette.textPrimary,
+                      style: TextStyle(
+                        color: context.saas.textPrimary,
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                       ),
@@ -575,8 +575,8 @@ class SaasConfirmDialog extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 body,
-                style: const TextStyle(
-                  color: SaasPalette.textSecondary,
+                style: TextStyle(
+                  color: context.saas.textSecondary,
                   fontSize: 14,
                   height: 1.5,
                 ),
@@ -596,7 +596,7 @@ class SaasConfirmDialog extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: onConfirm,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: SaasPalette.danger,
+                        backgroundColor: context.saas.danger,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 12),

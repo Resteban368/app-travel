@@ -108,7 +108,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
     final reservas = _filteredReservas;
 
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -140,32 +140,32 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
     final active = _searchQuery.isNotEmpty;
     return Container(
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: active ? SaasPalette.brand600 : SaasPalette.border,
+          color: active ? context.saas.brand600 : context.saas.border,
           width: active ? 1.5 : 1,
         ),
       ),
       child: TextField(
         controller: _searchCtrl,
-        style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
+        style: TextStyle(color: context.saas.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: 'Buscar por nombre o cédula del responsable...',
-          hintStyle: const TextStyle(
-            color: SaasPalette.textTertiary,
+          hintStyle: TextStyle(
+            color: context.saas.textTertiary,
             fontSize: 14,
           ),
           prefixIcon: Icon(
             Icons.search_rounded,
-            color: active ? SaasPalette.brand600 : SaasPalette.textTertiary,
+            color: active ? context.saas.brand600 : context.saas.textTertiary,
             size: 20,
           ),
           suffixIcon: active
               ? IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.close_rounded,
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                     size: 18,
                   ),
                   onPressed: () => _searchCtrl.clear(),
@@ -223,21 +223,21 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(Icons.sell_rounded, color: SaasPalette.brand600, size: 18),
+            children: [
+              Icon(Icons.sell_rounded, color: context.saas.brand600, size: 18),
               SizedBox(width: 8),
               Text(
                 'TABLA DE PRECIOS',
                 style: TextStyle(
-                  color: SaasPalette.textSecondary,
+                  color: context.saas.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
@@ -260,8 +260,8 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
                       children: [
                         Text(
                           p.descripcion,
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
@@ -273,8 +273,8 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
                               if (p.puntoPartida != null)
                                 'desde ${p.puntoPartida}',
                             ].join(' · '),
-                            style: const TextStyle(
-                              color: SaasPalette.textTertiary,
+                            style: TextStyle(
+                              color: context.saas.textTertiary,
                               fontSize: 11,
                             ),
                           ),
@@ -283,8 +283,8 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
                   ),
                   Text(
                     fmt.format(p.precio),
-                    style: const TextStyle(
-                      color: SaasPalette.success,
+                    style: TextStyle(
+                      color: context.saas.success,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -317,17 +317,17 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
     final usados = cupos - (disponibles ?? cupos);
     final porcentajeUsado = cupos > 0 ? usados / cupos : 0.0;
     final Color barColor = porcentajeUsado >= 1.0
-        ? SaasPalette.danger
+        ? context.saas.danger
         : porcentajeUsado >= 0.8
-        ? SaasPalette.warning
-        : SaasPalette.success;
+        ? context.saas.warning
+        : context.saas.success;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Column(
         children: [
@@ -336,14 +336,14 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
               _StatChip(
                 label: 'Cupos totales',
                 value: '$cupos',
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
                 icon: Icons.event_seat_rounded,
               ),
               const SizedBox(width: 12),
               _StatChip(
                 label: 'Ocupados',
                 value: '$usados',
-                color: SaasPalette.warning,
+                color: context.saas.warning,
                 icon: Icons.people_rounded,
               ),
               const SizedBox(width: 12),
@@ -360,7 +360,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: porcentajeUsado.clamp(0.0, 1.0),
-              backgroundColor: SaasPalette.bgSubtle,
+              backgroundColor: context.saas.bgSubtle,
               color: barColor,
               minHeight: 8,
             ),
@@ -379,15 +379,15 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
                   vertical: 16,
                 ),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [SaasPalette.brand600, SaasPalette.brand900],
+                  gradient: LinearGradient(
+                    colors: [context.saas.brand600, context.saas.brand900],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: SaasPalette.brand600.withValues(alpha: 0.25),
+                      color: context.saas.brand600.withValues(alpha: 0.25),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
@@ -461,8 +461,8 @@ class _StatChip extends StatelessWidget {
             ),
             Text(
               label,
-              style: const TextStyle(
-                color: SaasPalette.textTertiary,
+              style: TextStyle(
+                color: context.saas.textTertiary,
                 fontSize: 10,
               ),
             ),
@@ -490,6 +490,24 @@ class _ReservaCard extends StatefulWidget {
 class _ReservaCardState extends State<_ReservaCard> {
   bool _expanded = false;
   bool _generatingPdf = false;
+
+  String? _getFechasReserva(ReservaDetalle reserva, String disponibilidadTipo) {
+    if (disponibilidadTipo == 'permanente') {
+      final ini = reserva.fechaInicioPersonalizada;
+      final fin = reserva.fechaFinPersonalizada;
+      if (ini != null && fin != null) return '$ini → $fin';
+      return null;
+    }
+    if (disponibilidadTipo == 'multiples_fechas') {
+      final salida = reserva.tourSalida;
+      if (salida != null) {
+        final label = salida.label != null ? ' (${salida.label})' : '';
+        return '${salida.fechaInicio} → ${salida.fechaFin}$label';
+      }
+      return null;
+    }
+    return null;
+  }
 
   Future<void> _generateAndShowPdf() async {
     setState(() => _generatingPdf = true);
@@ -519,7 +537,7 @@ class _ReservaCardState extends State<_ReservaCard> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error generando PDF: $e'),
-          backgroundColor: SaasPalette.danger,
+          backgroundColor: context.saas.danger,
         ),
       );
     } finally {
@@ -559,7 +577,7 @@ class _ReservaCardState extends State<_ReservaCard> {
       context: context,
       useRootNavigator: true,
       builder: (ctx) => Dialog(
-        backgroundColor: SaasPalette.bgCanvas,
+        backgroundColor: context.saas.bgCanvas,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
           padding: const EdgeInsets.all(28),
@@ -568,31 +586,31 @@ class _ReservaCardState extends State<_ReservaCard> {
             children: [
               Container(
                 padding: const EdgeInsets.all(14),
-                decoration: const BoxDecoration(
-                  color: SaasPalette.brand50,
+                decoration: BoxDecoration(
+                  color: context.saas.brand50,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.picture_as_pdf_rounded,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   size: 32,
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'PDF Listo',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: SaasPalette.textPrimary,
+                  color: context.saas.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 filename,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: SaasPalette.textTertiary,
+                  color: context.saas.textTertiary,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -604,8 +622,8 @@ class _ReservaCardState extends State<_ReservaCard> {
                       icon: const Icon(Icons.open_in_new_rounded, size: 18),
                       label: const Text('Ver PDF'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: SaasPalette.brand600,
-                        side: const BorderSide(color: SaasPalette.brand600),
+                        foregroundColor: context.saas.brand600,
+                        side: BorderSide(color: context.saas.brand600),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -620,7 +638,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                       icon: const Icon(Icons.download_rounded, size: 18),
                       label: const Text('Descargar'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: SaasPalette.brand600,
+                        backgroundColor: context.saas.brand600,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -635,9 +653,9 @@ class _ReservaCardState extends State<_ReservaCard> {
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text(
+                child: Text(
                   'Cerrar',
-                  style: TextStyle(color: SaasPalette.textTertiary),
+                  style: TextStyle(color: context.saas.textTertiary),
                 ),
               ),
             ],
@@ -650,13 +668,13 @@ class _ReservaCardState extends State<_ReservaCard> {
   Color get _estadoColor {
     switch (widget.reserva.estado.toLowerCase()) {
       case 'al dia':
-        return SaasPalette.success;
+        return context.saas.success;
       case 'pendiente':
-        return SaasPalette.warning;
+        return context.saas.warning;
       case 'cancelado':
-        return SaasPalette.danger;
+        return context.saas.danger;
       default:
-        return SaasPalette.textTertiary;
+        return context.saas.textTertiary;
     }
   }
 
@@ -664,17 +682,18 @@ class _ReservaCardState extends State<_ReservaCard> {
   Widget build(BuildContext context) {
     final reserva = widget.reserva;
     final dateLabel = DateFormat('dd/MM/yyyy').format(reserva.fechaCreacion);
+    final fechasReserva = _getFechasReserva(reserva, widget.tour.disponibilidadTipo);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: reserva.ocupaCupo
-              ? SaasPalette.border
-              : SaasPalette.danger.withValues(alpha: 0.4),
+              ? context.saas.border
+              : context.saas.danger.withValues(alpha: 0.4),
         ),
       ),
       child: Column(
@@ -695,8 +714,8 @@ class _ReservaCardState extends State<_ReservaCard> {
                             Flexible(
                               child: Text(
                                 reserva.responsable.nombre,
-                                style: const TextStyle(
-                                  color: SaasPalette.textPrimary,
+                                style: TextStyle(
+                                  color: context.saas.textPrimary,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 15,
                                 ),
@@ -712,15 +731,14 @@ class _ReservaCardState extends State<_ReservaCard> {
                               const SizedBox(width: 6),
                               _EstadoBadge(
                                 label: 'SIN CUPO',
-                                color: SaasPalette.danger,
+                                color: context.saas.danger,
                               ),
                             ],
                             const SizedBox(width: 6),
-                            //agregar estado si no tiene asientos
-                            if (reserva.asientosBus.isEmpty)
-                              const _EstadoBadge(
+                            if (widget.tour.busLayoutIds.isNotEmpty && reserva.asientosBus.isEmpty)
+                              _EstadoBadge(
                                 label: 'SIN ASIENTOS',
-                                color: SaasPalette.brand600,
+                                color: context.saas.brand600,
                               ),
                           ],
                         ),
@@ -729,16 +747,16 @@ class _ReservaCardState extends State<_ReservaCard> {
                           children: [
                             Text(
                               "${reserva.responsable.tipoDocumento} ",
-                              style: const TextStyle(
-                                color: SaasPalette.brand600,
+                              style: TextStyle(
+                                color: context.saas.brand600,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 12,
                               ),
                             ),
                             Text(
                               reserva.responsable.documento,
-                              style: const TextStyle(
-                                color: SaasPalette.textPrimary,
+                              style: TextStyle(
+                                color: context.saas.textPrimary,
                                 fontSize: 12,
                               ),
                             ),
@@ -748,18 +766,39 @@ class _ReservaCardState extends State<_ReservaCard> {
                         const SizedBox(height: 4),
                         Text(
                           'Creada $dateLabel · ${reserva.totalPersonas} persona${reserva.totalPersonas != 1 ? 's' : ''}',
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                             fontSize: 12,
                           ),
                         ),
                         Text(
                           'Reserva: #${reserva.idReserva}',
-                          style: const TextStyle(
-                            color: SaasPalette.textTertiary,
+                          style: TextStyle(
+                            color: context.saas.textTertiary,
                             fontSize: 12,
                           ),
                         ),
+                        if (fechasReserva != null) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_month_rounded,
+                                size: 12,
+                                color: context.saas.brand600,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                fechasReserva,
+                                style: TextStyle(
+                                  color: context.saas.brand600,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -769,17 +808,17 @@ class _ReservaCardState extends State<_ReservaCard> {
                     child: Padding(
                       padding: const EdgeInsets.all(6),
                       child: _generatingPdf
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: SaasPalette.brand600,
+                                color: context.saas.brand600,
                               ),
                             )
-                          : const Icon(
+                          : Icon(
                               Icons.picture_as_pdf_rounded,
-                              color: SaasPalette.brand600,
+                              color: context.saas.brand600,
                               size: 20,
                             ),
                     ),
@@ -789,7 +828,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                     _expanded
                         ? Icons.keyboard_arrow_up_rounded
                         : Icons.keyboard_arrow_down_rounded,
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                   ),
                 ],
               ),
@@ -797,7 +836,7 @@ class _ReservaCardState extends State<_ReservaCard> {
           ),
 
           if (_expanded) ...[
-            const Divider(color: SaasPalette.border, height: 1),
+            Divider(color: context.saas.border, height: 1),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -813,7 +852,8 @@ class _ReservaCardState extends State<_ReservaCard> {
                   _DesgloseCard(reserva: reserva, currency: widget.currency),
                   const SizedBox(height: 16),
 
-                  // Sección de Asientos
+                  // Sección de Asientos (solo si el tour tiene buses asignados)
+                  if (widget.tour.busLayoutIds.isNotEmpty) ...[
                   const _SectionLabel(label: 'ASIENTOS'),
                   const SizedBox(height: 8),
                   if (reserva.asientosBus.isNotEmpty)
@@ -828,12 +868,12 @@ class _ReservaCardState extends State<_ReservaCard> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: SaasPalette.brand600.withValues(
+                                color: context.saas.brand600.withValues(
                                   alpha: 0.08,
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: SaasPalette.brand600.withValues(
+                                  color: context.saas.brand600.withValues(
                                     alpha: 0.2,
                                   ),
                                 ),
@@ -841,16 +881,16 @@ class _ReservaCardState extends State<_ReservaCard> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.event_seat_rounded,
-                                    color: SaasPalette.brand600,
+                                    color: context.saas.brand600,
                                     size: 14,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     asiento,
-                                    style: const TextStyle(
-                                      color: SaasPalette.brand600,
+                                    style: TextStyle(
+                                      color: context.saas.brand600,
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -868,25 +908,25 @@ class _ReservaCardState extends State<_ReservaCard> {
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color: SaasPalette.warning.withValues(alpha: 0.08),
+                        color: context.saas.warning.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: SaasPalette.warning.withValues(alpha: 0.2),
+                          color: context.saas.warning.withValues(alpha: 0.2),
                         ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: const [
+                        children: [
                           Icon(
                             Icons.warning_amber_rounded,
-                            color: SaasPalette.warning,
+                            color: context.saas.warning,
                             size: 16,
                           ),
                           SizedBox(width: 8),
                           Text(
                             'Falta por asignar asientos',
                             style: TextStyle(
-                              color: SaasPalette.warning,
+                              color: context.saas.warning,
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                             ),
@@ -894,6 +934,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                         ],
                       ),
                     ),
+                  ], // end busLayoutIds.isNotEmpty
                   if (reserva.seleccionLink != null &&
                       reserva.seleccionLink!.isNotEmpty) ...[
                     const SizedBox(height: 12),
@@ -903,25 +944,25 @@ class _ReservaCardState extends State<_ReservaCard> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: SaasPalette.brand50,
+                        color: context.saas.brand50,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: SaasPalette.brand600.withValues(alpha: 0.2),
+                          color: context.saas.brand600.withValues(alpha: 0.2),
                         ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.link_rounded,
-                            color: SaasPalette.brand600,
+                            color: context.saas.brand600,
                             size: 16,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               reserva.seleccionLink!,
-                              style: const TextStyle(
-                                color: SaasPalette.brand600,
+                              style: TextStyle(
+                                color: context.saas.brand600,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -940,9 +981,9 @@ class _ReservaCardState extends State<_ReservaCard> {
                                 'Link copiado al portapapeles',
                               );
                             },
-                            child: const Icon(
+                            child: Icon(
                               Icons.copy_rounded,
-                              color: SaasPalette.brand600,
+                              color: context.saas.brand600,
                               size: 16,
                             ),
                           ),
@@ -955,17 +996,17 @@ class _ReservaCardState extends State<_ReservaCard> {
                   if (reserva.notas != null && reserva.notas!.isNotEmpty) ...[
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.sticky_note_2_rounded,
-                          color: SaasPalette.textTertiary,
+                          color: context.saas.textTertiary,
                           size: 14,
                         ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             reserva.notas!,
-                            style: const TextStyle(
-                              color: SaasPalette.textSecondary,
+                            style: TextStyle(
+                              color: context.saas.textSecondary,
                               fontSize: 12,
                             ),
                           ),
@@ -1030,25 +1071,25 @@ class _DesgloseCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.receipt_long_rounded,
-                color: SaasPalette.textTertiary,
+                color: context.saas.textTertiary,
                 size: 14,
               ),
               const SizedBox(width: 6),
-              const Text(
+              Text(
                 'DESGLOSE DE COSTOS',
                 style: TextStyle(
-                  color: SaasPalette.textTertiary,
+                  color: context.saas.textTertiary,
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.8,
@@ -1061,13 +1102,13 @@ class _DesgloseCard extends StatelessWidget {
           _DesgloseRow(
             label: 'Valor del tour',
             value: currency.format(reserva.valorTourSnapshot),
-            valueColor: SaasPalette.textPrimary,
+            valueColor: context.saas.textPrimary,
             icon: Icons.confirmation_number_rounded,
           ),
 
           if (hasServicios) ...[
             const SizedBox(height: 4),
-            const Divider(color: SaasPalette.border, height: 12),
+            Divider(color: context.saas.border, height: 12),
             if (reserva.servicios.isNotEmpty)
               ...reserva.servicios.map(
                 (s) => Padding(
@@ -1075,7 +1116,7 @@ class _DesgloseCard extends StatelessWidget {
                   child: _DesgloseRow(
                     label: s.nombre,
                     value: s.costo != null ? currency.format(s.costo) : '—',
-                    valueColor: SaasPalette.brand600,
+                    valueColor: context.saas.brand600,
                     icon: Icons.add_circle_outline_rounded,
                   ),
                 ),
@@ -1084,27 +1125,27 @@ class _DesgloseCard extends StatelessWidget {
               _DesgloseRow(
                 label: 'Servicios adicionales',
                 value: currency.format(reserva.costoServicios),
-                valueColor: SaasPalette.brand600,
+                valueColor: context.saas.brand600,
                 icon: Icons.add_circle_outline_rounded,
               ),
           ],
 
-          const Divider(color: SaasPalette.border, height: 16),
+          Divider(color: context.saas.border, height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Total contratado',
                 style: TextStyle(
-                  color: SaasPalette.textSecondary,
+                  color: context.saas.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               Text(
                 currency.format(reserva.valorTotal),
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
+                style: TextStyle(
+                  color: context.saas.textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                 ),
@@ -1134,13 +1175,13 @@ class _DesgloseRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: SaasPalette.textTertiary, size: 13),
+        Icon(icon, color: context.saas.textTertiary, size: 13),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
-              color: SaasPalette.textSecondary,
+            style: TextStyle(
+              color: context.saas.textSecondary,
               fontSize: 12,
             ),
           ),
@@ -1175,28 +1216,28 @@ class _FinancieroRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Row(
         children: [
           _Money(
             label: 'Total',
             value: currency.format(total),
-            color: SaasPalette.textPrimary,
+            color: context.saas.textPrimary,
           ),
           _Divider(),
           _Money(
             label: 'Cancelado',
             value: currency.format(cancelado),
-            color: SaasPalette.success,
+            color: context.saas.success,
           ),
           _Divider(),
           _Money(
             label: 'Saldo',
             value: currency.format(saldo),
-            color: saldo > 0 ? SaasPalette.warning : SaasPalette.textTertiary,
+            color: saldo > 0 ? context.saas.warning : context.saas.textTertiary,
           ),
         ],
       ),
@@ -1224,7 +1265,7 @@ class _Money extends StatelessWidget {
         ),
         Text(
           label,
-          style: const TextStyle(color: SaasPalette.textTertiary, fontSize: 10),
+          style: TextStyle(color: context.saas.textTertiary, fontSize: 10),
         ),
       ],
     ),
@@ -1236,7 +1277,7 @@ class _Divider extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: 1,
     height: 28,
-    color: SaasPalette.border,
+    color: context.saas.border,
     margin: const EdgeInsets.symmetric(horizontal: 8),
   );
 }
@@ -1265,12 +1306,12 @@ class _PersonaRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isResponsable ? SaasPalette.brand50 : SaasPalette.bgSubtle,
+        color: isResponsable ? context.saas.brand50 : context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isResponsable
-              ? SaasPalette.brand600.withValues(alpha: 0.2)
-              : SaasPalette.border,
+              ? context.saas.brand600.withValues(alpha: 0.2)
+              : context.saas.border,
         ),
       ),
       child: Row(
@@ -1281,8 +1322,8 @@ class _PersonaRow extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               color: isResponsable
-                  ? SaasPalette.brand600.withValues(alpha: 0.15)
-                  : SaasPalette.border,
+                  ? context.saas.brand600.withValues(alpha: 0.15)
+                  : context.saas.border,
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -1290,8 +1331,8 @@ class _PersonaRow extends StatelessWidget {
                   ? Icons.manage_accounts_rounded
                   : Icons.person_rounded,
               color: isResponsable
-                  ? SaasPalette.brand600
-                  : SaasPalette.textTertiary,
+                  ? context.saas.brand600
+                  : context.saas.textTertiary,
               size: 18,
             ),
           ),
@@ -1302,8 +1343,8 @@ class _PersonaRow extends StatelessWidget {
               children: [
                 Text(
                   nombre,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -1354,11 +1395,11 @@ class _Detail extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(icon, color: SaasPalette.textTertiary, size: 12),
+      Icon(icon, color: context.saas.textTertiary, size: 12),
       const SizedBox(width: 4),
       Text(
         text,
-        style: const TextStyle(color: SaasPalette.textSecondary, fontSize: 11),
+        style: TextStyle(color: context.saas.textSecondary, fontSize: 11),
       ),
     ],
   );
@@ -1371,8 +1412,8 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     label,
-    style: const TextStyle(
-      color: SaasPalette.textTertiary,
+    style: TextStyle(
+      color: context.saas.textTertiary,
       fontSize: 10,
       fontWeight: FontWeight.w800,
       letterSpacing: 0.8,
@@ -1411,9 +1452,9 @@ class _SkelCard extends StatelessWidget {
     height: 120,
     margin: const EdgeInsets.only(bottom: 16),
     decoration: BoxDecoration(
-      color: SaasPalette.bgSubtle,
+      color: context.saas.bgSubtle,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: SaasPalette.border),
+      border: Border.all(color: context.saas.border),
     ),
   );
 }
@@ -1426,25 +1467,25 @@ class _EmptySearch extends StatelessWidget {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(
+        Icon(
           Icons.search_off_rounded,
           size: 64,
-          color: SaasPalette.textTertiary,
+          color: context.saas.textTertiary,
         ),
         const SizedBox(height: 16),
         Text(
           'Sin resultados para "$query"',
-          style: const TextStyle(
-            color: SaasPalette.textPrimary,
+          style: TextStyle(
+            color: context.saas.textPrimary,
             fontSize: 15,
             fontWeight: FontWeight.bold,
           ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'Intenta con otro nombre o cédula',
-          style: TextStyle(color: SaasPalette.textSecondary, fontSize: 12),
+          style: TextStyle(color: context.saas.textSecondary, fontSize: 12),
         ),
       ],
     ),
@@ -1458,16 +1499,16 @@ class _EmptyState extends StatelessWidget {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(
+        Icon(
           Icons.people_outline_rounded,
           size: 72,
-          color: SaasPalette.textTertiary,
+          color: context.saas.textTertiary,
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'No hay reservas para este tour',
           style: TextStyle(
-            color: SaasPalette.textPrimary,
+            color: context.saas.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -1487,16 +1528,16 @@ class _ErrorState extends StatelessWidget {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(
+        Icon(
           Icons.error_outline_rounded,
           size: 72,
-          color: SaasPalette.danger,
+          color: context.saas.danger,
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Error al cargar los datos',
           style: TextStyle(
-            color: SaasPalette.textPrimary,
+            color: context.saas.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -1504,8 +1545,8 @@ class _ErrorState extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           message,
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
+          style: TextStyle(
+            color: context.saas.textSecondary,
             fontSize: 12,
           ),
           textAlign: TextAlign.center,
@@ -1516,7 +1557,7 @@ class _ErrorState extends StatelessWidget {
           icon: const Icon(Icons.refresh_rounded),
           label: const Text('Reintentar'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: SaasPalette.brand600,
+            backgroundColor: context.saas.brand600,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),

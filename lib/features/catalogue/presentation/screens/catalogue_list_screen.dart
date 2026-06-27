@@ -55,7 +55,7 @@ class _CatalogueListBodyState extends State<_CatalogueListBody> {
         authState is AuthAuthenticated && authState.user.canWrite('catalogues');
 
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       body: BlocBuilder<CatalogueBloc, CatalogueState>(
         builder: (context, state) {
           List<Catalogue> list = [];
@@ -79,7 +79,7 @@ class _CatalogueListBodyState extends State<_CatalogueListBody> {
           return RefreshIndicator(
             onRefresh: () async =>
                 context.read<CatalogueBloc>().add(LoadCatalogues()),
-            color: SaasPalette.brand600,
+            color: context.saas.brand600,
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
@@ -199,11 +199,11 @@ class _CatalogueHeader extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Catálogos',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -213,7 +213,7 @@ class _CatalogueHeader extends StatelessWidget {
                   Text(
                     'Gestiona tus guías y PDFs informativos para clientes.',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 14,
                     ),
                   ),
@@ -274,10 +274,10 @@ class _CatalogueCardState extends State<_CatalogueCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
+              color: _hovered ? context.saas.brand600 : context.saas.border,
             ),
             boxShadow: [
               BoxShadow(
@@ -300,15 +300,15 @@ class _CatalogueCardState extends State<_CatalogueCard> {
                     height: 48,
                     decoration: BoxDecoration(
                       color: cat.activo
-                          ? SaasPalette.brand600.withOpacity(0.1)
-                          : SaasPalette.bgSubtle,
+                          ? context.saas.brand600.withOpacity(0.1)
+                          : context.saas.bgSubtle,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       Icons.picture_as_pdf_rounded,
                       color: cat.activo
-                          ? SaasPalette.brand600
-                          : SaasPalette.textTertiary,
+                          ? context.saas.brand600
+                          : context.saas.textTertiary,
                       size: 24,
                     ),
                   ),
@@ -324,8 +324,8 @@ class _CatalogueCardState extends State<_CatalogueCard> {
                             Expanded(
                               child: Text(
                                 cat.nombreCatalogue,
-                                style: const TextStyle(
-                                  color: SaasPalette.textPrimary,
+                                style: TextStyle(
+                                  color: context.saas.textPrimary,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -341,31 +341,31 @@ class _CatalogueCardState extends State<_CatalogueCard> {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.calendar_today_rounded,
                               size: 12,
-                              color: SaasPalette.textTertiary,
+                              color: context.saas.textTertiary,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               dateStr,
-                              style: const TextStyle(
-                                color: SaasPalette.textTertiary,
+                              style: TextStyle(
+                                color: context.saas.textTertiary,
                                 fontSize: 12,
                               ),
                             ),
                             const SizedBox(width: 12),
-                            const Icon(
+                            Icon(
                               Icons.link_rounded,
                               size: 12,
-                              color: SaasPalette.textTertiary,
+                              color: context.saas.textTertiary,
                             ),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
                                 cat.urlArchivo,
-                                style: const TextStyle(
-                                  color: SaasPalette.brand600,
+                                style: TextStyle(
+                                  color: context.saas.brand600,
                                   fontSize: 12,
                                 ),
                                 maxLines: 1,
@@ -417,30 +417,30 @@ class _ActionMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: const Icon(
+      icon: Icon(
         Icons.more_vert_rounded,
-        color: SaasPalette.textTertiary,
+        color: context.saas.textTertiary,
         size: 20,
       ),
-      color: SaasPalette.bgCanvas,
+      color: context.saas.bgCanvas,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: SaasPalette.border),
+        side: BorderSide(color: context.saas.border),
       ),
       elevation: 4,
       itemBuilder: (_) => [
-        _item('edit', Icons.edit_rounded, 'Editar', SaasPalette.textPrimary),
+        _item('edit', Icons.edit_rounded, 'Editar', context.saas.textPrimary),
         _item(
           'toggle',
           isActive ? Icons.visibility_off_rounded : Icons.visibility_rounded,
           isActive ? 'Desactivar' : 'Activar',
-          isActive ? SaasPalette.warning : SaasPalette.success,
+          isActive ? context.saas.warning : context.saas.success,
         ),
         _item(
           'delete',
           Icons.delete_outline_rounded,
           'Eliminar',
-          SaasPalette.danger,
+          context.saas.danger,
         ),
       ],
       onSelected: (value) {

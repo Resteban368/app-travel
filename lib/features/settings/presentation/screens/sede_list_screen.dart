@@ -40,7 +40,7 @@ class _SedeListScreenState extends State<SedeListScreen> {
         authState is AuthAuthenticated && authState.user.canWrite('sedes');
 
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       body: BlocBuilder<SedeBloc, SedeState>(
         builder: (context, state) {
           List<Sede> list = [];
@@ -61,7 +61,7 @@ class _SedeListScreenState extends State<SedeListScreen> {
 
           return RefreshIndicator(
             onRefresh: () async => context.read<SedeBloc>().add(LoadSedes()),
-            color: SaasPalette.brand600,
+            color: context.saas.brand600,
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
@@ -187,11 +187,11 @@ class _SedeHeader extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Gestión de Sedes',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -201,7 +201,7 @@ class _SedeHeader extends StatelessWidget {
                   Text(
                     'Administra las oficinas y puntos de atención de la agencia.',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 14,
                     ),
                   ),
@@ -264,10 +264,10 @@ class _SedeCardState extends State<_SedeCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
+              color: _hovered ? context.saas.brand600 : context.saas.border,
               width: _hovered ? 1.5 : 1,
             ),
             boxShadow: [
@@ -291,15 +291,15 @@ class _SedeCardState extends State<_SedeCard> {
                     height: 48,
                     decoration: BoxDecoration(
                       color: s.isActive
-                          ? SaasPalette.brand50
-                          : SaasPalette.bgSubtle,
+                          ? context.saas.brand50
+                          : context.saas.bgSubtle,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       Icons.storefront_rounded,
                       color: s.isActive
-                          ? SaasPalette.brand600
-                          : SaasPalette.textTertiary,
+                          ? context.saas.brand600
+                          : context.saas.textTertiary,
                       size: 24,
                     ),
                   ),
@@ -315,8 +315,8 @@ class _SedeCardState extends State<_SedeCard> {
                             Expanded(
                               child: Text(
                                 s.nombreSede,
-                                style: const TextStyle(
-                                  color: SaasPalette.textPrimary,
+                                style: TextStyle(
+                                  color: context.saas.textPrimary,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -329,17 +329,17 @@ class _SedeCardState extends State<_SedeCard> {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.location_on_outlined,
                               size: 14,
-                              color: SaasPalette.textTertiary,
+                              color: context.saas.textTertiary,
                             ),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
                                 s.direccion,
-                                style: const TextStyle(
-                                  color: SaasPalette.textSecondary,
+                                style: TextStyle(
+                                  color: context.saas.textSecondary,
                                   fontSize: 13,
                                 ),
                                 maxLines: 1,
@@ -351,16 +351,16 @@ class _SedeCardState extends State<_SedeCard> {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.phone_outlined,
                               size: 14,
-                              color: SaasPalette.textTertiary,
+                              color: context.saas.textTertiary,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               s.telefono,
-                              style: const TextStyle(
-                                color: SaasPalette.textSecondary,
+                              style: TextStyle(
+                                color: context.saas.textSecondary,
                                 fontSize: 13,
                               ),
                             ),
@@ -406,12 +406,12 @@ class _SedeActionMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: const Icon(
+      icon: Icon(
         Icons.more_vert_rounded,
-        color: SaasPalette.textTertiary,
+        color: context.saas.textTertiary,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: SaasPalette.bgCanvas,
+      color: context.saas.bgCanvas,
       elevation: 4,
       onSelected: (value) {
         if (value == 'edit') onEdit();
@@ -423,7 +423,7 @@ class _SedeActionMenu extends StatelessWidget {
           value: 'edit',
           icon: Icons.edit_outlined,
           label: 'Editar Sede',
-          color: SaasPalette.textPrimary,
+          color: context.saas.textPrimary,
         ),
         _buildMenuItem(
           value: 'toggle',
@@ -431,14 +431,14 @@ class _SedeActionMenu extends StatelessWidget {
               ? Icons.visibility_off_outlined
               : Icons.visibility_outlined,
           label: isActive ? 'Desactivar Sede' : 'Activar Sede',
-          color: isActive ? SaasPalette.warning : SaasPalette.success,
+          color: isActive ? context.saas.warning : context.saas.success,
         ),
         const PopupMenuDivider(),
         _buildMenuItem(
           value: 'delete',
           icon: Icons.delete_outline_rounded,
           label: 'Eliminar Sede',
-          color: SaasPalette.danger,
+          color: context.saas.danger,
         ),
       ],
     );

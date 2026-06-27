@@ -8,6 +8,7 @@ import '../../../../core/widgets/saas_ui_components.dart';
 import '../../../../config/app_router.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/domain/entities/user.dart';
+import '../../../../core/theme/theme_cubit.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -67,7 +68,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
-              backgroundColor: SaasPalette.danger,
+              backgroundColor: context.saas.danger,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -79,7 +80,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('Contraseña actualizada correctamente'),
-              backgroundColor: SaasPalette.success,
+              backgroundColor: context.saas.success,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -90,7 +91,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
         }
       },
       child: Scaffold(
-        backgroundColor: SaasPalette.bgApp,
+        backgroundColor: context.saas.bgApp,
         body: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
           child: Center(
@@ -100,20 +101,20 @@ class _ProfileBodyState extends State<_ProfileBody> {
                 // ── Header ───────────────────────────────────────────────
                 const SaasBreadcrumbs(items: ['Inicio', 'Mi Perfil']),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Configuración de Perfil',
                   style: TextStyle(
-                    color: SaasPalette.textPrimary,
+                    color: context.saas.textPrimary,
                     fontSize: 26,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.5,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Gestiona tu información personal y niveles de acceso.',
                   style: TextStyle(
-                    color: SaasPalette.textSecondary,
+                    color: context.saas.textSecondary,
                     fontSize: 14,
                   ),
                 ),
@@ -127,6 +128,8 @@ class _ProfileBodyState extends State<_ProfileBody> {
                   _CotizacionLinkCard(userId: user.id),
                   const SizedBox(height: 16),
                   _PermissionsCard(user: user),
+                  const SizedBox(height: 16),
+                  const _ThemeCard(),
                   const SizedBox(height: 16),
                   const _ChangePasswordCard(),
                 ] else
@@ -169,7 +172,7 @@ class _AvatarCard extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: SaasPalette.brand600,
+              color: context.saas.brand600,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Center(
@@ -191,8 +194,8 @@ class _AvatarCard extends StatelessWidget {
               children: [
                 Text(
                   user.name,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                   ),
@@ -200,8 +203,8 @@ class _AvatarCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   user.username,
-                  style: const TextStyle(
-                    color: SaasPalette.textSecondary,
+                  style: TextStyle(
+                    color: context.saas.textSecondary,
                     fontSize: 13,
                   ),
                 ),
@@ -224,7 +227,7 @@ class _RoleBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final isAdmin = role == 'admin';
     final label = isAdmin ? 'Administrador' : 'Agente';
-    final color = isAdmin ? SaasPalette.warning : SaasPalette.brand600;
+    final color = isAdmin ? context.saas.warning : context.saas.brand600;
     final icon = isAdmin ? Icons.shield_rounded : Icons.badge_rounded;
 
     return Container(
@@ -274,13 +277,13 @@ class _InfoCard extends StatelessWidget {
             label: 'Nombre',
             value: user.name,
           ),
-          const Divider(color: SaasPalette.border, height: 24),
+          Divider(color: context.saas.border, height: 24),
           _InfoRow(
             icon: Icons.email_outlined,
             label: 'Correo electrónico',
             value: user.username,
           ),
-          const Divider(color: SaasPalette.border, height: 24),
+          Divider(color: context.saas.border, height: 24),
           _InfoRow(
             icon: Icons.manage_accounts_outlined,
             label: 'Rol',
@@ -311,10 +314,10 @@ class _InfoRow extends StatelessWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: SaasPalette.brand600.withOpacity(0.08),
+            color: context.saas.brand600.withOpacity(0.08),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: SaasPalette.brand600, size: 18),
+          child: Icon(icon, color: context.saas.brand600, size: 18),
         ),
         const SizedBox(width: 14),
         Expanded(
@@ -323,8 +326,8 @@ class _InfoRow extends StatelessWidget {
             children: [
               Text(
                 label.toUpperCase(),
-                style: const TextStyle(
-                  color: SaasPalette.textTertiary,
+                style: TextStyle(
+                  color: context.saas.textTertiary,
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
@@ -333,8 +336,8 @@ class _InfoRow extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
+                style: TextStyle(
+                  color: context.saas.textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -399,13 +402,13 @@ class _PermissionsCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: SaasPalette.brand50,
+                  color: context.saas.brand50,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '${permisos.length} módulo${permisos.length != 1 ? 's' : ''}',
-                  style: const TextStyle(
-                    color: SaasPalette.brand600,
+                  style: TextStyle(
+                    color: context.saas.brand600,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -415,13 +418,13 @@ class _PermissionsCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           if (permisos.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Center(
                 child: Text(
                   'Sin permisos asignados',
                   style: TextStyle(
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                     fontSize: 13,
                     fontStyle: FontStyle.italic,
                   ),
@@ -464,7 +467,7 @@ class _PermissionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final badgeColor = isCompleto ? SaasPalette.success : SaasPalette.brand600;
+    final badgeColor = isCompleto ? context.saas.success : context.saas.brand600;
     final badgeLabel = isCompleto ? 'Completo' : 'Lectura';
     final badgeIcon = isCompleto
         ? Icons.edit_rounded
@@ -473,9 +476,9 @@ class _PermissionRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Row(
         children: [
@@ -492,8 +495,8 @@ class _PermissionRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
-                color: SaasPalette.textPrimary,
+              style: TextStyle(
+                color: context.saas.textPrimary,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -639,9 +642,9 @@ class _ChangePasswordCardState extends State<_ChangePasswordCard> {
               child: ElevatedButton(
                 onPressed: isLoading ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: SaasPalette.brand600,
+                  backgroundColor: context.saas.brand600,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: SaasPalette.bgSubtle,
+                  disabledBackgroundColor: context.saas.bgSubtle,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -649,12 +652,12 @@ class _ChangePasswordCardState extends State<_ChangePasswordCard> {
                   ),
                 ),
                 child: isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: SaasPalette.brand600,
+                          color: context.saas.brand600,
                         ),
                       )
                     : const Text(
@@ -697,8 +700,8 @@ class _PasswordField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
+          style: TextStyle(
+            color: context.saas.textSecondary,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -707,42 +710,42 @@ class _PasswordField extends StatelessWidget {
         TextFormField(
           controller: controller,
           obscureText: !visible,
-          style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
+          style: TextStyle(color: context.saas.textPrimary, fontSize: 14),
           validator: validator,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(
-              color: SaasPalette.textTertiary,
+            hintStyle: TextStyle(
+              color: context.saas.textTertiary,
               fontSize: 13,
             ),
             filled: true,
-            fillColor: SaasPalette.bgApp,
+            fillColor: context.saas.bgApp,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 14,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: SaasPalette.border),
+              borderSide: BorderSide(color: context.saas.border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: SaasPalette.border),
+              borderSide: BorderSide(color: context.saas.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                color: SaasPalette.brand600,
+              borderSide: BorderSide(
+                color: context.saas.brand600,
                 width: 1.5,
               ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: SaasPalette.danger),
+              borderSide: BorderSide(color: context.saas.danger),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: SaasPalette.danger),
+              borderSide: BorderSide(color: context.saas.danger),
             ),
             suffixIcon: IconButton(
               onPressed: onToggle,
@@ -750,7 +753,7 @@ class _PasswordField extends StatelessWidget {
                 visible
                     ? Icons.visibility_off_rounded
                     : Icons.visibility_rounded,
-                color: SaasPalette.textTertiary,
+                color: context.saas.textTertiary,
                 size: 18,
               ),
             ),
@@ -778,10 +781,10 @@ class _CotizacionLinkCard extends StatelessWidget {
         children: [
           const _SectionLabel(text: 'MI LINK DE COTIZACIÓN'),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Comparte este enlace con tus clientes para que soliciten una cotización directamente contigo.',
             style: TextStyle(
-              color: SaasPalette.textSecondary,
+              color: context.saas.textSecondary,
               fontSize: 13,
             ),
           ),
@@ -789,23 +792,23 @@ class _CotizacionLinkCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: SaasPalette.bgApp,
+              color: context.saas.bgApp,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: SaasPalette.border),
+              border: Border.all(color: context.saas.border),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.link_rounded,
                   size: 16,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: SelectableText(
                     link,
-                    style: const TextStyle(
-                      color: SaasPalette.brand600,
+                    style: TextStyle(
+                      color: context.saas.brand600,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
@@ -851,21 +854,21 @@ class _CopyButtonState extends State<_CopyButton> {
               key: const ValueKey('check'),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                color: SaasPalette.success.withValues(alpha: 0.1),
+                color: context.saas.success.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: SaasPalette.success.withValues(alpha: 0.3),
+                  color: context.saas.success.withValues(alpha: 0.3),
                 ),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_rounded, size: 14, color: SaasPalette.success),
+                  Icon(Icons.check_rounded, size: 14, color: context.saas.success),
                   SizedBox(width: 5),
                   Text(
                     'Copiado',
                     style: TextStyle(
-                      color: SaasPalette.success,
+                      color: context.saas.success,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
@@ -879,21 +882,21 @@ class _CopyButtonState extends State<_CopyButton> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 decoration: BoxDecoration(
-                  color: SaasPalette.brand600.withValues(alpha: 0.1),
+                  color: context.saas.brand600.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: SaasPalette.brand600.withValues(alpha: 0.25),
+                    color: context.saas.brand600.withValues(alpha: 0.25),
                   ),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.copy_rounded, size: 14, color: SaasPalette.brand600),
+                    Icon(Icons.copy_rounded, size: 14, color: context.saas.brand600),
                     SizedBox(width: 5),
                     Text(
                       'Copiar',
                       style: TextStyle(
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -921,9 +924,9 @@ class _SaasCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -933,6 +936,140 @@ class _SaasCard extends StatelessWidget {
         ],
       ),
       child: child,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  THEME CARD
+// ─────────────────────────────────────────────────────────────────────────────
+class _ThemeCard extends StatelessWidget {
+  const _ThemeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _SaasCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionLabel(text: 'APARIENCIA'),
+          const SizedBox(height: 16),
+          BlocBuilder<ThemeCubit, ThemeMode>(
+            builder: (context, themeMode) {
+              return Column(
+                children: [
+                  _ThemeOption(
+                    icon: Icons.wb_sunny_rounded,
+                    label: 'Claro',
+                    subtitle: 'Interfaz con fondo blanco',
+                    isSelected: themeMode == ThemeMode.light,
+                    onTap: () => context.read<ThemeCubit>().setLight(),
+                  ),
+                  const SizedBox(height: 10),
+                  _ThemeOption(
+                    icon: Icons.dark_mode_rounded,
+                    label: 'Oscuro',
+                    subtitle: 'Interfaz con fondo oscuro',
+                    isSelected: themeMode == ThemeMode.dark,
+                    onTap: () => context.read<ThemeCubit>().setDark(),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ThemeOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ThemeOption({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isSelected ? context.saas.brand600 : context.saas.textTertiary;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? context.saas.brand50 : context.saas.bgSubtle,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? context.saas.brand600.withValues(alpha: 0.4)
+                : context.saas.border,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 17),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: isSelected
+                          ? context.saas.brand600
+                          : context.saas.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: context.saas.textTertiary,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: context.saas.brand600,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  color: Colors.white,
+                  size: 12,
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -951,15 +1088,15 @@ class _SectionLabel extends StatelessWidget {
           width: 3,
           height: 13,
           decoration: BoxDecoration(
-            color: SaasPalette.brand600,
+            color: context.saas.brand600,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
         const SizedBox(width: 8),
         Text(
           text,
-          style: const TextStyle(
-            color: SaasPalette.textTertiary,
+          style: TextStyle(
+            color: context.saas.textTertiary,
             fontSize: 10,
             fontWeight: FontWeight.w900,
             letterSpacing: 1.2,

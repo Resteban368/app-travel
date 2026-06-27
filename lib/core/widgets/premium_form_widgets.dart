@@ -26,7 +26,7 @@ class PremiumSliverAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SliverAppBar(
       expandedHeight: 120,
-      backgroundColor: SaasPalette.brand900,
+      backgroundColor: context.saas.brand900,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       pinned: true,
@@ -52,9 +52,9 @@ class PremiumSliverAppBar extends StatelessWidget {
           ],
         ),
         background: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [SaasPalette.brand600, SaasPalette.brand900],
+              colors: [context.saas.brand600, context.saas.brand900],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -89,9 +89,9 @@ class PremiumSectionCard extends StatelessWidget {
     return Container(
       padding: padding ?? const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -133,17 +133,17 @@ class PremiumSectionHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: SaasPalette.brand50,
+            color: context.saas.brand50,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: SaasPalette.brand600, size: 18),
+          child: Icon(icon, color: context.saas.brand600, size: 18),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
-              color: SaasPalette.textPrimary,
+            style: TextStyle(
+              color: context.saas.textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.8,
@@ -221,8 +221,8 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
       children: [
         Text(
           widget.label,
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
+          style: TextStyle(
+            color: context.saas.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
@@ -239,11 +239,11 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
           focusNode: widget.focusNode,
           inputFormatters: widget.inputFormatters ??
               (widget.isNumeric ? [FilteringTextInputFormatter.digitsOnly] : null),
-          style: const TextStyle(color: SaasPalette.textPrimary, fontSize: 14),
+          style: TextStyle(color: context.saas.textPrimary, fontSize: 14),
           decoration: InputDecoration(
             prefixIcon: Icon(
               widget.icon,
-              color: SaasPalette.brand600,
+              color: context.saas.brand600,
               size: 18,
             ),
             suffixIcon: widget.isPassword
@@ -252,7 +252,7 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
                       _obscureText
                           ? Icons.visibility_off_rounded
                           : Icons.visibility_rounded,
-                      color: SaasPalette.textTertiary,
+                      color: context.saas.textTertiary,
                       size: 20,
                     ),
                     onPressed: () =>
@@ -261,27 +261,27 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
                 : null,
             filled: true,
             fillColor: widget.readOnly
-                ? SaasPalette.bgSubtle
-                : SaasPalette.bgCanvas,
+                ? context.saas.bgSubtle
+                : context.saas.bgCanvas,
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: SaasPalette.border),
+              borderSide: BorderSide(color: context.saas.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                color: SaasPalette.brand600,
+              borderSide: BorderSide(
+                color: context.saas.brand600,
                 width: 1.5,
               ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: SaasPalette.danger),
+              borderSide: BorderSide(color: context.saas.danger),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                color: SaasPalette.danger,
+              borderSide: BorderSide(
+                color: context.saas.danger,
                 width: 1.5,
               ),
             ),
@@ -330,12 +330,12 @@ class PremiumActionButton extends StatelessWidget {
         height: 52,
         decoration: BoxDecoration(
           color: isLoading
-              ? SaasPalette.brand600.withValues(alpha: 0.7)
-              : SaasPalette.brand600,
+              ? context.saas.brand600.withValues(alpha: 0.7)
+              : context.saas.brand600,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: SaasPalette.brand600.withValues(alpha: 0.25),
+              color: context.saas.brand600.withValues(alpha: 0.25),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -399,8 +399,8 @@ class PremiumStatusSwitch extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: SaasPalette.textSecondary,
+            style: TextStyle(
+              color: context.saas.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -410,8 +410,8 @@ class PremiumStatusSwitch extends StatelessWidget {
             value: value,
             activeThumbColor: activeColor,
             activeTrackColor: activeColor.withValues(alpha: 0.25),
-            inactiveThumbColor: SaasPalette.textTertiary,
-            inactiveTrackColor: SaasPalette.bgSubtle,
+            inactiveThumbColor: context.saas.textTertiary,
+            inactiveTrackColor: context.saas.bgSubtle,
             onChanged: onChanged,
           ),
         ],
@@ -491,14 +491,14 @@ class PremiumEmptyIndicator extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, color: SaasPalette.textTertiary, size: 32),
+              Icon(icon, color: context.saas.textTertiary, size: 32),
               const SizedBox(height: 12),
             ],
             Text(
               msg,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: SaasPalette.textSecondary,
+              style: TextStyle(
+                color: context.saas.textSecondary,
                 fontSize: 13,
                 fontStyle: FontStyle.italic,
               ),
@@ -517,7 +517,7 @@ class PremiumEmptyIndicator extends StatelessWidget {
 class DotGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = SaasPalette.border.withValues(alpha: 0.4);
+    final paint = Paint()..color = SaasPalette.border.withValues(alpha: 0.4); // TODO: dark mode
     const spacing = 28.0;
     for (double i = 0; i < size.width; i += spacing) {
       for (double j = 0; j < size.height; j += spacing) {

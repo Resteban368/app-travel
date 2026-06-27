@@ -26,9 +26,9 @@ class AnalyticsExpansionCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -47,8 +47,8 @@ class AnalyticsExpansionCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
+                style: TextStyle(
+                  color: context.saas.textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -57,13 +57,13 @@ class AnalyticsExpansionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: SaasPalette.bgSubtle,
+                  color: context.saas.bgSubtle,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '$count',
                   style: TextStyle(
-                    color: SaasPalette.textSecondary,
+                    color: context.saas.textSecondary,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
@@ -71,16 +71,16 @@ class AnalyticsExpansionCard extends StatelessWidget {
               ),
             ],
           ),
-          iconColor: SaasPalette.textTertiary,
-          collapsedIconColor: SaasPalette.textTertiary,
+          iconColor: context.saas.textTertiary,
+          collapsedIconColor: context.saas.textTertiary,
           children: count == 0
               ? [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     child: Text(
                       emptyText,
-                      style: const TextStyle(
-                        color: SaasPalette.textTertiary,
+                      style: TextStyle(
+                        color: context.saas.textTertiary,
                         fontSize: 13,
                       ),
                     ),
@@ -111,9 +111,9 @@ class PagoTile extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: SaasPalette.bgApp,
+        color: context.saas.bgApp,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Row(
         children: [
@@ -123,8 +123,8 @@ class PagoTile extends StatelessWidget {
               children: [
                 Text(
                   pago.proveedorComercio,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -132,15 +132,15 @@ class PagoTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${pago.metodoPago} · Ref: ${pago.referencia}',
-                  style: const TextStyle(
-                    color: SaasPalette.textSecondary,
+                  style: TextStyle(
+                    color: context.saas.textSecondary,
                     fontSize: 12,
                   ),
                 ),
                 Text(
                   dateFmt.format(pago.fechaCreacion.toLocal()),
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  style: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 11,
                   ),
                 ),
@@ -149,8 +149,8 @@ class PagoTile extends StatelessWidget {
           ),
           Text(
             currFmt.format(pago.monto),
-            style: const TextStyle(
-              color: SaasPalette.success,
+            style: TextStyle(
+              color: context.saas.success,
               fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
@@ -179,9 +179,9 @@ class ReservaTourTile extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: SaasPalette.bgApp,
+        color: context.saas.bgApp,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Row(
         children: [
@@ -191,8 +191,8 @@ class ReservaTourTile extends StatelessWidget {
               children: [
                 Text(
                   reserva.tourNombre ?? 'Tour s/n',
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -200,15 +200,15 @@ class ReservaTourTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   'ID: ${reserva.idReserva} · ${reserva.correo}',
-                  style: const TextStyle(
-                    color: SaasPalette.textSecondary,
+                  style: TextStyle(
+                    color: context.saas.textSecondary,
                     fontSize: 12,
                   ),
                 ),
                 Text(
                   dateFmt.format(reserva.fechaCreacion.toLocal()),
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  style: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 11,
                   ),
                 ),
@@ -220,16 +220,16 @@ class ReservaTourTile extends StatelessWidget {
             children: [
               Text(
                 currFmt.format(reserva.valorTotal),
-                style: const TextStyle(
-                  color: SaasPalette.brand600,
+                style: TextStyle(
+                  color: context.saas.brand600,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
                 reserva.estado,
-                style: const TextStyle(
-                  color: SaasPalette.textTertiary,
+                style: TextStyle(
+                  color: context.saas.textTertiary,
                   fontSize: 11,
                 ),
               ),
@@ -253,9 +253,9 @@ class CotizacionTile extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: SaasPalette.bgApp,
+        color: context.saas.bgApp,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Row(
         children: [
@@ -267,8 +267,8 @@ class CotizacionTile extends StatelessWidget {
                   children: [
                     Text(
                       cot.nombreCompleto,
-                      style: const TextStyle(
-                        color: SaasPalette.textPrimary,
+                      style: TextStyle(
+                        color: context.saas.textPrimary,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
@@ -278,8 +278,8 @@ class CotizacionTile extends StatelessWidget {
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(
-                          color: SaasPalette.brand600,
+                        decoration: BoxDecoration(
+                          color: context.saas.brand600,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -291,15 +291,15 @@ class CotizacionTile extends StatelessWidget {
                   '${cot.detallesPlan} · ${cot.numeroPasajeros} pax',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: SaasPalette.textSecondary,
+                  style: TextStyle(
+                    color: context.saas.textSecondary,
                     fontSize: 12,
                   ),
                 ),
                 Text(
                   dateFmt.format(cot.createdAt.toLocal()),
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  style: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 11,
                   ),
                 ),
@@ -309,13 +309,13 @@ class CotizacionTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: SaasPalette.bgSubtle,
+              color: context.saas.bgSubtle,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               cot.estado,
-              style: const TextStyle(
-                color: SaasPalette.textTertiary,
+              style: TextStyle(
+                color: context.saas.textTertiary,
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
               ),

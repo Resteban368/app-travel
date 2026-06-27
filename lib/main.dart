@@ -28,15 +28,17 @@ import 'core/di/injection_container.dart';
 import 'core/network/session_expired_notifier.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/premium_palette.dart';
+import 'core/theme/theme_cubit.dart';
 import 'config/app_router.dart';
 import 'features/tour/presentation/bloc/tour_bloc.dart';
 import 'features/tour/presentation/bloc/tour_historico_bloc.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
   initDependencies();
   initializeDateFormatting('es_CO', null);
+  await sl<ThemeCubit>().loadSavedTheme();
   runApp(const TravelToursApp());
 }
 
@@ -177,6 +179,7 @@ class _TravelToursAppState extends State<TravelToursApp> {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
+        BlocProvider<ThemeCubit>(create: (_) => sl<ThemeCubit>()),
         BlocProvider<TourBloc>(create: (_) => sl<TourBloc>()..add(LoadTours())),
         BlocProvider<TourHistoricoBloc>(create: (_) => sl<TourHistoricoBloc>()),
         BlocProvider<SedeBloc>(create: (_) => sl<SedeBloc>()),
@@ -206,20 +209,26 @@ class _TravelToursAppState extends State<TravelToursApp> {
           create: (_) => sl<NotificacionBloc>(),
         ),
       ],
-      child: MaterialApp(
-        navigatorKey: navigatorKey,
-        title: 'Agente Viajes',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
-        locale: const Locale('es', 'CO'),
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('es', 'CO'), Locale('en', 'US')],
-        initialRoute: AppRouter.splash,
-        onGenerateRoute: AppRouter.onGenerateRoute,
+      child: BlocBuilder<ThemeCubit, ThemeMode>(
+        builder: (context, themeMode) {
+          return MaterialApp(
+            navigatorKey: navigatorKey,
+            title: 'Agente Viajes',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+            themeMode: themeMode,
+            locale: const Locale('es', 'CO'),
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('es', 'CO'), Locale('en', 'US')],
+            initialRoute: AppRouter.splash,
+            onGenerateRoute: AppRouter.onGenerateRoute,
+          );
+        },
       ),
     );
   }

@@ -35,14 +35,14 @@ class _AgenteListScreenState extends State<AgenteListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       body: BlocConsumer<AgenteBloc, AgenteState>(
         listener: (context, state) {
           if (state is AgenteError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: SaasPalette.danger,
+                backgroundColor: context.saas.danger,
               ),
             );
           }
@@ -73,7 +73,7 @@ class _AgenteListScreenState extends State<AgenteListScreen> {
           return RefreshIndicator(
             onRefresh: () async =>
                 context.read<AgenteBloc>().add(LoadAgentes()),
-            color: SaasPalette.brand600,
+            color: context.saas.brand600,
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
@@ -185,11 +185,11 @@ class _AgenteHeader extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Gestión de Agentes',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -199,7 +199,7 @@ class _AgenteHeader extends StatelessWidget {
                   Text(
                     'Administra el equipo de ventas y asesores de la agencia.',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 14,
                     ),
                   ),
@@ -253,10 +253,10 @@ class _AgenteCardState extends State<_AgenteCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
+              color: _hovered ? context.saas.brand600 : context.saas.border,
               width: _hovered ? 1.5 : 1,
             ),
             boxShadow: [
@@ -284,12 +284,12 @@ class _AgenteCardState extends State<_AgenteCard> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: SaasPalette.brand50,
+                      color: context.saas.brand50,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.person_rounded,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                       size: 24,
                     ),
                   ),
@@ -300,8 +300,8 @@ class _AgenteCardState extends State<_AgenteCard> {
                       children: [
                         Text(
                           a.nombre,
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                           ),
@@ -309,8 +309,8 @@ class _AgenteCardState extends State<_AgenteCard> {
                         const SizedBox(height: 4),
                         Text(
                           a.correo,
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                             fontSize: 13,
                           ),
                         ),
@@ -347,12 +347,12 @@ class _AgenteActionMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: const Icon(
+      icon: Icon(
         Icons.more_vert_rounded,
-        color: SaasPalette.textTertiary,
+        color: context.saas.textTertiary,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: SaasPalette.bgCanvas,
+      color: context.saas.bgCanvas,
       elevation: 4,
       onSelected: (value) {
         if (value == 'edit') onEdit();
@@ -362,11 +362,11 @@ class _AgenteActionMenu extends StatelessWidget {
         PopupMenuItem(
           value: 'edit',
           child: Row(
-            children: const [
+            children: [
               Icon(
                 Icons.edit_outlined,
                 size: 18,
-                color: SaasPalette.textPrimary,
+                color: context.saas.textPrimary,
               ),
               SizedBox(width: 12),
               Text('Editar agente', style: TextStyle(fontSize: 13)),
@@ -377,16 +377,16 @@ class _AgenteActionMenu extends StatelessWidget {
         PopupMenuItem(
           value: 'delete',
           child: Row(
-            children: const [
+            children: [
               Icon(
                 Icons.delete_outline_rounded,
                 size: 18,
-                color: SaasPalette.danger,
+                color: context.saas.danger,
               ),
               SizedBox(width: 12),
               Text(
                 'Eliminar',
-                style: TextStyle(color: SaasPalette.danger, fontSize: 13),
+                style: TextStyle(color: context.saas.danger, fontSize: 13),
               ),
             ],
           ),

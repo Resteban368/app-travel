@@ -3,6 +3,7 @@
 import 'dart:ui';
 
 import 'package:agente_viajes/core/theme/app_colors.dart';
+import 'package:agente_viajes/core/theme/saas_palette.dart';
 import 'package:flutter/material.dart';
 
 class DialogLoadingNetwork extends StatelessWidget {
@@ -17,7 +18,7 @@ class DialogLoadingNetwork extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
         child: AlertDialog(
-          backgroundColor: Colors.white,
+          backgroundColor: context.saas.bgApp,
           actionsAlignment: MainAxisAlignment.center,
           title: Padding(
             padding: const EdgeInsets.all(20.0),
@@ -39,9 +40,9 @@ class DialogLoadingNetwork extends StatelessWidget {
                     ),
                     height: 80,
                     width: 80,
-                    child: const Icon(
+                    child:  Icon(
                       Icons.flight_takeoff_rounded,
-                      color: Colors.white,
+                      color: context.saas.bgApp,
                       size: 60,
                     ),
                   ),

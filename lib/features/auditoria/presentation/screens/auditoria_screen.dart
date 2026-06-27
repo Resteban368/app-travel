@@ -42,7 +42,7 @@ class _AuditoriaScreenState extends State<AuditoriaScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       body: NestedScrollView(
         headerSliverBuilder: (context, _) => [
           PremiumSliverAppBar(
@@ -57,10 +57,10 @@ class _AuditoriaScreenState extends State<AuditoriaScreen>
             delegate: _TabBarDelegate(
               TabBar(
                 controller: _tabController,
-                indicatorColor: SaasPalette.brand600,
+                indicatorColor: context.saas.brand600,
                 indicatorWeight: 2.5,
-                labelColor: SaasPalette.brand600,
-                unselectedLabelColor: SaasPalette.textSecondary,
+                labelColor: context.saas.brand600,
+                unselectedLabelColor: context.saas.textSecondary,
                 labelStyle: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -113,7 +113,7 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: SaasPalette.bgCanvas,
+      color: context.saas.bgCanvas,
       child: tabBar,
     );
   }
@@ -146,10 +146,10 @@ class _SesionesTabState extends State<_SesionesTab> {
       locale: const Locale('es', 'CO'),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: SaasPalette.brand600,
+          colorScheme: ColorScheme.light(
+            primary: context.saas.brand600,
             onPrimary: Colors.white,
-            surface: SaasPalette.bgCanvas,
+            surface: context.saas.bgCanvas,
           ),
         ),
         child: child!,
@@ -187,22 +187,22 @@ class _SesionesTabState extends State<_SesionesTab> {
     final isToday = _isSameDay(_selectedDate, DateTime.now());
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: const BoxDecoration(
-        color: SaasPalette.bgCanvas,
-        border: Border(bottom: BorderSide(color: SaasPalette.border)),
+      decoration: BoxDecoration(
+        color: context.saas.bgCanvas,
+        border: Border(bottom: BorderSide(color: context.saas.border)),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.calendar_today_rounded,
             size: 16,
-            color: SaasPalette.textTertiary,
+            color: context.saas.textTertiary,
           ),
           const SizedBox(width: 8),
           Text(
             isToday ? 'Hoy — ${_dateFormat.format(_selectedDate)}' : _dateFormat.format(_selectedDate),
-            style: const TextStyle(
-              color: SaasPalette.textPrimary,
+            style: TextStyle(
+              color: context.saas.textPrimary,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -213,8 +213,8 @@ class _SesionesTabState extends State<_SesionesTab> {
             icon: const Icon(Icons.edit_calendar_rounded, size: 15),
             label: const Text('Cambiar fecha'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: SaasPalette.brand600,
-              side: const BorderSide(color: SaasPalette.brand600),
+              foregroundColor: context.saas.brand600,
+              side: BorderSide(color: context.saas.brand600),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               textStyle: const TextStyle(
                 fontSize: 13,
@@ -231,9 +231,9 @@ class _SesionesTabState extends State<_SesionesTab> {
             onPressed: () => context
                 .read<SesionesBloc>()
                 .add(LoadSesiones(fecha: _selectedDate)),
-            icon: const Icon(
+            icon: Icon(
               Icons.refresh_rounded,
-              color: SaasPalette.textSecondary,
+              color: context.saas.textSecondary,
               size: 20,
             ),
           ),
@@ -261,21 +261,21 @@ class _SesionesTabState extends State<_SesionesTab> {
           label: 'Total sesiones',
           value: '$total',
           icon: Icons.people_rounded,
-          color: SaasPalette.brand600,
+          color: context.saas.brand600,
         ),
         const SizedBox(width: 12),
         _SummaryChip(
           label: 'Activas ahora',
           value: '$activas',
           icon: Icons.circle,
-          color: SaasPalette.success,
+          color: context.saas.success,
         ),
         const SizedBox(width: 12),
         _SummaryChip(
           label: 'Cerradas',
           value: '${total - activas}',
           icon: Icons.logout_rounded,
-          color: SaasPalette.textTertiary,
+          color: context.saas.textTertiary,
         ),
       ],
     );
@@ -291,24 +291,24 @@ class _SesionesTabState extends State<_SesionesTab> {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(
+        Icon(
           Icons.event_busy_rounded,
           size: 64,
-          color: SaasPalette.textTertiary,
+          color: context.saas.textTertiary,
         ),
         const SizedBox(height: 16),
         Text(
           'Sin sesiones el ${_dateFormat.format(_selectedDate)}',
-          style: const TextStyle(
-            color: SaasPalette.textPrimary,
+          style: TextStyle(
+            color: context.saas.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'No se registró actividad en esta fecha.',
-          style: TextStyle(color: SaasPalette.textSecondary, fontSize: 13),
+          style: TextStyle(color: context.saas.textSecondary, fontSize: 13),
         ),
       ],
     ),
@@ -318,16 +318,16 @@ class _SesionesTabState extends State<_SesionesTab> {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(
+        Icon(
           Icons.error_outline_rounded,
           size: 64,
-          color: SaasPalette.danger,
+          color: context.saas.danger,
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Error al cargar sesiones',
           style: TextStyle(
-            color: SaasPalette.textPrimary,
+            color: context.saas.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -335,8 +335,8 @@ class _SesionesTabState extends State<_SesionesTab> {
         const SizedBox(height: 6),
         Text(
           message,
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
+          style: TextStyle(
+            color: context.saas.textSecondary,
             fontSize: 13,
           ),
           textAlign: TextAlign.center,
@@ -349,7 +349,7 @@ class _SesionesTabState extends State<_SesionesTab> {
           icon: const Icon(Icons.refresh_rounded),
           label: const Text('Reintentar'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: SaasPalette.brand600,
+            backgroundColor: context.saas.brand600,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -374,17 +374,17 @@ class _SesionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = sesion.isActive ? SaasPalette.success : SaasPalette.textTertiary;
+    final color = sesion.isActive ? context.saas.success : context.saas.textTertiary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: sesion.isActive
-              ? SaasPalette.success.withValues(alpha: 0.3)
-              : SaasPalette.border,
+              ? context.saas.success.withValues(alpha: 0.3)
+              : context.saas.border,
         ),
       ),
       child: Padding(
@@ -417,8 +417,8 @@ class _SesionCard extends StatelessWidget {
                         children: [
                           Text(
                             sesion.usuarioNombre ?? 'Usuario #${sesion.usuarioId}',
-                            style: const TextStyle(
-                              color: SaasPalette.textPrimary,
+                            style: TextStyle(
+                              color: context.saas.textPrimary,
                               fontWeight: FontWeight.w700,
                               fontSize: 15,
                             ),
@@ -430,8 +430,8 @@ class _SesionCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         sesion.usuarioEmail ?? 'Sesión #${sesion.id}',
-                        style: const TextStyle(
-                          color: SaasPalette.textTertiary,
+                        style: TextStyle(
+                          color: context.saas.textTertiary,
                           fontSize: 12,
                         ),
                       ),
@@ -449,10 +449,10 @@ class _SesionCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const Text(
+                    Text(
                       'duración',
                       style: TextStyle(
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                         fontSize: 10,
                       ),
                     ),
@@ -461,7 +461,7 @@ class _SesionCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
-            const Divider(color: SaasPalette.border, height: 1),
+            Divider(color: context.saas.border, height: 1),
             const SizedBox(height: 14),
             Wrap(
               spacing: 20,
@@ -510,7 +510,7 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? SaasPalette.success : SaasPalette.textTertiary;
+    final color = isActive ? context.saas.success : context.saas.textTertiary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -556,19 +556,19 @@ class _InfoChip extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(icon, size: 13, color: SaasPalette.textTertiary),
+      Icon(icon, size: 13, color: context.saas.textTertiary),
       const SizedBox(width: 5),
       Text(
         '$label: ',
-        style: const TextStyle(
-          color: SaasPalette.textTertiary,
+        style: TextStyle(
+          color: context.saas.textTertiary,
           fontSize: 12,
         ),
       ),
       Text(
         value,
-        style: const TextStyle(
-          color: SaasPalette.textSecondary,
+        style: TextStyle(
+          color: context.saas.textSecondary,
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
@@ -613,8 +613,8 @@ class _SummaryChip extends StatelessWidget {
           ),
           Text(
             label,
-            style: const TextStyle(
-              color: SaasPalette.textTertiary,
+            style: TextStyle(
+              color: context.saas.textTertiary,
               fontSize: 10,
             ),
           ),
@@ -630,9 +630,9 @@ class _SkelCard extends StatelessWidget {
     height: 130,
     margin: const EdgeInsets.only(bottom: 12),
     decoration: BoxDecoration(
-      color: SaasPalette.bgSubtle,
+      color: context.saas.bgSubtle,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: SaasPalette.border),
+      border: Border.all(color: context.saas.border),
     ),
   );
 }
@@ -654,7 +654,7 @@ class _AuditoriaGeneralTab extends StatelessWidget {
               if (state is AuditoriaGeneralError) return _buildError(context, state.message);
               if (state is AuditoriaGeneralLoaded) {
                 return state.auditoria.isEmpty
-                    ? _buildEmpty()
+                    ? _buildEmpty(context)
                     : _buildList(state.auditoria);
               }
               return const SizedBox.shrink();
@@ -668,18 +668,18 @@ class _AuditoriaGeneralTab extends StatelessWidget {
   Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: const BoxDecoration(
-        color: SaasPalette.bgCanvas,
-        border: Border(bottom: BorderSide(color: SaasPalette.border)),
+      decoration: BoxDecoration(
+        color: context.saas.bgCanvas,
+        border: Border(bottom: BorderSide(color: context.saas.border)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline_rounded, size: 16, color: SaasPalette.textTertiary),
+          Icon(Icons.info_outline_rounded, size: 16, color: context.saas.textTertiary),
           const SizedBox(width: 8),
-          const Text(
+          Text(
             'Registro de cambios globales',
             style: TextStyle(
-              color: SaasPalette.textPrimary,
+              color: context.saas.textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -688,7 +688,7 @@ class _AuditoriaGeneralTab extends StatelessWidget {
           IconButton(
             tooltip: 'Recargar',
             onPressed: () => context.read<AuditoriaGeneralBloc>().add(const LoadAuditoriaGeneral()),
-            icon: const Icon(Icons.refresh_rounded, color: SaasPalette.textSecondary, size: 20),
+            icon: Icon(Icons.refresh_rounded, color: context.saas.textSecondary, size: 20),
           ),
         ],
       ),
@@ -710,20 +710,20 @@ class _AuditoriaGeneralTab extends StatelessWidget {
     itemBuilder: (_, __) => _SkelCard(),
   );
 
-  Widget _buildEmpty() => Center(
+  Widget _buildEmpty(BuildContext context) => Center(
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.history_toggle_off_rounded, size: 64, color: SaasPalette.textTertiary),
+        Icon(Icons.history_toggle_off_rounded, size: 64, color: context.saas.textTertiary),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Sin registros',
-          style: TextStyle(color: SaasPalette.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
+          style: TextStyle(color: context.saas.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'No se encontraron cambios en el sistema.',
-          style: TextStyle(color: SaasPalette.textSecondary, fontSize: 13),
+          style: TextStyle(color: context.saas.textSecondary, fontSize: 13),
         ),
       ],
     ),
@@ -733,18 +733,18 @@ class _AuditoriaGeneralTab extends StatelessWidget {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.error_outline_rounded, size: 64, color: SaasPalette.danger),
+        Icon(Icons.error_outline_rounded, size: 64, color: context.saas.danger),
         const SizedBox(height: 16),
-        const Text('Error al cargar auditoría', style: TextStyle(color: SaasPalette.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+        Text('Error al cargar auditoría', style: TextStyle(color: context.saas.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
-        Text(message, style: const TextStyle(color: SaasPalette.textSecondary, fontSize: 13), textAlign: TextAlign.center),
+        Text(message, style: TextStyle(color: context.saas.textSecondary, fontSize: 13), textAlign: TextAlign.center),
         const SizedBox(height: 20),
         ElevatedButton.icon(
           onPressed: () => context.read<AuditoriaGeneralBloc>().add(const LoadAuditoriaGeneral()),
           icon: const Icon(Icons.refresh_rounded),
           label: const Text('Reintentar'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: SaasPalette.brand600,
+            backgroundColor: context.saas.brand600,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
@@ -773,9 +773,9 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
 
     return Container(
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Column(
         children: [
@@ -819,8 +819,8 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
                                       const Spacer(),
                                       Text(
                                         df.format(widget.item.fecha.toLocal()),
-                                        style: const TextStyle(
-                                          color: SaasPalette.textTertiary,
+                                        style: TextStyle(
+                                          color: context.saas.textTertiary,
                                           fontSize: 11,
                                         ),
                                       ),
@@ -829,8 +829,8 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
                                   const SizedBox(height: 4),
                                   Text(
                                     'Módulo: ${widget.item.modulo.toUpperCase()}',
-                                    style: const TextStyle(
-                                      color: SaasPalette.textPrimary,
+                                    style: TextStyle(
+                                      color: context.saas.textPrimary,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -844,7 +844,7 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: SaasPalette.bgApp,
+                            color: context.saas.bgApp,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Column(
@@ -868,16 +868,16 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.data_object_rounded,
                                 size: 14,
-                                color: SaasPalette.textTertiary,
+                                color: context.saas.textTertiary,
                               ),
                               const SizedBox(width: 6),
-                              const Text(
+                              Text(
                                 'DETALLE DEL CAMBIO',
                                 style: TextStyle(
-                                  color: SaasPalette.textTertiary,
+                                  color: context.saas.textTertiary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 0.5,
@@ -893,8 +893,8 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
                                 ),
                                 child: Text(
                                   _isExpanded ? 'Ver menos' : 'Ver detalle',
-                                  style: const TextStyle(
-                                    color: SaasPalette.brand600,
+                                  style: TextStyle(
+                                    color: context.saas.brand600,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -929,9 +929,9 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: SaasPalette.border.withValues(alpha: 0.5)),
+        border: Border.all(color: context.saas.border.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -954,9 +954,9 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: SaasPalette.bgSubtle,
+        color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: SaasPalette.border.withValues(alpha: 0.5)),
+        border: Border.all(color: context.saas.border.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -973,8 +973,8 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
                 children: [
                   Text(
                     '${key.replaceAll('_', ' ')}: ',
-                    style: const TextStyle(
-                      color: SaasPalette.textTertiary,
+                    style: TextStyle(
+                      color: context.saas.textTertiary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -985,24 +985,24 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
                       children: [
                         Text(
                           '$oldVal',
-                          style: const TextStyle(
-                            color: SaasPalette.danger,
+                          style: TextStyle(
+                            color: context.saas.danger,
                             fontSize: 12,
                             decoration: TextDecoration.lineThrough,
                           ),
                         ),
-                        const Padding(
+                        Padding(
                           padding: EdgeInsets.symmetric(horizontal: 6),
                           child: Icon(
                             Icons.arrow_right_alt_rounded,
                             size: 14,
-                            color: SaasPalette.textTertiary,
+                            color: context.saas.textTertiary,
                           ),
                         ),
                         Text(
                           '$newVal',
-                          style: const TextStyle(
-                            color: SaasPalette.success,
+                          style: TextStyle(
+                            color: context.saas.success,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1026,11 +1026,11 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
       padding: const EdgeInsets.only(bottom: 4),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: SaasPalette.textSecondary, fontSize: 12),
+          style: TextStyle(color: context.saas.textSecondary, fontSize: 12),
           children: [
             TextSpan(
               text: '${key.replaceAll('_', ' ')}: ',
-              style: const TextStyle(color: SaasPalette.textTertiary, fontWeight: FontWeight.w600),
+              style: TextStyle(color: context.saas.textTertiary, fontWeight: FontWeight.w600),
             ),
             TextSpan(text: '$value'),
           ],
@@ -1047,12 +1047,12 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.code_rounded, size: 12, color: SaasPalette.brand600),
+            Icon(Icons.code_rounded, size: 12, color: context.saas.brand600),
             const SizedBox(width: 4),
-            const Text(
+            Text(
               'Ver JSON completo',
               style: TextStyle(
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
               ),
@@ -1196,14 +1196,14 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
   Widget _buildMetaRow(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, size: 14, color: SaasPalette.textTertiary),
+        Icon(icon, size: 14, color: context.saas.textTertiary),
         const SizedBox(width: 8),
-        Text('$label: ', style: const TextStyle(color: SaasPalette.textTertiary, fontSize: 12)),
+        Text('$label: ', style: TextStyle(color: context.saas.textTertiary, fontSize: 12)),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
-              color: SaasPalette.textPrimary,
+            style: TextStyle(
+              color: context.saas.textPrimary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -1215,10 +1215,10 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
 
   Color _getOperationColor(String op) {
     switch (op.toUpperCase()) {
-      case 'CREAR': return SaasPalette.success;
-      case 'ACTUALIZAR': return SaasPalette.brand600;
-      case 'ELIMINAR': return SaasPalette.danger;
-      default: return SaasPalette.textTertiary;
+      case 'CREAR': return context.saas.success;
+      case 'ACTUALIZAR': return context.saas.brand600;
+      case 'ELIMINAR': return context.saas.danger;
+      default: return context.saas.textTertiary;
     }
   }
 

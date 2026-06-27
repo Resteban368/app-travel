@@ -313,18 +313,18 @@ class _AdminShellState extends State<AdminShell> {
 
     if (!isDesktop) {
       return Scaffold(
-        backgroundColor: SaasPalette.bgApp,
+        backgroundColor: context.saas.bgApp,
         appBar: AppBar(
-          backgroundColor: SaasPalette.bgCanvas,
-          foregroundColor: SaasPalette.textPrimary,
+          backgroundColor: context.saas.bgCanvas,
+          foregroundColor: context.saas.textPrimary,
           elevation: 0,
-          shape: const Border(bottom: BorderSide(color: SaasPalette.border)),
-          title: const Text(
+          shape: Border(bottom: BorderSide(color: context.saas.border)),
+          title: Text(
             'Agente Viajes',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 16,
-              color: SaasPalette.textPrimary,
+              color: context.saas.textPrimary,
             ),
           ),
           leading: Builder(
@@ -351,7 +351,7 @@ class _AdminShellState extends State<AdminShell> {
     }
 
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       body: Row(
         children: [
           _buildSidebar(
@@ -376,9 +376,9 @@ class _AdminShellState extends State<AdminShell> {
   ) {
     return Container(
       width: 280,
-      decoration: const BoxDecoration(
-        color: SaasPalette.bgCanvas,
-        border: Border(right: BorderSide(color: SaasPalette.border)),
+      decoration: BoxDecoration(
+        color: context.saas.bgCanvas,
+        border: Border(right: BorderSide(color: context.saas.border)),
       ),
       child: Column(
         children: [
@@ -401,7 +401,7 @@ class _AdminShellState extends State<AdminShell> {
               },
             ),
           ),
-          const Divider(color: SaasPalette.border, height: 1),
+          Divider(color: context.saas.border, height: 1),
           _buildFooter(username),
         ],
       ),
@@ -415,7 +415,7 @@ class _AdminShellState extends State<AdminShell> {
     String currentRoute,
   ) {
     return Drawer(
-      backgroundColor: SaasPalette.bgCanvas,
+      backgroundColor: context.saas.bgCanvas,
       child: SafeArea(
         child: Column(
           children: [
@@ -423,9 +423,9 @@ class _AdminShellState extends State<AdminShell> {
               children: [
                 Expanded(child: _buildHeader(email)),
                 IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.close,
-                    color: SaasPalette.textSecondary,
+                    color: context.saas.textSecondary,
                   ),
                   onPressed: () => Navigator.pop(context),
                   padding: const EdgeInsets.all(16),
@@ -452,7 +452,7 @@ class _AdminShellState extends State<AdminShell> {
                 },
               ),
             ),
-            const Divider(color: SaasPalette.border, height: 1),
+            Divider(color: context.saas.border, height: 1),
             _buildFooter(username, isMobile: true),
           ],
         ),
@@ -472,7 +472,7 @@ class _AdminShellState extends State<AdminShell> {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: SaasPalette.brand600,
+              color: context.saas.brand600,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.flight, color: Colors.white, size: 18),
@@ -483,10 +483,10 @@ class _AdminShellState extends State<AdminShell> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   'Agente Viajes',
                   style: TextStyle(
-                    color: SaasPalette.textPrimary,
+                    color: context.saas.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -495,8 +495,8 @@ class _AdminShellState extends State<AdminShell> {
                 ),
                 Text(
                   email,
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  style: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 12,
                   ),
                   maxLines: 1,
@@ -514,12 +514,12 @@ class _AdminShellState extends State<AdminShell> {
                   AppRouter.enviarNotificacion,
                 ),
                 borderRadius: BorderRadius.circular(8),
-                child: const Padding(
+                child: Padding(
                   padding: EdgeInsets.all(6),
                   child: Icon(
                     Icons.add_alert_rounded,
                     size: 18,
-                    color: SaasPalette.textSecondary,
+                    color: context.saas.textSecondary,
                   ),
                 ),
               ),
@@ -537,35 +537,35 @@ class _AdminShellState extends State<AdminShell> {
       child: Container(
         height: 36,
         decoration: BoxDecoration(
-          color: SaasPalette.bgApp,
+          color: context.saas.bgApp,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: SaasPalette.border),
+          border: Border.all(color: context.saas.border),
         ),
         child: Row(
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(horizontal: 8),
               child: Icon(
                 Icons.search,
                 size: 16,
-                color: SaasPalette.textTertiary,
+                color: context.saas.textTertiary,
               ),
             ),
             Expanded(
               child: TextField(
                 controller: _searchController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Buscar...',
                   hintStyle: TextStyle(
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                     fontSize: 13,
                   ),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
                 ),
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
+                style: TextStyle(
+                  color: context.saas.textPrimary,
                   fontSize: 13,
                 ),
               ),
@@ -574,11 +574,11 @@ class _AdminShellState extends State<AdminShell> {
             //   margin: const EdgeInsets.only(right: 6),
             //   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             //   decoration: BoxDecoration(
-            //     color: SaasPalette.bgCanvas,
+            //     color: context.saas.bgCanvas,
             //     borderRadius: BorderRadius.circular(4),
-            //     border: Border.all(color: SaasPalette.border),
+            //     border: Border.all(color: context.saas.border),
             //   ),
-            //   child: const Text('⌘K', style: TextStyle(color: SaasPalette.textTertiary, fontSize: 10, fontWeight: FontWeight.bold)),
+            //   child: const Text('⌘K', style: TextStyle(color: context.saas.textTertiary, fontSize: 10, fontWeight: FontWeight.bold)),
             // ),
           ],
         ),
@@ -593,8 +593,8 @@ class _AdminShellState extends State<AdminShell> {
         alignment: Alignment.centerLeft,
         child: Text(
           label,
-          style: const TextStyle(
-            color: SaasPalette.textTertiary,
+          style: TextStyle(
+            color: context.saas.textTertiary,
             fontSize: 11,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
@@ -611,7 +611,7 @@ class _AdminShellState extends State<AdminShell> {
         children: [
           CircleAvatar(
             radius: 16,
-            backgroundColor: SaasPalette.brand600,
+            backgroundColor: context.saas.brand600,
             child: Text(
               username.isNotEmpty ? username[0].toUpperCase() : 'A',
               style: const TextStyle(
@@ -629,8 +629,8 @@ class _AdminShellState extends State<AdminShell> {
               children: [
                 Text(
                   username,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -645,7 +645,7 @@ class _AdminShellState extends State<AdminShell> {
             constraints: const BoxConstraints(),
             icon: Icon(
               Icons.logout_rounded,
-              color: SaasPalette.textSecondary,
+              color: context.saas.textSecondary,
               size: 20,
             ),
             onPressed: () {
@@ -691,21 +691,21 @@ class _AdminShellState extends State<AdminShell> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: SaasPalette.bgCanvas,
-        title: const Text(
+        backgroundColor: context.saas.bgCanvas,
+        title: Text(
           'Cerrar Sesión',
-          style: TextStyle(color: SaasPalette.textPrimary),
+          style: TextStyle(color: context.saas.textPrimary),
         ),
-        content: const Text(
+        content: Text(
           '¿Está seguro de que desea cerrar sesión?',
-          style: TextStyle(color: SaasPalette.textSecondary),
+          style: TextStyle(color: context.saas.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               'Cancelar',
-              style: TextStyle(color: SaasPalette.textSecondary),
+              style: TextStyle(color: context.saas.textSecondary),
             ),
           ),
           TextButton(
@@ -713,9 +713,9 @@ class _AdminShellState extends State<AdminShell> {
               Navigator.pop(context);
               _onLogout();
             },
-            child: const Text(
+            child: Text(
               'Cerrar Sesión',
-              style: TextStyle(color: SaasPalette.danger),
+              style: TextStyle(color: context.saas.danger),
             ),
           ),
         ],

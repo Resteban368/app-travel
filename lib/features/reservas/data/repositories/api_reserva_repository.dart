@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../../domain/entities/reserva.dart';
 import '../../domain/entities/integrante.dart';
@@ -17,6 +18,7 @@ import 'package:agente_viajes/features/agentes/domain/entities/agente.dart';
 import 'package:agente_viajes/features/pagos_realizados/domain/entities/pago_realizado.dart';
 import 'package:agente_viajes/features/tour/domain/entities/tour_precio.dart';
 import 'package:agente_viajes/features/tour/domain/entities/precio_grupal.dart';
+import 'package:agente_viajes/features/tour/domain/entities/tour_salida.dart';
 
 class ApiReservaRepository implements ReservaRepository {
   final http.Client client;
@@ -126,6 +128,17 @@ class ApiReservaRepository implements ReservaRepository {
       if (reserva.precioResponsableAplicado != null) {
         bodyMap['precio_responsable_aplicado'] = reserva.precioResponsableAplicado;
       }
+      if (reserva.idTourSalida != null) {
+        bodyMap['id_tour_salida'] = reserva.idTourSalida;
+      }
+      if (reserva.fechaInicioPersonalizada != null) {
+        bodyMap['fecha_inicio_personalizada'] =
+            DateFormat('yyyy-MM-dd').format(reserva.fechaInicioPersonalizada!);
+      }
+      if (reserva.fechaFinPersonalizada != null) {
+        bodyMap['fecha_fin_personalizada'] =
+            DateFormat('yyyy-MM-dd').format(reserva.fechaFinPersonalizada!);
+      }
     }
 
     if (reserva.valorTotal != null) {
@@ -181,6 +194,17 @@ class ApiReservaRepository implements ReservaRepository {
       }
       if (reserva.precioResponsableAplicado != null) {
         bodyMap['precio_responsable_aplicado'] = reserva.precioResponsableAplicado;
+      }
+      if (reserva.idTourSalida != null) {
+        bodyMap['id_tour_salida'] = reserva.idTourSalida;
+      }
+      if (reserva.fechaInicioPersonalizada != null) {
+        bodyMap['fecha_inicio_personalizada'] =
+            DateFormat('yyyy-MM-dd').format(reserva.fechaInicioPersonalizada!);
+      }
+      if (reserva.fechaFinPersonalizada != null) {
+        bodyMap['fecha_fin_personalizada'] =
+            DateFormat('yyyy-MM-dd').format(reserva.fechaFinPersonalizada!);
       }
     }
 
@@ -486,6 +510,16 @@ class ApiReservaRepository implements ReservaRepository {
       asientosBus: (json['asientos_bus'] as List<dynamic>? ?? [])
           .map((e) => e.toString())
           .toList(),
+      idTourSalida: int.tryParse(json['id_tour_salida']?.toString() ?? ''),
+      tourSalida: json['tour_salida'] != null
+          ? TourSalida.fromJson(json['tour_salida'] as Map<String, dynamic>)
+          : null,
+      fechaInicioPersonalizada: json['fecha_inicio_personalizada'] != null
+          ? DateTime.tryParse(json['fecha_inicio_personalizada'].toString())
+          : null,
+      fechaFinPersonalizada: json['fecha_fin_personalizada'] != null
+          ? DateTime.tryParse(json['fecha_fin_personalizada'].toString())
+          : null,
     );
   }
 
@@ -628,6 +662,14 @@ class ApiReservaRepository implements ReservaRepository {
             .map((p) => PrecioGrupal.fromJson(p as Map<String, dynamic>))
             .toList(),
         imagenes: (jsonTour['imagenes'] as List? ?? []).whereType<String>().toList(),
+        disponibilidadTipo: jsonTour['disponibilidad_tipo']?.toString() ?? 'fecha_fija',
+        salidas: jsonTour['salidas'] != null
+            ? (jsonTour['salidas'] as List)
+                  .map((s) => TourSalida.fromJson(s as Map<String, dynamic>))
+                  .toList()
+            : null,
+        descripcion: jsonTour['descripcion']?.toString(),
+        recomendaciones: jsonTour['recomendaciones']?.toString(),
       );
     } catch (e) {
       debugPrint('❌ [ApiReservaRepository] _parseTour error: $e');

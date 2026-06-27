@@ -33,14 +33,14 @@ class _InfoEmpresaListScreenState extends State<InfoEmpresaListScreen> {
         authState.user.canWrite('infoEmpresa');
 
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       body: BlocConsumer<InfoEmpresaBloc, InfoEmpresaState>(
         listener: (context, state) {
           if (state is InfoSynced) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
+              SnackBar(
                 content: Text('Vectores sincronizados correctamente'),
-                backgroundColor: SaasPalette.success,
+                backgroundColor: context.saas.success,
               ),
             );
           }
@@ -48,7 +48,7 @@ class _InfoEmpresaListScreenState extends State<InfoEmpresaListScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: SaasPalette.danger,
+                backgroundColor: context.saas.danger,
               ),
             );
           }
@@ -165,11 +165,11 @@ class _InfoHeader extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Información de Empresa',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -179,7 +179,7 @@ class _InfoHeader extends StatelessWidget {
                   Text(
                     'Administra la identidad corporativa y base documental de la agencia.',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 14,
                     ),
                   ),
@@ -234,10 +234,10 @@ class _InfoCardState extends State<_InfoCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
+              color: _hovered ? context.saas.brand600 : context.saas.border,
               width: _hovered ? 1.5 : 1,
             ),
             boxShadow: [
@@ -267,12 +267,12 @@ class _InfoCardState extends State<_InfoCard> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: SaasPalette.brand50,
+                          color: context.saas.brand50,
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.business_rounded,
-                          color: SaasPalette.brand600,
+                          color: context.saas.brand600,
                           size: 24,
                         ),
                       ),
@@ -283,16 +283,16 @@ class _InfoCardState extends State<_InfoCard> {
                           children: [
                             Text(
                               i.nombre,
-                              style: const TextStyle(
-                                color: SaasPalette.textPrimary,
+                              style: TextStyle(
+                                color: context.saas.textPrimary,
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                             Text(
                               'Gerente: ${i.nombreGerente}',
-                              style: const TextStyle(
-                                color: SaasPalette.textSecondary,
+                              style: TextStyle(
+                                color: context.saas.textSecondary,
                                 fontSize: 13,
                               ),
                             ),
@@ -300,10 +300,10 @@ class _InfoCardState extends State<_InfoCard> {
                         ),
                       ),
                       if (widget.canWrite && !isBusy)
-                        const Icon(
+                        Icon(
                           Icons.arrow_forward_ios_rounded,
                           size: 14,
-                          color: SaasPalette.textTertiary,
+                          color: context.saas.textTertiary,
                         ),
                     ],
                   ),
@@ -312,8 +312,8 @@ class _InfoCardState extends State<_InfoCard> {
                     i.detalles,
                     maxLines: 4,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: SaasPalette.textSecondary,
+                    style: TextStyle(
+                      color: context.saas.textSecondary,
                       fontSize: 14,
                       height: 1.6,
                     ),
@@ -335,9 +335,9 @@ class _InfoCardState extends State<_InfoCard> {
                   ),
                   if (isBusy) ...[
                     const SizedBox(height: 20),
-                    const LinearProgressIndicator(
-                      backgroundColor: SaasPalette.bgApp,
-                      valueColor: AlwaysStoppedAnimation(SaasPalette.brand600),
+                    LinearProgressIndicator(
+                      backgroundColor: context.saas.bgApp,
+                      valueColor: AlwaysStoppedAnimation(context.saas.brand600),
                       minHeight: 2,
                     ),
                   ],
@@ -361,12 +361,12 @@ class _ContactInfo extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: SaasPalette.textTertiary, size: 16),
+        Icon(icon, color: context.saas.textTertiary, size: 16),
         const SizedBox(width: 8),
         Text(
           label,
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
+          style: TextStyle(
+            color: context.saas.textSecondary,
             fontSize: 13,
             fontWeight: FontWeight.w500,
           ),

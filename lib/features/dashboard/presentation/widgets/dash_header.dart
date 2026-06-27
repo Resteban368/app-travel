@@ -33,7 +33,7 @@ class DashHeader extends StatelessWidget {
                   Text(
                     '${_greeting()}, Administrador',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: isMobile ? 20 : 26,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
@@ -43,7 +43,7 @@ class DashHeader extends StatelessWidget {
                   Text(
                     'Bienvenido al centro de operaciones de Agente Viajes.',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: isMobile ? 12 : 14,
                       height: 1.4,
                     ),
@@ -56,13 +56,13 @@ class DashHeader extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: SaasPalette.bgSubtle,
+                  color: context.saas.bgSubtle,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: SaasPalette.border.withValues(alpha: 0.5)),
+                  border: Border.all(color: context.saas.border.withValues(alpha: 0.5)),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.person_outline_rounded,
-                  color: SaasPalette.brand600,
+                  color: context.saas.brand600,
                   size: 24,
                 ),
               ),

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:agente_viajes/features/tour/domain/entities/tour.dart';
+import 'package:agente_viajes/features/tour/domain/entities/tour_salida.dart';
 import 'package:agente_viajes/features/clientes/domain/entities/cliente.dart';
 import 'package:agente_viajes/features/agentes/domain/entities/agente.dart';
 import 'package:agente_viajes/features/pagos_realizados/domain/entities/pago_realizado.dart';
@@ -40,6 +41,10 @@ class Reserva extends Equatable {
   final double? valorCancelado;
   final String? seleccionLink;
   final List<String> asientosBus;
+  final int? idTourSalida;
+  final TourSalida? tourSalida;
+  final DateTime? fechaInicioPersonalizada;
+  final DateTime? fechaFinPersonalizada;
 
   const Reserva({
     this.id,
@@ -73,6 +78,10 @@ class Reserva extends Equatable {
     this.valorCancelado,
     this.seleccionLink,
     this.asientosBus = const [],
+    this.idTourSalida,
+    this.tourSalida,
+    this.fechaInicioPersonalizada,
+    this.fechaFinPersonalizada,
   });
 
   Reserva copyWith({
@@ -107,6 +116,10 @@ class Reserva extends Equatable {
     double? valorCancelado,
     String? seleccionLink,
     List<String>? asientosBus,
+    int? idTourSalida,
+    TourSalida? tourSalida,
+    DateTime? fechaInicioPersonalizada,
+    DateTime? fechaFinPersonalizada,
   }) {
     return Reserva(
       id: id ?? this.id,
@@ -141,6 +154,10 @@ class Reserva extends Equatable {
       valorCancelado: valorCancelado ?? this.valorCancelado,
       seleccionLink: seleccionLink ?? this.seleccionLink,
       asientosBus: asientosBus ?? this.asientosBus,
+      idTourSalida: idTourSalida ?? this.idTourSalida,
+      tourSalida: tourSalida ?? this.tourSalida,
+      fechaInicioPersonalizada: fechaInicioPersonalizada ?? this.fechaInicioPersonalizada,
+      fechaFinPersonalizada: fechaFinPersonalizada ?? this.fechaFinPersonalizada,
     );
   }
 
@@ -177,5 +194,9 @@ class Reserva extends Equatable {
     valorCancelado,
     seleccionLink,
     asientosBus,
+    idTourSalida,
+    tourSalida,
+    fechaInicioPersonalizada,
+    fechaFinPersonalizada,
   ];
 }

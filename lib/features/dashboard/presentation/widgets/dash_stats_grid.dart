@@ -48,8 +48,8 @@ class DashStatsGrid extends StatelessWidget {
                     ? 'Requieren validación'
                     : 'Todo al día',
                 color: pendingPagos > 0
-                    ? SaasPalette.danger
-                    : SaasPalette.success,
+                    ? context.saas.danger
+                    : context.saas.success,
               ),
             ),
             _InkStatWrapper(
@@ -58,7 +58,7 @@ class DashStatsGrid extends StatelessWidget {
                 label: 'Tours Activos',
                 value: '$totalActive',
                 trend: 'Experiencias publicadas',
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
               ),
             ),
             _InkStatWrapper(
@@ -67,7 +67,7 @@ class DashStatsGrid extends StatelessWidget {
                 label: 'Promociones',
                 value: '$totalPromos',
                 trend: 'Vigentes hoy',
-                color: SaasPalette.warning,
+                color: context.saas.warning,
               ),
             ),
             _InkStatWrapper(
@@ -79,8 +79,8 @@ class DashStatsGrid extends StatelessWidget {
                     ? 'Sin responder'
                     : 'Todo atendido',
                 color: pendingCotizaciones > 0
-                    ? SaasPalette.warning
-                    : SaasPalette.success,
+                    ? context.saas.warning
+                    : context.saas.success,
               ),
             ),
           ],

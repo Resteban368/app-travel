@@ -24,9 +24,9 @@ class SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -65,8 +65,8 @@ class SummaryCard extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   value,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -1.0,
@@ -75,8 +75,8 @@ class SummaryCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   label.toUpperCase(),
-                  style: const TextStyle(
-                    color: SaasPalette.textTertiary,
+                  style: TextStyle(
+                    color: context.saas.textTertiary,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.8,
@@ -130,12 +130,12 @@ class VuelosPorAgenteCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(vertical: 12),
           child: Text(
             'Vuelos por Agente',
             style: TextStyle(
-              color: SaasPalette.textPrimary,
+              color: context.saas.textPrimary,
               fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
@@ -144,7 +144,7 @@ class VuelosPorAgenteCard extends StatelessWidget {
         ...grupos.map(
           (g) => AnalyticsExpansionCard(
             icon: Icons.person_outline_rounded,
-            color: SaasPalette.brand600,
+            color: context.saas.brand600,
             title: g.agenteNombre,
             count: g.totalReservas,
             emptyText: 'Sin reservas asignadas',
@@ -154,9 +154,9 @@ class VuelosPorAgenteCard extends StatelessWidget {
                     margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: SaasPalette.bgApp,
+                      color: context.saas.bgApp,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: SaasPalette.border),
+                      border: Border.all(color: context.saas.border),
                     ),
                     child: Row(
                       children: [
@@ -166,16 +166,16 @@ class VuelosPorAgenteCard extends StatelessWidget {
                             children: [
                               Text(
                                 'Reserva: ${r.idReserva}',
-                                style: const TextStyle(
-                                  color: SaasPalette.textPrimary,
+                                style: TextStyle(
+                                  color: context.saas.textPrimary,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                               Text(
                                 r.correo,
-                                style: const TextStyle(
-                                  color: SaasPalette.textSecondary,
+                                style: TextStyle(
+                                  color: context.saas.textSecondary,
                                   fontSize: 11,
                                 ),
                               ),
@@ -184,8 +184,8 @@ class VuelosPorAgenteCard extends StatelessWidget {
                         ),
                         Text(
                           currFmt.format(r.valorTotal),
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),

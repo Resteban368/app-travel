@@ -33,8 +33,8 @@ class NotificacionBell extends StatelessWidget {
                     Icons.notifications_rounded,
                     size: 20,
                     color: count > 0
-                        ? SaasPalette.brand600
-                        : SaasPalette.textSecondary,
+                        ? context.saas.brand600
+                        : context.saas.textSecondary,
                   ),
                   if (count > 0)
                     Positioned(
@@ -46,8 +46,8 @@ class NotificacionBell extends StatelessWidget {
                           minWidth: 16,
                           minHeight: 16,
                         ),
-                        decoration: const BoxDecoration(
-                          color: SaasPalette.danger,
+                        decoration: BoxDecoration(
+                          color: context.saas.danger,
                           shape: BoxShape.circle,
                         ),
                         child: Text(
@@ -83,9 +83,9 @@ class NotificacionBell extends StatelessWidget {
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: SaasPalette.bgCanvas,
+        backgroundColor: context.saas.bgCanvas,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.notifications_active_rounded,
                 color: Color(0xFFF59E0B), size: 22),
@@ -94,7 +94,7 @@ class NotificacionBell extends StatelessWidget {
               child: Text(
                 'Notificaciones del navegador',
                 style: TextStyle(
-                  color: SaasPalette.textPrimary,
+                  color: context.saas.textPrimary,
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
@@ -102,16 +102,16 @@ class NotificacionBell extends StatelessWidget {
             ),
           ],
         ),
-        content: const Text(
+        content: Text(
           'Activa las notificaciones para recibir alertas aunque estés en otra pestaña del navegador.',
-          style: TextStyle(color: SaasPalette.textSecondary, fontSize: 14),
+          style: TextStyle(color: context.saas.textSecondary, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
+            child: Text(
               'Ahora no',
-              style: TextStyle(color: SaasPalette.textSecondary),
+              style: TextStyle(color: context.saas.textSecondary),
             ),
           ),
           ElevatedButton.icon(
@@ -194,9 +194,9 @@ class _NotificacionPanel extends StatelessWidget {
         maxHeight: MediaQuery.of(context).size.height * 0.75,
       ),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.12),
@@ -211,7 +211,7 @@ class _NotificacionPanel extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildHeader(context),
-            const Divider(height: 1, color: SaasPalette.border),
+            Divider(height: 1, color: context.saas.border),
             Flexible(child: _buildList(context)),
           ],
         ),
@@ -228,16 +228,16 @@ class _NotificacionPanel extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
           child: Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.notifications_rounded,
                 size: 18,
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
               ),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Notificaciones',
                 style: TextStyle(
-                  color: SaasPalette.textPrimary,
+                  color: context.saas.textPrimary,
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
@@ -247,7 +247,7 @@ class _NotificacionPanel extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                   decoration: BoxDecoration(
-                    color: SaasPalette.danger,
+                    color: context.saas.danger,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -270,20 +270,20 @@ class _NotificacionPanel extends StatelessWidget {
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text(
+                  child: Text(
                     'Leer todo',
                     style: TextStyle(
                       fontSize: 12,
-                      color: SaasPalette.brand600,
+                      color: context.saas.brand600,
                     ),
                   ),
                 ),
               IconButton(
                 onPressed: onClose,
-                icon: const Icon(
+                icon: Icon(
                   Icons.close_rounded,
                   size: 18,
-                  color: SaasPalette.textSecondary,
+                  color: context.saas.textSecondary,
                 ),
                 padding: const EdgeInsets.all(4),
                 constraints: const BoxConstraints(),
@@ -307,12 +307,12 @@ class _NotificacionPanel extends StatelessWidget {
     return BlocBuilder<NotificacionBloc, NotificacionState>(
       builder: (context, state) {
         if (state is NotificacionCargando) {
-          return const SizedBox(
+          return SizedBox(
             height: 120,
             child: Center(
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: SaasPalette.brand600,
+                color: context.saas.brand600,
               ),
             ),
           );
@@ -321,7 +321,7 @@ class _NotificacionPanel extends StatelessWidget {
         final items = state is NotificacionesCargadas ? state.items : <Notificacion>[];
 
         if (items.isEmpty) {
-          return const SizedBox(
+          return SizedBox(
             height: 140,
             child: Center(
               child: Column(
@@ -330,13 +330,13 @@ class _NotificacionPanel extends StatelessWidget {
                   Icon(
                     Icons.notifications_off_outlined,
                     size: 36,
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                   ),
                   SizedBox(height: 8),
                   Text(
                     'Sin notificaciones',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 13,
                     ),
                   ),
@@ -351,7 +351,7 @@ class _NotificacionPanel extends StatelessWidget {
           padding: EdgeInsets.zero,
           itemCount: items.length,
           separatorBuilder: (context, index) =>
-              const Divider(height: 1, color: SaasPalette.border),
+              Divider(height: 1, color: context.saas.border),
           itemBuilder: (ctx, i) => _NotificacionTile(
             notificacion: items[i],
             isAdmin: isAdmin,
@@ -460,7 +460,7 @@ class _NotificacionTileState extends State<_NotificacionTile>
             onTap: widget.onTap,
             child: Container(
               color: unread
-                  ? SaasPalette.brand600.withValues(alpha: 0.04)
+                  ? context.saas.brand600.withValues(alpha: 0.04)
                   : Colors.transparent,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
@@ -478,7 +478,7 @@ class _NotificacionTileState extends State<_NotificacionTile>
                               child: Text(
                                 widget.notificacion.titulo,
                                 style: TextStyle(
-                                  color: SaasPalette.textPrimary,
+                                  color: context.saas.textPrimary,
                                   fontSize: 13,
                                   fontWeight: unread
                                       ? FontWeight.w700
@@ -493,8 +493,8 @@ class _NotificacionTileState extends State<_NotificacionTile>
                                 width: 7,
                                 height: 7,
                                 margin: const EdgeInsets.only(left: 6),
-                                decoration: const BoxDecoration(
-                                  color: SaasPalette.brand600,
+                                decoration: BoxDecoration(
+                                  color: context.saas.brand600,
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -503,8 +503,8 @@ class _NotificacionTileState extends State<_NotificacionTile>
                         const SizedBox(height: 3),
                         Text(
                           widget.notificacion.mensaje,
-                          style: const TextStyle(
-                            color: SaasPalette.textSecondary,
+                          style: TextStyle(
+                            color: context.saas.textSecondary,
                             fontSize: 12,
                           ),
                           maxLines: 2,
@@ -516,14 +516,14 @@ class _NotificacionTileState extends State<_NotificacionTile>
                             if (widget.notificacion.esGeneral)
                               _SmallBadge(
                                 label: 'General',
-                                color: SaasPalette.textTertiary,
+                                color: context.saas.textTertiary,
                               ),
                             if (widget.notificacion.esGeneral)
                               const SizedBox(width: 6),
                             Text(
                               _formatTime(widget.notificacion.createdAt),
-                              style: const TextStyle(
-                                color: SaasPalette.textTertiary,
+                              style: TextStyle(
+                                color: context.saas.textTertiary,
                                 fontSize: 11,
                               ),
                             ),
@@ -538,13 +538,13 @@ class _NotificacionTileState extends State<_NotificacionTile>
                       icon: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 180),
                         child: _deleting
-                            ? const SizedBox(
+                            ? SizedBox(
                                 key: ValueKey('spinner'),
                                 width: 16,
                                 height: 16,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 1.5,
-                                  color: SaasPalette.textTertiary,
+                                  color: context.saas.textTertiary,
                                 ),
                               )
                             : const Icon(
@@ -553,7 +553,7 @@ class _NotificacionTileState extends State<_NotificacionTile>
                                 size: 16,
                               ),
                       ),
-                      color: SaasPalette.textTertiary,
+                      color: context.saas.textTertiary,
                       padding: const EdgeInsets.all(4),
                       constraints: const BoxConstraints(),
                     ),
@@ -578,8 +578,8 @@ class _TipoIcon extends StatelessWidget {
     final (icon, color) = switch (tipo) {
       'cotizacion' => (Icons.request_quote_rounded, const Color(0xFF7C3AED)),
       'pago' => (Icons.payments_rounded, const Color(0xFF059669)),
-      'reserva' => (Icons.airplane_ticket_rounded, SaasPalette.brand600),
-      'sistema' => (Icons.settings_rounded, SaasPalette.textSecondary),
+      'reserva' => (Icons.airplane_ticket_rounded, context.saas.brand600),
+      'sistema' => (Icons.settings_rounded, context.saas.textSecondary),
       _ => (Icons.campaign_rounded, const Color(0xFFD97706)),
     };
     return Container(
@@ -619,8 +619,8 @@ class _NotificacionDetailDialog extends StatelessWidget {
     final (icon, color) = switch (n.tipo) {
       'cotizacion' => (Icons.request_quote_rounded,  const Color(0xFF7C3AED)),
       'pago'       => (Icons.payments_rounded,        const Color(0xFF059669)),
-      'reserva'    => (Icons.airplane_ticket_rounded, SaasPalette.brand600),
-      'sistema'    => (Icons.settings_rounded,        SaasPalette.textSecondary),
+      'reserva'    => (Icons.airplane_ticket_rounded, context.saas.brand600),
+      'sistema'    => (Icons.settings_rounded,        context.saas.textSecondary),
       _            => (Icons.campaign_rounded,         const Color(0xFFD97706)),
     };
 
@@ -656,8 +656,8 @@ class _NotificacionDetailDialog extends StatelessWidget {
                       children: [
                         Text(
                           n.titulo,
-                          style: const TextStyle(
-                            color: SaasPalette.textPrimary,
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             height: 1.3,
@@ -673,20 +673,20 @@ class _NotificacionDetailDialog extends StatelessWidget {
                               color: color,
                             ),
                             if (n.esGeneral)
-                              const _SmallBadge(
+                              _SmallBadge(
                                 label: 'General',
-                                color: SaasPalette.textTertiary,
+                                color: context.saas.textTertiary,
                               )
                             else
-                              const _SmallBadge(
+                              _SmallBadge(
                                 label: 'Personal',
-                                color: SaasPalette.brand600,
+                                color: context.saas.brand600,
                               ),
                             _SmallBadge(
                               label: n.leida ? 'Leída' : 'No leída',
                               color: n.leida
-                                  ? SaasPalette.textTertiary
-                                  : SaasPalette.danger,
+                                  ? context.saas.textTertiary
+                                  : context.saas.danger,
                             ),
                           ],
                         ),
@@ -696,7 +696,7 @@ class _NotificacionDetailDialog extends StatelessWidget {
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close_rounded, size: 18),
-                    color: SaasPalette.textSecondary,
+                    color: context.saas.textSecondary,
                     padding: const EdgeInsets.all(4),
                     constraints: const BoxConstraints(),
                   ),
@@ -704,14 +704,14 @@ class _NotificacionDetailDialog extends StatelessWidget {
               ),
 
               const SizedBox(height: 18),
-              const Divider(color: SaasPalette.border, height: 1),
+              Divider(color: context.saas.border, height: 1),
               const SizedBox(height: 18),
 
               // ── Mensaje completo ──────────────────────────────────────────
-              const Text(
+              Text(
                 'Mensaje',
                 style: TextStyle(
-                  color: SaasPalette.textTertiary,
+                  color: context.saas.textTertiary,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
@@ -720,15 +720,15 @@ class _NotificacionDetailDialog extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 n.mensaje,
-                style: const TextStyle(
-                  color: SaasPalette.textPrimary,
+                style: TextStyle(
+                  color: context.saas.textPrimary,
                   fontSize: 14,
                   height: 1.6,
                 ),
               ),
 
               const SizedBox(height: 18),
-              const Divider(color: SaasPalette.border, height: 1),
+              Divider(color: context.saas.border, height: 1),
               const SizedBox(height: 14),
 
               // ── Metadatos ─────────────────────────────────────────────────
@@ -777,7 +777,7 @@ class _NotificacionDetailDialog extends StatelessWidget {
                 child: FilledButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: FilledButton.styleFrom(
-                    backgroundColor: SaasPalette.brand600,
+                    backgroundColor: context.saas.brand600,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -813,14 +813,14 @@ class _MetaRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 14, color: SaasPalette.textTertiary),
+        Icon(icon, size: 14, color: context.saas.textTertiary),
         const SizedBox(width: 6),
         SizedBox(
           width: 80,
           child: Text(
             label,
-            style: const TextStyle(
-              color: SaasPalette.textTertiary,
+            style: TextStyle(
+              color: context.saas.textTertiary,
               fontSize: 12,
             ),
           ),
@@ -828,8 +828,8 @@ class _MetaRow extends StatelessWidget {
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
-              color: SaasPalette.textPrimary,
+            style: TextStyle(
+              color: context.saas.textPrimary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),

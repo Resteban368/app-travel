@@ -83,7 +83,7 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: SaasPalette.bgApp,
+        backgroundColor: context.saas.bgApp,
         body: BlocBuilder<TourHistoricoBloc, TourHistoricoState>(
           builder: (context, state) {
             List<Tour>? tours;
@@ -158,11 +158,11 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Histórico de tours',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -172,7 +172,7 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
                   Text(
                     'Registro de tours y promociones finalizados.',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 14,
                     ),
                   ),
@@ -201,27 +201,27 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
         child: Container(
           height: 44,
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: SaasPalette.border),
+            border: Border.all(color: context.saas.border),
           ),
           child: Row(
             children: [
               const SizedBox(width: 12),
-              const Icon(Icons.search, size: 18, color: SaasPalette.textTertiary),
+              Icon(Icons.search, size: 18, color: context.saas.textTertiary),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
                   controller: _searchCtrl,
                   onChanged: (v) => setState(() => _searchQuery = v),
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 14,
                   ),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Buscar por nombre...',
                     hintStyle: TextStyle(
-                      color: SaasPalette.textTertiary,
+                      color: context.saas.textTertiary,
                       fontSize: 14,
                     ),
                     border: InputBorder.none,
@@ -238,7 +238,7 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
         height: 44,
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: SaasPalette.bgSubtle,
+          color: context.saas.bgSubtle,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -253,7 +253,7 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: isSelected ? SaasPalette.bgCanvas : Colors.transparent,
+                    color: isSelected ? context.saas.bgCanvas : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: isSelected
                         ? [
@@ -269,8 +269,8 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
                     tab,
                     style: TextStyle(
                       color: isSelected
-                          ? SaasPalette.textPrimary
-                          : SaasPalette.textTertiary,
+                          ? context.saas.textPrimary
+                          : context.saas.textTertiary,
                       fontSize: 13,
                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                     ),
@@ -297,18 +297,18 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: SaasPalette.bgCanvas,
+        color: context.saas.bgCanvas,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SaasPalette.border),
+        border: Border.all(color: context.saas.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Filtrar por fecha',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: SaasPalette.textPrimary,
+              color: context.saas.textPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -324,24 +324,24 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                border: Border.all(color: SaasPalette.border),
+                border: Border.all(color: context.saas.border),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.calendar_today,
                     size: 16,
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                   ),
                   const SizedBox(width: 12),
                   Text(
                     _dateRange == null
                         ? 'Seleccionar rango'
                         : '${DateFormat('dd/MM/yyyy').format(_dateRange!.start)} — ${DateFormat('dd/MM/yyyy').format(_dateRange!.end)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                     ),
                   ),
                 ],
@@ -390,16 +390,16 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.error_outline_rounded,
                 size: 56,
-                color: SaasPalette.danger,
+                color: context.saas.danger,
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Error al cargar el histórico',
                 style: TextStyle(
-                  color: SaasPalette.textPrimary,
+                  color: context.saas.textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -408,8 +408,8 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
               Text(
                 state.message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: SaasPalette.textSecondary,
+                style: TextStyle(
+                  color: context.saas.textSecondary,
                   fontSize: 13,
                 ),
               ),
@@ -481,9 +481,9 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
     final isPromo = tour.isPromotion;
 
     final Color typeColor = isPromo
-        ? SaasPalette.warning.withValues(alpha: 0.12)
-        : SaasPalette.brand50;
-    final Color typeText = isPromo ? SaasPalette.warning : SaasPalette.brand600;
+        ? context.saas.warning.withValues(alpha: 0.12)
+        : context.saas.brand50;
+    final Color typeText = isPromo ? context.saas.warning : context.saas.brand600;
 
     final ocupados = (tour.cupos ?? 0) - (tour.cuposDisponibles ?? 0);
     final total = tour.cupos ?? 1;
@@ -496,10 +496,10 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
         duration: const Duration(milliseconds: 180),
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
+          color: context.saas.bgCanvas,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
+            color: _hovered ? context.saas.brand600 : context.saas.border,
           ),
           boxShadow: [
             BoxShadow(
@@ -561,8 +561,8 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
                               Flexible(
                                 child: Text(
                                   tour.name,
-                                  style: const TextStyle(
-                                    color: SaasPalette.textPrimary,
+                                  style: TextStyle(
+                                    color: context.saas.textPrimary,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -596,13 +596,13 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: SaasPalette.textTertiary.withValues(alpha: 0.12),
+                                  color: context.saas.textTertiary.withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(5),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'FINALIZADO',
                                   style: TextStyle(
-                                    color: SaasPalette.textTertiary,
+                                    color: context.saas.textTertiary,
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -626,7 +626,7 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
                                       child: Icon(
                                         Icons.calendar_today_outlined,
                                         size: 12,
-                                        color: SaasPalette.textTertiary,
+                                        color: context.saas.textTertiary,
                                       ),
                                     ),
                                     const WidgetSpan(child: SizedBox(width: 4)),
@@ -634,8 +634,8 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
                                       text: tour.startDate != null && tour.endDate != null
                                           ? '${DateFormat('dd MMM').format(tour.startDate!)} — ${DateFormat('dd MMM yyyy').format(tour.endDate!)}'
                                           : 'Fecha no disponible',
-                                      style: const TextStyle(
-                                        color: SaasPalette.textSecondary,
+                                      style: TextStyle(
+                                        color: context.saas.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -650,14 +650,14 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
                                       child: Icon(
                                         Icons.location_on_outlined,
                                         size: 12,
-                                        color: SaasPalette.textTertiary,
+                                        color: context.saas.textTertiary,
                                       ),
                                     ),
                                     const WidgetSpan(child: SizedBox(width: 4)),
                                     TextSpan(
                                       text: tour.departurePoint,
-                                      style: const TextStyle(
-                                        color: SaasPalette.textSecondary,
+                                      style: TextStyle(
+                                        color: context.saas.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -674,15 +674,15 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
                               children: [
                                 Text(
                                   widget.currencyFormat.format(tour.price),
-                                  style: const TextStyle(
-                                    color: SaasPalette.brand600,
+                                  style: TextStyle(
+                                    color: context.saas.brand600,
                                     fontSize: 15,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                                const Icon(
+                                Icon(
                                   Icons.chevron_right_rounded,
-                                  color: SaasPalette.textTertiary,
+                                  color: context.saas.textTertiary,
                                   size: 20,
                                 ),
                               ],
@@ -699,9 +699,9 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
                                   child: LinearProgressIndicator(
                                     value: progress,
                                     minHeight: 5,
-                                    backgroundColor: SaasPalette.bgSubtle,
-                                    valueColor: const AlwaysStoppedAnimation<Color>(
-                                      SaasPalette.textTertiary,
+                                    backgroundColor: context.saas.bgSubtle,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      context.saas.textTertiary,
                                     ),
                                   ),
                                 ),
@@ -709,8 +709,8 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
                               const SizedBox(width: 8),
                               Text(
                                 '$ocupados/${tour.cupos ?? 0} cupos',
-                                style: const TextStyle(
-                                  color: SaasPalette.textTertiary,
+                                style: TextStyle(
+                                  color: context.saas.textTertiary,
                                   fontSize: 11,
                                 ),
                               ),
@@ -724,8 +724,8 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
                       const SizedBox(width: 16),
                       Text(
                         widget.currencyFormat.format(tour.price),
-                        style: const TextStyle(
-                          color: SaasPalette.textPrimary,
+                        style: TextStyle(
+                          color: context.saas.textPrimary,
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                         ),
@@ -734,12 +734,12 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
                     ],
                     if (widget.canWrite)
                       PopupMenuButton<String>(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.more_vert_rounded,
-                          color: SaasPalette.textTertiary,
+                          color: context.saas.textTertiary,
                           size: 20,
                         ),
-                        color: SaasPalette.bgCanvas,
+                        color: context.saas.bgCanvas,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -749,22 +749,22 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
                           }
                         },
                         itemBuilder: (_) => [
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'duplicate',
                             child: Row(
                               children: [
-                                Icon(Icons.copy_rounded, size: 16, color: SaasPalette.brand600),
+                                Icon(Icons.copy_rounded, size: 16, color: context.saas.brand600),
                                 SizedBox(width: 8),
-                                Text('Duplicar', style: TextStyle(color: SaasPalette.textPrimary)),
+                                Text('Duplicar', style: TextStyle(color: context.saas.textPrimary)),
                               ],
                             ),
                           ),
                         ],
                       )
                     else if (!isNarrow)
-                      const Icon(
+                      Icon(
                         Icons.chevron_right_rounded,
-                        color: SaasPalette.textTertiary,
+                        color: context.saas.textTertiary,
                         size: 20,
                       ),
                   ],
@@ -786,9 +786,9 @@ class _SkelCard extends StatelessWidget {
     height: 120,
     margin: const EdgeInsets.only(bottom: 16),
     decoration: BoxDecoration(
-      color: SaasPalette.bgCanvas,
+      color: context.saas.bgCanvas,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: SaasPalette.border),
+      border: Border.all(color: context.saas.border),
     ),
   );
 }
@@ -807,15 +807,15 @@ class _EmptyState extends StatelessWidget {
         Icon(
           isSearch ? Icons.search_off_rounded : Icons.history_rounded,
           size: 64,
-          color: SaasPalette.textTertiary,
+          color: context.saas.textTertiary,
         ),
         const SizedBox(height: 16),
         Text(
           isSearch
               ? 'No se encontraron resultados'
               : 'No hay tours en el histórico',
-          style: const TextStyle(
-            color: SaasPalette.textPrimary,
+          style: TextStyle(
+            color: context.saas.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -825,8 +825,8 @@ class _EmptyState extends StatelessWidget {
           isSearch
               ? 'Intenta con otros términos o filtros.'
               : 'Los tours finalizados aparecerán aquí.',
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
+          style: TextStyle(
+            color: context.saas.textSecondary,
             fontSize: 14,
           ),
         ),

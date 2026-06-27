@@ -40,7 +40,7 @@ class _SaldoPendienteDetailScreenState extends State<SaldoPendienteDetailScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: SaasPalette.bgApp,
+      backgroundColor: context.saas.bgApp,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,14 +52,14 @@ class _SaldoPendienteDetailScreenState extends State<SaldoPendienteDetailScreen>
             if (widget.tour.fechaTour != null)
               Text(
                 _formatFecha(widget.tour.fechaTour),
-                style: const TextStyle(fontSize: 12, color: SaasPalette.textSecondary),
+                style: TextStyle(fontSize: 12, color: context.saas.textSecondary),
               ),
           ],
         ),
-        backgroundColor: SaasPalette.bgCanvas,
-        foregroundColor: SaasPalette.textPrimary,
+        backgroundColor: context.saas.bgCanvas,
+        foregroundColor: context.saas.textPrimary,
         elevation: 0,
-        shape: const Border(bottom: BorderSide(color: SaasPalette.border)),
+        shape: Border(bottom: BorderSide(color: context.saas.border)),
       ),
       body: BlocConsumer<SaldoPendienteDetailBloc, SaldoPendienteDetailState>(
         listener: (context, state) {
@@ -67,21 +67,21 @@ class _SaldoPendienteDetailScreenState extends State<SaldoPendienteDetailScreen>
              ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Recordatorio enviado a ${state.result.responsable}'),
-                backgroundColor: SaasPalette.success,
+                backgroundColor: context.saas.success,
               ),
             );
           } else if (state is RecordatorioFallidoDetail) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: SaasPalette.danger,
+                backgroundColor: context.saas.danger,
               ),
             );
           }
         },
         builder: (context, state) {
           if (state is SaldoPendienteDetailLoading) {
-            return const Center(child: CircularProgressIndicator(color: SaasPalette.brand600));
+            return Center(child: CircularProgressIndicator(color: context.saas.brand600));
           }
           if (state is SaldoPendienteDetailError) {
             return Center(child: Text(state.message));
@@ -152,10 +152,10 @@ class _ReservaCardState extends State<_ReservaCard> {
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: SaasPalette.border),
+        side: BorderSide(color: context.saas.border),
       ),
       elevation: 0,
-      color: SaasPalette.bgCanvas,
+      color: context.saas.bgCanvas,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -166,8 +166,8 @@ class _ReservaCardState extends State<_ReservaCard> {
               children: [
                 Text(
                   reserva.idReserva,
-                  style: const TextStyle(
-                    color: SaasPalette.brand600,
+                  style: TextStyle(
+                    color: context.saas.brand600,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -184,7 +184,7 @@ class _ReservaCardState extends State<_ReservaCard> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.person_rounded, size: 16, color: SaasPalette.textTertiary),
+                Icon(Icons.person_rounded, size: 16, color: context.saas.textTertiary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -192,8 +192,8 @@ class _ReservaCardState extends State<_ReservaCard> {
                     children: [
                       Text(
                         reserva.responsable.nombre,
-                        style: const TextStyle(
-                          color: SaasPalette.textPrimary,
+                        style: TextStyle(
+                          color: context.saas.textPrimary,
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                         ),
@@ -203,15 +203,15 @@ class _ReservaCardState extends State<_ReservaCard> {
                         children: [
                           Text(
                             '${reserva.responsable.tipoDocumento} ${reserva.responsable.documento}',
-                            style: const TextStyle(fontSize: 12, color: SaasPalette.textSecondary),
+                            style: TextStyle(fontSize: 12, color: context.saas.textSecondary),
                           ),
                           if (reserva.responsable.telefono.isNotEmpty) ...[
                             const SizedBox(width: 12),
-                            const Icon(Icons.phone_rounded, size: 12, color: SaasPalette.textTertiary),
+                            Icon(Icons.phone_rounded, size: 12, color: context.saas.textTertiary),
                             const SizedBox(width: 4),
                             Text(
                               reserva.responsable.telefono,
-                              style: const TextStyle(fontSize: 12, color: SaasPalette.textSecondary),
+                              style: TextStyle(fontSize: 12, color: context.saas.textSecondary),
                             ),
                           ],
                         ],
@@ -228,19 +228,19 @@ class _ReservaCardState extends State<_ReservaCard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _MontoLabel(label: 'Total', value: currFmt.format(reserva.valorTotal)),
-                _MontoLabel(label: 'Pagado', value: currFmt.format(reserva.totalPagado), color: SaasPalette.success),
-                _MontoLabel(label: 'Saldo', value: currFmt.format(reserva.saldoPendiente), color: SaasPalette.danger),
+                _MontoLabel(label: 'Pagado', value: currFmt.format(reserva.totalPagado), color: context.saas.success),
+                _MontoLabel(label: 'Saldo', value: currFmt.format(reserva.saldoPendiente), color: context.saas.danger),
               ],
             ),
             if (reserva.ultimaFechaPago != null) ...[
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.history_rounded, size: 12, color: SaasPalette.textTertiary),
+                  Icon(Icons.history_rounded, size: 12, color: context.saas.textTertiary),
                   const SizedBox(width: 4),
                   Text(
                     'Último pago: ${widget.formatFecha(reserva.ultimaFechaPago)}',
-                    style: const TextStyle(fontSize: 11, color: SaasPalette.textTertiary, fontWeight: FontWeight.w500),
+                    style: TextStyle(fontSize: 11, color: context.saas.textTertiary, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -255,8 +255,8 @@ class _ReservaCardState extends State<_ReservaCard> {
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: pct,
-                      backgroundColor: SaasPalette.bgSubtle,
-                      color: pct >= 1.0 ? SaasPalette.success : (pct >= 0.5 ? SaasPalette.warning : SaasPalette.danger),
+                      backgroundColor: context.saas.bgSubtle,
+                      color: pct >= 1.0 ? context.saas.success : (pct >= 0.5 ? context.saas.warning : context.saas.danger),
                       minHeight: 6,
                     ),
                   ),
@@ -264,7 +264,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                 const SizedBox(width: 8),
                 Text(
                   '${(pct * 100).toStringAsFixed(0)}%',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: SaasPalette.textSecondary),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.saas.textSecondary),
                 ),
               ],
             ),
@@ -274,12 +274,12 @@ class _ReservaCardState extends State<_ReservaCard> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: SaasPalette.bgSubtle,
+                color: context.saas.bgSubtle,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.notifications_active_rounded, size: 14, color: SaasPalette.warning),
+                  Icon(Icons.notifications_active_rounded, size: 14, color: context.saas.warning),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -289,12 +289,12 @@ class _ReservaCardState extends State<_ReservaCard> {
                           reserva.totalRecordatorios == 0 
                             ? 'Sin recordatorios enviados' 
                             : '${reserva.totalRecordatorios} recordatorio${reserva.totalRecordatorios != 1 ? 's' : ''} enviado${reserva.totalRecordatorios != 1 ? 's' : ''}',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: SaasPalette.textPrimary),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.saas.textPrimary),
                         ),
                         if (reserva.ultimoRecordatorio != null)
                           Text(
                             'Último: ${widget.formatFecha(reserva.ultimoRecordatorio)}',
-                            style: const TextStyle(fontSize: 11, color: SaasPalette.textSecondary),
+                            style: TextStyle(fontSize: 11, color: context.saas.textSecondary),
                           ),
                       ],
                     ),
@@ -316,12 +316,12 @@ class _ReservaCardState extends State<_ReservaCard> {
                       Icon(
                         _pagosExpanded ? Icons.expand_less : Icons.expand_more,
                         size: 20,
-                        color: SaasPalette.brand600,
+                        color: context.saas.brand600,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         'Ver ${reserva.pagos.length} pago${reserva.pagos.length != 1 ? 's' : ''} registrado${reserva.pagos.length != 1 ? 's' : ''}',
-                        style: const TextStyle(color: SaasPalette.brand600, fontSize: 13, fontWeight: FontWeight.w600),
+                        style: TextStyle(color: context.saas.brand600, fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
@@ -354,7 +354,7 @@ class _MontoLabel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 10, color: SaasPalette.textTertiary)),
+        Text(label, style: TextStyle(fontSize: 10, color: context.saas.textTertiary)),
         Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color)),
       ],
     );
@@ -373,9 +373,9 @@ class _PagoItem extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
       margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
-        color: SaasPalette.bgApp,
+        color: context.saas.bgApp,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: SaasPalette.border.withValues(alpha: 0.5)),
+        border: Border.all(color: context.saas.border.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,25 +385,25 @@ class _PagoItem extends StatelessWidget {
               Icon(
                 pago.isValidated ? Icons.check_circle_rounded : Icons.pending_actions_rounded,
                 size: 14,
-                color: pago.isValidated ? SaasPalette.success : SaasPalette.warning,
+                color: pago.isValidated ? context.saas.success : context.saas.warning,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   '${pago.metodoPago} - ${pago.referencia}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: SaasPalette.textPrimary,
+                    color: context.saas.textPrimary,
                   ),
                 ),
               ),
               Text(
                 currFmt.format(pago.monto),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  color: SaasPalette.textPrimary,
+                  color: context.saas.textPrimary,
                 ),
               ),
             ],
@@ -454,13 +454,13 @@ class _PagoDetailLabel extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 11, color: SaasPalette.textTertiary),
+        Icon(icon, size: 11, color: context.saas.textTertiary),
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
-            color: SaasPalette.textSecondary,
+            color: context.saas.textSecondary,
           ),
         ),
       ],
@@ -474,10 +474,10 @@ class _EstadoBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color color = SaasPalette.textTertiary;
-    if (estado == 'confirmada') color = SaasPalette.success;
-    if (estado == 'pendiente') color = SaasPalette.warning;
-    if (estado == 'cancelada') color = SaasPalette.danger;
+    Color color = context.saas.textTertiary;
+    if (estado == 'confirmada') color = context.saas.success;
+    if (estado == 'pendiente') color = context.saas.warning;
+    if (estado == 'cancelada') color = context.saas.danger;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -576,7 +576,7 @@ class _RecordatorioDialogState extends State<_RecordatorioDialog> {
         constraints: const BoxConstraints(maxWidth: 380),
         padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
+          color: context.saas.bgCanvas,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: _kWhatsApp.withValues(alpha: 0.25)),
           boxShadow: [
@@ -604,10 +604,10 @@ class _RecordatorioDialogState extends State<_RecordatorioDialog> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Enviar recordatorio',
               style: TextStyle(
-                color: SaasPalette.textPrimary,
+                color: context.saas.textPrimary,
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
               ),
@@ -617,8 +617,8 @@ class _RecordatorioDialogState extends State<_RecordatorioDialog> {
               '¿Deseas enviar un recordatorio de pago por WhatsApp a '
               '${reserva.responsable.nombre}?',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: SaasPalette.textSecondary,
+              style: TextStyle(
+                color: context.saas.textSecondary,
                 fontSize: 13,
                 height: 1.5,
               ),
@@ -628,16 +628,16 @@ class _RecordatorioDialogState extends State<_RecordatorioDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.phone_rounded,
                     size: 13,
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     reserva.responsable.telefono,
-                    style: const TextStyle(
-                      color: SaasPalette.textTertiary,
+                    style: TextStyle(
+                      color: context.saas.textTertiary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -654,8 +654,8 @@ class _RecordatorioDialogState extends State<_RecordatorioDialog> {
                         ? null
                         : () => Navigator.of(context).pop(),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: SaasPalette.textSecondary,
-                      side: const BorderSide(color: SaasPalette.border),
+                      foregroundColor: context.saas.textSecondary,
+                      side: BorderSide(color: context.saas.border),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

@@ -186,10 +186,10 @@ class _ClienteListScreenState extends State<ClienteListScreen>
                       physics: const BouncingScrollPhysics(),
                       slivers: [
                         if (state is ClienteLoading && (clientes == null || clientes.isEmpty))
-                          const SliverFillRemaining(
+                          SliverFillRemaining(
                             child: Center(
                               child: CircularProgressIndicator(
-                                color: SaasPalette.brand600,
+                                color: context.saas.brand600,
                               ),
                             ),
                           )
@@ -204,13 +204,13 @@ class _ClienteListScreenState extends State<ClienteListScreen>
                             ),
                           ),
                           if (state is ClienteLoaded && !state.hasReachedMax)
-                            const SliverToBoxAdapter(
+                            SliverToBoxAdapter(
                               child: Padding(
                                 padding: EdgeInsets.all(32),
                                 child: Center(
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: SaasPalette.brand600,
+                                    color: context.saas.brand600,
                                   ),
                                 ),
                               ),
@@ -243,11 +243,11 @@ class _ClienteListScreenState extends State<ClienteListScreen>
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Gestión de Clientes',
                     style: TextStyle(
-                      color: SaasPalette.textPrimary,
+                      color: context.saas.textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -257,7 +257,7 @@ class _ClienteListScreenState extends State<ClienteListScreen>
                   Text(
                     'Administra la información y el historial de tus clientes.',
                     style: TextStyle(
-                      color: SaasPalette.textSecondary,
+                      color: context.saas.textSecondary,
                       fontSize: 14,
                     ),
                   ),
@@ -348,10 +348,10 @@ class _ClienteCardState extends State<_ClienteCard> {
         duration: const Duration(milliseconds: 300),
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: SaasPalette.bgCanvas,
+          color: context.saas.bgCanvas,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _hovered ? SaasPalette.brand600 : SaasPalette.border,
+            color: _hovered ? context.saas.brand600 : context.saas.border,
             width: _hovered ? 1.5 : 1,
           ),
           boxShadow: [
@@ -395,8 +395,8 @@ class _ClienteCardState extends State<_ClienteCard> {
                     children: [
                       Text(
                         c.nombre,
-                        style: const TextStyle(
-                          color: D.surface,
+                        style:  TextStyle(
+                          color: context.saas.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -413,7 +413,7 @@ class _ClienteCardState extends State<_ClienteCard> {
                           const SizedBox(width: 4),
                           Text(
                             c.telefono,
-                            style: TextStyle(color: D.surface, fontSize: 12),
+                            style: TextStyle(color: context.saas.textPrimary, fontSize: 12),
                           ),
                           const SizedBox(width: 12),
                         ],
@@ -425,7 +425,7 @@ class _ClienteCardState extends State<_ClienteCard> {
                           const SizedBox(width: 4),
                           Text(
                             '${c.tipoDocumento}: ${c.documento}',
-                            style: TextStyle(color: D.surface, fontSize: 12),
+                            style: TextStyle(color: context.saas.textPrimary, fontSize: 12),
                           ),
                         ],
                       ),
@@ -447,7 +447,7 @@ class _ClienteCardState extends State<_ClienteCard> {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          icon: const Icon(Icons.history_rounded, color: SaasPalette.brand600, size: 20),
+          icon: Icon(Icons.history_rounded, color: context.saas.brand600, size: 20),
           onPressed: () => Navigator.pushNamed(
             context,
             AppRouter.clienteHistorial,
@@ -516,9 +516,9 @@ class _PremiumConfirmDialog extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: D.surface,
+        color: context.saas.textPrimary,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: D.border),
+        border: Border.all(color: context.saas.textPrimary),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -527,8 +527,8 @@ class _PremiumConfirmDialog extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
+            style:  TextStyle(
+              color: context.saas.bgApp,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),

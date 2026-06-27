@@ -83,8 +83,8 @@ class PhoneFormField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: SaasPalette.textSecondary,
+          style: TextStyle(
+            color: context.saas.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
@@ -93,23 +93,23 @@ class PhoneFormField extends StatelessWidget {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: SaasPalette.bgCanvas,
+            color: context.saas.bgCanvas,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: SaasPalette.border),
+            border: Border.all(color: context.saas.border),
           ),
           child: Row(
             children: [
               DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: countryCode,
-                  dropdownColor: SaasPalette.bgCanvas,
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  dropdownColor: context.saas.bgCanvas,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 13,
                   ),
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.arrow_drop_down_rounded,
-                    color: SaasPalette.textTertiary,
+                    color: context.saas.textTertiary,
                     size: 18,
                   ),
                   onChanged: readOnly ? null : (v) => onCountryCodeChanged(v!),
@@ -121,8 +121,8 @@ class PhoneFormField extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
                               '${cc.flag} ${cc.code}',
-                              style: const TextStyle(
-                                color: SaasPalette.textPrimary,
+                              style: TextStyle(
+                                color: context.saas.textPrimary,
                                 fontSize: 13,
                               ),
                             ),
@@ -132,21 +132,21 @@ class PhoneFormField extends StatelessWidget {
                       .toList(),
                 ),
               ),
-              Container(width: 1, height: 24, color: SaasPalette.border),
+              Container(width: 1, height: 24, color: context.saas.border),
               Expanded(
                 child: TextFormField(
                   controller: controller,
                   readOnly: readOnly,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(
-                    color: SaasPalette.textPrimary,
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
                     fontSize: 14,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Número sin indicativo',
-                    hintStyle: const TextStyle(
-                      color: SaasPalette.textTertiary,
+                    hintStyle: TextStyle(
+                      color: context.saas.textTertiary,
                       fontSize: 13,
                     ),
                     border: InputBorder.none,
