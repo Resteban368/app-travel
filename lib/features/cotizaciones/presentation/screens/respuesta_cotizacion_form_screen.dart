@@ -143,6 +143,7 @@ class _RespuestaCotizacionFormScreenState
     extends State<RespuestaCotizacionFormScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _saving = false;
+  bool _downloadingPdf = false;
 
   // Plantillas
   List<RespuestaCotizacion> _plantillas = [];
@@ -790,6 +791,22 @@ class _RespuestaCotizacionFormScreenState
       esPublica: esPublica,
       createdAt: DateTime.now(),
     );
+  }
+
+  Future<void> _downloadPdf(String token) async {
+    setState(() => _downloadingPdf = true);
+    try {
+      final uri = Uri.parse('${ApiConstants.kBaseUrl}/v1/p/$token/pdf');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) SaasSnackBar.showError(context, 'No se pudo abrir el PDF');
+      }
+    } catch (_) {
+      if (mounted) SaasSnackBar.showError(context, 'Error al generar el PDF');
+    } finally {
+      if (mounted) setState(() => _downloadingPdf = false);
+    }
   }
 
   void _openPreview() {
@@ -3212,6 +3229,53 @@ class _RespuestaCotizacionFormScreenState
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Divider(color: context.saas.border, height: 1),
+          const SizedBox(height: 10),
+          InkWell(
+            onTap: _downloadingPdf ? null : () => _downloadPdf(token),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDC2626).withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFFDC2626).withValues(alpha: 0.28),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_downloadingPdf)
+                    SizedBox(
+                      width: 15,
+                      height: 15,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: const Color(0xFFDC2626),
+                      ),
+                    )
+                  else
+                    const Icon(
+                      Icons.picture_as_pdf_rounded,
+                      color: Color(0xFFDC2626),
+                      size: 16,
+                    ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _downloadingPdf ? 'Generando PDF...' : 'Descargar PDF',
+                    style: const TextStyle(
+                      color: Color(0xFFDC2626),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

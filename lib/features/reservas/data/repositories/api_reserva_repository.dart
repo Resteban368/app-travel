@@ -264,8 +264,9 @@ class ApiReservaRepository implements ReservaRepository {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getBusesDisponibilidad(int tourId) async {
-    final url = '${ApiConstants.kBaseUrl}/v1/tours/$tourId/buses-disponibilidad';
+  Future<List<Map<String, dynamic>>> getBusesDisponibilidad(int tourId, {int? salidaId}) async {
+    final base = '${ApiConstants.kBaseUrl}/v1/tours/$tourId/buses-disponibilidad';
+    final url = salidaId != null ? '$base?salida_id=$salidaId' : base;
     try {
       final response = await client.get(Uri.parse(url), headers: _headers);
       if (response.statusCode == 200) {

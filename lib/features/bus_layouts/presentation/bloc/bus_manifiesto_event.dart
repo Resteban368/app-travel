@@ -8,9 +8,10 @@ abstract class BusManifiestoEvent extends Equatable {
 
 class LoadBusManifiesto extends BusManifiestoEvent {
   final int tourId;
-  const LoadBusManifiesto(this.tourId);
+  final int? salidaId;
+  const LoadBusManifiesto(this.tourId, {this.salidaId});
   @override
-  List<Object?> get props => [tourId];
+  List<Object?> get props => [tourId, salidaId];
 }
 
 class AutoAsignarAsientos extends BusManifiestoEvent {

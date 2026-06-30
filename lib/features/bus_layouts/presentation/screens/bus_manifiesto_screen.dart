@@ -37,12 +37,13 @@ Color _colorParaReserva(String idReserva, Map<String, Color> cache) {
 
 class BusManifiestoScreen extends StatelessWidget {
   final int tourId;
-  const BusManifiestoScreen({super.key, required this.tourId});
+  final int? salidaId;
+  const BusManifiestoScreen({super.key, required this.tourId, this.salidaId});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<BusManifiestoBloc>()..add(LoadBusManifiesto(tourId)),
+      create: (_) => sl<BusManifiestoBloc>()..add(LoadBusManifiesto(tourId, salidaId: salidaId)),
       child: const _BusManifiestoBody(),
     );
   }

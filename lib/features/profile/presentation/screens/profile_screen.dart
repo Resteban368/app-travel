@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:agente_viajes/core/constants/api_constants.dart';
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:http/http.dart' as http;
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../../../config/app_router.dart';
@@ -129,6 +131,10 @@ class _ProfileBodyState extends State<_ProfileBody> {
                   const SizedBox(height: 16),
                   _PermissionsCard(user: user),
                   const SizedBox(height: 16),
+                  if (user.role == 'admin') ...[
+                    const _AiAgentCard(),
+                    const SizedBox(height: 16),
+                  ],
                   const _ThemeCard(),
                   const SizedBox(height: 16),
                   const _ChangePasswordCard(),
@@ -905,6 +911,192 @@ class _CopyButtonState extends State<_CopyButton> {
                 ),
               ),
             ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  AI AGENT CARD  (solo admin)
+// ─────────────────────────────────────────────────────────────────────────────
+class _AiAgentCard extends StatefulWidget {
+  const _AiAgentCard();
+
+  @override
+  State<_AiAgentCard> createState() => _AiAgentCardState();
+}
+
+class _AiAgentCardState extends State<_AiAgentCard> {
+  static const _aiColor = Color(0xFF7C3AED);
+  static const _adminKey = 'agente_trave_baneste_codes';
+
+  bool _active = false;
+  bool _loading = false;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchStatus();
+  }
+
+  Future<void> _fetchStatus() async {
+    try {
+      final uri = Uri.parse('${ApiConstants.kBaseUrl}/v1/n8n/workflow/status');
+      final response = await http.get(
+        uri,
+        headers: {'x-admin-key': _adminKey},
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (mounted) {
+          setState(() {
+            _active = (data['active'] as bool?) ?? false;
+            _initialized = true;
+          });
+        }
+      }
+    } catch (_) {
+      // Estado desconocido — el usuario puede togglear manualmente
+    }
+  }
+
+  Future<void> _toggle(bool value) async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final uri = Uri.parse('${ApiConstants.kBaseUrl}/v1/n8n/workflow/toggle');
+      final response = await http.patch(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': _adminKey,
+        },
+        body: jsonEncode({'active': value}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (data['success'] == true) {
+          setState(() {
+            _active = (data['active'] as bool?) ?? value;
+            _initialized = true;
+          });
+          if (mounted) {
+            SaasSnackBar.showSuccess(
+              context,
+              _active ? 'Agente IA activado' : 'Agente IA desactivado',
+            );
+          }
+          return;
+        }
+      }
+      throw Exception('HTTP ${response.statusCode}');
+    } catch (_) {
+      if (mounted) {
+        SaasSnackBar.showError(context, 'Error al cambiar el estado del agente IA');
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _SaasCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionLabel(text: 'AGENTE IA'),
+          const SizedBox(height: 16),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+              color: _active
+                  ? _aiColor.withValues(alpha: 0.05)
+                  : context.saas.bgSubtle,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _active
+                    ? _aiColor.withValues(alpha: 0.35)
+                    : context.saas.border,
+                width: _active ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: _aiColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.smart_toy_rounded,
+                    color: _aiColor,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Agente de IA',
+                        style: TextStyle(
+                          color: context.saas.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _initialized
+                            ? (_active
+                                ? 'Activo — respondiendo consultas'
+                                : 'Inactivo — sin responder')
+                            : 'Activa o desactiva el workflow de n8n',
+                        style: TextStyle(
+                          color: _active && _initialized
+                              ? _aiColor
+                              : context.saas.textTertiary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (_loading)
+                  const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: _aiColor,
+                    ),
+                  )
+                else
+                  Switch(
+                    value: _active,
+                    onChanged: _toggle,
+                    activeThumbColor: _aiColor,
+                    activeTrackColor: _aiColor.withValues(alpha: 0.35),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Controla si el agente de IA responde automáticamente a las consultas de clientes vía WhatsApp.',
+            style: TextStyle(
+              color: context.saas.textTertiary,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

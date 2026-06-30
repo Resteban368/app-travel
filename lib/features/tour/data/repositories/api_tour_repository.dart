@@ -90,6 +90,17 @@ class ApiTourRepository implements TourRepository {
   }
 
   @override
+  Future<void> updateTourSalida(String tourId, int salidaId, {required List<int> busLayoutIds}) async {
+    final url = '$_baseUrl/$tourId/salidas/$salidaId';
+    final body = json.encode({'bus_layout_ids': busLayoutIds});
+    debugPrint('📤 [ApiTourRepository] PATCH $url body=$body');
+    final response = await client.patch(Uri.parse(url), headers: _headers, body: body);
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw ApiException.fromResponse(response);
+    }
+  }
+
+  @override
   Future<String> createTour(Tour tour) async {
     final payload = _toJson(tour);
     if (tour.modoPrecio == 'grupal') {
@@ -118,8 +129,9 @@ class ApiTourRepository implements TourRepository {
   }
 
   @override
-  Future<List<String>> getAgentesForBus(String tourId, int busLayoutId) async {
-    final url = '$_baseUrl/$tourId/buses/$busLayoutId/agentes';
+  Future<List<String>> getAgentesForBus(String tourId, int busLayoutId, {int? salidaId}) async {
+    final base = '$_baseUrl/$tourId/buses/$busLayoutId/agentes';
+    final url = salidaId != null ? '$base?salida_id=$salidaId' : base;
     debugPrint('🌎 [ApiTourRepository] GET $url');
     final response = await client.get(Uri.parse(url), headers: _headers);
     debugPrint('📥 [ApiTourRepository] agentes status=${response.statusCode} body=${response.body}');
@@ -138,9 +150,11 @@ class ApiTourRepository implements TourRepository {
   Future<void> updateAgentesForBus(
     String tourId,
     int busLayoutId,
-    List<String> asientos,
-  ) async {
-    final url = '$_baseUrl/$tourId/buses/$busLayoutId/agentes';
+    List<String> asientos, {
+    int? salidaId,
+  }) async {
+    final base = '$_baseUrl/$tourId/buses/$busLayoutId/agentes';
+    final url = salidaId != null ? '$base?salida_id=$salidaId' : base;
     debugPrint('📤 [ApiTourRepository] PATCH $url asientos_agentes=$asientos');
     final response = await client.patch(
       Uri.parse(url),

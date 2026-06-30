@@ -10,6 +10,7 @@ import '../../../../core/di/injection_container.dart';
 import '../../../../core/widgets/dialog_loading_widget.dart';
 import '../../domain/entities/tour.dart' hide ItineraryDay;
 import '../../domain/entities/tour_detalle.dart';
+import '../../domain/entities/tour_salida.dart';
 import '../../domain/repositories/tour_repository.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
 import '../../../reservas/domain/repositories/reserva_repository.dart';
@@ -31,6 +32,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
   bool _loading = true;
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
+  List<TourSalida> _salidas = [];
 
   final _currency = NumberFormat.currency(
     locale: 'es_CO',
@@ -68,11 +70,19 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
     );
 
     try {
-      final d = await sl<TourRepository>().getTourDetalle(widget.tour.id);
+      final futures = <Future>[
+        sl<TourRepository>().getTourDetalle(widget.tour.id),
+        if (widget.tour.disponibilidadTipo == 'multiples_fechas')
+          sl<TourRepository>().getTourSalidas(widget.tour.id),
+      ];
+      final results = await Future.wait(futures);
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop(); // Cerrar diálogo
         setState(() {
-          _detalle = d;
+          _detalle = results[0] as TourDetalle;
+          if (widget.tour.disponibilidadTipo == 'multiples_fechas') {
+            _salidas = (results[1] as List<TourSalida>).where((s) => s.isActive).toList();
+          }
           _loading = false;
         });
       }
@@ -202,6 +212,11 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
             : const _EmptyState(),
       );
     }
+
+    if (widget.tour.disponibilidadTipo == 'multiples_fechas') {
+      return _buildReservasAgrupadas(reservas);
+    }
+
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (_, i) => _ReservaCard(
@@ -210,6 +225,53 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
           tour: widget.tour,
         ),
         childCount: reservas.length,
+      ),
+    );
+  }
+
+  Widget _buildReservasAgrupadas(List<ReservaDetalle> reservas) {
+    // Agrupar por idTourSalida
+    final Map<int?, List<ReservaDetalle>> grupos = {};
+    for (final r in reservas) {
+      grupos.putIfAbsent(r.idTourSalida, () => []).add(r);
+    }
+
+    // Ordenar grupos: salidas conocidas por fecha, sin salida al final
+    final salidaIds = grupos.keys
+        .where((id) => id != null)
+        .cast<int>()
+        .toList()
+      ..sort((a, b) {
+        final sa = _salidas.firstWhere((s) => s.id == a, orElse: () => _salidas.first);
+        final sb = _salidas.firstWhere((s) => s.id == b, orElse: () => _salidas.first);
+        return sa.fechaInicio.compareTo(sb.fechaInicio);
+      });
+    if (grupos.containsKey(null)) salidaIds.add(-1); // sentinel para sin salida
+
+    // Construir lista plana de widgets
+    final items = <Widget>[];
+    for (final idKey in salidaIds) {
+      final salidaId = idKey == -1 ? null : idKey;
+      final group = grupos[salidaId] ?? [];
+      final salida = salidaId != null
+          ? _salidas.where((s) => s.id == salidaId).firstOrNull
+          : null;
+
+      items.add(_SalidaGroupHeader(
+        salida: salida,
+        salidaId: salidaId,
+        count: group.length,
+        tourId: int.tryParse(widget.tour.id),
+      ));
+      for (final r in group) {
+        items.add(_ReservaCard(reserva: r, currency: _currency, tour: widget.tour));
+      }
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (_, i) => items[i],
+        childCount: items.length,
       ),
     );
   }
@@ -365,60 +427,231 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
               minHeight: 8,
             ),
           ),
-          if (widget.tour.busLayoutIds!.isNotEmpty) ...[
+          // Manifiesto: tour fecha_fija con buses asignados al tour
+          if (widget.tour.disponibilidadTipo != 'multiples_fechas' &&
+              widget.tour.busLayoutIds!.isNotEmpty) ...[
             const SizedBox(height: 16),
-            GestureDetector(
+            _ManifiestoButton(
+              label: 'Ver manifiesto de bus',
               onTap: () => Navigator.pushNamed(
                 context,
                 AppRouter.busManifiesto,
-                arguments: widget.tour.id,
-              ),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [context.saas.brand600, context.saas.brand900],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: context.saas.brand600.withValues(alpha: 0.25),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-
-                width: double.infinity,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.directions_bus_rounded,
-                      size: 18,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Ver manifiesto de bus',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+                arguments: {'tourId': int.parse(widget.tour.id)},
               ),
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _SalidaGroupHeader extends StatelessWidget {
+  final TourSalida? salida;
+  final int? salidaId;
+  final int count;
+  final int? tourId;
+
+  const _SalidaGroupHeader({
+    required this.salida,
+    required this.salidaId,
+    required this.count,
+    required this.tourId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = DateFormat('dd MMM yyyy', 'es_CO');
+
+    String title;
+    String? subtitle;
+    if (salida != null) {
+      final fechaIni = DateTime.tryParse(salida!.fechaInicio);
+      final fechaFin = DateTime.tryParse(salida!.fechaFin);
+      final rango = fechaIni != null && fechaFin != null
+          ? '${fmt.format(fechaIni)} → ${fmt.format(fechaFin)}'
+          : '${salida!.fechaInicio} → ${salida!.fechaFin}';
+      if (salida!.label?.isNotEmpty == true) {
+        title = salida!.label!;
+        subtitle = rango;
+      } else {
+        title = rango;
+      }
+    } else {
+      title = 'Sin salida asignada';
+    }
+
+    final hasBuses = salida?.buses.isNotEmpty == true;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, top: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: context.saas.brand600.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.calendar_month_rounded,
+                  size: 15,
+                  color: context.saas.brand600,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: context.saas.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: context.saas.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: context.saas.bgSubtle,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: context.saas.border),
+                ),
+                child: Text(
+                  '$count reserva${count == 1 ? '' : 's'}',
+                  style: TextStyle(
+                    color: context.saas.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (hasBuses && tourId != null) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: salida!.buses.map((bus) {
+                return GestureDetector(
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    AppRouter.busManifiesto,
+                    arguments: {'tourId': tourId, 'salidaId': salida!.id},
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: context.saas.brand600,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.directions_bus_rounded, size: 13, color: Colors.white),
+                        const SizedBox(width: 6),
+                        Text(
+                          bus.nombre,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${bus.asientosDisponibles}/${bus.totalAsientosCliente}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Divider(color: context.saas.border, height: 1),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+}
+
+class _ManifiestoButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _ManifiestoButton({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [context.saas.brand600, context.saas.brand900],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: context.saas.brand600.withValues(alpha: 0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.directions_bus_rounded, size: 18, color: Colors.white),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -490,6 +723,15 @@ class _ReservaCard extends StatefulWidget {
 class _ReservaCardState extends State<_ReservaCard> {
   bool _expanded = false;
   bool _generatingPdf = false;
+
+  bool _showBusSection(ReservaDetalle reserva) {
+    final tipo = widget.tour.disponibilidadTipo;
+    if (tipo == 'fecha_fija') return widget.tour.busLayoutIds.isNotEmpty;
+    if (tipo == 'multiples_fechas') {
+      return reserva.seleccionLink?.isNotEmpty == true;
+    }
+    return false;
+  }
 
   String? _getFechasReserva(ReservaDetalle reserva, String disponibilidadTipo) {
     if (disponibilidadTipo == 'permanente') {
@@ -735,10 +977,10 @@ class _ReservaCardState extends State<_ReservaCard> {
                               ),
                             ],
                             const SizedBox(width: 6),
-                            if (widget.tour.busLayoutIds.isNotEmpty && reserva.asientosBus.isEmpty)
+                            if (_showBusSection(reserva) && reserva.asientosBus.isEmpty)
                               _EstadoBadge(
                                 label: 'SIN ASIENTOS',
-                                color: context.saas.brand600,
+                                color: context.saas.warning,
                               ),
                           ],
                         ),
@@ -852,8 +1094,8 @@ class _ReservaCardState extends State<_ReservaCard> {
                   _DesgloseCard(reserva: reserva, currency: widget.currency),
                   const SizedBox(height: 16),
 
-                  // Sección de Asientos (solo si el tour tiene buses asignados)
-                  if (widget.tour.busLayoutIds.isNotEmpty) ...[
+                  // Sección de Asientos
+                  if (_showBusSection(reserva)) ...[
                   const _SectionLabel(label: 'ASIENTOS'),
                   const SizedBox(height: 8),
                   if (reserva.asientosBus.isNotEmpty)

@@ -15,7 +15,7 @@ abstract class ReservaRepository {
   Future<Reserva> createReserva(Reserva reserva);
   Future<void> updateReserva(Reserva reserva);
   Future<List<Aerolinea>> getAerolineas();
-  Future<List<Map<String, dynamic>>> getBusesDisponibilidad(int tourId);
+  Future<List<Map<String, dynamic>>> getBusesDisponibilidad(int tourId, {int? salidaId});
   Future<void> deleteReserva(int id);
   Future<double> deleteIntegrante(String reservaId, int integranteId);
   Future<void> cancelReserva(String id);

@@ -4,11 +4,11 @@ class ApiConstants {
   ApiConstants._();
 
   // todo produccion
-  // static const String kBaseUrl = 'https://api-travel.agenteviajes.com';
+  static const String kBaseUrl = 'https://api-travel.agenteviajes.com';
 
   // todo para el navegador
   //
-  static const String kBaseUrl = 'http://localhost:3001';
+  // static const String kBaseUrl = 'http://localhost:3001';
   //todo api de test
   // static const String kBaseUrl = 'https://api-travel-api-test.rvbxuq.easypanel.host';
   // todo vamos a usar el emulador de android

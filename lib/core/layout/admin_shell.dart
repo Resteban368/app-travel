@@ -260,7 +260,7 @@ class _AdminShellState extends State<AdminShell> {
 
   void _onLogout() {
     context.read<AuthBloc>().add(LogoutRequested());
-    Navigator.pushNamedAndRemoveUntil(context, AppRouter.login, (_) => false);
+    // La navegación al login la maneja el BlocListener<AuthBloc> en AdminShellWrapper.
   }
 
   @override

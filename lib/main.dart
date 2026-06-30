@@ -145,10 +145,8 @@ class _TravelToursAppState extends State<TravelToursApp> {
                     onPressed: () {
                       _sessionDialogVisible = false;
                       ctx.read<AuthBloc>().add(const LogoutRequested());
-                      navigatorKey.currentState?.pushNamedAndRemoveUntil(
-                        AppRouter.login,
-                        (_) => false,
-                      );
+                      // La navegación al login la maneja el BlocListener<AuthBloc>
+                      // en AdminShellWrapper al recibir AuthInitial.
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: D.rose,

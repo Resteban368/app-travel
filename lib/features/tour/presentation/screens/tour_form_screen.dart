@@ -464,6 +464,28 @@ class _TourFormScreenState extends State<TourFormScreen>
           if (tourId != null && _agenteSeatsByBus.isNotEmpty) {
             await _saveAllAgentes(context, tourId);
           }
+          if (_isEditing &&
+              widget.tour?.id != null &&
+              _disponibilidadTipo == 'multiples_fechas') {
+            final nuevasSalidas = _salidas.where((s) => s.id == 0).toList();
+            if (nuevasSalidas.isNotEmpty) {
+              try {
+                for (final salida in nuevasSalidas) {
+                  await sl<TourRepository>().addTourSalida(
+                    widget.tour!.id,
+                    salida,
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  SaasSnackBar.showError(
+                    context,
+                    'Error al guardar salida(s): ${e.toString()}',
+                  );
+                }
+              }
+            }
+          }
           SaasSnackBar.showSuccess(
             context,
             'Experiencia guardada exitosamente',
@@ -1775,73 +1797,197 @@ class _TourFormScreenState extends State<TourFormScreen>
             )
           else
             ..._salidas.asMap().entries.map(
-              (e) => Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: context.saas.bgSubtle,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: context.saas.border),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.event_rounded,
-                      color: context.saas.brand600,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            e.value.label?.isNotEmpty == true
-                                ? e.value.label!
-                                : '${fmt.format(DateTime.parse(e.value.fechaInicio))} – ${fmt.format(DateTime.parse(e.value.fechaFin))}',
-                            style: TextStyle(
-                              color: context.saas.textPrimary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if (e.value.label?.isNotEmpty == true)
-                            Text(
-                              '${fmt.format(DateTime.parse(e.value.fechaInicio))} – ${fmt.format(DateTime.parse(e.value.fechaFin))}',
-                              style: TextStyle(
-                                color: context.saas.textSecondary,
-                                fontSize: 12,
+              (e) {
+                final salida = e.value;
+                final hasBuses = salida.busLayoutIds.isNotEmpty || salida.buses.isNotEmpty;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: context.saas.bgSubtle,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: context.saas.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        child: Row(
+                          children: [
+                            Icon(Icons.event_rounded, color: context.saas.brand600, size: 16),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    salida.label?.isNotEmpty == true
+                                        ? salida.label!
+                                        : '${fmt.format(DateTime.parse(salida.fechaInicio))} – ${fmt.format(DateTime.parse(salida.fechaFin))}',
+                                    style: TextStyle(color: context.saas.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                                  ),
+                                  if (salida.label?.isNotEmpty == true)
+                                    Text(
+                                      '${fmt.format(DateTime.parse(salida.fechaInicio))} – ${fmt.format(DateTime.parse(salida.fechaFin))}',
+                                      style: TextStyle(color: context.saas.textSecondary, fontSize: 12),
+                                    ),
+                                  if (salida.cupos != null)
+                                    Text('${salida.cupos} cupos', style: TextStyle(color: context.saas.textTertiary, fontSize: 11)),
+                                ],
                               ),
                             ),
-                          if (e.value.cupos != null)
-                            Text(
-                              '${e.value.cupos} cupos',
-                              style: TextStyle(
-                                color: context.saas.textTertiary,
-                                fontSize: 11,
+                            // Botón editar buses
+                            if (canWrite)
+                              IconButton(
+                                onPressed: () => _showEditarBusesSheet(e.key),
+                                icon: Icon(Icons.directions_bus_rounded, color: context.saas.brand600, size: 18),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                tooltip: 'Buses de esta salida',
                               ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    if (canWrite)
-                      IconButton(
-                        onPressed: () =>
-                            setState(() => _salidas.removeAt(e.key)),
-                        icon: Icon(
-                          Icons.delete_outline_rounded,
-                          color: context.saas.danger,
-                          size: 18,
+                            if (canWrite) const SizedBox(width: 8),
+                            if (canWrite)
+                              IconButton(
+                                onPressed: () => setState(() => _salidas.removeAt(e.key)),
+                                icon: Icon(Icons.delete_outline_rounded, color: context.saas.danger, size: 18),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                          ],
                         ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
                       ),
-                  ],
-                ),
-              ),
+                      // ── Buses de esta salida ──────────────────────────
+                      if (hasBuses) ...[
+                        Divider(color: context.saas.border, height: 1),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('BUSES', style: TextStyle(color: context.saas.textSecondary, fontSize: 10, fontWeight: FontWeight.w900)),
+                              const SizedBox(height: 6),
+                              // Mostrar desde buses[] (cargado del API) si existe, sino desde busLayoutIds
+                              if (salida.buses.isNotEmpty)
+                                ...salida.buses.map((bus) {
+                                  final layout = salida.busLayouts
+                                      .where((l) => l.id == bus.busLayoutId)
+                                      .firstOrNull;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 4),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.directions_bus_outlined, color: context.saas.brand600, size: 14),
+                                        const SizedBox(width: 6),
+                                        Expanded(child: Text(bus.nombre, style: TextStyle(color: context.saas.textPrimary, fontSize: 12))),
+                                        if (bus.asientosAgentes.isNotEmpty) ...[
+                                          Container(
+                                            margin: const EdgeInsets.only(right: 6),
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              '${bus.asientosAgentes.length} agente${bus.asientosAgentes.length == 1 ? '' : 's'}',
+                                              style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 10, fontWeight: FontWeight.w700),
+                                            ),
+                                          ),
+                                        ],
+                                        Text(
+                                          '${bus.asientosDisponibles}/${bus.totalAsientosCliente} libres',
+                                          style: TextStyle(color: context.saas.textTertiary, fontSize: 11),
+                                        ),
+                                        if (layout?.configuracion != null && _isEditing && salida.id > 0) ...[
+                                          const SizedBox(width: 4),
+                                          GestureDetector(
+                                            onTap: () async {
+                                              final result = await showDialog<Set<String>>(
+                                                context: context,
+                                                builder: (_) => _AgenteSeatDialog(
+                                                  layout: layout!,
+                                                  initialAgentes: Set<String>.from(bus.asientosAgentes),
+                                                ),
+                                              );
+                                              if (result == null || !mounted) return;
+                                              final tourId = widget.tour?.id;
+                                              if (tourId == null) return;
+                                              // Diálogo de carga
+                                              showDialog(
+                                                context: context,
+                                                barrierDismissible: false,
+                                                builder: (_) => const DialogLoadingNetwork(
+                                                  titel: 'Guardando configuración de agentes...',
+                                                ),
+                                              );
+                                              try {
+                                                await sl<TourRepository>().updateAgentesForBus(
+                                                  tourId,
+                                                  bus.busLayoutId,
+                                                  result.toList(),
+                                                  salidaId: salida.id,
+                                                );
+                                                if (mounted) {
+                                                  Navigator.of(context, rootNavigator: true).pop();
+                                                  setState(() {
+                                                    final updatedBuses = salida.buses.map((b) =>
+                                                      b.busLayoutId == bus.busLayoutId
+                                                          ? b.copyWith(asientosAgentes: result.toList())
+                                                          : b,
+                                                    ).toList();
+                                                    _salidas[e.key] = salida.copyWith(buses: updatedBuses);
+                                                  });
+                                                  SaasSnackBar.showSuccess(
+                                                    context,
+                                                    result.isEmpty
+                                                        ? 'Asientos de agente eliminados'
+                                                        : 'Agentes asignados: ${result.join(', ')}',
+                                                  );
+                                                }
+                                              } catch (err) {
+                                                if (mounted) {
+                                                  Navigator.of(context, rootNavigator: true).pop();
+                                                  SaasSnackBar.showError(context, 'Error al guardar agentes: $err');
+                                                }
+                                              }
+                                            },
+                                            child: Tooltip(
+                                              message: 'Configurar asientos de agente',
+                                              child: Icon(
+                                                Icons.airline_seat_recline_normal_rounded,
+                                                size: 16,
+                                                color: bus.asientosAgentes.isNotEmpty
+                                                    ? const Color(0xFFF59E0B)
+                                                    : context.saas.textTertiary,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  );
+                                })
+                              else
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 4,
+                                  children: salida.busLayoutIds.map((id) => Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: context.saas.brand600.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: context.saas.brand600.withValues(alpha: 0.2)),
+                                    ),
+                                    child: Text('Bus #$id', style: TextStyle(color: context.saas.brand600, fontSize: 11, fontWeight: FontWeight.w600)),
+                                  )).toList(),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
             ),
         ],
       ),
@@ -1854,160 +2000,207 @@ class _TourFormScreenState extends State<TourFormScreen>
     final cuposCtrl = TextEditingController();
     final labelCtrl = TextEditingController();
     DateTimeRange? salidaRange;
+    List<int> selectedBusIds = [];
 
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: context.saas.bgCanvas,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Agregar salida',
-                        style: TextStyle(
-                          color: context.saas.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      icon: Icon(
-                        Icons.close_rounded,
-                        color: context.saas.textTertiary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                InkWell(
-                  onTap: () async {
-                    final range = await showDateRangePicker(
-                      context: ctx,
-                      firstDate: DateTime(2023),
-                      lastDate: DateTime(2030),
-                    );
-                    if (range != null) {
-                      setSheetState(() {
-                        salidaRange = range;
-                        fechaInicioCtrl.text = DateFormat(
-                          'yyyy-MM-dd',
-                        ).format(range.start);
-                        fechaFinCtrl.text = DateFormat(
-                          'yyyy-MM-dd',
-                        ).format(range.end);
-                      });
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: context.saas.bgCanvas,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: salidaRange != null
-                            ? context.saas.brand600
-                            : context.saas.border,
-                      ),
-                    ),
-                    child: Row(
+      builder: (sheetCtx) => BlocProvider(
+        create: (_) => sl<BusLayoutBloc>()..add(const LoadBusLayouts()),
+        child: BlocBuilder<BusLayoutBloc, BusLayoutState>(
+          builder: (blocCtx, busState) {
+            final layouts = busState is BusLayoutLoaded ? busState.layouts : <BusLayout>[];
+            return StatefulBuilder(
+              builder: (ctx, setSheetState) => Padding(
+                padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: context.saas.bgCanvas,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.date_range_rounded,
-                          color: context.saas.brand600,
-                          size: 18,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Agregar salida',
+                                style: TextStyle(
+                                  color: context.saas.textPrimary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              icon: Icon(Icons.close_rounded, color: context.saas.textTertiary),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Text(
-                          salidaRange == null
-                              ? 'Seleccionar fechas *'
-                              : '${DateFormat('dd/MM/yyyy').format(salidaRange!.start)} – ${DateFormat('dd/MM/yyyy').format(salidaRange!.end)}',
-                          style: TextStyle(
-                            color: salidaRange != null
-                                ? context.saas.textPrimary
-                                : context.saas.textTertiary,
-                            fontSize: 14,
+                        const SizedBox(height: 16),
+                        // ── Selector de fechas ──────────────────────────
+                        InkWell(
+                          onTap: () async {
+                            final range = await showDateRangePicker(
+                              context: ctx,
+                              firstDate: DateTime(2023),
+                              lastDate: DateTime(2030),
+                            );
+                            if (range != null) {
+                              setSheetState(() {
+                                salidaRange = range;
+                                fechaInicioCtrl.text = DateFormat('yyyy-MM-dd').format(range.start);
+                                fechaFinCtrl.text = DateFormat('yyyy-MM-dd').format(range.end);
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: context.saas.bgCanvas,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: salidaRange != null ? context.saas.brand600 : context.saas.border,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.date_range_rounded, color: context.saas.brand600, size: 18),
+                                const SizedBox(width: 12),
+                                Text(
+                                  salidaRange == null
+                                      ? 'Seleccionar fechas *'
+                                      : '${DateFormat('dd/MM/yyyy').format(salidaRange!.start)} – ${DateFormat('dd/MM/yyyy').format(salidaRange!.end)}',
+                                  style: TextStyle(
+                                    color: salidaRange != null ? context.saas.textPrimary : context.saas.textTertiary,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        PremiumTextField(
+                          controller: cuposCtrl,
+                          label: 'Cupos (opcional)',
+                          icon: Icons.people_alt_rounded,
+                          isNumeric: true,
+                        ),
+                        const SizedBox(height: 14),
+                        PremiumTextField(
+                          controller: labelCtrl,
+                          label: 'Etiqueta (ej. Temporada alta)',
+                          icon: Icons.label_rounded,
+                        ),
+                        // ── Picker de buses (opcional) ──────────────────
+                        if (layouts.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            'BUSES ASIGNADOS (OPCIONAL)',
+                            style: TextStyle(
+                              color: context.saas.textSecondary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ...layouts.map((layout) {
+                            final isSelected = selectedBusIds.contains(layout.id);
+                            return InkWell(
+                              onTap: () => setSheetState(() {
+                                if (isSelected) {
+                                  selectedBusIds.remove(layout.id);
+                                } else {
+                                  selectedBusIds.add(layout.id!);
+                                }
+                              }),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? context.saas.brand600.withValues(alpha: 0.08)
+                                      : context.saas.bgSubtle,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isSelected ? context.saas.brand600 : context.saas.border,
+                                    width: isSelected ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isSelected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+                                      color: isSelected ? context.saas.brand600 : context.saas.textTertiary,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        layout.nombre,
+                                        style: TextStyle(
+                                          color: isSelected ? context.saas.brand600 : context.saas.textPrimary,
+                                          fontSize: 13,
+                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                        ),
+                                      ),
+                                    ),
+                                    if (layout.totalAsientosCliente > 0)
+                                      Text(
+                                        '${layout.totalAsientosCliente} asientos',
+                                        style: TextStyle(color: context.saas.textTertiary, fontSize: 11),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                        ] else if (busState is BusLayoutLoading) ...[
+                          const SizedBox(height: 16),
+                          Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: context.saas.brand600))),
+                        ],
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: context.saas.brand600,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () {
+                              if (salidaRange == null) return;
+                              final nueva = TourSalida(
+                                id: 0,
+                                fechaInicio: DateFormat('yyyy-MM-dd').format(salidaRange!.start),
+                                fechaFin: DateFormat('yyyy-MM-dd').format(salidaRange!.end),
+                                cupos: int.tryParse(cuposCtrl.text.trim()),
+                                label: labelCtrl.text.trim().isEmpty ? null : labelCtrl.text.trim(),
+                                busLayoutIds: List.from(selectedBusIds),
+                              );
+                              setState(() => _salidas.add(nueva));
+                              Navigator.pop(ctx);
+                            },
+                            child: const Text('AGREGAR', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
-                PremiumTextField(
-                  controller: cuposCtrl,
-                  label: 'Cupos (opcional)',
-                  icon: Icons.people_alt_rounded,
-                  isNumeric: true,
-                ),
-                const SizedBox(height: 14),
-                PremiumTextField(
-                  controller: labelCtrl,
-                  label: 'Etiqueta (ej. Temporada alta)',
-                  icon: Icons.label_rounded,
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: context.saas.brand600,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () {
-                      if (salidaRange == null) return;
-                      final nueva = TourSalida(
-                        id: 0,
-                        fechaInicio: DateFormat(
-                          'yyyy-MM-dd',
-                        ).format(salidaRange!.start),
-                        fechaFin: DateFormat(
-                          'yyyy-MM-dd',
-                        ).format(salidaRange!.end),
-                        cupos: int.tryParse(cuposCtrl.text.trim()),
-                        label: labelCtrl.text.trim().isEmpty
-                            ? null
-                            : labelCtrl.text.trim(),
-                      );
-                      setState(() => _salidas.add(nueva));
-                      Navigator.pop(ctx);
-                    },
-                    child: const Text(
-                      'AGREGAR',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     ).then((_) {
@@ -2016,6 +2209,255 @@ class _TourFormScreenState extends State<TourFormScreen>
       cuposCtrl.dispose();
       labelCtrl.dispose();
     });
+  }
+
+  void _showEditarBusesSheet(int salidaIndex) {
+    final salida = _salidas[salidaIndex];
+    List<int> selectedBusIds = List.from(salida.busLayoutIds);
+
+    // Pre-popular desde salida.buses (ya incluye asientos_agentes del API)
+    final Map<int, Set<String>> sheetAgentes = {
+      for (final bus in salida.buses)
+        if (bus.asientosAgentes.isNotEmpty)
+          bus.busLayoutId: Set<String>.from(bus.asientosAgentes),
+    };
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => BlocProvider(
+        create: (_) => sl<BusLayoutBloc>()..add(const LoadBusLayouts()),
+        child: BlocBuilder<BusLayoutBloc, BusLayoutState>(
+          builder: (blocCtx, busState) {
+            final layouts = busState is BusLayoutLoaded ? busState.layouts : <BusLayout>[];
+            return StatefulBuilder(
+              builder: (ctx, setSheetState) {
+                final selectedLayouts = layouts.where((l) => selectedBusIds.contains(l.id)).toList();
+
+                return Padding(
+                  padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: context.saas.bgCanvas,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Buses de la salida',
+                                  style: TextStyle(color: context.saas.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                icon: Icon(Icons.close_rounded, color: context.saas.textTertiary),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            salida.label?.isNotEmpty == true
+                                ? salida.label!
+                                : '${salida.fechaInicio} → ${salida.fechaFin}',
+                            style: TextStyle(color: context.saas.textSecondary, fontSize: 13),
+                          ),
+                          const SizedBox(height: 16),
+                          if (busState is BusLayoutLoading)
+                            const Center(child: CircularProgressIndicator())
+                          else if (layouts.isEmpty)
+                            Text('No hay buses disponibles.', style: TextStyle(color: context.saas.textTertiary, fontSize: 13))
+                          else
+                            ...layouts.map((layout) {
+                              final isSelected = selectedBusIds.contains(layout.id);
+                              return InkWell(
+                                onTap: () => setSheetState(() {
+                                  if (isSelected) {
+                                    selectedBusIds.remove(layout.id);
+                                    sheetAgentes.remove(layout.id);
+                                  } else {
+                                    selectedBusIds.add(layout.id!);
+                                  }
+                                }),
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? context.saas.brand600.withValues(alpha: 0.08)
+                                        : context.saas.bgSubtle,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: isSelected ? context.saas.brand600 : context.saas.border,
+                                      width: isSelected ? 1.5 : 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        isSelected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+                                        color: isSelected ? context.saas.brand600 : context.saas.textTertiary,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          layout.nombre,
+                                          style: TextStyle(
+                                            color: isSelected ? context.saas.brand600 : context.saas.textPrimary,
+                                            fontSize: 13,
+                                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                          ),
+                                        ),
+                                      ),
+                                      if (layout.totalAsientosCliente > 0)
+                                        Text('${layout.totalAsientosCliente} asientos', style: TextStyle(color: context.saas.textTertiary, fontSize: 11)),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+
+                          // ── Agentes por bus (solo salidas persistidas) ─────────
+                          if (salida.id > 0 && selectedLayouts.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            Text(
+                              'ASIENTOS DE AGENTES',
+                              style: TextStyle(
+                                color: context.saas.textSecondary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ...selectedLayouts.map((layout) {
+                              final agentes = sheetAgentes[layout.id] ?? {};
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: context.saas.bgSubtle,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: context.saas.border),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.directions_bus_rounded, size: 15, color: context.saas.brand600),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            layout.nombre,
+                                            style: TextStyle(color: context.saas.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                                          ),
+                                          if (agentes.isNotEmpty)
+                                            Text(
+                                              '${agentes.length} asiento${agentes.length == 1 ? '' : 's'} de agente',
+                                              style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 11, fontWeight: FontWeight.w600),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    TextButton.icon(
+                                      onPressed: layout.configuracion == null
+                                          ? null
+                                          : () async {
+                                              final result = await showDialog<Set<String>>(
+                                                context: ctx,
+                                                builder: (_) => _AgenteSeatDialog(
+                                                  layout: layout,
+                                                  initialAgentes: agentes,
+                                                ),
+                                              );
+                                              if (result != null) {
+                                                setSheetState(() => sheetAgentes[layout.id!] = result);
+                                              }
+                                            },
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: const Color(0xFFF59E0B),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      ),
+                                      icon: const Icon(Icons.person_pin_rounded, size: 14),
+                                      label: const Text('Configurar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: context.saas.brand600,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: () async {
+                                // Actualizar buses y agentes en memoria
+                                final updatedBuses = salida.buses.map((bus) {
+                                  final nuevos = sheetAgentes[bus.busLayoutId];
+                                  return nuevos != null
+                                      ? bus.copyWith(asientosAgentes: nuevos.toList())
+                                      : bus.copyWith(asientosAgentes: []);
+                                }).toList();
+                                setState(() {
+                                  _salidas[salidaIndex] = salida.copyWith(
+                                    busLayoutIds: List.from(selectedBusIds),
+                                    buses: updatedBuses,
+                                  );
+                                });
+                                Navigator.pop(ctx);
+                                if (_isEditing && salida.id > 0 && widget.tour?.id != null) {
+                                  final tourId = widget.tour!.id;
+                                  final repo = sl<TourRepository>();
+                                  try {
+                                    await repo.updateTourSalida(tourId, salida.id, busLayoutIds: selectedBusIds);
+                                  } catch (e) {
+                                    if (mounted) SaasSnackBar.showError(context, 'Error al guardar buses: $e');
+                                  }
+                                  for (final entry in sheetAgentes.entries) {
+                                    try {
+                                      await repo.updateAgentesForBus(
+                                        tourId,
+                                        entry.key,
+                                        entry.value.toList(),
+                                        salidaId: salida.id,
+                                      );
+                                    } catch (e) {
+                                      if (mounted) SaasSnackBar.showError(context, 'Error al guardar agentes: $e');
+                                    }
+                                  }
+                                }
+                              },
+                              child: const Text('GUARDAR', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
   }
 
   Widget _buildBusLayoutDropdown({required bool canWrite}) {

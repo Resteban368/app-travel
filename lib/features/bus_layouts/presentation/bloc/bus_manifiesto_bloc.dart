@@ -6,6 +6,7 @@ import 'bus_manifiesto_state.dart';
 
 class BusManifiestoBloc extends Bloc<BusManifiestoEvent, BusManifiestoState> {
   final BusManifiestoRepository repository;
+  int? _salidaId;
 
   BusManifiestoBloc({required this.repository})
     : super(BusManifiestoInitial()) {
@@ -20,9 +21,10 @@ class BusManifiestoBloc extends Bloc<BusManifiestoEvent, BusManifiestoState> {
     LoadBusManifiesto event,
     Emitter<BusManifiestoState> emit,
   ) async {
+    _salidaId = event.salidaId;
     emit(BusManifiestoLoading());
     try {
-      final manifiesto = await repository.getBusManifiesto(event.tourId);
+      final manifiesto = await repository.getBusManifiesto(event.tourId, salidaId: _salidaId);
       emit(BusManifiestoLoaded(manifiesto));
     } catch (e) {
       emit(BusManifiestoError(e.toString()));
@@ -48,7 +50,7 @@ class BusManifiestoBloc extends Bloc<BusManifiestoEvent, BusManifiestoState> {
     emit(BusManifiestoAsignando(current));
     try {
       await repository.autoAsignarAsientos(event.tourId);
-      final manifiesto = await repository.getBusManifiesto(event.tourId);
+      final manifiesto = await repository.getBusManifiesto(event.tourId, salidaId: _salidaId);
       emit(BusManifiestoLoaded(manifiesto));
     } catch (e) {
       emit(BusManifiestoLoaded(current));
@@ -68,7 +70,7 @@ class BusManifiestoBloc extends Bloc<BusManifiestoEvent, BusManifiestoState> {
         reservaId: event.reservaId,
         numeroAsiento: event.numeroAsiento,
       );
-      final manifiesto = await repository.getBusManifiesto(event.tourId);
+      final manifiesto = await repository.getBusManifiesto(event.tourId, salidaId: _salidaId);
       emit(BusManifiestoOperacionExito(manifiesto));
     } catch (e) {
       emit(BusManifiestoOperacionError(current, e.toString()));
@@ -90,7 +92,7 @@ class BusManifiestoBloc extends Bloc<BusManifiestoEvent, BusManifiestoState> {
         asientoOrigen: event.asientoOrigen,
         asientoDestino: event.asientoDestino,
       );
-      final manifiesto = await repository.getBusManifiesto(event.tourId);
+      final manifiesto = await repository.getBusManifiesto(event.tourId, salidaId: _salidaId);
       emit(BusManifiestoOperacionExito(manifiesto));
     } catch (e) {
       emit(BusManifiestoOperacionError(current, e.toString()));
@@ -111,7 +113,7 @@ class BusManifiestoBloc extends Bloc<BusManifiestoEvent, BusManifiestoState> {
         reservaId: event.reservaId,
         asientos: event.asientos,
       );
-      final manifiesto = await repository.getBusManifiesto(event.tourId);
+      final manifiesto = await repository.getBusManifiesto(event.tourId, salidaId: _salidaId);
       emit(BusManifiestoOperacionExito(manifiesto));
     } catch (e) {
       emit(BusManifiestoOperacionError(current, e.toString()));

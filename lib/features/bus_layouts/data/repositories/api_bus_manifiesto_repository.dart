@@ -16,8 +16,9 @@ class ApiBusManifiestoRepository implements BusManifiestoRepository {
       };
 
   @override
-  Future<BusManifiesto> getBusManifiesto(int tourId) async {
-    final url = '${ApiConstants.kBaseUrl}/v1/tours/$tourId/buses-manifiesto';
+  Future<BusManifiesto> getBusManifiesto(int tourId, {int? salidaId}) async {
+    final base = '${ApiConstants.kBaseUrl}/v1/tours/$tourId/buses-manifiesto';
+    final url = salidaId != null ? '$base?salida_id=$salidaId' : base;
     debugPrint('🌎 [ApiBusManifiestoRepository] GET $url');
     final response = await client.get(Uri.parse(url), headers: _headers);
     if (response.statusCode == 200) {

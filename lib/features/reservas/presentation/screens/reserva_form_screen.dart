@@ -217,7 +217,13 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       final tourId = fresh.idTour;
       final tourIdInt = int.tryParse(tourId ?? '');
       if (tourIdInt != null) {
-        await _loadBusesDisponibilidad(tourIdInt);
+        if (fresh.tour?.disponibilidadTipo == 'multiples_fechas') {
+          if (_selectedSalidaId != null) {
+            await _loadBusesDisponibilidad(tourIdInt, salidaId: _selectedSalidaId);
+          }
+        } else {
+          await _loadBusesDisponibilidad(tourIdInt);
+        }
       }
       if (tourId != null && fresh.tour?.disponibilidadTipo == 'multiples_fechas') {
         _loadTourSalidas(tourId, preserveSelection: true);
@@ -376,7 +382,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     }
   }
 
-  Future<void> _loadBusesDisponibilidad(int tourId) async {
+  Future<void> _loadBusesDisponibilidad(int tourId, {int? salidaId}) async {
     setState(() {
       _loadingBuses = true;
       _busesDisponibilidad = [];
@@ -384,12 +390,25 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     try {
       final buses = await sl<ReservaRepository>().getBusesDisponibilidad(
         tourId,
+        salidaId: salidaId,
       );
       if (mounted) setState(() => _busesDisponibilidad = buses);
     } catch (e) {
       debugPrint('❌ [ReservaForm] loadBuses: $e');
     } finally {
       if (mounted) setState(() => _loadingBuses = false);
+    }
+  }
+
+  void _onSalidaSelected(TourSalida salida) {
+    setState(() {
+      _selectedSalidaId = salida.id;
+      _selectedBusLayoutId = null;
+      _busesDisponibilidad = [];
+    });
+    final tourIdInt = int.tryParse(_selectedTourId ?? '');
+    if (tourIdInt != null) {
+      _loadBusesDisponibilidad(tourIdInt, salidaId: salida.id);
     }
   }
 
@@ -1513,11 +1532,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                   });
                                   field.didChange(result.id);
                                   final tourIdInt = int.tryParse(result.id);
-                                  if (tourIdInt != null) {
-                                    _loadBusesDisponibilidad(tourIdInt);
-                                  }
                                   if (result.disponibilidadTipo == 'multiples_fechas') {
                                     _loadTourSalidas(result.id);
+                                  } else if (tourIdInt != null) {
+                                    _loadBusesDisponibilidad(tourIdInt);
                                   }
                                 }
                               },
@@ -1735,7 +1753,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               : (salida.cupos != null ? '${salida.cupos} cupos' : 'Sin límite');
 
           return GestureDetector(
-            onTap: () => setState(() => _selectedSalidaId = salida.id),
+            onTap: () => _onSalidaSelected(salida),
             child: Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

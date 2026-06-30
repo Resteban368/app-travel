@@ -340,8 +340,15 @@ class AppRouter {
         return _fadeRoute(BusLayoutFormScreen(layout: busLayout), settings);
       case busManifiesto:
         final arg = settings.arguments;
-        final tourId = arg is int ? arg : int.parse(arg.toString());
-        return _fadeRoute(BusManifiestoScreen(tourId: tourId), settings);
+        int tourId;
+        int? salidaId;
+        if (arg is Map<String, dynamic>) {
+          tourId = arg['tourId'] as int;
+          salidaId = arg['salidaId'] as int?;
+        } else {
+          tourId = arg is int ? arg : int.parse(arg.toString());
+        }
+        return _fadeRoute(BusManifiestoScreen(tourId: tourId, salidaId: salidaId), settings);
       case clienteHistorial:
         final cliente = settings.arguments as Cliente;
         return _fadeRoute(
