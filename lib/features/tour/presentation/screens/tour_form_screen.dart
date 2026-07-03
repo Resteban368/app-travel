@@ -3930,7 +3930,7 @@ class _AgenteSeatDialogState extends State<_AgenteSeatDialog> {
   @override
   Widget build(BuildContext context) {
     final cfg = widget.layout.configuracion!;
-    final mitad = cfg.columnas ~/ 2;
+    final mitad = cfg.pasilloColumn;
     final maxFila = cfg.asientos.isEmpty
         ? 0
         : cfg.asientos.map((a) => a.fila).reduce((a, b) => a > b ? a : b);

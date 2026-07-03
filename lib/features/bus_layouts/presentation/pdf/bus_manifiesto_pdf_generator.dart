@@ -387,7 +387,7 @@ class BusManifestoPdfGenerator {
     final maxFila = cfg.asientos.isEmpty
         ? 0
         : cfg.asientos.map((a) => a.fila).reduce((a, b) => a > b ? a : b);
-    final mitad = (cfg.columnas / 2).floor();
+    final mitad = cfg.pasilloColumn;
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.center,

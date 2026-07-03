@@ -488,7 +488,7 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
     final maxFila = cfg.asientos.isEmpty
         ? 0
         : cfg.asientos.map((a) => a.fila).reduce((a, b) => a > b ? a : b);
-    final mitad = (cfg.columnas / 2).floor();
+    final mitad = cfg.pasilloColumn;
 
     // ── debug: confirm special seats reach the renderer ───────────────────
     final speciales = layoutByPos.entries
@@ -1138,7 +1138,7 @@ class _AsignarAsientoDialogState extends State<_AsignarAsientoDialog>
     final maxFila = cfg.asientos.isEmpty
         ? 0
         : cfg.asientos.map((a) => a.fila).reduce((a, b) => a > b ? a : b);
-    final mitad = (cfg.columnas / 2).floor();
+    final mitad = cfg.pasilloColumn;
     final isThisBusLocked =
         _lockedBusLayoutId != null && _lockedBusLayoutId != bus.busLayoutId;
 
