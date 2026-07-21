@@ -204,10 +204,10 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: D.skyBlue.withOpacity(0.1),
+                                    color: D.skyBlue.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: D.skyBlue.withOpacity(0.3),
+                                      color: D.skyBlue.withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: const Row(
@@ -612,7 +612,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
           decoration: BoxDecoration(
             color: D.bg,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           ),
           child: SwitchListTile(
             title: const Text(
@@ -629,9 +629,9 @@ class _ServiceFormScreenState extends State<ServiceFormScreen>
             ),
             value: _isActive,
             activeThumbColor: D.emerald,
-            activeTrackColor: D.emerald.withOpacity(0.3),
+            activeTrackColor: D.emerald.withValues(alpha: 0.3),
             inactiveThumbColor: D.slate400,
-            inactiveTrackColor: D.bg.withOpacity(0.5),
+            inactiveTrackColor: D.bg.withValues(alpha: 0.5),
             onChanged: canWrite ? (v) => setState(() => _isActive = v) : null,
           ),
         ),
@@ -661,7 +661,7 @@ class _GaleriaBtn extends StatelessWidget {
           children: [
             Icon(Icons.photo_library_rounded,
                 color: context.saas.brand600, size: 16),
-            SizedBox(width: 5),
+            const SizedBox(width: 5),
             Text(
               'Galería',
               style: TextStyle(

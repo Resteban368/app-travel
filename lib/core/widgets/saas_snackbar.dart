@@ -304,12 +304,12 @@ class _NotificacionToastState extends State<_NotificacionToast>
                                   ),
 
                                   // ── Close ───────────────────────────────
-                                  Padding(
-                                    padding: const EdgeInsets.fromLTRB(0, 10, 12, 0),
+                                  const Padding(
+                                    padding: EdgeInsets.fromLTRB(0, 10, 12, 0),
                                     child: Icon(
                                       Icons.close_rounded,
                                       size: 15,
-                                      color: const Color(0xFFD1D5DB),
+                                      color: Color(0xFFD1D5DB),
                                     ),
                                   ),
                                 ],

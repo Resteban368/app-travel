@@ -284,7 +284,7 @@ class _SesionesTabState extends State<_SesionesTab> {
   Widget _buildLoading() => ListView.builder(
     padding: const EdgeInsets.all(20),
     itemCount: 5,
-    itemBuilder: (_, __) => _SkelCard(),
+    itemBuilder: (_, _) => _SkelCard(),
   );
 
   Widget _buildEmpty() => Center(
@@ -699,7 +699,7 @@ class _AuditoriaGeneralTab extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.all(20),
       itemCount: auditoria.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) => _AuditoriaCard(item: auditoria[index]),
     );
   }
@@ -707,7 +707,7 @@ class _AuditoriaGeneralTab extends StatelessWidget {
   Widget _buildLoading() => ListView.builder(
     padding: const EdgeInsets.all(20),
     itemCount: 8,
-    itemBuilder: (_, __) => _SkelCard(),
+    itemBuilder: (_, _) => _SkelCard(),
   );
 
   Widget _buildEmpty(BuildContext context) => Center(
@@ -992,7 +992,7 @@ class _AuditoriaCardState extends State<_AuditoriaCard> {
                           ),
                         ),
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
                           child: Icon(
                             Icons.arrow_right_alt_rounded,
                             size: 14,

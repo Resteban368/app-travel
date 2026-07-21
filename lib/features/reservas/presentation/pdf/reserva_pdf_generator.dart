@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:agente_viajes/features/tour/domain/entities/tour_precio.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
@@ -217,9 +218,9 @@ class ReservaPdfGenerator {
               pw.Container(
                 width: 75,
                 height: 75,
-                decoration: pw.BoxDecoration(
+                decoration: const pw.BoxDecoration(
                   color: PdfColors.white,
-                  borderRadius: const pw.BorderRadius.all(
+                  borderRadius: pw.BorderRadius.all(
                     pw.Radius.circular(10),
                   ),
                 ),
@@ -257,35 +258,35 @@ class ReservaPdfGenerator {
                     pw.SizedBox(height: 4),
                     pw.Text(
                       'GERENTE: Daniela Agatón Soto',
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 9,
                         color: PdfColor(1, 1, 1, 0.75),
                       ),
                     ),
                     pw.Text(
                       'NIT: 10065025016',
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 9,
                         color: PdfColor(1, 1, 1, 0.75),
                       ),
                     ),
                     pw.Text(
                       'CRA 7 N 16A 08 BRR 7 DE AGOSTO',
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 9,
                         color: PdfColor(1, 1, 1, 0.75),
                       ),
                     ),
                     pw.Text(
                       '3142266528',
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 9,
                         color: PdfColor(1, 1, 1, 0.75),
                       ),
                     ),
                     pw.Text(
                       'infoasesoras2022@gmail.com',
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 9,
                         color: PdfColor(1, 1, 1, 0.75),
                       ),
@@ -302,7 +303,7 @@ class ReservaPdfGenerator {
                     style: pw.TextStyle(
                       font: bold,
                       fontSize: 8,
-                      color: PdfColor(1, 1, 1, 0.75),
+                      color: const PdfColor(1, 1, 1, 0.75),
                       letterSpacing: 1.2,
                     ),
                   ),
@@ -318,7 +319,7 @@ class ReservaPdfGenerator {
                   pw.SizedBox(height: 2),
                   pw.Text(
                     'Fecha: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                       fontSize: 8,
                       color: PdfColor(1, 1, 1, 0.75),
                     ),
@@ -1224,15 +1225,9 @@ class ReservaPdfGenerator {
     pw.Font regular,
   ) {
     final isTour = reserva.tipoReserva == 'tour';
-    final paxCount = reserva.integrantes.length;
     final total = reserva.valorTotal ?? 0.0;
     final sinDescuento = reserva.valorSinDescuento ?? total;
     final saldoPendiente = reserva.saldoPendiente ?? 0.0;
-
-    final totalPaxValue =
-        reserva.valorPersonas ??
-        (isTour ? ((reserva.tour?.price ?? 0.0) * paxCount).toDouble() : 0.0);
-    final displayPaxCount = reserva.totalPersonas ?? paxCount;
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1423,7 +1418,7 @@ class ReservaPdfGenerator {
                 ] else ...[
                   // Tour normal: mostrar cada persona individualmente
                   () {
-                    var respCat;
+                    TourPrecio? respCat;
                     if (reserva.precioResponsableId != null &&
                         reserva.tour != null) {
                       try {
@@ -1434,7 +1429,7 @@ class ReservaPdfGenerator {
                     }
                     final respLabel = respCat != null
                         ? 'Responsable (${respCat.descripcion})'
-                        : 'Responsable (Precio base)';
+                        : 'Responsable';
                     return _summaryRow(
                       respLabel,
                       _fmt(
@@ -1448,7 +1443,7 @@ class ReservaPdfGenerator {
                   }(),
                   ...reserva.integrantes.asMap().entries.map((entry) {
                     final integrante = entry.value;
-                    var cat;
+                    TourPrecio? cat;
                     if (integrante.tourPrecioId != null &&
                         reserva.tour != null) {
                       try {
@@ -1460,7 +1455,7 @@ class ReservaPdfGenerator {
                     final nombreLabel = 'Integrante ${entry.key + 1}';
                     final label = cat != null
                         ? '$nombreLabel (${cat.descripcion})'
-                        : '$nombreLabel (Precio base)';
+                        : nombreLabel;
                     return _summaryRow(
                       label,
                       _fmt(

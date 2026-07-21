@@ -190,7 +190,7 @@ class _Header extends StatelessWidget {
             child: Row(
               children: [
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: Icon(
                     Icons.search_rounded,
                     size: 18,
@@ -248,7 +248,7 @@ class _Body extends StatelessWidget {
       itemBuilder: (context, index) {
         if (index == loaded.tours.length) {
           return Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
+            padding: const EdgeInsets.symmetric(vertical: 24),
             child: Center(
               child: CircularProgressIndicator(color: context.saas.brand600),
             ),

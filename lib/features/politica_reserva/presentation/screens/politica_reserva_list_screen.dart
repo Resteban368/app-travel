@@ -92,7 +92,7 @@ class _PoliticaReservaListScreenState extends State<PoliticaReservaListScreen> {
                     padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (_, __) => const SaasListSkeleton(),
+                        (_, _) => const SaasListSkeleton(),
                         childCount: 4,
                       ),
                     ),
@@ -179,7 +179,7 @@ class _PoliticaHeader extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Define los términos, condiciones y políticas de cancelación.',
                     style: TextStyle(
@@ -247,7 +247,7 @@ class _PoliticaCardState extends State<_PoliticaCard> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(_hovered ? 0.08 : 0.03),
+                color: Colors.black.withValues(alpha: _hovered ? 0.08 : 0.03),
                 blurRadius: _hovered ? 16 : 8,
                 offset: Offset(0, _hovered ? 4 : 2),
               ),
@@ -387,8 +387,8 @@ class _PoliticaActionMenu extends StatelessWidget {
                 size: 18,
                 color: context.saas.textPrimary,
               ),
-              SizedBox(width: 12),
-              Text('Editar política', style: TextStyle(fontSize: 13)),
+              const SizedBox(width: 12),
+              const Text('Editar política', style: TextStyle(fontSize: 13)),
             ],
           ),
         ),
@@ -402,7 +402,7 @@ class _PoliticaActionMenu extends StatelessWidget {
                 size: 18,
                 color: context.saas.danger,
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Text(
                 'Eliminar',
                 style: TextStyle(color: context.saas.danger, fontSize: 13),

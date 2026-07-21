@@ -200,7 +200,7 @@ class RendimientoAgenteChart extends StatelessWidget {
                         ag.respuestasCotizacion,
                       ];
                       return Padding(
-                        padding: EdgeInsets.only(right: agentGap),
+                        padding: const EdgeInsets.only(right: agentGap),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -311,7 +311,7 @@ class _YAxis extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final steps = 4;
+    const steps = 4;
     return SizedBox(
       height: height,
       child: Column(
@@ -600,11 +600,11 @@ class _DestinosPieChartState extends State<DestinosPieChart> {
     final topN = widget.data.take(6).toList();
 
     if (topN.isEmpty) {
-      return ChartCard(
+      return const ChartCard(
         title: 'Destinos más solicitados',
         icon: Icons.flight_takeoff_rounded,
-        color: const Color(0xFF7C3AED),
-        child: const _EmptyChart(text: 'Sin cotizaciones en este período'),
+        color: Color(0xFF7C3AED),
+        child: _EmptyChart(text: 'Sin cotizaciones en este período'),
       );
     }
 
@@ -723,11 +723,11 @@ class ServiciosChart extends StatelessWidget {
     final topN = data.take(5).toList();
 
     if (topN.isEmpty) {
-      return ChartCard(
+      return const ChartCard(
         title: 'Servicios adicionales',
         icon: Icons.room_service_rounded,
-        color: const Color(0xFF0891B2),
-        child: const _EmptyChart(text: 'Sin servicios contratados'),
+        color: Color(0xFF0891B2),
+        child: _EmptyChart(text: 'Sin servicios contratados'),
       );
     }
 
@@ -1283,11 +1283,11 @@ class ToursProximosCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
-      return ChartCard(
+      return const ChartCard(
         title: 'Tours próximos (30 días)',
         icon: Icons.flight_land_rounded,
-        color: const Color(0xFF0891B2),
-        child: const _EmptyChart(text: 'Sin tours programados en los próximos 30 días'),
+        color: Color(0xFF0891B2),
+        child: _EmptyChart(text: 'Sin tours programados en los próximos 30 días'),
       );
     }
 
@@ -1584,7 +1584,7 @@ class RendimientoLegend extends StatelessWidget {
         const SizedBox(width: 4),
         Text('Vuelo', style: TextStyle(fontSize: 11, color: context.saas.textSecondary)),
         const SizedBox(width: 16),
-        _dot(Color(0xFF7C3AED)),
+        _dot(const Color(0xFF7C3AED)),
         const SizedBox(width: 4),
         Text('Cotizaciones', style: TextStyle(fontSize: 11, color: context.saas.textSecondary)),
       ],

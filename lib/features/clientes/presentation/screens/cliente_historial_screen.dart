@@ -1,9 +1,10 @@
+import 'dart:async';
 import 'dart:js_interop';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:web/web.dart' as webLib;
+import 'package:web/web.dart' as web_lib;
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
@@ -314,13 +315,13 @@ class _HistorialCardState extends State<_HistorialCard> {
   Future<void> _generateAndShowPdf() async {
     setState(() => _generatingPdf = true);
     final rootNav = Navigator.of(context, rootNavigator: true);
-    showDialog(
+    unawaited(showDialog(
       context: context,
       useRootNavigator: true,
       barrierDismissible: false,
       builder: (_) =>
           const DialogLoadingNetwork(titel: 'Generando PDF de Reserva'),
-    );
+    ));
     try {
       final fullReserva = await sl<ReservaRepository>().getReservaById(
         widget.reserva.id!,
@@ -354,26 +355,26 @@ class _HistorialCardState extends State<_HistorialCard> {
     final uint8Bytes = Uint8List.fromList(bytes);
 
     void openInNewTab() {
-      final blob = webLib.Blob(
+      final blob = web_lib.Blob(
         <JSAny>[uint8Bytes.buffer.toJS].toJS,
-        webLib.BlobPropertyBag(type: 'application/pdf'),
+        web_lib.BlobPropertyBag(type: 'application/pdf'),
       );
-      final url = webLib.URL.createObjectURL(blob);
-      webLib.window.open(url, '_blank', '');
+      final url = web_lib.URL.createObjectURL(blob);
+      web_lib.window.open(url, '_blank', '');
     }
 
     void download() {
-      final blob = webLib.Blob(
+      final blob = web_lib.Blob(
         <JSAny>[uint8Bytes.buffer.toJS].toJS,
-        webLib.BlobPropertyBag(type: 'application/pdf'),
+        web_lib.BlobPropertyBag(type: 'application/pdf'),
       );
-      final url = webLib.URL.createObjectURL(blob);
+      final url = web_lib.URL.createObjectURL(blob);
       final anchor =
-          webLib.document.createElement('a') as webLib.HTMLAnchorElement;
+          web_lib.document.createElement('a') as web_lib.HTMLAnchorElement;
       anchor.href = url;
       anchor.download = filename;
       anchor.click();
-      webLib.URL.revokeObjectURL(url);
+      web_lib.URL.revokeObjectURL(url);
     }
 
     await showDialog(

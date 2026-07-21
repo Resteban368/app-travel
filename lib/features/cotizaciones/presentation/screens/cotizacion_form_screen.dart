@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:agente_viajes/core/theme/saas_palette.dart';
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
@@ -344,9 +345,9 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
                                       ),
                                     ],
                                   ),
-                                  child: Row(
+                                  child: const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
-                                    children: const [
+                                    children: [
                                       Icon(Icons.reply_rounded, color: Colors.white, size: 20),
                                       SizedBox(width: 10),
                                       Text(
@@ -374,17 +375,17 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
                                       end: Alignment.centerRight,
                                     ),
                                     borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
+                                    boxShadow: const [
                                       BoxShadow(
                                         color: Color(0xFF6366F1),
                                         blurRadius: 12,
-                                        offset: const Offset(0, 4),
+                                        offset: Offset(0, 4),
                                       ),
                                     ],
                                   ),
-                                  child: Row(
+                                  child: const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
-                                    children: const [
+                                    children: [
                                       Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
                                       SizedBox(width: 10),
                                       Text(
@@ -428,13 +429,13 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
   Future<void> _viewResponse() async {
     bool dialogShown = false;
     try {
-      showDialog(
+      unawaited(showDialog(
         context: context,
         barrierDismissible: false,
         builder: (_) => Center(
           child: CircularProgressIndicator(color: context.saas.brand600),
         ),
-      );
+      ));
       await Future.delayed(const Duration(milliseconds: 150));
       dialogShown = true;
 

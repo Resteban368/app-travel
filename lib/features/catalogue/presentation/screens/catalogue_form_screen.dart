@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:agente_viajes/core/theme/saas_palette.dart';
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +9,6 @@ import '../../domain/entities/catalogue.dart';
 import '../bloc/catalogue_bloc.dart';
 import '../bloc/catalogue_event.dart';
 import '../bloc/catalogue_state.dart';
-import '../../../../core/theme/premium_palette.dart';
 import '../../../../core/widgets/premium_form_widgets.dart';
 
 class CatalogueFormScreen extends StatefulWidget {
@@ -340,7 +338,7 @@ class _CatalogueFormScreenState extends State<CatalogueFormScreen>
                       sedes
                           .firstWhere(
                             (s) => int.tryParse(s.id) == _selectedSedeId,
-                            orElse: () => Sede(
+                            orElse: () => const Sede(
                               id: '0',
                               nombreSede: 'Desconocido',
                               telefono: '',

@@ -29,9 +29,10 @@ class Cliente extends Equatable {
     String? correo,
     String? telefono,
     String? tipoDocumento,
-    String? numeroDocumento,
+    dynamic documento,
     DateTime? fechaNacimiento,
-    String? notas,
+    bool? estado,
+    DateTime? deletedAt,
   }) {
     return Cliente(
       id: id ?? this.id,
@@ -39,10 +40,10 @@ class Cliente extends Equatable {
       correo: correo ?? this.correo,
       telefono: telefono ?? this.telefono,
       tipoDocumento: tipoDocumento ?? this.tipoDocumento,
-      documento: documento ?? documento,
+      documento: documento ?? this.documento,
       fechaNacimiento: fechaNacimiento ?? this.fechaNacimiento,
-      estado: estado ?? estado,
-      deletedAt: deletedAt ?? deletedAt,
+      estado: estado ?? this.estado,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 

@@ -28,7 +28,7 @@ class SaasBreadcrumbs extends StatelessWidget {
             ),
             if (!isLast)
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Icon(
                   Icons.chevron_right,
                   size: 14,
@@ -149,7 +149,7 @@ class SaasButton extends StatelessWidget {
           boxShadow: isPrimary
               ? [
                   BoxShadow(
-                    color: context.saas.brand600.withOpacity(0.2),
+                    color: context.saas.brand600.withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -225,7 +225,7 @@ class _SaasSearchFieldState extends State<SaasSearchField> {
         boxShadow: _focused
             ? [
                 BoxShadow(
-                  color: context.saas.brand600.withOpacity(0.08),
+                  color: context.saas.brand600.withValues(alpha: 0.08),
                   blurRadius: 10,
                 ),
               ]
@@ -286,7 +286,7 @@ class SaasStatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -438,9 +438,9 @@ class SaasBannerSkeleton extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: context.saas.brand600.withOpacity(0.05),
+        color: context.saas.brand600.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.saas.brand600.withOpacity(0.1)),
+        border: Border.all(color: context.saas.brand600.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -451,7 +451,7 @@ class SaasBannerSkeleton extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: context.saas.brand600.withOpacity(0.1),
+                  color: context.saas.brand600.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -463,7 +463,7 @@ class SaasBannerSkeleton extends StatelessWidget {
                     width: 150,
                     height: 14,
                     decoration: BoxDecoration(
-                      color: context.saas.brand600.withOpacity(0.1),
+                      color: context.saas.brand600.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -472,7 +472,7 @@ class SaasBannerSkeleton extends StatelessWidget {
                     width: 100,
                     height: 10,
                     decoration: BoxDecoration(
-                      color: context.saas.brand600.withOpacity(0.1),
+                      color: context.saas.brand600.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -485,7 +485,7 @@ class SaasBannerSkeleton extends StatelessWidget {
             width: double.infinity,
             height: 12,
             decoration: BoxDecoration(
-              color: context.saas.brand600.withOpacity(0.05),
+              color: context.saas.brand600.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -494,7 +494,7 @@ class SaasBannerSkeleton extends StatelessWidget {
             width: 200,
             height: 12,
             decoration: BoxDecoration(
-              color: context.saas.brand600.withOpacity(0.05),
+              color: context.saas.brand600.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -535,7 +535,7 @@ class SaasConfirmDialog extends StatelessWidget {
             border: Border.all(color: context.saas.border),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 30,
                 offset: const Offset(0, 10),
               ),
@@ -550,7 +550,7 @@ class SaasConfirmDialog extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: context.saas.danger.withOpacity(0.1),
+                      color: context.saas.danger.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(

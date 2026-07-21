@@ -177,7 +177,7 @@ class _ClienteFormScreenState extends State<ClienteFormScreen>
                     title: _isEditing ? 'Editar Cliente' : 'Nuevo Cliente',
                     actions: IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.arrow_back, color: D.white),
+                      icon: const Icon(Icons.arrow_back, color: D.white),
                     ),
                   ),
                   SliverToBoxAdapter(

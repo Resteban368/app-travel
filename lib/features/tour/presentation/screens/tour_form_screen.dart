@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:agente_viajes/core/widgets/dialog_loading_widget.dart';
 import 'package:flutter/material.dart';
@@ -53,7 +54,7 @@ class _TourFormScreenState extends State<TourFormScreen>
   String? _selectedSedeId;
   List<int> _selectedBusLayoutIds = [];
   // busLayoutId → asientos de agente seleccionados para ese bus en este tour
-  Map<int, Set<String>> _agenteSeatsByBus = {};
+  final Map<int, Set<String>> _agenteSeatsByBus = {};
   bool _isPromotion = false;
   bool _isActive = true;
   bool _precioPorPareja = false;
@@ -85,7 +86,7 @@ class _TourFormScreenState extends State<TourFormScreen>
     _nameCtrl = TextEditingController(text: t?.name ?? '');
     _agencyCtrl = TextEditingController(text: t?.agency ?? 'Agente Viajes');
     _priceCtrl = TextEditingController(
-      text: t?.price?.toInt().toString() ?? '',
+      text: t?.price.toInt().toString() ?? '',
     );
     _departurePointCtrl = TextEditingController(text: t?.departurePoint ?? '');
     _departureTimeCtrl = TextEditingController(text: t?.departureTime ?? '');
@@ -102,14 +103,14 @@ class _TourFormScreenState extends State<TourFormScreen>
         _dateRange = DateTimeRange(start: t.startDate!, end: t.endDate!);
       }
       _selectedSedeId = t.sedeId;
-      _selectedBusLayoutIds = List<int>.from(t.busLayoutIds ?? []);
-      _isPromotion = t.isPromotion ?? false;
-      _isActive = t.isActive ?? false;
-      _precioPorPareja = t.precioPorPareja ?? false;
-      _inclusions = List.from(t.inclusions ?? []);
-      _exclusions = List.from(t.exclusions ?? []);
-      _itinerary = List.from(t.itinerary ?? []);
-      _precios = List.from(t.precios ?? []);
+      _selectedBusLayoutIds = List<int>.from(t.busLayoutIds);
+      _isPromotion = t.isPromotion;
+      _isActive = t.isActive;
+      _precioPorPareja = t.precioPorPareja;
+      _inclusions = List.from(t.inclusions);
+      _exclusions = List.from(t.exclusions);
+      _itinerary = List.from(t.itinerary);
+      _precios = List.from(t.precios);
       _preciosGrupales = List.from(t.preciosGrupales);
       _imagenes = List.from(t.imagenes);
       _modoPrecio = t.modoPrecio ?? 'individual';
@@ -144,13 +145,13 @@ class _TourFormScreenState extends State<TourFormScreen>
   }
 
   void _updateFieldsFromTour(Tour t) {
-    _nameCtrl.text = t.name ?? '';
-    _agencyCtrl.text = t.agency ?? '';
-    _priceCtrl.text = t.price?.toInt().toString() ?? '';
-    _departurePointCtrl.text = t.departurePoint ?? '';
-    _departureTimeCtrl.text = t.departureTime ?? '';
-    _arrivalCtrl.text = t.arrival ?? '';
-    _pdfLinkCtrl.text = t.pdfLink ?? '';
+    _nameCtrl.text = t.name;
+    _agencyCtrl.text = t.agency;
+    _priceCtrl.text = t.price.toInt().toString();
+    _departurePointCtrl.text = t.departurePoint;
+    _departureTimeCtrl.text = t.departureTime;
+    _arrivalCtrl.text = t.arrival;
+    _pdfLinkCtrl.text = t.pdfLink;
     _idTourCtrl.text = t.idTour?.toString() ?? '';
     _cuposCtrl.text = t.cupos?.toString() ?? '';
     _descripcionCtrl.text = t.descripcion ?? '';
@@ -162,14 +163,14 @@ class _TourFormScreenState extends State<TourFormScreen>
       _dateRange = null;
     }
     _selectedSedeId = t.sedeId;
-    _selectedBusLayoutIds = List<int>.from(t.busLayoutIds ?? []);
-    _isPromotion = t.isPromotion ?? false;
-    _isActive = t.isActive ?? false;
-    _precioPorPareja = t.precioPorPareja ?? false;
-    _inclusions = List.from(t.inclusions ?? []);
-    _exclusions = List.from(t.exclusions ?? []);
-    _itinerary = List.from(t.itinerary ?? []);
-    _precios = List.from(t.precios ?? []);
+    _selectedBusLayoutIds = List<int>.from(t.busLayoutIds);
+    _isPromotion = t.isPromotion;
+    _isActive = t.isActive;
+    _precioPorPareja = t.precioPorPareja;
+    _inclusions = List.from(t.inclusions);
+    _exclusions = List.from(t.exclusions);
+    _itinerary = List.from(t.itinerary);
+    _precios = List.from(t.precios);
     _preciosGrupales = List.from(t.preciosGrupales);
     _imagenes = List.from(t.imagenes);
     _tipoTour = t.tipoTour;
@@ -432,9 +433,9 @@ class _TourFormScreenState extends State<TourFormScreen>
         if (state is TourDetailLoaded) {
           Navigator.of(context, rootNavigator: true).pop();
           if (mounted) setState(() => _updateFieldsFromTour(state.tour));
-          final busIds = state.tour.busLayoutIds ?? [];
+          final busIds = state.tour.busLayoutIds;
           if (busIds.isNotEmpty) {
-            _loadAgentesForAllBuses(state.tour.id, busIds);
+            unawaited(_loadAgentesForAllBuses(state.tour.id, busIds));
           }
           final now = DateTime.now();
           final end = state.tour.endDate;
@@ -463,6 +464,7 @@ class _TourFormScreenState extends State<TourFormScreen>
           final tourId = _isEditing ? widget.tour!.id : state.savedTourId;
           if (tourId != null && _agenteSeatsByBus.isNotEmpty) {
             await _saveAllAgentes(context, tourId);
+            if (!context.mounted) return;
           }
           if (_isEditing &&
               widget.tour?.id != null &&
@@ -477,20 +479,21 @@ class _TourFormScreenState extends State<TourFormScreen>
                   );
                 }
               } catch (e) {
-                if (mounted) {
+                if (context.mounted) {
                   SaasSnackBar.showError(
                     context,
                     'Error al guardar salida(s): ${e.toString()}',
                   );
                 }
               }
+              if (!context.mounted) return;
             }
           }
           SaasSnackBar.showSuccess(
             context,
             'Experiencia guardada exitosamente',
           );
-          if (mounted) Navigator.pop(context);
+          Navigator.pop(context);
         } else if (state is TourError && !_isLoadingFullData) {
           if (mounted) SaasSnackBar.showError(context, state.message);
         }
@@ -675,7 +678,7 @@ class _TourFormScreenState extends State<TourFormScreen>
                                               color: context.saas.brand600,
                                               size: 18,
                                             ),
-                                            SizedBox(width: 12),
+                                            const SizedBox(width: 12),
                                             Text(
                                               'Cupos ilimitados',
                                               style: TextStyle(
@@ -1031,7 +1034,7 @@ class _TourFormScreenState extends State<TourFormScreen>
           child: Container(
             decoration: BoxDecoration(
               color: context.saas.bgCanvas,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
             child: Column(
@@ -1114,7 +1117,7 @@ class _TourFormScreenState extends State<TourFormScreen>
                     ),
                     Switch(
                       value: activo,
-                      activeColor: context.saas.brand600,
+                      activeThumbColor: context.saas.brand600,
                       onChanged: (v) => setSheetState(() => activo = v),
                     ),
                   ],
@@ -1133,8 +1136,9 @@ class _TourFormScreenState extends State<TourFormScreen>
                     ),
                     onPressed: () {
                       if (descCtrl.text.trim().isEmpty ||
-                          precioCtrl.text.trim().isEmpty)
+                          precioCtrl.text.trim().isEmpty) {
                         return;
+                      }
                       final nuevo = TourPrecio(
                         descripcion: descCtrl.text.trim(),
                         precio:
@@ -1265,7 +1269,7 @@ class _TourFormScreenState extends State<TourFormScreen>
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _imagenes.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
               itemBuilder: (context, index) => _ImagenThumbnail(
                 url: _imagenes[index],
                 canWrite: canWrite,
@@ -1632,7 +1636,7 @@ class _TourFormScreenState extends State<TourFormScreen>
           )
         else
           DropdownButtonFormField<String>(
-            value: _tipoTour,
+            initialValue: _tipoTour,
             dropdownColor: context.saas.bgCanvas,
             style: TextStyle(
               color: context.saas.textPrimary,
@@ -1912,13 +1916,13 @@ class _TourFormScreenState extends State<TourFormScreen>
                                               final tourId = widget.tour?.id;
                                               if (tourId == null) return;
                                               // Diálogo de carga
-                                              showDialog(
+                                              unawaited(showDialog(
                                                 context: context,
                                                 barrierDismissible: false,
                                                 builder: (_) => const DialogLoadingNetwork(
                                                   titel: 'Guardando configuración de agentes...',
                                                 ),
-                                              );
+                                              ));
                                               try {
                                                 await sl<TourRepository>().updateAgentesForBus(
                                                   tourId,
@@ -3086,15 +3090,15 @@ class _ItineraryDayCard extends StatelessWidget {
     filled: true,
     fillColor: context.saas.bgCanvas,
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(10)),
+      borderRadius: const BorderRadius.all(Radius.circular(10)),
       borderSide: BorderSide(color: context.saas.border),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(10)),
+      borderRadius: const BorderRadius.all(Radius.circular(10)),
       borderSide: BorderSide(color: context.saas.brand600, width: 1.5),
     ),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(10)),
+      borderRadius: const BorderRadius.all(Radius.circular(10)),
       borderSide: BorderSide(color: context.saas.border),
     ),
   ).copyWith(labelText: label);
@@ -3124,7 +3128,7 @@ class _GaleriaBtn extends StatelessWidget {
               color: context.saas.brand600,
               size: 16,
             ),
-            SizedBox(width: 5),
+            const SizedBox(width: 5),
             Text(
               'Galería',
               style: TextStyle(
@@ -3436,7 +3440,7 @@ class _GrupalPriceSheetState extends State<_GrupalPriceSheet> {
       child: Container(
         decoration: BoxDecoration(
           color: context.saas.bgCanvas,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
         child: Column(

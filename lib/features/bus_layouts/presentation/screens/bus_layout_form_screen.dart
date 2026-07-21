@@ -367,7 +367,7 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
 
     if (_loadingHistorial) {
       body = Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
+        padding: const EdgeInsets.symmetric(vertical: 20),
         child: Center(
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -380,7 +380,7 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
                   color: context.saas.brand600,
                 ),
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Text(
                 'Cargando historial...',
                 style: TextStyle(
@@ -545,7 +545,7 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
                                   color: context.saas.brand600,
                                   size: 16,
                                 ),
-                                SizedBox(width: 8),
+                                const SizedBox(width: 8),
                                 Text(
                                   'CONFIGURACIÓN DEL BUS',
                                   style: TextStyle(
@@ -723,8 +723,8 @@ class _BusLayoutFormScreenState extends State<BusLayoutFormScreen>
                                   configuracion: _generarLayout(),
                                   aisleIndex: _colDef.aisle,
                                   onSeatTap: canWrite
-                                      ? (num, fila, col) =>
-                                          _toggleSeat(num, fila, col, ctx)
+                                      ? (numero, fila, col) =>
+                                          _toggleSeat(numero, fila, col, ctx)
                                       : null,
                                 ),
                               ),
@@ -1096,7 +1096,7 @@ class _ColumnaConfigSelector extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
                     'Columnas por lado del pasillo',
                     style: TextStyle(

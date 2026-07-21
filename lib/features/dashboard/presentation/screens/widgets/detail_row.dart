@@ -27,7 +27,7 @@ class DetailRow extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.greyDark,
                 fontWeight: FontWeight.w500,

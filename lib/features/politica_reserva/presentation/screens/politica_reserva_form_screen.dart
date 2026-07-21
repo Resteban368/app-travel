@@ -167,10 +167,10 @@ class _PoliticaReservaFormScreenState extends State<PoliticaReservaFormScreen>
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: D.skyBlue.withOpacity(0.1),
+                                    color: D.skyBlue.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: D.skyBlue.withOpacity(0.3),
+                                      color: D.skyBlue.withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: const Row(
@@ -279,7 +279,7 @@ class _PoliticaReservaFormScreenState extends State<PoliticaReservaFormScreen>
           decoration: BoxDecoration(
             color: D.bg,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           ),
           child: SwitchListTile(
             title: const Text(
@@ -296,9 +296,9 @@ class _PoliticaReservaFormScreenState extends State<PoliticaReservaFormScreen>
             ),
             value: _activo,
             activeThumbColor: D.emerald,
-            activeTrackColor: D.emerald.withOpacity(0.3),
+            activeTrackColor: D.emerald.withValues(alpha: 0.3),
             inactiveThumbColor: D.slate400,
-            inactiveTrackColor: D.bg.withOpacity(0.5),
+            inactiveTrackColor: D.bg.withValues(alpha: 0.5),
             onChanged: canWrite ? (v) => setState(() => _activo = v) : null,
           ),
         ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:agente_viajes/core/theme/saas_palette.dart';
 import 'package:agente_viajes/config/app_router.dart';
 import 'package:agente_viajes/features/cotizaciones/presentation/bloc/cotizacion_bloc.dart';
@@ -41,15 +42,18 @@ class _DashboardBodyState extends State<DashboardScreen> {
     context.read<CotizacionBloc>().add(const LoadAllData());
   }
 
+  // Detalle de tour al tocar una tarjeta. UI staged, pendiente de cablear al
+  // onTap de las tarjetas del dashboard (ver ANALISIS_Y_PLAN_MEJORAS.md, Fase 4).
+  // ignore: unused_element
   void _showTourDetail(Tour tour) {
-    showDialog(
+    unawaited(showDialog(
       context: context,
       builder: (context) => DialogDetailTour(
         tour: tour,
         currencyFormat: _currencyFormat,
         dateFormat: _dateFormat,
       ),
-    );
+    ));
   }
 
   @override
@@ -73,7 +77,7 @@ class _DashboardBodyState extends State<DashboardScreen> {
                 ? pagosState.pagos.where((p) => !p.isValidated).length
                 : 0;
 
-            final isLoading = tourState is TourLoading;
+
 
             return Scaffold(
               backgroundColor: context.saas.bgApp,
@@ -84,8 +88,8 @@ class _DashboardBodyState extends State<DashboardScreen> {
                   physics: const BouncingScrollPhysics(),
                   slivers: [
                     // ── Header ───────────────────────────────────────────────
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+                    const SliverPadding(
+                      padding: EdgeInsets.fromLTRB(24, 32, 24, 0),
                       sliver: SliverToBoxAdapter(child: DashHeader()),
                     ),
 

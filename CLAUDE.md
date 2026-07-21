@@ -19,7 +19,7 @@ This is a **Flutter admin panel** for "Travel Tours Florencia" travel agency, ta
 
 **State Management:** BLoC (`flutter_bloc`) — events trigger logic, BLoC emits states, UI rebuilds on state changes.
 
-**Dependency Injection:** GetIt service locator. All dependencies registered in [lib/core/di/injection_container.dart](lib/core/di/injection_container.dart) via `initDependencies()`, called at startup. BLoCs are factories; repositories are lazy singletons. Access via global `sl<T>()`.
+**Dependency Injection:** GetIt service locator. All dependencies registered in [lib/core/di/injection_container.dart](lib/core/di/injection_container.dart) via `initDependencies()`, called at startup. Repositories are lazy singletons. BLoCs son una mezcla de `factory` y `lazySingleton` — normalizar a `factory` está planificado en la Fase 2 (ver [ANALISIS_Y_PLAN_MEJORAS.md](ANALISIS_Y_PLAN_MEJORAS.md)). Access via global `sl<T>()`.
 
 **Clean Architecture per feature:**
 ```
@@ -34,7 +34,19 @@ features/<name>/
     └── screens/        # UI screens and widgets
 ```
 
-**12 feature modules:** `auth`, `tour`, `settings`, `catalogue`, `dashboard`, `faq`, `service`, `politica_reserva`, `info_empresa`, `pagos_realizados`, `cotizaciones`, `whatsapp`.
+**24 feature modules:** `agentes`, `auditoria`, `auth`, `bus_layouts`, `catalogue`, `clientes`, `cotizaciones`, `dashboard`, `faq`, `gallery`, `hoteles`, `info_empresa`, `notificaciones`, `pagos_realizados`, `politica_reserva`, `profile`, `proveedores`, `reservas`, `saldos_pendientes`, `service`, `settings`, `tour`, `uploads`, `whatsapp`.
+
+## Convenciones (Fase 0 — mejora continua)
+
+Ver [ANALISIS_Y_PLAN_MEJORAS.md](ANALISIS_Y_PLAN_MEJORAS.md) para el plan por fases.
+
+- **`flutter analyze` debe quedar en 0 issues.** El CI corre `flutter analyze --fatal-infos`: cualquier info/warning rompe el build. Lints extra activos: `unawaited_futures`, `cancel_subscriptions`, `close_sinks`, `avoid_print`, `prefer_const_*`.
+- **Nunca `print()`** en código de producción — usar `debugPrint`.
+- **Fire-and-forget:** todo `Future` no esperado debe envolverse en `unawaited(...)` (importar `dart:async`).
+- **`BuildContext` tras `await`:** volver a verificar `context.mounted` (o `mounted` en State) antes de usarlo.
+- **`withOpacity` está deprecado** — usar `.withValues(alpha: x)`.
+- **`package:web` / `dart:html`** solo compilan en el target web/wasm, no en la VM de `flutter test`. Los tests de widget de pantallas que dependen de ellos (vía `app_router.dart`) requieren `--platform chrome` o abstraer la dependencia (planificado en Fase 5). Los unit tests de entidades/repos sí corren en la VM.
+- Scripts one-off de mantenimiento viven en `tool/` (excluido del analyzer).
 
 ## Key Files
 

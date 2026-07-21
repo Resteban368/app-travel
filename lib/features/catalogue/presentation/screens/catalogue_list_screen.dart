@@ -113,7 +113,7 @@ class _CatalogueListBodyState extends State<_CatalogueListBody> {
                     padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (_, __) => const SaasListSkeleton(),
+                        (_, _) => const SaasListSkeleton(),
                         childCount: 5,
                       ),
                     ),
@@ -209,7 +209,7 @@ class _CatalogueHeader extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Gestiona tus guías y PDFs informativos para clientes.',
                     style: TextStyle(
@@ -281,7 +281,7 @@ class _CatalogueCardState extends State<_CatalogueCard> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(_hovered ? 0.07 : 0.03),
+                color: Colors.black.withValues(alpha: _hovered ? 0.07 : 0.03),
                 blurRadius: _hovered ? 16 : 6,
                 offset: Offset(0, _hovered ? 6 : 2),
               ),
@@ -300,7 +300,7 @@ class _CatalogueCardState extends State<_CatalogueCard> {
                     height: 48,
                     decoration: BoxDecoration(
                       color: cat.activo
-                          ? context.saas.brand600.withOpacity(0.1)
+                          ? context.saas.brand600.withValues(alpha: 0.1)
                           : context.saas.bgSubtle,
                       borderRadius: BorderRadius.circular(12),
                     ),

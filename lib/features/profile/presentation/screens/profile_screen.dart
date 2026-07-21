@@ -239,9 +239,9 @@ class _RoleBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.25)),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -276,7 +276,7 @@ class _InfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionLabel(text: 'INFORMACIÓN DE CUENTA'),
+          const _SectionLabel(text: 'INFORMACIÓN DE CUENTA'),
           const SizedBox(height: 16),
           _InfoRow(
             icon: Icons.person_outline_rounded,
@@ -320,7 +320,7 @@ class _InfoRow extends StatelessWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: context.saas.brand600.withOpacity(0.08),
+            color: context.saas.brand600.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: context.saas.brand600, size: 18),
@@ -425,7 +425,7 @@ class _PermissionsCard extends StatelessWidget {
           const SizedBox(height: 16),
           if (permisos.isEmpty)
             Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               child: Center(
                 child: Text(
                   'Sin permisos asignados',
@@ -492,7 +492,7 @@ class _PermissionRow extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: badgeColor.withOpacity(0.1),
+              color: badgeColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: badgeColor, size: 17),
@@ -511,9 +511,9 @@ class _PermissionRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
             decoration: BoxDecoration(
-              color: badgeColor.withOpacity(0.1),
+              color: badgeColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: badgeColor.withOpacity(0.25)),
+              border: Border.all(color: badgeColor.withValues(alpha: 0.25)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -870,7 +870,7 @@ class _CopyButtonState extends State<_CopyButton> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.check_rounded, size: 14, color: context.saas.success),
-                  SizedBox(width: 5),
+                  const SizedBox(width: 5),
                   Text(
                     'Copiado',
                     style: TextStyle(
@@ -898,7 +898,7 @@ class _CopyButtonState extends State<_CopyButton> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.copy_rounded, size: 14, color: context.saas.brand600),
-                    SizedBox(width: 5),
+                    const SizedBox(width: 5),
                     Text(
                       'Copiar',
                       style: TextStyle(
@@ -1121,7 +1121,7 @@ class _SaasCard extends StatelessWidget {
         border: Border.all(color: context.saas.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

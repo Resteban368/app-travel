@@ -1,3 +1,5 @@
+// TODO(Fase 5): migrar a package:web + dart:js_interop (ANALISIS_Y_PLAN_MEJORAS.md)
+// ignore_for_file: deprecated_member_use
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 import 'dart:convert';

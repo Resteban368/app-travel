@@ -54,7 +54,7 @@ class AuthNetworkImage extends StatelessWidget {
                   color: context.saas.textTertiary,
                   size: 22,
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
                   'Sin vista previa',
                   style: TextStyle(

@@ -37,7 +37,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
   initDependencies();
-  initializeDateFormatting('es_CO', null);
+  await initializeDateFormatting('es_CO', null);
   await sl<ThemeCubit>().loadSavedTheme();
   runApp(const TravelToursApp());
 }
@@ -129,7 +129,7 @@ class _TravelToursAppState extends State<TravelToursApp> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(
+                const Text(
                   'Tu sesión ha expirado o no es válida. Por favor inicia sesión nuevamente para continuar.',
                   textAlign: TextAlign.center,
                   style: TextStyle(

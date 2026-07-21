@@ -470,7 +470,7 @@ class _CotizacionesBodyState extends State<_CotizacionesBody>
         isScrollable: true,
         indicator: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
-          color: context.saas.brand600.withOpacity(0.1),
+          color: context.saas.brand600.withValues(alpha: 0.1),
         ),
         indicatorPadding: const EdgeInsets.all(4),
         labelColor: context.saas.brand600,
@@ -664,7 +664,7 @@ class _CotizacionCardState extends State<_CotizacionCard> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(_hover ? 0.08 : 0.03),
+                color: Colors.black.withValues(alpha: _hover ? 0.08 : 0.03),
                 blurRadius: _hover ? 16 : 8,
                 offset: Offset(0, _hover ? 4 : 2),
               ),
@@ -681,7 +681,7 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: context.saas.brand600.withOpacity(0.1),
+                      color: context.saas.brand600.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -736,7 +736,7 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                                       size: 10,
                                       color: context.saas.warning,
                                     ),
-                                    SizedBox(width: 3),
+                                    const SizedBox(width: 3),
                                     Text(
                                       'Sin respuesta',
                                       style: TextStyle(
@@ -847,7 +847,7 @@ class _CotizacionCardState extends State<_CotizacionCard> {
                             //       vertical: 2,
                             //     ),
                             //     decoration: BoxDecoration(
-                            //       color: context.saas.brand600.withOpacity(0.1),
+                            //       color: context.saas.brand600.withValues(alpha: 0.1),
                             //       borderRadius: BorderRadius.circular(4),
                             //     ),
                             //     child: const Text(
@@ -942,7 +942,7 @@ class _RespuestaCardState extends State<_RespuestaCard> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(_hover ? 0.08 : 0.03),
+                color: Colors.black.withValues(alpha: _hover ? 0.08 : 0.03),
                 blurRadius: _hover ? 16 : 8,
                 offset: Offset(0, _hover ? 4 : 2),
               ),
@@ -963,7 +963,7 @@ class _RespuestaCardState extends State<_RespuestaCard> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: context.saas.warning.withOpacity(0.1),
+                          color: context.saas.warning.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
@@ -1213,7 +1213,7 @@ class _PaginationBar extends StatelessWidget {
           border: Border.all(color: context.saas.border),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -1281,7 +1281,7 @@ class _PageBtn extends StatelessWidget {
         height: 38,
         decoration: BoxDecoration(
           color: enabled
-              ? context.saas.brand600.withOpacity(0.08)
+              ? context.saas.brand600.withValues(alpha: 0.08)
               : Colors.white,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(

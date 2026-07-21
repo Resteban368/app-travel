@@ -540,7 +540,7 @@ class _ProveedorCardState extends State<_ProveedorCard> {
                       child: Row(
                         children: [
                           Icon(Icons.edit_rounded, size: 16, color: context.saas.brand600),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text('Editar', style: TextStyle(color: context.saas.textPrimary)),
                         ],
                       ),
@@ -550,7 +550,7 @@ class _ProveedorCardState extends State<_ProveedorCard> {
                       child: Row(
                         children: [
                           Icon(Icons.delete_outline_rounded, size: 16, color: context.saas.danger),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text('Eliminar', style: TextStyle(color: context.saas.danger)),
                         ],
                       ),

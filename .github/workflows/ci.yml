@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, desarrollo]
+  pull_request:
+    branches: [main, desarrollo]
+
+jobs:
+  analyze-and-test:
+    name: Analyze, Test & Build Web
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.8'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # La Fase 0 dejó `flutter analyze` en cero issues. `--fatal-infos` hace
+      # que cualquier nuevo info/warning rompa el build (ver ANALISIS_Y_PLAN_MEJORAS.md).
+      - name: Analyze
+        run: flutter analyze --fatal-infos
+
+      - name: Test
+        run: flutter test
+
+      - name: Build web (release)
+        run: flutter build web --release

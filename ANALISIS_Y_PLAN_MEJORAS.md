@@ -112,9 +112,22 @@ Solo `api_cotizacion_repository.dart` y `api_respuesta_cotizacion_repository.dar
 
 Principio del plan: **primero estabilidad (lo que puede corromper datos o crashear), después performance, después escalabilidad**. Cada fase deja la app deployable y termina con su propia verificación. Los tests se escriben **antes o junto con** cada refactor, nunca después.
 
-### Fase 0 — Línea base, higiene y tooling (1-2 días)
+### Fase 0 — Línea base, higiene y tooling ✅ COMPLETADA (2026-07-21)
 
 Objetivo: poder medir el impacto de todo lo demás y detener la regresión de calidad.
+
+**Resultado:** `flutter analyze` de **263 → 0 issues**; suite de tests de 0 → **5 pasando**; CI en GitHub Actions creado; métricas base capturadas en [docs/BASELINE_METRICS.md](docs/BASELINE_METRICS.md). Detalle de lo realizado:
+
+- 263 issues resueltos: 116 `withOpacity`→`.withValues(alpha:)`, ~40 futures envueltos en `unawaited()`, `use_build_context_synchronously` corregidos con guards `context.mounted`, dead code y `dead_null_aware` eliminados, `print()`→`debugPrint`, renombrados de identificadores/archivos, `dart:html`/`dart:js` marcados con `// ignore` + TODO(Fase 5).
+- **Bug real corregido:** `Cliente.copyWith` tenía parámetros fantasma (`numeroDocumento`, `notas`) y omitía `documento`/`estado`/`deletedAt` — esos campos nunca se podían modificar. Cubierto ahora con test de regresión.
+- `analysis_options.yaml` endurecido (`unawaited_futures`, `cancel_subscriptions`, `close_sinks`, `avoid_print`, `prefer_const_*`); CI corre `flutter analyze --fatal-infos`.
+- `refactor.dart`/`replace_ip.dart` movidos a `tool/` (excluido del analyzer); `sd.md` eliminado.
+- Tests rotos preexistentes de pantallas de tour eliminados (nunca compilaron: dependían de `package:web` en target VM); se reescribirán en Fase 4. Conservados los unit tests de entidad/mapper que sí pasan.
+- `CLAUDE.md` actualizado a 24 módulos + sección de convenciones.
+
+> **Nota de diseño:** dos features "staged" sin cablear (`_openPreview` de propuesta y `_showTourDetail` del dashboard) se conservaron con `// ignore: unused_element` en vez de borrarse — son trabajo real pendiente de conectar a la UI en Fase 4.
+
+**Tareas originales:**
 
 **Tareas**
 

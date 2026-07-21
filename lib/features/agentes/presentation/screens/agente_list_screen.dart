@@ -107,7 +107,7 @@ class _AgenteListScreenState extends State<AgenteListScreen> {
                     padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (_, __) => const SaasListSkeleton(),
+                        (_, _) => const SaasListSkeleton(),
                         childCount: 4,
                       ),
                     ),
@@ -195,7 +195,7 @@ class _AgenteHeader extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Administra el equipo de ventas y asesores de la agencia.',
                     style: TextStyle(
@@ -261,7 +261,7 @@ class _AgenteCardState extends State<_AgenteCard> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(_hovered ? 0.08 : 0.03),
+                color: Colors.black.withValues(alpha: _hovered ? 0.08 : 0.03),
                 blurRadius: _hovered ? 16 : 8,
                 offset: Offset(0, _hovered ? 4 : 2),
               ),
@@ -368,8 +368,8 @@ class _AgenteActionMenu extends StatelessWidget {
                 size: 18,
                 color: context.saas.textPrimary,
               ),
-              SizedBox(width: 12),
-              Text('Editar agente', style: TextStyle(fontSize: 13)),
+              const SizedBox(width: 12),
+              const Text('Editar agente', style: TextStyle(fontSize: 13)),
             ],
           ),
         ),
@@ -383,7 +383,7 @@ class _AgenteActionMenu extends StatelessWidget {
                 size: 18,
                 color: context.saas.danger,
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Text(
                 'Eliminar',
                 style: TextStyle(color: context.saas.danger, fontSize: 13),

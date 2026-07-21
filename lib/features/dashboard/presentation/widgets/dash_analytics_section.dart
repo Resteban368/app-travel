@@ -93,7 +93,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
       decoration: BoxDecoration(
         color: context.saas.bgSubtle,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.saas.border.withOpacity(0.5)),
+        border: Border.all(color: context.saas.border.withValues(alpha: 0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -116,7 +116,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                 boxShadow: selected
                     ? [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
+                          color: Colors.black.withValues(alpha: 0.06),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -164,7 +164,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: context.saas.brand600.withOpacity(0.1),
+                          color: context.saas.brand600.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
@@ -195,7 +195,7 @@ class _DashAnalyticsSectionState extends State<DashAnalyticsSection> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: context.saas.brand600.withOpacity(0.1),
+                      color: context.saas.brand600.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(

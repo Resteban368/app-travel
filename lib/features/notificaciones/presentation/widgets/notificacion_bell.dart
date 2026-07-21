@@ -87,9 +87,9 @@ class NotificacionBell extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            Icon(Icons.notifications_active_rounded,
+            const Icon(Icons.notifications_active_rounded,
                 color: Color(0xFFF59E0B), size: 22),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 'Notificaciones del navegador',
@@ -332,7 +332,7 @@ class _NotificacionPanel extends StatelessWidget {
                     size: 36,
                     color: context.saas.textTertiary,
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     'Sin notificaciones',
                     style: TextStyle(
@@ -539,7 +539,7 @@ class _NotificacionTileState extends State<_NotificacionTile>
                         duration: const Duration(milliseconds: 180),
                         child: _deleting
                             ? SizedBox(
-                                key: ValueKey('spinner'),
+                                key: const ValueKey('spinner'),
                                 width: 16,
                                 height: 16,
                                 child: CircularProgressIndicator(

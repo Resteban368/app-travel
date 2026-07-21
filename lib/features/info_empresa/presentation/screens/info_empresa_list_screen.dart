@@ -39,7 +39,7 @@ class _InfoEmpresaListScreenState extends State<InfoEmpresaListScreen> {
           if (state is InfoSynced) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Vectores sincronizados correctamente'),
+                content: const Text('Vectores sincronizados correctamente'),
                 backgroundColor: context.saas.success,
               ),
             );
@@ -57,13 +57,13 @@ class _InfoEmpresaListScreenState extends State<InfoEmpresaListScreen> {
           List<InfoEmpresa> infoList = [];
           if (state is InfoLoaded) {
             infoList = state.infoList;
-          } else if (state is InfoSaved)
+          } else if (state is InfoSaved) {
             infoList = state.infoList;
-          else if (state is InfoSynced)
+          } else if (state is InfoSynced) {
             infoList = state.infoList;
-          else if (state is InfoSyncing)
+          } else if (state is InfoSyncing) {
             infoList = state.infoList;
-          else if (state is InfoSaving && state.infoList != null) {
+          } else if (state is InfoSaving && state.infoList != null) {
             infoList = state.infoList!;
           }
 
@@ -94,7 +94,7 @@ class _InfoEmpresaListScreenState extends State<InfoEmpresaListScreen> {
                   padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
-                      (_, __) => const SaasListSkeleton(),
+                      (_, _) => const SaasListSkeleton(),
                       childCount: 1,
                     ),
                   ),
@@ -175,7 +175,7 @@ class _InfoHeader extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Administra la identidad corporativa y base documental de la agencia.',
                     style: TextStyle(
@@ -242,7 +242,7 @@ class _InfoCardState extends State<_InfoCard> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(_hovered ? 0.08 : 0.03),
+                color: Colors.black.withValues(alpha: _hovered ? 0.08 : 0.03),
                 blurRadius: _hovered ? 16 : 8,
                 offset: Offset(0, _hovered ? 4 : 2),
               ),

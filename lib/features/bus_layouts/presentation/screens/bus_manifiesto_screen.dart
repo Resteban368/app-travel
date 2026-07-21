@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:web/web.dart' as webLib;
+import 'package:web/web.dart' as web_lib;
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/widgets/dialog_loading_widget.dart';
@@ -75,7 +75,6 @@ class _ModoMoverInfo {
 
 class _BusManifiestoBodyState extends State<_BusManifiestoBody>
     with SingleTickerProviderStateMixin {
-  int _busIndex = 0;
   String? _reservaSeleccionada;
   String? _asientoSeleccionado;
   final Map<String, Color> _colorCache = {};
@@ -247,7 +246,6 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
       _tabController!.addListener(() {
         if (!_tabController!.indexIsChanging) {
           setState(() {
-            _busIndex = _tabController!.index;
             _reservaSeleccionada = null;
             _asientoSeleccionado = null;
           });
@@ -443,9 +441,9 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
                   children: [
                     TabBar(
                       labelColor: context.saas.brand600,
-                      unselectedLabelColor: Color(0xFF64748B),
+                      unselectedLabelColor: const Color(0xFF64748B),
                       indicatorColor: context.saas.brand600,
-                      tabs: [
+                      tabs: const [
                         Tab(text: 'Mapa del bus'),
                         Tab(text: 'Reservas'),
                       ],
@@ -724,10 +722,10 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
             spacing: 8,
             runSpacing: 6,
             children: [
-              _LeyendaItem(
-                color: const Color(0xFFE2E8F0),
+              const _LeyendaItem(
+                color: Color(0xFFE2E8F0),
                 label: 'Libre',
-                textColor: const Color(0xFF64748B),
+                textColor: Color(0xFF64748B),
               ),
               ...reservasUnicas.entries.map(
                 (e) => _LeyendaItem(
@@ -909,26 +907,26 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
     String filename,
   ) async {
     void openInNewTab() {
-      final blob = webLib.Blob(
+      final blob = web_lib.Blob(
         <JSAny>[bytes.buffer.toJS].toJS,
-        webLib.BlobPropertyBag(type: 'application/pdf'),
+        web_lib.BlobPropertyBag(type: 'application/pdf'),
       );
-      final url = webLib.URL.createObjectURL(blob);
-      webLib.window.open(url, '_blank', '');
+      final url = web_lib.URL.createObjectURL(blob);
+      web_lib.window.open(url, '_blank', '');
     }
 
     void download() {
-      final blob = webLib.Blob(
+      final blob = web_lib.Blob(
         <JSAny>[bytes.buffer.toJS].toJS,
-        webLib.BlobPropertyBag(type: 'application/pdf'),
+        web_lib.BlobPropertyBag(type: 'application/pdf'),
       );
-      final url = webLib.URL.createObjectURL(blob);
+      final url = web_lib.URL.createObjectURL(blob);
       final anchor =
-          webLib.document.createElement('a') as webLib.HTMLAnchorElement;
+          web_lib.document.createElement('a') as web_lib.HTMLAnchorElement;
       anchor.href = url;
       anchor.download = filename;
       anchor.click();
-      webLib.URL.revokeObjectURL(url);
+      web_lib.URL.revokeObjectURL(url);
     }
 
     await showDialog(
@@ -1037,7 +1035,7 @@ class _BusManifiestoBodyState extends State<_BusManifiestoBody>
         colorCache: _colorCache,
       ),
     );
-    if (result != null && mounted) {
+    if (result != null && context.mounted) {
       context.read<BusManifiestoBloc>().add(AsignarAsientoManual(
         tourId: manifiesto.tour.id,
         busLayoutId: result.$1,
@@ -1748,9 +1746,9 @@ class _BusFront extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E293B),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.center,

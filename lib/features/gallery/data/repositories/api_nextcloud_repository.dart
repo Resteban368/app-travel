@@ -59,7 +59,7 @@ class ApiNextcloudRepository implements NextcloudRepository {
     required String filename,
     required String mimeType,
   }) async {
-    final base = '${ApiConstants.kBaseUrl}/v1/nextcloud/image';
+    const base = '${ApiConstants.kBaseUrl}/v1/nextcloud/image';
     final uri = (folder != null && folder.isNotEmpty)
         ? Uri.parse('$base?folder=$folder')
         : Uri.parse(base);

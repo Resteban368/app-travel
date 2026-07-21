@@ -43,38 +43,46 @@ class _TourListScreenState extends State<TourListScreen> {
   }
 
   List<Tour> _sortByDate(List<Tour> tours) {
-    final now = DateTime.now();
+    final today = DateUtils.dateOnly(DateTime.now());
 
-    DateTime? effectiveDate(Tour t) {
-      if (t.disponibilidadTipo == 'fecha_fija') return t.startDate;
-      if (t.disponibilidadTipo == 'multiples_fechas' &&
-          t.salidas != null &&
-          t.salidas!.isNotEmpty) {
-        final dates = t.salidas!
-            .where((s) => s.isActive)
-            .map((s) => DateTime.tryParse(s.fechaInicio))
-            .whereType<DateTime>()
-            .toList();
-        final upcoming = dates.where((d) => d.isAfter(now)).toList()..sort();
-        if (upcoming.isNotEmpty) return upcoming.first;
-        final past = dates..sort((a, b) => b.compareTo(a));
-        return past.isNotEmpty ? past.first : null;
+    // Fecha con la que se ordena un tour: la próxima salida (>= hoy) si la
+    // tiene, si no la más reciente en el pasado. Null => sin fecha (permanente).
+    // No dependemos del string de `disponibilidadTipo`: recogemos cualquier
+    // fecha disponible en `startDate` y en las `salidas` activas.
+    DateTime? sortDate(Tour t) {
+      final dates = <DateTime>[];
+      if (t.startDate != null) dates.add(t.startDate!);
+      if (t.salidas != null) {
+        for (final s in t.salidas!) {
+          if (!s.isActive) continue;
+          final d = DateTime.tryParse(s.fechaInicio);
+          if (d != null) dates.add(d);
+        }
       }
-      return null; // permanente → va al final
+      if (dates.isEmpty) return null; // permanente / sin fecha → al final
+
+      final normalized = dates.map(DateUtils.dateOnly).toList()..sort();
+      // La próxima (>= hoy); si todas son pasadas, la más reciente.
+      return normalized.firstWhere(
+        (d) => !d.isBefore(today),
+        orElse: () => normalized.last,
+      );
     }
 
     return [...tours]..sort((a, b) {
-      final da = effectiveDate(a);
-      final db = effectiveDate(b);
+      final da = sortDate(a);
+      final db = sortDate(b);
 
       if (da == null && db == null) return 0;
-      if (da == null) return 1;
+      if (da == null) return 1; // sin fecha al final
       if (db == null) return -1;
 
-      final aUpcoming = !da.isBefore(now);
-      final bUpcoming = !db.isBefore(now);
+      final aUpcoming = !da.isBefore(today);
+      final bUpcoming = !db.isBefore(today);
 
+      // Próximos primero, ordenados por fecha más cercana (los que están por vencer).
       if (aUpcoming && bUpcoming) return da.compareTo(db);
+      // Pasados después, el más reciente primero.
       if (!aUpcoming && !bUpcoming) return db.compareTo(da);
       return aUpcoming ? -1 : 1;
     });
@@ -124,13 +132,13 @@ class _TourListScreenState extends State<TourListScreen> {
             if (_searchQuery.isNotEmpty) {
               final query = _searchQuery.toLowerCase();
               tours = tours
-                  .where((t) => t.name!.toLowerCase().contains(query))
+                  .where((t) => t.name.toLowerCase().contains(query))
                   .toList();
             }
             if (_activeTab == 'Tours') {
-              tours = tours.where((t) => !t.isPromotion!).toList();
+              tours = tours.where((t) => !t.isPromotion).toList();
             } else if (_activeTab == 'Promos') {
-              tours = tours.where((t) => t.isPromotion!).toList();
+              tours = tours.where((t) => t.isPromotion).toList();
             }
             tours = _sortByDate(tours);
           }
@@ -202,7 +210,7 @@ class _TourListScreenState extends State<TourListScreen> {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Explora y administra los tours mundiales disponibles para tus clientes.',
                     style: TextStyle(
@@ -318,7 +326,7 @@ class _TourListScreenState extends State<TourListScreen> {
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -545,12 +553,12 @@ class _TourRowState extends State<_TourRow> {
   @override
   Widget build(BuildContext context) {
     final tour = widget.tour;
-    final isPromo = tour.isPromotion ?? false;
+    final isPromo = tour.isPromotion;
 
-    final Color typeColor = isPromo ?? false
+    final Color typeColor = isPromo
         ? context.saas.warning.withValues(alpha: 0.12)
         : context.saas.brand50;
-    final Color typeText = isPromo ?? false
+    final Color typeText = isPromo
         ? context.saas.warning
         : context.saas.brand600;
 
@@ -573,7 +581,7 @@ class _TourRowState extends State<_TourRow> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(_hovered ? 0.07 : 0.03),
+              color: Colors.black.withValues(alpha: _hovered ? 0.07 : 0.03),
               blurRadius: _hovered ? 16 : 6,
               offset: const Offset(0, 3),
             ),
@@ -613,7 +621,7 @@ class _TourRowState extends State<_TourRow> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
-                        isPromo ?? false
+                        isPromo
                             ? Icons.local_offer_rounded
                             : Icons.map_outlined,
                         color: typeText,
@@ -637,7 +645,7 @@ class _TourRowState extends State<_TourRow> {
                                 children: [
                                   Flexible(
                                     child: Text(
-                                      tour.name ?? "",
+                                      tour.name,
                                       style: TextStyle(
                                         color: context.saas.textPrimary,
                                         fontSize: 14,
@@ -832,7 +840,7 @@ class _TourRowState extends State<_TourRow> {
                           onTap: () => _confirmDelete(context),
                           borderRadius: BorderRadius.circular(8),
                           child: Padding(
-                            padding: EdgeInsets.all(6),
+                            padding: const EdgeInsets.all(6),
                             child: Icon(
                               Icons.delete_outline_rounded,
                               color: context.saas.danger,
@@ -936,7 +944,7 @@ class _SaaSConfirmDialog extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: context.saas.danger.withOpacity(0.1),
+              color: context.saas.danger.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(

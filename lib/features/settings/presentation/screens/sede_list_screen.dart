@@ -96,7 +96,7 @@ class _SedeListScreenState extends State<SedeListScreen> {
                     padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (_, __) => const SaasListSkeleton(),
+                        (_, _) => const SaasListSkeleton(),
                         childCount: 4,
                       ),
                     ),
@@ -197,7 +197,7 @@ class _SedeHeader extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Administra las oficinas y puntos de atención de la agencia.',
                     style: TextStyle(
@@ -272,7 +272,7 @@ class _SedeCardState extends State<_SedeCard> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(_hovered ? 0.08 : 0.03),
+                color: Colors.black.withValues(alpha: _hovered ? 0.08 : 0.03),
                 blurRadius: _hovered ? 16 : 8,
                 offset: Offset(0, _hovered ? 4 : 2),
               ),

@@ -37,9 +37,9 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
           shaderCallback: (bounds) {
             return LinearGradient(
               colors: [
-                Colors.white.withOpacity(0.1),
-                Colors.white.withOpacity(0.5),
-                Colors.white.withOpacity(0.1),
+                Colors.white.withValues(alpha: 0.1),
+                Colors.white.withValues(alpha: 0.5),
+                Colors.white.withValues(alpha: 0.1),
               ],
               stops: const [0.1, 0.5, 0.9],
               begin: const Alignment(-1.0, -0.3),

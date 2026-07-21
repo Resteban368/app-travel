@@ -103,7 +103,7 @@ class _BusLayoutListBodyState extends State<_BusLayoutListBody> {
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
-                      (_, __) => const SaasListSkeleton(),
+                      (_, _) => const SaasListSkeleton(),
                       childCount: 5,
                     ),
                   ),
@@ -518,7 +518,7 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
                               size: 16,
                               color: context.saas.brand600,
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Text(
                               'Editar',
                               style: TextStyle(color: context.saas.textPrimary),
@@ -535,7 +535,7 @@ class _BusLayoutCardState extends State<_BusLayoutCard> {
                               size: 16,
                               color: context.saas.danger,
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Text(
                               'Eliminar',
                               style: TextStyle(color: context.saas.danger),

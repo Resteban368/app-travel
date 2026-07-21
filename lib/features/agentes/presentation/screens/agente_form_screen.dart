@@ -266,7 +266,7 @@ class _AgenteFormScreenState extends State<AgenteFormScreen>
                                             color: context.saas.brand600,
                                             size: 14,
                                           ),
-                                          SizedBox(width: 8),
+                                          const SizedBox(width: 8),
                                           Text(
                                             'ADMINISTRACIÓN / AGENTES',
                                             style: TextStyle(

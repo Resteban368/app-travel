@@ -50,8 +50,9 @@ class _PaymentMethodListBodyState extends State<_PaymentMethodListBody> {
           List<PaymentMethod> list = [];
           if (state is PaymentMethodsLoaded) {
             list = state.methods;
-          } else if (state is PaymentMethodSaving && state.methods != null)
+          } else if (state is PaymentMethodSaving && state.methods != null) {
             list = state.methods!;
+          }
 
           final isLoading = state is PaymentMethodLoading && list.isEmpty;
 
@@ -83,15 +84,15 @@ class _PaymentMethodListBodyState extends State<_PaymentMethodListBody> {
                             mainAxisExtent: 180,
                           ),
                       delegate: SliverChildBuilderDelegate(
-                        (_, __) => const SaasListSkeleton(),
+                        (_, _) => const SaasListSkeleton(),
                         childCount: 4,
                       ),
                     ),
                   )
                 else if (list.isEmpty)
-                  SliverFillRemaining(
+                  const SliverFillRemaining(
                     hasScrollBody: false,
-                    child: const SaasEmptyState(
+                    child: SaasEmptyState(
                       icon: Icons.account_balance_wallet_outlined,
                       title: 'Sin métodos de pago',
                       subtitle:
@@ -188,7 +189,7 @@ class _PaymentHeader extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Gestiona cuentas bancarias y canales de cobro oficiales.',
                     style: TextStyle(
@@ -266,7 +267,7 @@ class _PaymentMethodCardState extends State<_PaymentMethodCard> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(_hover ? 0.08 : 0.03),
+              color: Colors.black.withValues(alpha: _hover ? 0.08 : 0.03),
               blurRadius: _hover ? 16 : 8,
               offset: Offset(0, _hover ? 4 : 2),
             ),
@@ -405,7 +406,7 @@ class _CardActions extends StatelessWidget {
                 size: 18,
                 color: context.saas.textPrimary,
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Text(
                 'Editar cuenta',
                 style: TextStyle(color: context.saas.textPrimary, fontSize: 13),
@@ -445,7 +446,7 @@ class _CardActions extends StatelessWidget {
                 size: 18,
                 color: context.saas.danger,
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Text(
                 'Eliminar',
                 style: TextStyle(color: context.saas.danger, fontSize: 13),

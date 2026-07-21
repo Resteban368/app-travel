@@ -87,7 +87,7 @@ class ApiNotificacionRepository implements NotificacionRepository {
       'titulo': titulo,
       'mensaje': mensaje,
       'tipo': tipo,
-      if (usuarioId != null) 'usuario_id': usuarioId,
+      'usuario_id': ?usuarioId,
     });
     final response = await client.post(
       Uri.parse(_base),

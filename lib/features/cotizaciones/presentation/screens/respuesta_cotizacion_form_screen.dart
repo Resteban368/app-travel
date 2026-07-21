@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:agente_viajes/core/constants/api_constants.dart';
@@ -259,12 +260,12 @@ class _RespuestaCotizacionFormScreenState
   }
 
   Future<void> _applyPlantilla(RespuestaCotizacion plantilla) async {
-    showDialog(
+    unawaited(showDialog(
       context: context,
       barrierDismissible: false,
       useRootNavigator: true,
       builder: (_) => const DialogLoadingNetwork(titel: 'Cargando plantilla'),
-    );
+    ));
     await Future.delayed(const Duration(milliseconds: 400));
     
     if (mounted) {
@@ -323,7 +324,7 @@ class _RespuestaCotizacionFormScreenState
             filled: true,
             fillColor: context.saas.bgApp,
           ),
-          value: _selectedPlantilla,
+          initialValue: _selectedPlantilla,
           icon: const Icon(Icons.arrow_drop_down_rounded),
           isExpanded: true,
           items: _plantillas.map((p) {
@@ -809,15 +810,18 @@ class _RespuestaCotizacionFormScreenState
     }
   }
 
+  // Vista previa en vivo de la propuesta. UI staged, pendiente de cablear a un
+  // botón en la barra de acciones (ver ANALISIS_Y_PLAN_MEJORAS.md, Fase 4).
+  // ignore: unused_element
   void _openPreview() {
-    showDialog<void>(
+    unawaited(showDialog<void>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.7),
       builder: (_) => _PropuestaPreviewDialog(
         respuesta: _buildCurrentRespuesta(),
         cotizacion: widget.cotizacion ?? _loadedCotizacion,
       ),
-    );
+    ));
   }
 
   Future<void> _save({bool esPublica = false}) async {
@@ -2750,7 +2754,7 @@ class _RespuestaCotizacionFormScreenState
                 children: [
                   // Vuelos con checkbox
                   if (vuelosConCosto.isNotEmpty) ...[
-                    _ResumenGrupoHeader(
+                    const _ResumenGrupoHeader(
                       label: 'Vuelos',
                       icon: Icons.flight_rounded,
                     ),
@@ -2791,7 +2795,7 @@ class _RespuestaCotizacionFormScreenState
                   ],
                   // Hoteles con checkbox
                   if (hotelesConCosto.isNotEmpty) ...[
-                    _ResumenGrupoHeader(
+                    const _ResumenGrupoHeader(
                       label: 'Hoteles',
                       icon: Icons.hotel_rounded,
                     ),
@@ -2825,7 +2829,7 @@ class _RespuestaCotizacionFormScreenState
                   ],
                   // Adicionales (siempre incluidos, sin checkbox)
                   if (adicionalRows.isNotEmpty) ...[
-                    _ResumenGrupoHeader(
+                    const _ResumenGrupoHeader(
                       label: 'Adicionales',
                       icon: Icons.extension_rounded,
                     ),
@@ -2972,7 +2976,7 @@ class _RespuestaCotizacionFormScreenState
             child: _loadingVistas
                 ? Center(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
+                      padding: const EdgeInsets.symmetric(vertical: 24),
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         color: context.saas.brand600,
@@ -3219,7 +3223,7 @@ class _RespuestaCotizacionFormScreenState
                   color: context.saas.brand600,
                   size: 14,
                 ),
-                SizedBox(width: 5),
+                const SizedBox(width: 5),
                 Text(
                   'Abrir en navegador',
                   style: TextStyle(
@@ -3251,12 +3255,12 @@ class _RespuestaCotizacionFormScreenState
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (_downloadingPdf)
-                    SizedBox(
+                    const SizedBox(
                       width: 15,
                       height: 15,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: const Color(0xFFDC2626),
+                        color: Color(0xFFDC2626),
                       ),
                     )
                   else
@@ -3519,7 +3523,7 @@ class _GuardarPlantillaButton extends StatelessWidget {
                 color: context.saas.brand600,
                 size: 18,
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Text(
                 'GUARDAR COMO PLANTILLA',
                 style: TextStyle(
@@ -3680,9 +3684,9 @@ class _CotizacionBanner extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: Row(
+                    child: const Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         Icon(
                           Icons.visibility_rounded,
                           color: Colors.white,
@@ -3760,7 +3764,7 @@ class _CotizacionBanner extends StatelessWidget {
                   ),
                 ],
                 Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Divider(color: context.saas.border, height: 1),
                 ),
                 // Detalles plan
@@ -3780,7 +3784,7 @@ class _CotizacionBanner extends StatelessWidget {
                   ),
                 ],
                 Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Divider(color: context.saas.border, height: 1),
                 ),
                 // Fechas y pasajeros en fila
@@ -3829,7 +3833,7 @@ class _CotizacionBanner extends StatelessWidget {
                 if (c.especificaciones != null &&
                     c.especificaciones!.isNotEmpty) ...[
                   Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Divider(color: context.saas.border, height: 1),
                   ),
                   _BannerRow(
@@ -4002,7 +4006,7 @@ class _GaleriaButton extends StatelessWidget {
               color: context.saas.brand600,
               size: 16,
             ),
-            SizedBox(width: 5),
+            const SizedBox(width: 5),
             Text(
               'Galería',
               style: TextStyle(
@@ -4613,7 +4617,7 @@ class _PropuestaPreviewDialogState extends State<_PropuestaPreviewDialog> {
                               const SizedBox(height: 16),
                             ],
                             if (r.itemsIncluidos.isNotEmpty) ...[
-                              _PreviewSectionTitle(
+                              const _PreviewSectionTitle(
                                 title: '¿QUÉ INCLUYE?',
                                 icon: Icons.checklist_rounded,
                               ),
@@ -4667,7 +4671,7 @@ class _PropuestaPreviewDialogState extends State<_PropuestaPreviewDialog> {
                               const SizedBox(height: 24),
                             ],
                             if (r.itemsNoIncluidos.isNotEmpty) ...[
-                              _PreviewSectionTitle(
+                              const _PreviewSectionTitle(
                                 title: '¿QUÉ NO INCLUYE?',
                                 icon: Icons.remove_circle_outline_rounded,
                               ),
@@ -4721,7 +4725,7 @@ class _PropuestaPreviewDialogState extends State<_PropuestaPreviewDialog> {
                               const SizedBox(height: 24),
                             ],
                             if (r.vuelos.isNotEmpty) ...[
-                              _PreviewSectionTitle(
+                              const _PreviewSectionTitle(
                                 title: 'ITINERARIO DE VUELO',
                                 icon: Icons.flight_rounded,
                               ),
@@ -4730,7 +4734,7 @@ class _PropuestaPreviewDialogState extends State<_PropuestaPreviewDialog> {
                               const SizedBox(height: 24),
                             ],
                             if (r.opcionesHotel.isNotEmpty) ...[
-                              _PreviewSectionTitle(
+                              const _PreviewSectionTitle(
                                 title: 'OPCIONES DE HOTEL',
                                 icon: Icons.hotel_rounded,
                               ),
@@ -4741,7 +4745,7 @@ class _PropuestaPreviewDialogState extends State<_PropuestaPreviewDialog> {
                               const SizedBox(height: 24),
                             ],
                             if (r.adicionales.isNotEmpty) ...[
-                              _PreviewSectionTitle(
+                              const _PreviewSectionTitle(
                                 title: 'SERVICIOS ADICIONALES',
                                 icon: Icons.add_circle_outline_rounded,
                               ),
@@ -4750,7 +4754,7 @@ class _PropuestaPreviewDialogState extends State<_PropuestaPreviewDialog> {
                               const SizedBox(height: 24),
                             ],
                             if (r.condicionesGenerales.isNotEmpty) ...[
-                              _PreviewSectionTitle(
+                              const _PreviewSectionTitle(
                                 title: 'CONDICIONES GENERALES',
                                 icon: Icons.gavel_rounded,
                               ),

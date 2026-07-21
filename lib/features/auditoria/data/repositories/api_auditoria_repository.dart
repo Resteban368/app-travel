@@ -17,7 +17,7 @@ class ApiAuditoriaRepository implements AuditoriaRepository {
 
   @override
   Future<List<SesionUsuario>> getSesiones({DateTime? fecha}) async {
-    final base = '${ApiConstants.kBaseUrl}/v1/auth/sesiones';
+    const base = '${ApiConstants.kBaseUrl}/v1/auth/sesiones';
     final uri = fecha != null
         ? Uri.parse(base).replace(
             queryParameters: {

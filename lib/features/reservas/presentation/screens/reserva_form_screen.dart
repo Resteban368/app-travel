@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:js_interop';
-import 'package:web/web.dart' as webLib;
+import 'package:web/web.dart' as web_lib;
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/theme/premium_palette.dart';
@@ -125,7 +125,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
   late final AnimationController _entryCtrl;
 
   bool get _isEditing => widget.reserva != null;
-  bool _loadingReserva = false;
+  final bool _loadingReserva = false;
   int? _precioResponsableId;
   Reserva? _currentReserva;
 
@@ -163,7 +163,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
 
     final clienteState = context.read<ClienteBloc>().state;
     if (clienteState is ClienteInitial || clienteState is ClienteError) {
-      context.read<ClienteBloc>().add(LoadClientes());
+      context.read<ClienteBloc>().add(const LoadClientes());
     }
 
     final hotelState = context.read<HotelBloc>().state;
@@ -195,13 +195,13 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     if (!mounted) return;
 
     // Mostramos un único diálogo de carga premium
-    showDialog(
+    unawaited(showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => const DialogLoadingNetwork(
         titel: 'Cargando información de la reserva...',
       ),
-    );
+    ));
 
     try {
       // 1. Cargar reserva completa desde el API
@@ -226,7 +226,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         }
       }
       if (tourId != null && fresh.tour?.disponibilidadTipo == 'multiples_fechas') {
-        _loadTourSalidas(tourId, preserveSelection: true);
+        unawaited(_loadTourSalidas(tourId, preserveSelection: true));
       }
     } catch (e) {
       debugPrint('❌ [ReservaForm] _loadInitialData: $e');
@@ -457,12 +457,12 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     final reserva = _currentReserva ?? widget.reserva;
     if (reserva == null) return;
     setState(() => _generatingPdf = true);
-    showDialog(
+    unawaited(showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) =>
           const DialogLoadingNetwork(titel: 'Generando PDF de Reserva'),
-    );
+    ));
 
     try {
       final fullReserva = reserva.id != null
@@ -484,26 +484,26 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
       final uint8Bytes = Uint8List.fromList(bytes);
 
       void openInNewTab() {
-        final blob = webLib.Blob(
+        final blob = web_lib.Blob(
           <JSAny>[uint8Bytes.buffer.toJS].toJS,
-          webLib.BlobPropertyBag(type: 'application/pdf'),
+          web_lib.BlobPropertyBag(type: 'application/pdf'),
         );
-        final url = webLib.URL.createObjectURL(blob);
-        webLib.window.open(url, '_blank', '');
+        final url = web_lib.URL.createObjectURL(blob);
+        web_lib.window.open(url, '_blank', '');
       }
 
       void download() {
-        final blob = webLib.Blob(
+        final blob = web_lib.Blob(
           <JSAny>[uint8Bytes.buffer.toJS].toJS,
-          webLib.BlobPropertyBag(type: 'application/pdf'),
+          web_lib.BlobPropertyBag(type: 'application/pdf'),
         );
-        final url = webLib.URL.createObjectURL(blob);
+        final url = web_lib.URL.createObjectURL(blob);
         final anchor =
-            webLib.document.createElement('a') as webLib.HTMLAnchorElement;
+            web_lib.document.createElement('a') as web_lib.HTMLAnchorElement;
         anchor.href = url;
         anchor.download = filename;
         anchor.click();
-        webLib.URL.revokeObjectURL(url);
+        web_lib.URL.revokeObjectURL(url);
       }
 
       await showDialog(
@@ -647,18 +647,18 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         onConfirm: () => Navigator.pop(ctx, true),
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
 
     final reservaId = _currentReserva?.id ?? widget.reserva?.id;
 
     if (_isEditing && integrante.id != null && reservaId != null) {
-      showDialog(
+      unawaited(showDialog(
         context: context,
         barrierDismissible: false,
         builder: (_) => const DialogLoadingNetwork(
           titel: 'Eliminando integrante...',
         ),
-      );
+      ));
       try {
         await sl<ReservaRepository>().deleteIntegrante(
           reservaId,
@@ -741,11 +741,11 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     );
     if (confirmed != true || !mounted) return;
 
-    showDialog(
+    unawaited(showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => const DialogLoadingNetwork(titel: 'Cancelando reserva...'),
-    );
+    ));
 
     try {
       await sl<ReservaRepository>().cancelReserva(reserva!.id!);
@@ -786,9 +786,13 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
     if (_selectedTourId != null) {
       final tourState = context.read<TourBloc>().state;
       List<Tour> allToursForValidation = [];
-      if (tourState is ToursLoaded) allToursForValidation = tourState.tours;
-      else if (tourState is TourSaving && tourState.tours != null) allToursForValidation = tourState.tours!;
-      else if (tourState is TourSaved && tourState.tours != null) allToursForValidation = tourState.tours!;
+      if (tourState is ToursLoaded) {
+        allToursForValidation = tourState.tours;
+      } else if (tourState is TourSaving && tourState.tours != null) {
+        allToursForValidation = tourState.tours!;
+      } else if (tourState is TourSaved && tourState.tours != null) {
+        allToursForValidation = tourState.tours!;
+      }
       final tourForValidation = allToursForValidation.cast<Tour?>().firstWhere(
         (t) => t?.id == _selectedTourId,
         orElse: () => _currentReserva?.tour ?? widget.reserva?.tour,
@@ -1053,10 +1057,10 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             );
           }
 
-          if (!mounted) return;
+          if (!context.mounted) return;
           Navigator.pop(context);
         } else if (state is ReservaError) {
-          showDialog(
+          unawaited(showDialog(
             context: context,
             builder: (_) => Dialog(
               backgroundColor: Colors.transparent,
@@ -1129,7 +1133,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                 ),
               ),
             ),
-          );
+          ));
         }
       },
       child: Scaffold(
@@ -1485,9 +1489,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                           departureTime: '',
                           arrival: '',
                           pdfLink: '',
-                          inclusions: [],
-                          exclusions: [],
-                          itinerary: [],
+                          inclusions: const [],
+                          exclusions: const [],
+                          itinerary: const [],
                         ),
                   )
                 : null;
@@ -1533,9 +1537,9 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                                   field.didChange(result.id);
                                   final tourIdInt = int.tryParse(result.id);
                                   if (result.disponibilidadTipo == 'multiples_fechas') {
-                                    _loadTourSalidas(result.id);
+                                    unawaited(_loadTourSalidas(result.id));
                                   } else if (tourIdInt != null) {
-                                    _loadBusesDisponibilidad(tourIdInt);
+                                    unawaited(_loadBusesDisponibilidad(tourIdInt));
                                   }
                                 }
                               },
@@ -1711,7 +1715,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         child: Row(
           children: [
             SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: context.saas.brand600)),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             Text('Cargando salidas...', style: TextStyle(color: context.saas.textSecondary, fontSize: 14)),
           ],
         ),
@@ -1729,7 +1733,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         child: Row(
           children: [
             Icon(Icons.info_outline_rounded, color: context.saas.textTertiary, size: 16),
-            SizedBox(width: 8),
+            const SizedBox(width: 8),
             Text('Sin salidas disponibles', style: TextStyle(color: context.saas.textSecondary, fontSize: 13)),
           ],
         ),
@@ -2029,7 +2033,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
           )
         else
           DropdownButtonFormField<int>(
-            value:
+            initialValue:
                 _busesDisponibilidad.any(
                   (b) =>
                       (b['bus_layout_id'] as num?)?.toInt() ==
@@ -2197,7 +2201,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   // ── Modo grupal: solo mostrar tramos grupales ──
                   Row(
                     children: [
-                      _PrecioSectionHeader(
+                      const _PrecioSectionHeader(
                         icon: Icons.groups_rounded,
                         label: 'PRECIOS POR GRUPO',
                       ),
@@ -2222,7 +2226,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   const SizedBox(height: 8),
                   if (tour.preciosGrupales.isEmpty)
                     Padding(
-                      padding: EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.only(bottom: 8),
                       child: Text(
                         'Sin tramos de precio configurados',
                         style: TextStyle(color: context.saas.textSecondary, fontSize: 13),
@@ -2272,7 +2276,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     ),
                   if (tour.precios.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    _PrecioSectionHeader(
+                    const _PrecioSectionHeader(
                       icon: Icons.loyalty_rounded,
                       label: 'CATEGORÍAS DE PRECIO',
                     ),
@@ -2615,20 +2619,20 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             'Estado de la reserva',
           ),
           items: [
-            DropdownMenuItem(
+            const DropdownMenuItem(
               value: 'pendiente',
               child: Row(
-                children: const [
+                children: [
                   Icon(Icons.circle, color: Colors.amber, size: 12),
                   SizedBox(width: 8),
                   Text('Pendiente'),
                 ],
               ),
             ),
-            DropdownMenuItem(
+            const DropdownMenuItem(
               value: 'al dia',
               child: Row(
-                children: const [
+                children: [
                   Icon(Icons.circle, color: Colors.greenAccent, size: 12),
                   SizedBox(width: 8),
                   Text('Al Día'),
@@ -2640,8 +2644,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               child: Row(
                 children: [
                   Icon(Icons.circle, color: context.saas.danger, size: 12),
-                  SizedBox(width: 8),
-                  Text('Cancelado'),
+                  const SizedBox(width: 8),
+                  const Text('Cancelado'),
                 ],
               ),
             ),
@@ -2650,8 +2654,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               child: Row(
                 children: [
                   Icon(Icons.circle, color: context.saas.danger, size: 12),
-                  SizedBox(width: 8),
-                  Text('Cancelada'),
+                  const SizedBox(width: 8),
+                  const Text('Cancelada'),
                 ],
               ),
             ),
@@ -3098,7 +3102,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                               fontSize: 13,
                             ),
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
+                            contentPadding: const EdgeInsets.symmetric(
                               horizontal: 8,
                               vertical: 8,
                             ),
@@ -3129,7 +3133,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   ],
                 ],
                 Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Divider(color: context.saas.border),
                 ),
                 _buildResumenRow(
@@ -3148,7 +3152,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                     valueColor: context.saas.danger,
                   ),
                   Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Divider(color: context.saas.border),
                   ),
                   _buildResumenRow(
@@ -3162,7 +3166,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                   ),
                 ],
                 Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Divider(color: context.saas.border),
                 ),
                 Row(
@@ -3207,7 +3211,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
                             fontSize: 13,
                           ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 8,
                           ),
@@ -3332,7 +3336,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         if (_loadingPagos)
           Center(
             child: Padding(
-              padding: EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
               child: CircularProgressIndicator(color: context.saas.brand600),
             ),
           )
@@ -3346,7 +3350,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _pagos.length,
-            separatorBuilder: (_, __) =>
+            separatorBuilder: (_, _) =>
                 Divider(color: context.saas.border, height: 1),
             itemBuilder: (context, index) {
               final pago = _pagos[index];
@@ -3449,8 +3453,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _integrantes.length,
-            separatorBuilder: (_, __) => Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
+            separatorBuilder: (_, _) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
               child: Divider(color: context.saas.border, height: 1),
             ),
             itemBuilder: (context, index) {
@@ -3613,7 +3617,7 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
               onPressed: () {
                 setState(
                   () => _vuelos.add(
-                    VueloReserva(
+                    const VueloReserva(
                       numeroVuelo: '',
                       origen: '',
                       destino: '',
@@ -3651,8 +3655,8 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _vuelos.length,
-            separatorBuilder: (_, __) => Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
+            separatorBuilder: (_, _) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
               child: Divider(color: context.saas.border, height: 1),
             ),
             itemBuilder: (context, index) {
@@ -6380,7 +6384,7 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
   Widget _buildHabitacionesSection() {
     if (_loadingHotel) {
       return Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Center(
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -6393,7 +6397,7 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                   color: context.saas.brand600,
                 ),
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Text(
                 'Cargando habitaciones...',
                 style: TextStyle(
@@ -6655,7 +6659,7 @@ class _HotelReservaRowState extends State<_HotelReservaRow> {
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: hab.imagenes.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (_, _) =>
                                 const SizedBox(width: 6),
                             itemBuilder: (ctx, i) =>
                                 _HabImageThumb(url: hab.imagenes[i]),
@@ -7029,7 +7033,7 @@ class _HabImageThumb extends StatelessWidget {
                   child: Image.network(
                     url,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                       color: context.saas.bgCanvas,
                       padding: const EdgeInsets.all(32),
                       child: Column(
@@ -7040,7 +7044,7 @@ class _HabImageThumb extends StatelessWidget {
                             color: context.saas.textTertiary,
                             size: 48,
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Text(
                             'Error al cargar imagen',
                             style: TextStyle(color: context.saas.textTertiary),
@@ -7101,7 +7105,7 @@ class _HabImageThumb extends StatelessWidget {
                   ),
                 );
               },
-              errorBuilder: (_, __, ___) => Center(
+              errorBuilder: (_, _, _) => Center(
                 child: Icon(
                   Icons.broken_image_rounded,
                   color: context.saas.textTertiary,
@@ -7400,7 +7404,7 @@ class _ReservaCreatedDialogState extends State<_ReservaCreatedDialog> {
 
   void _openLink() {
     final link = widget.reserva.seleccionLink ?? '';
-    if (link.isNotEmpty) webLib.window.open(link, '_blank', '');
+    if (link.isNotEmpty) web_lib.window.open(link, '_blank', '');
   }
 
   @override

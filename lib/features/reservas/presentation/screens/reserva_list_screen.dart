@@ -5,7 +5,7 @@ import 'package:agente_viajes/features/tour/presentation/bloc/tour_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:web/web.dart' as webLib;
+import 'package:web/web.dart' as web_lib;
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../config/app_router.dart';
 import '../../../../core/widgets/saas_ui_components.dart';
@@ -118,7 +118,8 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
           : null,
     );
 
-    if (picked != null) {
+    if (picked == null || !mounted || !context.mounted) return;
+    {
       setState(() {
         _startDate = picked.start;
         _endDate = picked.end;
@@ -313,7 +314,7 @@ class _ReservaListScreenState extends State<ReservaListScreen> {
       if (state is ReservaLoaded && !state.hasReachedMax)
         SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.all(32),
+            padding: const EdgeInsets.all(32),
             child: Center(
               child: CircularProgressIndicator(
                 strokeWidth: 2,
@@ -394,7 +395,7 @@ class _ReservaHeader extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Control y administración de reservas y flujos de pago.',
                     style: TextStyle(
@@ -704,12 +705,12 @@ class _ReservaCardState extends State<_ReservaCard> {
 
   Future<void> _generateAndShowPdf() async {
     setState(() => _generatingPdf = true);
-    showDialog(
+    unawaited(showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) =>
           const DialogLoadingNetwork(titel: 'Generando PDF de Reserva'),
-    );
+    ));
 
     try {
       final fullReserva = widget.reserva.id != null
@@ -753,26 +754,26 @@ class _ReservaCardState extends State<_ReservaCard> {
     final uint8Bytes = Uint8List.fromList(bytes);
 
     void openInNewTab() {
-      final blob = webLib.Blob(
+      final blob = web_lib.Blob(
         <JSAny>[uint8Bytes.buffer.toJS].toJS,
-        webLib.BlobPropertyBag(type: 'application/pdf'),
+        web_lib.BlobPropertyBag(type: 'application/pdf'),
       );
-      final url = webLib.URL.createObjectURL(blob);
-      webLib.window.open(url, '_blank', '');
+      final url = web_lib.URL.createObjectURL(blob);
+      web_lib.window.open(url, '_blank', '');
     }
 
     void download() {
-      final blob = webLib.Blob(
+      final blob = web_lib.Blob(
         <JSAny>[uint8Bytes.buffer.toJS].toJS,
-        webLib.BlobPropertyBag(type: 'application/pdf'),
+        web_lib.BlobPropertyBag(type: 'application/pdf'),
       );
-      final url = webLib.URL.createObjectURL(blob);
+      final url = web_lib.URL.createObjectURL(blob);
       final anchor =
-          webLib.document.createElement('a') as webLib.HTMLAnchorElement;
+          web_lib.document.createElement('a') as web_lib.HTMLAnchorElement;
       anchor.href = url;
       anchor.download = filename;
       anchor.click();
-      webLib.URL.revokeObjectURL(url);
+      web_lib.URL.revokeObjectURL(url);
     }
 
     await showDialog(
@@ -1116,7 +1117,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                                       onTap: _generateAndShowPdf,
                                       borderRadius: BorderRadius.circular(6),
                                       child: Padding(
-                                        padding: EdgeInsets.all(3),
+                                        padding: const EdgeInsets.all(3),
                                         child: Icon(
                                           Icons.picture_as_pdf_rounded,
                                           size: 18,
@@ -1263,8 +1264,8 @@ class _ReservaActionMenu extends StatelessWidget {
                 size: 18,
                 color: context.saas.textPrimary,
               ),
-              SizedBox(width: 12),
-              Text('Editar reserva', style: TextStyle(fontSize: 13)),
+              const SizedBox(width: 12),
+              const Text('Editar reserva', style: TextStyle(fontSize: 13)),
             ],
           ),
         ),
@@ -1279,7 +1280,7 @@ class _ReservaActionMenu extends StatelessWidget {
                   size: 18,
                   color: context.saas.warning,
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Text(
                   'Cancelar reserva',
                   style: TextStyle(color: context.saas.warning, fontSize: 13),
@@ -1298,7 +1299,7 @@ class _ReservaActionMenu extends StatelessWidget {
                 size: 18,
                 color: context.saas.danger,
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Text(
                 'Eliminar',
                 style: TextStyle(color: context.saas.danger, fontSize: 13),

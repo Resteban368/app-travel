@@ -168,7 +168,7 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Registro de tours y promociones finalizados.',
                     style: TextStyle(
@@ -377,7 +377,7 @@ class _TourHistoricoScreenState extends State<TourHistoricoScreen> {
         padding: EdgeInsets.symmetric(horizontal: isDesktop ? 32 : 16),
         sliver: SliverList(
           delegate: SliverChildBuilderDelegate(
-            (_, _i) => _SkelCard(),
+            (_, i) => _SkelCard(),
             childCount: 5,
           ),
         ),
@@ -754,7 +754,7 @@ class _TourHistoricoRowState extends State<_TourHistoricoRow> {
                             child: Row(
                               children: [
                                 Icon(Icons.copy_rounded, size: 16, color: context.saas.brand600),
-                                SizedBox(width: 8),
+                                const SizedBox(width: 8),
                                 Text('Duplicar', style: TextStyle(color: context.saas.textPrimary)),
                               ],
                             ),

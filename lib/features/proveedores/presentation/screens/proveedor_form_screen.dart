@@ -222,7 +222,7 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen>
                                     color: context.saas.brand600,
                                     size: 16,
                                   ),
-                                  SizedBox(width: 8),
+                                  const SizedBox(width: 8),
                                   Text(
                                     'DATOS DEL PROVEEDOR',
                                     style: TextStyle(

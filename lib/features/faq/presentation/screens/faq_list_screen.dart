@@ -98,7 +98,7 @@ class _FaqListBodyState extends State<_FaqListBody> {
                     padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (_, __) => const SaasListSkeleton(),
+                        (_, _) => const SaasListSkeleton(),
                         childCount: 5,
                       ),
                     ),
@@ -186,7 +186,7 @@ class _FaqHeader extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Administra las respuestas a las dudas más comunes de tus clientes.',
                     style: TextStyle(
@@ -255,7 +255,7 @@ class _FaqCardState extends State<_FaqCard> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(
+                color: Colors.black.withValues(alpha: 
                   (_isExpanded || _hovered) ? 0.08 : 0.03,
                 ),
                 blurRadius: (_isExpanded || _hovered) ? 16 : 8,

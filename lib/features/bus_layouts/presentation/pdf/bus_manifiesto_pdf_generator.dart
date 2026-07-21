@@ -104,10 +104,9 @@ class BusManifestoPdfGenerator {
         build: (ctx) => [
           pw.SizedBox(height: 16),
           _buildTourCard(manifiesto.tour, bold, regular),
-          ...manifiesto.buses.expand((bus) => [
-            pw.SizedBox(height: 20),
-            _buildBusBlock(bus, reservaColorIdx, bold, regular),
-          ]),
+          ...manifiesto.buses.expand(
+            (bus) => _buildBusWidgets(bus, reservaColorIdx, bold, regular),
+          ),
         ],
       ),
     );
@@ -159,9 +158,9 @@ class BusManifestoPdfGenerator {
               pw.Container(
                 width: 70,
                 height: 70,
-                decoration: pw.BoxDecoration(
+                decoration: const pw.BoxDecoration(
                   color: PdfColors.white,
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                  borderRadius: pw.BorderRadius.all(pw.Radius.circular(8)),
                 ),
                 child: pw.Center(
                   child: logo != null
@@ -197,13 +196,13 @@ class BusManifestoPdfGenerator {
                       style: pw.TextStyle(
                         font: bold,
                         fontSize: 8,
-                        color: PdfColor(1, 1, 1, 0.75),
+                        color: const PdfColor(1, 1, 1, 0.75),
                         letterSpacing: 1.2,
                       )),
                   pw.SizedBox(height: 4),
                   pw.Text(
                     DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()),
-                    style: pw.TextStyle(fontSize: 8, color: PdfColors.white),
+                    style: const pw.TextStyle(fontSize: 8, color: PdfColors.white),
                   ),
                 ],
               ),
@@ -216,7 +215,7 @@ class BusManifestoPdfGenerator {
 
   static pw.Widget _headerLine(String text) {
     return pw.Text(text,
-        style: pw.TextStyle(fontSize: 8, color: PdfColor(1, 1, 1, 0.7)));
+        style: const pw.TextStyle(fontSize: 8, color: PdfColor(1, 1, 1, 0.7)));
   }
 
   // ─── Page footer ─────────────────────────────────────────────────
@@ -306,32 +305,30 @@ class BusManifestoPdfGenerator {
     );
   }
 
-  // ─── Bus block (grid + passenger table side by side) ─────────────
-  static pw.Widget _buildBusBlock(
+  // ─── Bus block emitted as flat, page-breakable widgets ───────────
+  //
+  // Returns a flat list instead of a single Column so MultiPage can page-break
+  // between the pieces. The passenger Table is a top-level spanning widget, so a
+  // long list flows across pages instead of throwing TooManyPagesException.
+  // (A Row/Column can't be split across pages — that was the original bug.)
+  static List<pw.Widget> _buildBusWidgets(
     BusManifiestoData bus,
     Map<String, int> reservaColorIdx,
     pw.Font bold,
     pw.Font regular,
   ) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _sectionTitle('Bus: ${bus.nombre}', bold),
-        pw.SizedBox(height: 8),
-        _buildStats(bus, bold),
-        pw.SizedBox(height: 12),
-        pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            _buildSeatGrid(bus, reservaColorIdx, bold),
-            pw.SizedBox(width: 14),
-            pw.Expanded(
-              child: _buildPassengerTable(bus, reservaColorIdx, bold, regular),
-            ),
-          ],
-        ),
-      ],
-    );
+    return [
+      pw.SizedBox(height: 20),
+      _sectionTitle('Bus: ${bus.nombre}', bold),
+      pw.SizedBox(height: 8),
+      _buildStats(bus, bold),
+      pw.SizedBox(height: 12),
+      // Seat map — atomic block, centered (fits within one page).
+      pw.Center(child: _buildSeatGrid(bus, reservaColorIdx, bold)),
+      pw.SizedBox(height: 14),
+      // Passenger table — spans pages when long.
+      ..._buildPassengerSection(bus, reservaColorIdx, bold, regular),
+    ];
   }
 
   // ─── Stats bar ───────────────────────────────────────────────────
@@ -455,7 +452,7 @@ class BusManifestoPdfGenerator {
       ),
       child: pw.Text(
         label,
-        style: pw.TextStyle(fontSize: 7, color: PdfColor(1, 1, 1, 0.5), letterSpacing: 1.0),
+        style: const pw.TextStyle(fontSize: 7, color: PdfColor(1, 1, 1, 0.5), letterSpacing: 1.0),
         textAlign: pw.TextAlign.center,
       ),
     );
@@ -507,7 +504,7 @@ class BusManifestoPdfGenerator {
     switch (layout.tipo) {
       case TipoAsiento.conductor:
         bg = _busPanel;
-        fg = PdfColor(1, 1, 1, 0.55);
+        fg = const PdfColor(1, 1, 1, 0.55);
         topLabel = 'Cond';
         break;
       case TipoAsiento.agente:
@@ -594,8 +591,8 @@ class BusManifestoPdfGenerator {
     );
   }
 
-  // ─── Passenger table (compact, beside the grid) ──────────────────
-  static pw.Widget _buildPassengerTable(
+  // ─── Passenger table (full width, spans pages) ───────────────────
+  static List<pw.Widget> _buildPassengerSection(
     BusManifiestoData bus,
     Map<String, int> reservaColorIdx,
     pw.Font bold,
@@ -613,15 +610,17 @@ class BusManifestoPdfGenerator {
     }
 
     if (reservasUnicas.isEmpty) {
-      return pw.Container(
-        padding: const pw.EdgeInsets.all(12),
-        decoration: pw.BoxDecoration(
-          color: _bgSubtle,
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+      return [
+        pw.Container(
+          padding: const pw.EdgeInsets.all(12),
+          decoration: pw.BoxDecoration(
+            color: _bgSubtle,
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+          ),
+          child: pw.Text('Sin pasajeros asignados',
+              style: pw.TextStyle(fontSize: 9, color: _textTertiary)),
         ),
-        child: pw.Text('Sin pasajeros asignados',
-            style: pw.TextStyle(fontSize: 9, color: _textTertiary)),
-      );
+      ];
     }
 
     final rows = <pw.TableRow>[];
@@ -670,37 +669,34 @@ class BusManifestoPdfGenerator {
       }
     }
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _sectionTitle(
-            'Pasajeros — ${reservasUnicas.length} reservas · ${rows.length} personas',
-            bold),
-        pw.Table(
-          border: pw.TableBorder.all(color: _border, width: 0.3),
-          columnWidths: {
-            0: const pw.FixedColumnWidth(50), // ID Reserva
-            1: const pw.FlexColumnWidth(2.5), // Nombre
-            2: const pw.FlexColumnWidth(2.0), // Documento
-            3: const pw.FlexColumnWidth(1.5), // Teléfono
-            4: const pw.FixedColumnWidth(45), // Asientos
-          },
-          children: [
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: _brandDark),
-              children: [
-                _th('ID Reserva', bold, color: PdfColors.white),
-                _th('Nombre del Pasajero', bold, color: PdfColors.white),
-                _th('Documento', bold, color: PdfColors.white),
-                _th('Teléfono', bold, color: PdfColors.white),
-                _th('Asientos', bold, color: PdfColors.white),
-              ],
-            ),
-            ...rows,
-          ],
-        ),
-      ],
-    );
+    return [
+      _sectionTitle(
+          'Pasajeros — ${reservasUnicas.length} reservas · ${rows.length} personas',
+          bold),
+      pw.Table(
+        border: pw.TableBorder.all(color: _border, width: 0.3),
+        columnWidths: {
+          0: const pw.FixedColumnWidth(50), // ID Reserva
+          1: const pw.FlexColumnWidth(2.5), // Nombre
+          2: const pw.FlexColumnWidth(2.0), // Documento
+          3: const pw.FlexColumnWidth(1.5), // Teléfono
+          4: const pw.FixedColumnWidth(45), // Asientos
+        },
+        children: [
+          pw.TableRow(
+            decoration: pw.BoxDecoration(color: _brandDark),
+            children: [
+              _th('ID Reserva', bold, color: PdfColors.white),
+              _th('Nombre del Pasajero', bold, color: PdfColors.white),
+              _th('Documento', bold, color: PdfColors.white),
+              _th('Teléfono', bold, color: PdfColors.white),
+              _th('Asientos', bold, color: PdfColors.white),
+            ],
+          ),
+          ...rows,
+        ],
+      ),
+    ];
   }
 
   static pw.TableRow _passengerRow({
@@ -715,8 +711,8 @@ class BusManifestoPdfGenerator {
     required pw.Font regular,
     required bool isHeader,
   }) {
-    final textColor = PdfColors.white;
-    final idColor = PdfColors.white;
+    const textColor = PdfColors.white;
+    const idColor = PdfColors.white;
 
     return pw.TableRow(
       decoration: pw.BoxDecoration(color: bgColor),

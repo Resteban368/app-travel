@@ -269,7 +269,7 @@ class _PagoRealizadoListBodyState extends State<_PagoRealizadoListBody> {
                     if (state is PagosRealizadosLoaded && !state.hasReachedMax)
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: EdgeInsets.all(32),
+                          padding: const EdgeInsets.all(32),
                           child: Center(
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
@@ -319,7 +319,7 @@ class _PagoHeader extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Seguimiento y conciliación de comprobantes de pago.',
                     style: TextStyle(
@@ -492,7 +492,7 @@ class _ChatGroupCardState extends State<_ChatGroupCard> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(_isExpanded ? 0.08 : 0.03),
+              color: Colors.black.withValues(alpha: _isExpanded ? 0.08 : 0.03),
               blurRadius: _isExpanded ? 16 : 8,
               offset: Offset(0, _isExpanded ? 4 : 2),
             ),
@@ -774,9 +774,9 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         label,

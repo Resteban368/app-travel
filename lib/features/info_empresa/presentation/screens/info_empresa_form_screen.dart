@@ -216,7 +216,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.vertical(
+                      borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(20),
                       ),
                     ),
@@ -527,7 +527,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                                         color: context.saas.brand600,
                                         size: 16,
                                       ),
-                                      SizedBox(width: 8),
+                                      const SizedBox(width: 8),
                                       Text(
                                         'PERFIL EMPRESARIAL',
                                         style: TextStyle(
@@ -792,7 +792,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
           const SizedBox(height: 12),
           if (_redesSociales.isEmpty)
             Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               child: Row(
                 children: [
                   Icon(
@@ -800,7 +800,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                     size: 16,
                     color: context.saas.textTertiary,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
                     'No hay redes sociales configuradas',
                     style: TextStyle(

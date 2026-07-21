@@ -203,8 +203,6 @@ class ApiTourRepository implements TourRepository {
       Uri.parse('$_baseUrl/$id/detalle'),
       headers: _headers,
     );
-    print('$_baseUrl/$id/detalle');
-    print('Respuesta $_baseUrl/$id/detalle ${response.body}');
     if (response.statusCode != 200) {
       throw ApiException.fromResponse(response);
     }

@@ -1,3 +1,5 @@
+// TODO(Fase 5): migrar a package:web + dart:js_interop (ANALISIS_Y_PLAN_MEJORAS.md)
+// ignore_for_file: deprecated_member_use, avoid_web_libraries_in_flutter
 import 'dart:js' as js;
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
@@ -246,7 +248,7 @@ class _AdminShellState extends State<AdminShell> {
       case AppRouter.cotizaciones:
         context.read<CotizacionBloc>().add(const LoadAllData());
       case AppRouter.clientes:
-        context.read<ClienteBloc>().add(LoadClientes());
+        context.read<ClienteBloc>().add(const LoadClientes());
       case AppRouter.hoteles:
         context.read<HotelBloc>().add(const LoadHoteles());
       case AppRouter.proveedores:
@@ -259,7 +261,7 @@ class _AdminShellState extends State<AdminShell> {
   }
 
   void _onLogout() {
-    context.read<AuthBloc>().add(LogoutRequested());
+    context.read<AuthBloc>().add(const LogoutRequested());
     // La navegación al login la maneja el BlocListener<AuthBloc> en AdminShellWrapper.
   }
 
@@ -515,7 +517,7 @@ class _AdminShellState extends State<AdminShell> {
                 ),
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
-                  padding: EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(6),
                   child: Icon(
                     Icons.add_alert_rounded,
                     size: 18,
@@ -544,7 +546,7 @@ class _AdminShellState extends State<AdminShell> {
         child: Row(
           children: [
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Icon(
                 Icons.search,
                 size: 16,
@@ -659,14 +661,14 @@ class _AdminShellState extends State<AdminShell> {
 
   void _playNotificacionSound() {
     try {
-      final AudioCtxCtor = js.context['AudioContext'] ??
+      final audioCtxCtor = js.context['AudioContext'] ??
           js.context['webkitAudioContext'];
-      if (AudioCtxCtor == null) return;
+      if (audioCtxCtor == null) return;
 
-      final ctx = js.JsObject(AudioCtxCtor as js.JsFunction);
+      final ctx = js.JsObject(audioCtxCtor as js.JsFunction);
       final now = (ctx['currentTime'] as num).toDouble();
 
-      void _tone(double freq, double startAt, double duration, double peak) {
+      void tone(double freq, double startAt, double duration, double peak) {
         final osc = ctx.callMethod('createOscillator') as js.JsObject;
         final gain = ctx.callMethod('createGain') as js.JsObject;
         osc.callMethod('connect', [gain]);
@@ -682,8 +684,8 @@ class _AdminShellState extends State<AdminShell> {
       }
 
       // Ding doble: 880 Hz → 1109 Hz
-      _tone(880, 0.0, 0.18, 0.12);
-      _tone(1109, 0.12, 0.18, 0.10);
+      tone(880, 0.0, 0.18, 0.12);
+      tone(1109, 0.12, 0.18, 0.10);
     } catch (_) {}
   }
 

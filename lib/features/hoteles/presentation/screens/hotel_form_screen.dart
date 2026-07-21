@@ -508,7 +508,7 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                   ),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
-                    value: _habTipoCama,
+                    initialValue: _habTipoCama,
                     dropdownColor: context.saas.bgCanvas,
                     style: TextStyle(
                       color: context.saas.textPrimary,
@@ -832,7 +832,7 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       CircularProgressIndicator(color: context.saas.brand600),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       Text(
                         'Cargando datos del hotel...',
                         style: TextStyle(
@@ -883,7 +883,7 @@ class _HotelFormScreenState extends State<HotelFormScreen>
                                     color: context.saas.brand600,
                                     size: 16,
                                   ),
-                                  SizedBox(width: 8),
+                                  const SizedBox(width: 8),
                                   Text(
                                     'DATOS DEL HOTEL',
                                     style: TextStyle(
@@ -1043,7 +1043,7 @@ class _GaleriaBtn extends StatelessWidget {
           children: [
             Icon(Icons.photo_library_rounded,
                 color: context.saas.brand600, size: 16),
-            SizedBox(width: 5),
+            const SizedBox(width: 5),
             Text(
               'Galería',
               style: TextStyle(

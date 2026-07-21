@@ -74,10 +74,10 @@ class _HotelListBodyState extends State<_HotelListBody> {
               context.read<HotelBloc>().add(const LoadHoteles()),
           child: CustomScrollView(
             slivers: [
-              SliverToBoxAdapter(
+              const SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                  child: const _HotelHeader(),
+                  padding: EdgeInsets.fromLTRB(24, 24, 24, 0),
+                  child: _HotelHeader(),
                 ),
               ),
               SliverToBoxAdapter(
@@ -99,7 +99,7 @@ class _HotelListBodyState extends State<_HotelListBody> {
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
-                      (_, __) => const SaasListSkeleton(),
+                      (_, _) => const SaasListSkeleton(),
                       childCount: 5,
                     ),
                   ),
@@ -534,7 +534,7 @@ class _HotelCardState extends State<_HotelCard> {
                             size: 16,
                             color: context.saas.brand600,
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text(
                             'Editar',
                             style: TextStyle(color: context.saas.textPrimary),
@@ -551,7 +551,7 @@ class _HotelCardState extends State<_HotelCard> {
                             size: 16,
                             color: context.saas.danger,
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text(
                             'Eliminar',
                             style: TextStyle(color: context.saas.danger),

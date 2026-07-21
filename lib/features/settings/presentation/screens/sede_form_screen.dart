@@ -248,7 +248,7 @@ class _SedeFormScreenState extends State<SedeFormScreen>
           decoration: BoxDecoration(
             color: D.bg,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           ),
           child: SwitchListTile(
             title: const Text(
@@ -267,9 +267,9 @@ class _SedeFormScreenState extends State<SedeFormScreen>
             ),
             value: _isActive,
             activeThumbColor: D.emerald,
-            activeTrackColor: D.emerald.withOpacity(0.3),
+            activeTrackColor: D.emerald.withValues(alpha: 0.3),
             inactiveThumbColor: D.slate400,
-            inactiveTrackColor: D.bg.withOpacity(0.5),
+            inactiveTrackColor: D.bg.withValues(alpha: 0.5),
             onChanged: (v) => setState(() => _isActive = v),
           ),
         ),

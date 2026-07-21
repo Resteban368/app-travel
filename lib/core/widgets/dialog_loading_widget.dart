@@ -63,7 +63,7 @@ class DialogLoadingNetwork extends StatelessWidget {
               ),
             ),
           ),
-          content: Column(
+          content: const Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

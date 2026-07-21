@@ -30,7 +30,7 @@ class ApiAgenteRepository implements AgenteRepository {
     throw Exception('Error al cargar módulos: ${response.statusCode}');
   }
 
-  /// Convierte Map<moduloKey, nivel> → lista de objetos que espera el API
+  /// Convierte `Map<moduloKey, nivel>` → lista de objetos que espera el API
   List<Map<String, dynamic>> _permisosToApi(
     Map<String, String> permisos,
     Map<String, int> moduloIds,

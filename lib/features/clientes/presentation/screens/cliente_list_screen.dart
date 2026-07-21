@@ -206,7 +206,7 @@ class _ClienteListScreenState extends State<ClienteListScreen>
                           if (state is ClienteLoaded && !state.hasReachedMax)
                             SliverToBoxAdapter(
                               child: Padding(
-                                padding: EdgeInsets.all(32),
+                                padding: const EdgeInsets.all(32),
                                 child: Center(
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
@@ -253,7 +253,7 @@ class _ClienteListScreenState extends State<ClienteListScreen>
                       letterSpacing: -0.5,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Administra la información y el historial de tus clientes.',
                     style: TextStyle(
@@ -356,7 +356,7 @@ class _ClienteCardState extends State<_ClienteCard> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(_hovered ? 0.08 : 0.03),
+              color: Colors.black.withValues(alpha: _hovered ? 0.08 : 0.03),
               blurRadius: _hovered ? 16 : 8,
               offset: Offset(0, _hovered ? 4 : 2),
             ),
@@ -379,7 +379,7 @@ class _ClienteCardState extends State<_ClienteCard> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: D.royalBlue.withOpacity(0.1),
+                    color: D.royalBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(
@@ -404,12 +404,12 @@ class _ClienteCardState extends State<_ClienteCard> {
                       const SizedBox(height: 4),
                       Text(
                         c.correo,
-                        style: TextStyle(color: D.slate400, fontSize: 13),
+                        style: const TextStyle(color: D.slate400, fontSize: 13),
                       ),
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          Icon(Icons.phone_rounded, size: 12, color: D.bg),
+                          const Icon(Icons.phone_rounded, size: 12, color: D.bg),
                           const SizedBox(width: 4),
                           Text(
                             c.telefono,
@@ -421,7 +421,7 @@ class _ClienteCardState extends State<_ClienteCard> {
                       const SizedBox(width: 12),
                       Row(
                         children: [
-                          Icon(Icons.badge_outlined, size: 12, color: D.bg),
+                          const Icon(Icons.badge_outlined, size: 12, color: D.bg),
                           const SizedBox(width: 4),
                           Text(
                             '${c.tipoDocumento}: ${c.documento}',
@@ -491,7 +491,7 @@ class _EmptyState extends StatelessWidget {
         const SizedBox(height: 16),
         Text(
           isSearch ? 'No se encontraron clientes' : 'Sin clientes registrados',
-          style: TextStyle(
+          style: const TextStyle(
             color: D.slate600,
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -537,7 +537,7 @@ class _PremiumConfirmDialog extends StatelessWidget {
           Text(
             content,
             textAlign: TextAlign.center,
-            style: TextStyle(color: D.slate400, fontSize: 14),
+            style: const TextStyle(color: D.slate400, fontSize: 14),
           ),
           const SizedBox(height: 32),
           Row(

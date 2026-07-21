@@ -169,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen>
           flex: 58,
           child: AnimatedBuilder(
             animation: Listenable.merge([_entryCtrl, _floatCtrl, _shimmerCtrl]),
-            builder: (_, __) => FadeTransition(
+            builder: (_, _) => FadeTransition(
               opacity: _leftOpacity,
               child: SlideTransition(position: _leftSlide, child: _leftPanel()),
             ),
@@ -179,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen>
           flex: 42,
           child: AnimatedBuilder(
             animation: _entryCtrl,
-            builder: (_, __) => FadeTransition(
+            builder: (_, _) => FadeTransition(
               opacity: _rightOpacity,
               child: SlideTransition(
                 position: _rightSlide,
@@ -201,7 +201,7 @@ class _LoginScreenState extends State<LoginScreen>
         Positioned.fill(
           child: AnimatedBuilder(
             animation: _shimmerCtrl,
-            builder: (_, __) =>
+            builder: (_, _) =>
                 CustomPaint(painter: _MobileBgPainter(_shimmer.value)),
           ),
         ),
@@ -221,7 +221,7 @@ class _LoginScreenState extends State<LoginScreen>
                     child: Icon(
                       Icons.flight,
                       size: iconSize,
-                      color: _C.skyBlue.withOpacity(0.6),
+                      color: _C.skyBlue.withValues(alpha: 0.6),
                     ),
                   ),
                 ),
@@ -234,7 +234,7 @@ class _LoginScreenState extends State<LoginScreen>
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 48),
             child: AnimatedBuilder(
               animation: _entryCtrl,
-              builder: (_, __) => FadeTransition(
+              builder: (_, _) => FadeTransition(
                 opacity: _rightOpacity,
                 child: SlideTransition(
                   position: _rightSlide,
@@ -255,9 +255,9 @@ class _LoginScreenState extends State<LoginScreen>
     return Stack(
       children: [
         // Fondo base
-        Positioned.fill(
+        const Positioned.fill(
           child: DecoratedBox(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -283,8 +283,8 @@ class _LoginScreenState extends State<LoginScreen>
                   begin: Alignment.topRight,
                   end: Alignment.bottomLeft,
                   colors: [
-                    _C.royalBlue.withOpacity(0.40),
-                    _C.indigo.withOpacity(0.10),
+                    _C.royalBlue.withValues(alpha: 0.40),
+                    _C.indigo.withValues(alpha: 0.10),
                   ],
                 ),
               ),
@@ -307,8 +307,8 @@ class _LoginScreenState extends State<LoginScreen>
                   begin: Alignment.bottomLeft,
                   end: Alignment.topRight,
                   colors: [
-                    _C.cyan.withOpacity(0.18),
-                    _C.gold.withOpacity(0.06),
+                    _C.cyan.withValues(alpha: 0.18),
+                    _C.gold.withValues(alpha: 0.06),
                   ],
                 ),
               ),
@@ -323,8 +323,8 @@ class _LoginScreenState extends State<LoginScreen>
           child: _pulsatingOrb(
             300,
             Color.lerp(
-              _C.royalBlue.withOpacity(0.18),
-              _C.indigo.withOpacity(0.30),
+              _C.royalBlue.withValues(alpha: 0.18),
+              _C.indigo.withValues(alpha: 0.30),
               _shimmer.value,
             )!,
           ),
@@ -337,8 +337,8 @@ class _LoginScreenState extends State<LoginScreen>
           child: _pulsatingOrb(
             380,
             Color.lerp(
-              _C.cyan.withOpacity(0.08),
-              _C.gold.withOpacity(0.14),
+              _C.cyan.withValues(alpha: 0.08),
+              _C.gold.withValues(alpha: 0.14),
               _shimmer.value,
             )!,
           ),
@@ -362,7 +362,7 @@ class _LoginScreenState extends State<LoginScreen>
               // Logo del producto
               AnimatedBuilder(
                 animation: _floatCtrl,
-                builder: (_, __) => Transform.translate(
+                builder: (_, _) => Transform.translate(
                   offset: Offset(0, _floatY.value * 0.6),
                   child: _productLogo(size: 72),
                 ),
@@ -415,7 +415,7 @@ class _LoginScreenState extends State<LoginScreen>
                     Text(
                       'La plataforma todo-en-uno para\nagencias de viaje modernas.',
                       style: TextStyle(
-                        color: _C.slate400.withOpacity(0.9),
+                        color: _C.slate400.withValues(alpha: 0.9),
                         fontSize: 15,
                         height: 1.60,
                         fontWeight: FontWeight.w400,
@@ -493,13 +493,13 @@ class _LoginScreenState extends State<LoginScreen>
         borderRadius: BorderRadius.circular(size * 0.27),
         boxShadow: [
           BoxShadow(
-            color: _C.skyBlue.withOpacity(0.38),
+            color: _C.skyBlue.withValues(alpha: 0.38),
             blurRadius: 28,
             spreadRadius: 3,
             offset: const Offset(0, 10),
           ),
           BoxShadow(
-            color: _C.royalBlue.withOpacity(0.25),
+            color: _C.royalBlue.withValues(alpha: 0.25),
             blurRadius: 50,
             spreadRadius: -4,
             offset: const Offset(0, 20),
@@ -527,9 +527,9 @@ class _LoginScreenState extends State<LoginScreen>
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-            color: _C.royalBlue.withOpacity(0.18),
+            color: _C.royalBlue.withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _C.skyBlue.withOpacity(0.22)),
+            border: Border.all(color: _C.skyBlue.withValues(alpha: 0.22)),
           ),
           child: Icon(icon, color: _C.skyBlue, size: 18),
         ),
@@ -550,7 +550,7 @@ class _LoginScreenState extends State<LoginScreen>
               Text(
                 subtitle,
                 style: TextStyle(
-                  color: _C.slate400.withOpacity(0.75),
+                  color: _C.slate400.withValues(alpha: 0.75),
                   fontSize: 11.5,
                   height: 1.4,
                 ),
@@ -566,9 +566,9 @@ class _LoginScreenState extends State<LoginScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: _C.white.withOpacity(0.04),
+        color: _C.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _C.border.withOpacity(0.8)),
+        border: Border.all(color: _C.border.withValues(alpha: 0.8)),
       ),
       child: Row(
         children: [
@@ -595,7 +595,7 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                     child: Icon(
                       Icons.business_center_rounded,
-                      color: _C.white.withOpacity(0.85),
+                      color: _C.white.withValues(alpha: 0.85),
                       size: 12,
                     ),
                   ),
@@ -620,7 +620,7 @@ class _LoginScreenState extends State<LoginScreen>
                 Text(
                   'Gestión centralizada · Actualización continua',
                   style: TextStyle(
-                    color: _C.slate400.withOpacity(0.7),
+                    color: _C.slate400.withValues(alpha: 0.7),
                     fontSize: 10.5,
                   ),
                 ),
@@ -650,7 +650,7 @@ class _LoginScreenState extends State<LoginScreen>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [_C.skyBlue.withOpacity(0.10), Colors.transparent],
+                  colors: [_C.skyBlue.withValues(alpha: 0.10), Colors.transparent],
                 ),
               ),
             ),
@@ -668,8 +668,8 @@ class _LoginScreenState extends State<LoginScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      _C.royalBlue.withOpacity(0.09),
-                      _C.skyBlue.withOpacity(0.04),
+                      _C.royalBlue.withValues(alpha: 0.09),
+                      _C.skyBlue.withValues(alpha: 0.04),
                     ],
                   ),
                 ),
@@ -703,7 +703,7 @@ class _LoginScreenState extends State<LoginScreen>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.24),
+            color: Colors.black.withValues(alpha: 0.24),
             blurRadius: 48,
             offset: const Offset(0, 16),
           ),
@@ -754,7 +754,7 @@ class _LoginScreenState extends State<LoginScreen>
                   'Accede al panel de tu agencia',
                   style: TextStyle(
                     fontSize: 13.5,
-                    color: _C.slate600.withOpacity(0.85),
+                    color: _C.slate600.withValues(alpha: 0.85),
                   ),
                 ),
               ],
@@ -795,19 +795,19 @@ class _LoginScreenState extends State<LoginScreen>
             opacity: _btnOpacity,
             child: Row(
               children: [
-                Expanded(child: Divider(color: _C.inputBorder, height: 1)),
+                const Expanded(child: Divider(color: _C.inputBorder, height: 1)),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
                     'AgenteViajes Platform v3.0.0',
                     style: TextStyle(
                       fontSize: 11,
-                      color: _C.slate600.withOpacity(0.5),
+                      color: _C.slate600.withValues(alpha: 0.5),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-                Expanded(child: Divider(color: _C.inputBorder, height: 1)),
+                const Expanded(child: Divider(color: _C.inputBorder, height: 1)),
               ],
             ),
           ),
@@ -821,7 +821,7 @@ class _LoginScreenState extends State<LoginScreen>
                 '© ${DateTime.now().year} AgenteViajes · Todos los derechos reservados',
                 style: TextStyle(
                   fontSize: 10.5,
-                  color: _C.slate600.withOpacity(0.45),
+                  color: _C.slate600.withValues(alpha: 0.45),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -841,10 +841,10 @@ class _LoginScreenState extends State<LoginScreen>
   }) => InputDecoration(
     labelText: label,
     hintText: hint,
-    hintStyle: TextStyle(color: _C.slate600.withOpacity(0.4), fontSize: 13),
+    hintStyle: TextStyle(color: _C.slate600.withValues(alpha: 0.4), fontSize: 13),
     labelStyle: TextStyle(
       fontSize: 13,
-      color: _C.slate600.withOpacity(0.85),
+      color: _C.slate600.withValues(alpha: 0.85),
       fontWeight: FontWeight.w500,
     ),
     floatingLabelStyle: const TextStyle(
@@ -858,11 +858,11 @@ class _LoginScreenState extends State<LoginScreen>
     fillColor: _C.inputBg,
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: _C.inputBorder),
+      borderSide: const BorderSide(color: _C.inputBorder),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: _C.inputBorder),
+      borderSide: const BorderSide(color: _C.inputBorder),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
@@ -935,7 +935,7 @@ class _LoginScreenState extends State<LoginScreen>
               ? []
               : [
                   BoxShadow(
-                    color: _C.royalBlue.withOpacity(0.38),
+                    color: _C.royalBlue.withValues(alpha: 0.38),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   ),
@@ -956,7 +956,7 @@ class _LoginScreenState extends State<LoginScreen>
                 },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
-            disabledBackgroundColor: _C.slate600.withOpacity(0.2),
+            disabledBackgroundColor: _C.slate600.withValues(alpha: 0.2),
             shadowColor: Colors.transparent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -1028,7 +1028,7 @@ class _DotGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final p = Paint()
-      ..color = Colors.white.withOpacity(0.05)
+      ..color = Colors.white.withValues(alpha: 0.05)
       ..strokeCap = StrokeCap.round;
     const sp = 28.0;
     for (double x = sp / 2; x < size.width; x += sp) {
@@ -1049,7 +1049,7 @@ class _RoutePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size s) {
     final stroke = Paint()
-      ..color = Colors.white.withOpacity(0.07)
+      ..color = Colors.white.withValues(alpha: 0.07)
       ..strokeWidth = 1.4
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -1080,19 +1080,19 @@ class _RoutePainter extends CustomPainter {
         s.height * 0.10 + offset * 0.15,
       );
 
-    stroke.color = Colors.white.withOpacity(0.035);
+    stroke.color = Colors.white.withValues(alpha: 0.035);
     _drawDashed(canvas, arc2, stroke, 6, 6);
 
     // Nodo final ruta principal
     canvas.drawCircle(
       Offset(s.width * 0.95, s.height * 0.18 + offset * 0.25),
       4.0,
-      Paint()..color = _C.skyBlue.withOpacity(0.30),
+      Paint()..color = _C.skyBlue.withValues(alpha: 0.30),
     );
     canvas.drawCircle(
       Offset(s.width * 0.95, s.height * 0.18 + offset * 0.25),
       2.0,
-      Paint()..color = _C.skyBlue.withOpacity(0.60),
+      Paint()..color = _C.skyBlue.withValues(alpha: 0.60),
     );
   }
 
@@ -1146,8 +1146,8 @@ class _MobileBgPainter extends CustomPainter {
           end: Alignment.bottomLeft,
           colors: [
             Color.lerp(
-              _C.royalBlue.withOpacity(0.30),
-              _C.indigo.withOpacity(0.20),
+              _C.royalBlue.withValues(alpha: 0.30),
+              _C.indigo.withValues(alpha: 0.20),
               pulse,
             )!,
             Colors.transparent,
@@ -1157,7 +1157,7 @@ class _MobileBgPainter extends CustomPainter {
 
     // Grilla de puntos
     final dot = Paint()
-      ..color = Colors.white.withOpacity(0.04)
+      ..color = Colors.white.withValues(alpha: 0.04)
       ..strokeCap = StrokeCap.round;
     const sp = 24.0;
     for (double x = sp / 2; x < size.width; x += sp) {

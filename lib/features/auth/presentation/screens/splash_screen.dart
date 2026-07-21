@@ -103,17 +103,17 @@ class _SplashScreenState extends State<SplashScreen>
           child: Stack(
             children: [
               // Decorative circles
-              Positioned(
+              const Positioned(
                 top: -80,
                 right: -60,
                 child: _DecorativeCircle(size: 260, opacity: 0.06),
               ),
-              Positioned(
+              const Positioned(
                 bottom: -100,
                 left: -80,
                 child: _DecorativeCircle(size: 340, opacity: 0.05),
               ),
-              Positioned(
+              const Positioned(
                 top: 160,
                 left: -40,
                 child: _DecorativeCircle(size: 140, opacity: 0.04),

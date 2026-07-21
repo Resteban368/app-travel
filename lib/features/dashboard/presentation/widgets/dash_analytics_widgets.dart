@@ -29,7 +29,7 @@ class SummaryCard extends StatelessWidget {
         border: Border.all(color: context.saas.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -45,7 +45,7 @@ class SummaryCard extends StatelessWidget {
             child: Icon(
               icon,
               size: 80,
-              color: color.withOpacity(0.04),
+              color: color.withValues(alpha: 0.04),
             ),
           ),
           Padding(
@@ -57,7 +57,7 @@ class SummaryCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
+                    color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(icon, color: color, size: 20),
@@ -89,7 +89,7 @@ class SummaryCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.08),
+                      color: color.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -131,7 +131,7 @@ class VuelosPorAgenteCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           child: Text(
             'Vuelos por Agente',
             style: TextStyle(

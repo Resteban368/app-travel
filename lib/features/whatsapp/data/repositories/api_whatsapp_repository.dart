@@ -11,7 +11,7 @@ class ApiWhatsAppRepository implements WhatsAppRepository {
 
   @override
   Future<void> sendMessage({required int conversationId, required String content}) async {
-    final url = '${ApiConstants.kBaseUrl}/v1/whatsapp/send';
+    const url = '${ApiConstants.kBaseUrl}/v1/whatsapp/send';
 
     try {
       final response = await client.post(

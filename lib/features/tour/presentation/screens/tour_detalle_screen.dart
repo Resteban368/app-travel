@@ -1,10 +1,10 @@
+import 'dart:async';
 import 'dart:js_interop';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:agente_viajes/core/widgets/saas_snackbar.dart';
-import 'package:web/web.dart' as webLib;
+import 'package:web/web.dart' as web_lib;
 import '../../../../core/theme/saas_palette.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/widgets/dialog_loading_widget.dart';
@@ -62,12 +62,12 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
     });
 
     // Mostrar diálogo de carga premium
-    showDialog(
+    unawaited(showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) =>
           const DialogLoadingNetwork(titel: 'Cargando detalle del tour...'),
-    );
+    ));
 
     try {
       final futures = <Future>[
@@ -127,7 +127,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             sliver: SliverToBoxAdapter(child: _buildCuposHeader()),
           ),
-          if (widget.tour.precios != null && widget.tour.precios!.isNotEmpty)
+          if (widget.tour.precios.isNotEmpty)
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
               sliver: SliverToBoxAdapter(child: _buildTablaPreciosTour()),
@@ -295,7 +295,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
           Row(
             children: [
               Icon(Icons.sell_rounded, color: context.saas.brand600, size: 18),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 'TABLA DE PRECIOS',
                 style: TextStyle(
@@ -308,7 +308,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          ...widget.tour.precios!.map((p) {
+          ...widget.tour.precios.map((p) {
             final edadStr = (p.edadMin != null || p.edadMax != null)
                 ? '${p.edadMin ?? 0}-${p.edadMax ?? '∞'} años'
                 : null;
@@ -331,7 +331,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
                         if (edadStr != null || p.puntoPartida != null)
                           Text(
                             [
-                              if (edadStr != null) edadStr,
+                              ?edadStr,
                               if (p.puntoPartida != null)
                                 'desde ${p.puntoPartida}',
                             ].join(' · '),
@@ -362,7 +362,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
 
   Widget _buildAppBar() {
     return PremiumSliverAppBar(
-      title: widget.tour.name ?? "",
+      title: widget.tour.name,
       actions: IconButton(
         icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
         onPressed: () => Navigator.pop(context),
@@ -429,7 +429,7 @@ class _TourDetalleScreenState extends State<TourDetalleScreen> {
           ),
           // Manifiesto: tour fecha_fija con buses asignados al tour
           if (widget.tour.disponibilidadTipo != 'multiples_fechas' &&
-              widget.tour.busLayoutIds!.isNotEmpty) ...[
+              widget.tour.busLayoutIds.isNotEmpty) ...[
             const SizedBox(height: 16),
             _ManifiestoButton(
               label: 'Ver manifiesto de bus',
@@ -754,13 +754,13 @@ class _ReservaCardState extends State<_ReservaCard> {
   Future<void> _generateAndShowPdf() async {
     setState(() => _generatingPdf = true);
     final rootNav = Navigator.of(context, rootNavigator: true);
-    showDialog(
+    unawaited(showDialog(
       context: context,
       useRootNavigator: true,
       barrierDismissible: false,
       builder: (_) =>
           const DialogLoadingNetwork(titel: 'Generando PDF de Reserva'),
-    );
+    ));
     try {
       final fullReserva = await sl<ReservaRepository>().getReservaById(
         widget.reserva.id.toString(),
@@ -793,26 +793,26 @@ class _ReservaCardState extends State<_ReservaCard> {
     final uint8Bytes = Uint8List.fromList(bytes);
 
     void openInNewTab() {
-      final blob = webLib.Blob(
+      final blob = web_lib.Blob(
         <JSAny>[uint8Bytes.buffer.toJS].toJS,
-        webLib.BlobPropertyBag(type: 'application/pdf'),
+        web_lib.BlobPropertyBag(type: 'application/pdf'),
       );
-      final url = webLib.URL.createObjectURL(blob);
-      webLib.window.open(url, '_blank', '');
+      final url = web_lib.URL.createObjectURL(blob);
+      web_lib.window.open(url, '_blank', '');
     }
 
     void download() {
-      final blob = webLib.Blob(
+      final blob = web_lib.Blob(
         <JSAny>[uint8Bytes.buffer.toJS].toJS,
-        webLib.BlobPropertyBag(type: 'application/pdf'),
+        web_lib.BlobPropertyBag(type: 'application/pdf'),
       );
-      final url = webLib.URL.createObjectURL(blob);
+      final url = web_lib.URL.createObjectURL(blob);
       final anchor =
-          webLib.document.createElement('a') as webLib.HTMLAnchorElement;
+          web_lib.document.createElement('a') as web_lib.HTMLAnchorElement;
       anchor.href = url;
       anchor.download = filename;
       anchor.click();
-      webLib.URL.revokeObjectURL(url);
+      web_lib.URL.revokeObjectURL(url);
     }
 
     await showDialog(
@@ -1164,7 +1164,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                             color: context.saas.warning,
                             size: 16,
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text(
                             'Falta por asignar asientos',
                             style: TextStyle(

@@ -1,3 +1,5 @@
+// TODO(Fase 5): migrar a package:web + dart:js_interop (ANALISIS_Y_PLAN_MEJORAS.md)
+// ignore_for_file: deprecated_member_use
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -477,7 +479,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               } else {
                 // Esperamos un frame para que el diálogo se cierre completamente antes de cerrar la pantalla
                 Future.delayed(Duration.zero, () {
-                  if (mounted) Navigator.pop(context);
+                  if (context.mounted) Navigator.pop(context);
                 });
               }
             } else if (state is PagosRealizadosLoaded && _isEditing) {
@@ -809,7 +811,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                     ? child
                     : Center(
                         child: Padding(
-                          padding: EdgeInsets.all(40),
+                          padding: const EdgeInsets.all(40),
                           child: CircularProgressIndicator(
                             color: context.saas.brand600,
                           ),
@@ -890,7 +892,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
               notas: '',
               integrantes: const [],
               idTour: '',
-              serviciosIds: [],
+              serviciosIds: const [],
             ),
           );
           if (selectedReserva.id?.isNotEmpty == true) {
@@ -1139,7 +1141,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: _metodosPagoValues.contains(_metodoPago) ? _metodoPago : 'transferencia',
+          initialValue: _metodosPagoValues.contains(_metodoPago) ? _metodoPago : 'transferencia',
           dropdownColor: context.saas.bgCanvas,
           isExpanded: true,
           style: TextStyle(color: context.saas.textPrimary, fontSize: 14),
@@ -1391,7 +1393,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           )
         else
           DropdownButtonFormField<String>(
-            value: sedes.any((s) => s.id == _selectedSedeId) ? _selectedSedeId : null,
+            initialValue: sedes.any((s) => s.id == _selectedSedeId) ? _selectedSedeId : null,
             dropdownColor: context.saas.bgCanvas,
             style: TextStyle(color: context.saas.textPrimary, fontSize: 14),
             decoration: InputDecoration(
@@ -1975,6 +1977,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
           'mime_type': mimeType,
         }),
       );
+      if (!mounted) return;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = json.decode(response.body) as Map<String, dynamic>;
@@ -2005,11 +2008,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         });
         SaasSnackBar.showSuccess(context, 'Datos extraídos automáticamente');
       } else {
-        //datos que se estan enviando
-        print("MIME: ${mimeType}");
-        print("Base64: ${base64Image}");
-
-        print("ERROR: ${response.body}");
+        debugPrint('Error extrayendo datos del comprobante: ${response.statusCode}');
         String msg = 'No se pudieron extraer los datos del comprobante';
         try {
           final decoded = json.decode(response.body);
@@ -2020,7 +2019,9 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         SaasSnackBar.showError(context, msg);
       }
     } catch (_) {
-      SaasSnackBar.showError(context, 'Error al analizar el documento');
+      if (mounted) {
+        SaasSnackBar.showError(context, 'Error al analizar el documento');
+      }
     } finally {
       if (mounted) setState(() => _isAnalyzing = false);
     }
@@ -2061,7 +2062,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
     });
 
     // Analizar automáticamente con IA
-    _analyzeDocument(bytes, mimeType);
+    unawaited(_analyzeDocument(bytes, mimeType));
   }
 
   Widget _buildUploadBtn() {
@@ -2087,7 +2088,7 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
                 color: context.saas.brand600,
               ),
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             Text(
               'Analizando comprobante con IA...',
               style: TextStyle(
@@ -2262,7 +2263,7 @@ class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                   ),
                   child: Row(
                     children: [
@@ -2325,7 +2326,7 @@ class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
                       ),
                       suffixIcon: isLoading
                           ? Padding(
-                              padding: EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(12),
                               child: SizedBox(
                                 width: 16,
                                 height: 16,
@@ -2376,7 +2377,7 @@ class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
                             children: [
                               Icon(Icons.store_rounded,
                                   color: context.saas.textTertiary, size: 40),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Text(
                                 'Sin resultados',
                                 style: TextStyle(
@@ -2392,7 +2393,7 @@ class _ProveedorPickerDialogState extends State<_ProveedorPickerDialog> {
                             horizontal: 16, vertical: 4,
                           ),
                           itemCount: proveedores.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 6),
+                          separatorBuilder: (_, _) => const SizedBox(height: 6),
                           itemBuilder: (_, index) {
                             final p = proveedores[index];
                             final tipoColor = _tipoColor(p.tipo);
@@ -2586,7 +2587,7 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.vertical(
+                    borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(20),
                     ),
                   ),
@@ -2658,7 +2659,7 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                       ),
                       suffixIcon: isLoading
                           ? Padding(
-                              padding: EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(12),
                               child: SizedBox(
                                 width: 16,
                                 height: 16,
@@ -2717,7 +2718,7 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                                 color: context.saas.textTertiary,
                                 size: 40,
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Text(
                                 'Sin resultados',
                                 style: TextStyle(
@@ -2741,7 +2742,7 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                             if (index >= reservas.length) {
                               return Center(
                                 child: Padding(
-                                  padding: EdgeInsets.all(16),
+                                  padding: const EdgeInsets.all(16),
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     color: context.saas.brand600,
@@ -2804,7 +2805,7 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                                                   size: 13,
                                                   color: context.saas.brand600,
                                                 ),
-                                                SizedBox(width: 4),
+                                                const SizedBox(width: 4),
                                                 Text(
                                                   responsable ??
                                                       'Sin responsable',
@@ -2825,7 +2826,7 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                                                   size: 13,
                                                   color: context.saas.brand600,
                                                 ),
-                                                SizedBox(width: 4),
+                                                const SizedBox(width: 4),
                                                 Text(
                                                   r.tour?.name ?? 'Sin tour',
                                                   style: TextStyle(
@@ -2845,7 +2846,7 @@ class _ReservaPickerDialogState extends State<_ReservaPickerDialog> {
                                                   size: 13,
                                                   color: context.saas.brand600,
                                                 ),
-                                                SizedBox(width: 4),
+                                                const SizedBox(width: 4),
                                                 Text(
                                                   //ponemos la fecga en formato dd/MM/yyyy
                                                   DateFormat(
@@ -3128,7 +3129,7 @@ class _ImageError extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.broken_image_rounded, color: context.saas.danger, size: 48),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Text(
             'Error al cargar comprobante',
             style: TextStyle(color: context.saas.textSecondary, fontSize: 12),

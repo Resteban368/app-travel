@@ -31,7 +31,7 @@ class DialogDetailTour extends StatelessWidget {
               border: Border.all(color: context.saas.border),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 30,
                   offset: const Offset(0, 10),
                 ),
@@ -146,8 +146,8 @@ class _HeroSection extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.1),
-                  Colors.black.withOpacity(0.7),
+                  Colors.black.withValues(alpha: 0.1),
+                  Colors.black.withValues(alpha: 0.7),
                 ],
               ),
             ),
@@ -158,7 +158,7 @@ class _HeroSection extends StatelessWidget {
             top: 16,
             right: 16,
             child: Material(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(12),
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),

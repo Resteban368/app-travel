@@ -100,7 +100,7 @@ class _ServiceListBodyState extends State<_ServiceListBody> {
                     padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (_, __) => const SaasListSkeleton(),
+                        (_, _) => const SaasListSkeleton(),
                         childCount: 5,
                       ),
                     ),
@@ -187,7 +187,7 @@ class _ServiceHeader extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Gestiona los beneficios y servicios adicionales de tus productos.',
                     style: TextStyle(
@@ -254,7 +254,7 @@ class _ServiceCardState extends State<_ServiceCard> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(_isHovered ? 0.08 : 0.03),
+                color: Colors.black.withValues(alpha: _isHovered ? 0.08 : 0.03),
                 blurRadius: _isHovered ? 16 : 8,
                 offset: Offset(0, _isHovered ? 4 : 2),
               ),
@@ -326,7 +326,7 @@ class _ServiceCardState extends State<_ServiceCard> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: context.saas.success.withOpacity(0.1),
+                                color: context.saas.success.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -394,8 +394,8 @@ class _ServiceActionMenu extends StatelessWidget {
                 size: 18,
                 color: context.saas.textPrimary,
               ),
-              SizedBox(width: 12),
-              Text('Editar servicio', style: TextStyle(fontSize: 13)),
+              const SizedBox(width: 12),
+              const Text('Editar servicio', style: TextStyle(fontSize: 13)),
             ],
           ),
         ),
@@ -409,7 +409,7 @@ class _ServiceActionMenu extends StatelessWidget {
                 size: 18,
                 color: context.saas.danger,
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Text(
                 'Eliminar',
                 style: TextStyle(color: context.saas.danger, fontSize: 13),
