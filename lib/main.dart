@@ -1,24 +1,5 @@
 import 'dart:async';
 import 'package:agente_viajes/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:agente_viajes/features/settings/presentation/bloc/payment_method_bloc.dart';
-import 'package:agente_viajes/features/settings/presentation/bloc/sede_bloc.dart';
-import 'package:agente_viajes/features/catalogue/presentation/bloc/catalogue_bloc.dart';
-import 'package:agente_viajes/features/faq/presentation/bloc/faq_bloc.dart';
-import 'package:agente_viajes/features/service/presentation/bloc/service_bloc.dart';
-import 'package:agente_viajes/features/politica_reserva/presentation/bloc/politica_reserva_bloc.dart';
-import 'package:agente_viajes/features/info_empresa/presentation/bloc/info_empresa_bloc.dart';
-import 'package:agente_viajes/features/pagos_realizados/presentation/bloc/pago_realizado_bloc.dart';
-import 'package:agente_viajes/features/whatsapp/presentation/bloc/whatsapp_bloc.dart';
-import 'package:agente_viajes/features/cotizaciones/presentation/bloc/cotizacion_bloc.dart';
-import 'package:agente_viajes/features/agentes/presentation/bloc/agente_bloc.dart';
-import 'package:agente_viajes/features/reservas/presentation/bloc/reserva_bloc.dart';
-import 'package:agente_viajes/features/clientes/presentation/bloc/cliente_bloc.dart';
-import 'package:agente_viajes/features/hoteles/presentation/bloc/hotel_bloc.dart';
-import 'package:agente_viajes/features/proveedores/presentation/bloc/proveedor_bloc.dart';
-import 'package:agente_viajes/features/bus_layouts/presentation/bloc/bus_layout_bloc.dart';
-import 'package:agente_viajes/features/uploads/presentation/bloc/upload_bloc.dart';
-import 'package:agente_viajes/features/saldos_pendientes/presentation/bloc/saldo_pendiente_bloc.dart';
-import 'package:agente_viajes/features/notificaciones/presentation/bloc/notificacion_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -30,8 +11,6 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/premium_palette.dart';
 import 'core/theme/theme_cubit.dart';
 import 'config/app_router.dart';
-import 'features/tour/presentation/bloc/tour_bloc.dart';
-import 'features/tour/presentation/bloc/tour_historico_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -175,37 +154,16 @@ class _TravelToursAppState extends State<TravelToursApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Solo los BLoCs verdaderamente globales viven en el root:
+    // - ThemeCubit: singleton, su tema se carga antes de runApp.
+    // - AuthBloc: lo necesitan Splash y Login, que están fuera del shell.
+    // Los ~20 BLoCs de feature se proveen dentro de AdminShellWrapper (área
+    // autenticada), de modo que se recrean al entrar y se destruyen —con su
+    // estado— al hacer logout. Ver ANALISIS_Y_PLAN_MEJORAS.md (Fase 2).
     return MultiBlocProvider(
       providers: [
         BlocProvider<ThemeCubit>(create: (_) => sl<ThemeCubit>()),
-        BlocProvider<TourBloc>(create: (_) => sl<TourBloc>()..add(LoadTours())),
-        BlocProvider<TourHistoricoBloc>(create: (_) => sl<TourHistoricoBloc>()),
-        BlocProvider<SedeBloc>(create: (_) => sl<SedeBloc>()),
-        BlocProvider<CatalogueBloc>(create: (_) => sl<CatalogueBloc>()),
-        BlocProvider<PaymentMethodBloc>(create: (_) => sl<PaymentMethodBloc>()),
-        BlocProvider<FaqBloc>(create: (_) => sl<FaqBloc>()),
-        BlocProvider<ServiceBloc>(create: (_) => sl<ServiceBloc>()),
-        BlocProvider<PoliticaReservaBloc>(
-          create: (_) => sl<PoliticaReservaBloc>(),
-        ),
-        BlocProvider<InfoEmpresaBloc>(create: (_) => sl<InfoEmpresaBloc>()),
-        BlocProvider<PagoRealizadoBloc>(create: (_) => sl<PagoRealizadoBloc>()),
-        BlocProvider<WhatsAppBloc>(create: (_) => sl<WhatsAppBloc>()),
-        BlocProvider<CotizacionBloc>(create: (_) => sl<CotizacionBloc>()),
-        BlocProvider<AgenteBloc>(create: (_) => sl<AgenteBloc>()),
-        BlocProvider<ReservaBloc>(create: (_) => sl<ReservaBloc>()),
-        BlocProvider<ClienteBloc>(create: (_) => sl<ClienteBloc>()),
-        BlocProvider<HotelBloc>(create: (_) => sl<HotelBloc>()),
-        BlocProvider<ProveedorBloc>(create: (_) => sl<ProveedorBloc>()),
-        BlocProvider<BusLayoutBloc>(create: (_) => sl<BusLayoutBloc>()),
         BlocProvider<AuthBloc>(create: (_) => sl<AuthBloc>()),
-        BlocProvider<UploadBloc>(create: (_) => sl<UploadBloc>()),
-        BlocProvider<SaldoPendienteBloc>(
-          create: (_) => sl<SaldoPendienteBloc>(),
-        ),
-        BlocProvider<NotificacionBloc>(
-          create: (_) => sl<NotificacionBloc>(),
-        ),
       ],
       child: BlocBuilder<ThemeCubit, ThemeMode>(
         builder: (context, themeMode) {

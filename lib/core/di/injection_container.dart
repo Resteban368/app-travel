@@ -194,25 +194,31 @@ void initDependencies() {
   sl.registerLazySingleton(() => SendWhatsAppMessage(sl()));
 
   // ─── BLoCs ────────────────────────────────────────────
+  // Regla (Fase 2, ver ANALISIS_Y_PLAN_MEJORAS.md): los BLoCs se registran como
+  // `factory` para que cada BlocProvider obtenga una instancia fresca y, al
+  // desmontarse, la cierre sin afectar a otras. La única excepción es ThemeCubit
+  // (singleton: su tema se carga una vez antes de runApp). Nunca registres un
+  // BLoC como lazySingleton: un BlocProvider lo cerraría y GetIt seguiría
+  // devolviendo la instancia cerrada → "Cannot add new events after close".
   sl.registerFactory(() => AuthBloc(authRepository: sl()));
-  sl.registerLazySingleton(() => TourBloc(tourRepository: sl()));
+  sl.registerFactory(() => TourBloc(tourRepository: sl()));
   sl.registerFactory(() => TourHistoricoBloc(tourRepository: sl()));
   sl.registerFactory(() => SedeBloc(sedeRepository: sl()));
   sl.registerFactory(() => PaymentMethodBloc(paymentMethodRepository: sl()));
-  sl.registerLazySingleton(() => CatalogueBloc(catalogueRepository: sl()));
-  sl.registerLazySingleton(() => FaqBloc(faqRepository: sl()));
-  sl.registerLazySingleton(() => ServiceBloc(serviceRepository: sl()));
-  sl.registerLazySingleton(() => PoliticaReservaBloc(repository: sl()));
+  sl.registerFactory(() => CatalogueBloc(catalogueRepository: sl()));
+  sl.registerFactory(() => FaqBloc(faqRepository: sl()));
+  sl.registerFactory(() => ServiceBloc(serviceRepository: sl()));
+  sl.registerFactory(() => PoliticaReservaBloc(repository: sl()));
   sl.registerFactory(() => InfoEmpresaBloc(repository: sl()));
-  sl.registerLazySingleton(() => PagoRealizadoBloc(repository: sl()));
+  sl.registerFactory(() => PagoRealizadoBloc(repository: sl()));
   sl.registerFactory(() => WhatsAppBloc(sendWhatsAppMessage: sl()));
-  sl.registerLazySingleton(
+  sl.registerFactory(
       () => CotizacionBloc(repository: sl(), respuestaRepository: sl()));
   sl.registerFactory(() => AgenteBloc(repository: sl()));
   sl.registerFactory(() => ReservaBloc(repository: sl()));
   sl.registerFactory(() => ClienteBloc(repository: sl()));
-  sl.registerLazySingleton(() => HotelBloc(repository: sl()));
-  sl.registerLazySingleton(() => ProveedorBloc(repository: sl()));
+  sl.registerFactory(() => HotelBloc(repository: sl()));
+  sl.registerFactory(() => ProveedorBloc(repository: sl()));
   sl.registerFactory(() => BusLayoutBloc(repository: sl()));
   sl.registerFactory(() => BusManifiestoBloc(repository: sl()));
   sl.registerFactory(() => UploadBloc(repository: sl()));
@@ -221,7 +227,7 @@ void initDependencies() {
   sl.registerFactory(() => AuditoriaGeneralBloc(repository: sl()));
   sl.registerFactory(() => SaldoPendienteBloc(repository: sl()));
   sl.registerFactory(() => SaldoPendienteDetailBloc(repository: sl()));
-  sl.registerLazySingleton(
+  sl.registerFactory(
     () => NotificacionBloc(
       repository: sl(),
       sseService: sl(),

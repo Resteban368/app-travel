@@ -19,7 +19,9 @@ This is a **Flutter admin panel** for "Travel Tours Florencia" travel agency, ta
 
 **State Management:** BLoC (`flutter_bloc`) — events trigger logic, BLoC emits states, UI rebuilds on state changes.
 
-**Dependency Injection:** GetIt service locator. All dependencies registered in [lib/core/di/injection_container.dart](lib/core/di/injection_container.dart) via `initDependencies()`, called at startup. Repositories are lazy singletons. BLoCs son una mezcla de `factory` y `lazySingleton` — normalizar a `factory` está planificado en la Fase 2 (ver [ANALISIS_Y_PLAN_MEJORAS.md](ANALISIS_Y_PLAN_MEJORAS.md)). Access via global `sl<T>()`.
+**Dependency Injection:** GetIt service locator. All dependencies registered in [lib/core/di/injection_container.dart](lib/core/di/injection_container.dart) via `initDependencies()`, called at startup. Repositories are lazy singletons. **Todos los BLoCs se registran como `factory`** (única excepción: `ThemeCubit`, singleton). Nunca registres un BLoC como `lazySingleton`: un `BlocProvider` lo cerraría y GetIt seguiría devolviendo la instancia cerrada. Access via global `sl<T>()`.
+
+**Scope de los BLoCs (Fase 2):** solo `ThemeCubit` y `AuthBloc` viven en el root ([lib/main.dart](lib/main.dart)) — son los únicos que usan Splash y Login, fuera del área autenticada. Los ~20 BLoCs de feature se proveen dentro de [lib/core/layout/admin_shell_wrapper.dart](lib/core/layout/admin_shell_wrapper.dart), que envuelve todo el navigator anidado: se crean al entrar a la app y se destruyen —cerrando su estado y el SSE— cuando el logout desmonta el shell. Providers puntuales por ruta (saldos, auditoría, historial de cliente) siguen en [lib/config/app_router.dart](lib/config/app_router.dart).
 
 **Clean Architecture per feature:**
 ```

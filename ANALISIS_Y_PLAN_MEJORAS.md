@@ -172,11 +172,23 @@ Objetivo: eliminar el riesgo de duplicación de operaciones y los logouts aleato
 
 ---
 
-### Fase 2 — Ciclo de vida de BLoCs y sesión (3-4 días)
+### Fase 2 — Ciclo de vida de BLoCs y sesión ✅ COMPLETADA (2026-07-21)
 
 Objetivo: estado predecible, sin fugas entre sesiones ni singletons cerrados.
 
-**Tareas**
+**Resultado:** `flutter analyze` en 0 issues, suite de **12 tests pasando** (7 nuevos de `AuthBloc` con `bloc_test`/`mocktail`), build web verde. Lo realizado:
+
+- **DI:** los 10 BLoCs que estaban como `lazySingleton` (Tour, Catalogue, Faq, Service, PoliticaReserva, PagoRealizado, Cotizacion, Hotel, Proveedor, Notificacion) pasaron a `factory`. Regla documentada en el DI y en CLAUDE.md: BLoC = factory; única excepción `ThemeCubit`.
+- **Scope por sesión:** el root (`main.dart`) quedó solo con `ThemeCubit` + `AuthBloc` (lo único que usan Splash/Login). Los ~20 BLoCs de feature se movieron a `AdminShellWrapper`, que envuelve todo el navigator anidado → se crean al entrar y se **destruyen con su estado al hacer logout** (el `pushNamedAndRemoveUntil(login)` desmonta el shell). Esto elimina la fuga de datos entre sesiones y el riesgo de "Cannot add events after close".
+- **Arranque:** eliminado el `TourBloc..add(LoadTours())` ansioso del root (disparaba una petición antes de autenticar). Cada pantalla carga su data al entrar.
+- **SSE:** `NotificacionBloc` ahora reconecta con **backoff exponencial** (1→32s) en `onError` —antes solo logueaba y las notificaciones morían hasta recargar—; el timer se cancela en `close()` y en la desconexión manual. Al ser factory + scoped al shell, el logout cierra el bloc y desconecta el SSE limpiamente.
+- **Riesgo verificado:** se auditó que ningún widget fuera del shell (Splash/Login/diálogo de sesión) ni ningún diálogo `useRootNavigator: true` lee un BLoC de feature — el movimiento de providers no rompe el flujo lista→formulario (los providers envuelven todo el navigator anidado).
+
+> **Desviación del plan (justificada):** el texto original sugería proveer los BLoCs "por ruta" en `app_router.dart`. Se descartó: `TourFormScreen` lee `TourBloc` 13 veces y lo comparte con la lista; proveer por ruta rompería ese flujo. Envolver el shell autenticado logra los mismos objetivos (reset por sesión, sin singletons cerrados) sin ese riesgo.
+>
+> **Tests bloqueados a Fase 5:** el `bloc_test` de `AuthBloc` corre en la VM. El test de DI y los de `NotificacionBloc`/pantallas **no compilan en la VM** porque `injection_container.dart` y esos BLoCs arrastran `dart:html` (SSE / web notifications). Serán viables cuando la Fase 5 abstraiga `package:web`/`dart:html` detrás de una interfaz con import condicional.
+
+**Tareas originales:**
 
 1. **Todos los BLoCs a `registerFactory`** salvo los 2-3 genuinamente globales (`AuthBloc` — que pasa a singleton explícito con ciclo controlado —, `ThemeCubit`, `NotificacionBloc`). Documentar la regla en CLAUDE.md: *"BLoC = factory; singleton solo con justificación de ciclo de vida"*.
 2. **Sacar del root los ~18 providers de feature** y proveerlos **por ruta** en `app_router.dart` (patrón que ya usan `saldos_pendientes` y `auditoria`: `BlocProvider(create: (_) => sl<XBloc>()..add(LoadX()))`). El root queda con: `ThemeCubit`, `AuthBloc`, `NotificacionBloc`.

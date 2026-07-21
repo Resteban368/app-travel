@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -117,6 +118,11 @@ class NotificacionBloc extends Bloc<NotificacionEvent, NotificacionState> {
   final FlutterSecureStorage _storage;
   final WebNotificationService _webNotif;
 
+  // Reconexión SSE con backoff exponencial (1s, 2s, 4s… tope 32s).
+  Timer? _reconnectTimer;
+  int _reconnectAttempts = 0;
+  static const int _maxBackoffExp = 6; // 2^5 = 32s máximo
+
   NotificacionBloc({
     required NotificacionRepository repository,
     required SseNotificacionService sseService,
@@ -178,22 +184,45 @@ class NotificacionBloc extends Bloc<NotificacionEvent, NotificacionState> {
     final token = await _storage.read(key: 'access_token');
     if (token == null) return;
 
+    // Al (re)conectar cancelamos cualquier reintento pendiente.
+    _reconnectTimer?.cancel();
+
     // Carga inmediata sin esperar al evento SSE "connected"
     add(CargarNotificaciones());
 
     _sseService.connect(
       ApiConstants.kBaseUrl,
       token,
-      onConnected: () => add(CargarNotificaciones()),
+      onConnected: () {
+        _reconnectAttempts = 0; // conexión sana → resetear backoff
+        add(CargarNotificaciones());
+      },
       onData: (data) => add(_SseDataRecibida(data)),
-      onError: () => debugPrint('⚠️ [SSE] Conexión perdida'),
+      onError: _scheduleReconnect,
     );
+  }
+
+  /// Programa una reconexión con backoff exponencial. La cae de la conexión
+  /// SSE antes solo se logueaba, dejando las notificaciones muertas hasta
+  /// recargar la página.
+  void _scheduleReconnect() {
+    if (isClosed) return;
+    _reconnectTimer?.cancel();
+    _reconnectAttempts = (_reconnectAttempts + 1).clamp(1, _maxBackoffExp);
+    final seconds = 1 << (_reconnectAttempts - 1); // 1,2,4,8,16,32
+    debugPrint('⚠️ [SSE] Conexión perdida — reintentando en ${seconds}s');
+    _reconnectTimer = Timer(Duration(seconds: seconds), () {
+      if (!isClosed) add(ConectarSse());
+    });
   }
 
   Future<void> _onDesconectar(
     DesconectarSse event,
     Emitter<NotificacionState> emit,
   ) async {
+    // Desconexión manual: cancelar reintentos para no reconectar solo.
+    _reconnectTimer?.cancel();
+    _reconnectAttempts = 0;
     _sseService.disconnect();
   }
 
@@ -304,6 +333,7 @@ class NotificacionBloc extends Bloc<NotificacionEvent, NotificacionState> {
 
   @override
   Future<void> close() {
+    _reconnectTimer?.cancel();
     _sseService.disconnect();
     return super.close();
   }
