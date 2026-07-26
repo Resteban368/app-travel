@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../core/di/injection_container.dart';
+import '../core/navigation/entity_loader.dart';
+import '../core/navigation/entity_route_matcher.dart';
+import '../core/navigation/not_found_screen.dart';
+import '../features/tour/domain/repositories/tour_repository.dart';
+import '../features/reservas/domain/repositories/reserva_repository.dart';
+import '../features/clientes/domain/repositories/cliente_repository.dart';
 
 import '../core/layout/admin_shell_wrapper.dart';
 import '../features/auth/presentation/screens/login_screen.dart';
@@ -82,8 +88,6 @@ class AppRouter {
   static const String dashboard = '/dashboard';
   static const String tours = '/tours';
   static const String tourCreate = '/tours/create';
-  static const String tourEdit = '/tours/edit';
-  static const String tourDetalle = '/tours/detalle';
   static const String toursHistorico = '/tours/historico';
   static const String tourHistoricoDetalle = '/tours/historico/detalle';
   static const String sedes = '/settings/sedes';
@@ -118,11 +122,8 @@ class AppRouter {
 
   static const String reservas = '/reservas';
   static const String reservaCreate = '/reservas/create';
-  static const String reservaEdit = '/reservas/edit';
   static const String clientes = '/clientes';
   static const String clienteCreate = '/clientes/create';
-  static const String clienteEdit = '/clientes/edit';
-  static const String clienteHistorial = '/clientes/historial';
   static const String hoteles = '/hoteles';
   static const String hotelCreate = '/hoteles/create';
   static const String hotelEdit = '/hoteles/edit';
@@ -140,12 +141,17 @@ class AppRouter {
   static const String saldosPendientesDetalle = '/saldos-pendientes/detalle';
   static const String enviarNotificacion = '/notificaciones/enviar';
 
-  static final ValueNotifier<String> currentRouteNotifier =
-      ValueNotifier<String>('/');
+  // ── Rutas con ID en la URL (deep-linking real, Fase 3) ──────────────
+  // La URL codifica QUÉ entidad se abre, así el refresh (F5) o compartir el
+  // enlace la restauran vía fetch por ID. El objeto sigue pudiéndose pasar por
+  // `arguments` como vía rápida (evita el fetch en la navegación normal).
+  static String tourEditPath(String id) => '/tours/$id/edit';
+  static String tourDetallePath(String id) => '/tours/$id/detalle';
+  static String reservaEditPath(String id) => '/reservas/$id/edit';
+  static String clienteEditPath(int id) => '/clientes/$id/edit';
+  static String clienteHistorialPath(int id) => '/clientes/$id/historial';
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
-    currentRouteNotifier.value = settings.name ?? '';
-
     switch (settings.name) {
       case splash:
         return _fadeRoute(const SplashScreen(), settings);
@@ -159,11 +165,100 @@ class AppRouter {
 
   static Route<dynamic> onGenerateNestedRoute(RouteSettings settings) {
     try {
+      // 1) Rutas con ID en la URL (tours/reservas/clientes): deep-linking real.
+      final byId = _matchEntityRoute(settings);
+      if (byId != null) return byId;
+      // 2) Rutas estáticas.
       return _buildNestedRoute(settings);
     } catch (e, st) {
       debugPrint('⚠️ [AppRouter] Error building route "${settings.name}": $e\n$st');
-      return _fadeRoute(const ProfileScreen(), settings);
+      return _fadeRoute(
+        const NotFoundScreen(message: 'Ocurrió un error al abrir esta página.'),
+        settings,
+      );
     }
+  }
+
+  /// Matchea rutas cuyo path lleva el ID de la entidad (`/tours/123/edit`).
+  /// Devuelve `null` si no aplica, para caer al switch de rutas estáticas.
+  static Route<dynamic>? _matchEntityRoute(RouteSettings settings) {
+    final match = parseEntityRoute(settings.name);
+    if (match == null) return null;
+    final id = match.id;
+
+    if (match.resource == 'tours' && match.action == 'edit') {
+      return _fadeRouteLight(_tourFormFor(id, argOf<Tour>(settings)), settings);
+    }
+    if (match.resource == 'tours' && match.action == 'detalle') {
+      return _fadeRouteLight(
+          _tourDetalleFor(id, argOf<Tour>(settings)), settings);
+    }
+    if (match.resource == 'reservas' && match.action == 'edit') {
+      return _fadeRouteLight(
+          _reservaFormFor(id, argOf<Reserva>(settings)), settings);
+    }
+    if (match.resource == 'clientes' && match.action == 'edit') {
+      final intId = int.tryParse(id);
+      if (intId == null) return null;
+      return _fadeRouteLight(
+          _clienteFormFor(intId, argOf<Cliente>(settings)), settings);
+    }
+    if (match.resource == 'clientes' && match.action == 'historial') {
+      final intId = int.tryParse(id);
+      if (intId == null) return null;
+      return _fadeRoute(
+          _clienteHistorialFor(intId, argOf<Cliente>(settings)), settings);
+    }
+    return null;
+  }
+
+  static Widget _tourFormFor(String id, Tour? preloaded) {
+    if (preloaded != null) return TourFormScreen(tour: preloaded);
+    return EntityLoader<Tour>(
+      fetch: () => sl<TourRepository>().getTourById(id),
+      builder: (_, tour) => TourFormScreen(tour: tour),
+      notFoundMessage: 'No se encontró el tour solicitado.',
+    );
+  }
+
+  static Widget _tourDetalleFor(String id, Tour? preloaded) {
+    if (preloaded != null) return TourDetalleScreen(tour: preloaded);
+    return EntityLoader<Tour>(
+      fetch: () => sl<TourRepository>().getTourById(id),
+      builder: (_, tour) => TourDetalleScreen(tour: tour),
+      notFoundMessage: 'No se encontró el tour solicitado.',
+    );
+  }
+
+  static Widget _reservaFormFor(String id, Reserva? preloaded) {
+    if (preloaded != null) return ReservaFormScreen(reserva: preloaded);
+    return EntityLoader<Reserva>(
+      fetch: () => sl<ReservaRepository>().getReservaById(id),
+      builder: (_, reserva) => ReservaFormScreen(reserva: reserva),
+      notFoundMessage: 'No se encontró la reserva solicitada.',
+    );
+  }
+
+  static Widget _clienteFormFor(int id, Cliente? preloaded) {
+    if (preloaded != null) return ClienteFormScreen(cliente: preloaded);
+    return EntityLoader<Cliente>(
+      fetch: () => sl<ClienteRepository>().getClienteById(id),
+      builder: (_, cliente) => ClienteFormScreen(cliente: cliente),
+      notFoundMessage: 'No se encontró el cliente solicitado.',
+    );
+  }
+
+  static Widget _clienteHistorialFor(int id, Cliente? preloaded) {
+    Widget wrap(Cliente c) => BlocProvider(
+          create: (_) => sl<ClienteHistorialBloc>(),
+          child: ClienteHistorialScreen(cliente: c),
+        );
+    if (preloaded != null) return wrap(preloaded);
+    return EntityLoader<Cliente>(
+      fetch: () => sl<ClienteRepository>().getClienteById(id),
+      builder: (_, cliente) => wrap(cliente),
+      notFoundMessage: 'No se encontró el cliente solicitado.',
+    );
   }
 
   static Route<dynamic> _buildNestedRoute(RouteSettings settings) {
@@ -243,17 +338,17 @@ class AppRouter {
         );
 
       // -- Formularios y Detalles --
+      // Nota: tours/reservas/clientes (edit, detalle, historial) se resuelven en
+      // _matchEntityRoute con el ID en la URL (deep-linking real). Aquí solo
+      // quedan las rutas estáticas; toda ruta que exija un argumento usa argOf<T>
+      // y, si falta, redirige a su LISTA (nunca al perfil).
       case tourHistoricoDetalle:
-        final tour = settings.arguments as Tour;
-        return _fadeRoute(TourFormScreen(tour: tour, duplicateMode: true), settings);
+        final tour = argOf<Tour>(settings);
+        if (tour == null) return _fadeRoute(const TourHistoricoScreen(), settings);
+        return _fadeRouteLight(
+            TourFormScreen(tour: tour, duplicateMode: true), settings);
       case tourCreate:
-        return _fadeRoute(const TourFormScreen(), settings);
-      case tourEdit:
-        final tour = settings.arguments as Tour;
-        return _fadeRoute(TourFormScreen(tour: tour), settings);
-      case tourDetalle:
-        final tour = settings.arguments as Tour;
-        return _fadeRoute(TourDetalleScreen(tour: tour), settings);
+        return _fadeRouteLight(const TourFormScreen(), settings);
       case sedeForm:
         final sede = settings.arguments as Sede?;
         return _fadeRoute(SedeFormScreen(sede: sede), settings);
@@ -263,106 +358,126 @@ class AppRouter {
       case catalogueCreate:
         return _fadeRoute(const CatalogueFormScreen(), settings);
       case catalogueEdit:
-        final cat = settings.arguments as Catalogue;
+        final cat = argOf<Catalogue>(settings);
+        if (cat == null) return _fadeRoute(const CatalogueListScreen(), settings);
         return _fadeRoute(CatalogueFormScreen(catalogue: cat), settings);
       case faqCreate:
         return _fadeRoute(const FaqFormScreen(), settings);
       case faqEdit:
-        final faq = settings.arguments as Faq;
+        final faq = argOf<Faq>(settings);
+        if (faq == null) return _fadeRoute(const FaqListScreen(), settings);
         return _fadeRoute(FaqFormScreen(faq: faq), settings);
       case serviceCreate:
         return _fadeRoute(const ServiceFormScreen(), settings);
       case serviceEdit:
-        final service = settings.arguments as Service;
+        final service = argOf<Service>(settings);
+        if (service == null) return _fadeRoute(const ServiceListScreen(), settings);
         return _fadeRoute(ServiceFormScreen(service: service), settings);
       case politicaReservaCreate:
         return _fadeRoute(const PoliticaReservaFormScreen(), settings);
       case politicaReservaEdit:
-        final politica = settings.arguments as PoliticaReserva;
+        final politica = argOf<PoliticaReserva>(settings);
+        if (politica == null) {
+          return _fadeRoute(const PoliticaReservaListScreen(), settings);
+        }
         return _fadeRoute(PoliticaReservaFormScreen(politica: politica), settings);
       case infoEmpresaCreate:
         return _fadeRoute(const InfoEmpresaFormScreen(), settings);
       case infoEmpresaEdit:
-        final info = settings.arguments as InfoEmpresa;
+        final info = argOf<InfoEmpresa>(settings);
+        if (info == null) return _fadeRoute(const InfoEmpresaListScreen(), settings);
         return _fadeRoute(InfoEmpresaFormScreen(info: info), settings);
       case pagoRealizadoCreate:
-        return _fadeRoute(const PagoRealizadoFormScreen(), settings);
+        return _fadeRouteLight(const PagoRealizadoFormScreen(), settings);
       case pagoRealizadoEdit:
-        final pago = settings.arguments as PagoRealizado;
-        return _fadeRoute(PagoRealizadoFormScreen(pago: pago), settings);
+        final pago = argOf<PagoRealizado>(settings);
+        if (pago == null) {
+          return _fadeRoute(const PagoRealizadoListScreen(), settings);
+        }
+        return _fadeRouteLight(PagoRealizadoFormScreen(pago: pago), settings);
       case cotizacionCreate:
-        final cotizacion = settings.arguments as Cotizacion?;
-        return _fadeRoute(CotizacionFormScreen(cotizacion: cotizacion), settings);
+        return _fadeRouteLight(
+            CotizacionFormScreen(cotizacion: argOf<Cotizacion>(settings)),
+            settings);
       case cotizacionResponder:
-        if (settings.arguments is RespuestaCotizacion) {
-          return _fadeRoute(
-            RespuestaCotizacionFormScreen(
-              duplicarDe: settings.arguments as RespuestaCotizacion,
-            ),
+        final duplicarDe = argOf<RespuestaCotizacion>(settings);
+        if (duplicarDe != null) {
+          return _fadeRouteLight(
+            RespuestaCotizacionFormScreen(duplicarDe: duplicarDe),
             settings,
           );
         }
-        final cotizacion = settings.arguments as Cotizacion?;
-        return _fadeRoute(
-            RespuestaCotizacionFormScreen(cotizacion: cotizacion), settings);
+        return _fadeRouteLight(
+            RespuestaCotizacionFormScreen(
+                cotizacion: argOf<Cotizacion>(settings)),
+            settings);
       case respuestaDetalle:
-        final respuesta = settings.arguments as RespuestaCotizacion;
-        return _fadeRoute(RespuestaCotizacionFormScreen(respuesta: respuesta), settings);
+        final respuesta = argOf<RespuestaCotizacion>(settings);
+        if (respuesta == null) {
+          return _fadeRoute(const CotizacionesListScreen(), settings);
+        }
+        return _fadeRouteLight(
+            RespuestaCotizacionFormScreen(respuesta: respuesta), settings);
       case agenteCreate:
         return _fadeRoute(const AgenteFormScreen(), settings);
       case agenteEdit:
-        final agente = settings.arguments as Agente;
+        final agente = argOf<Agente>(settings);
+        if (agente == null) return _fadeRoute(const AgenteListScreen(), settings);
         return _fadeRoute(AgenteFormScreen(agente: agente), settings);
       case reservaCreate:
-        return _fadeRoute(const ReservaFormScreen(), settings);
-      case reservaEdit:
-        final reserva = settings.arguments as Reserva;
-        return _fadeRoute(ReservaFormScreen(reserva: reserva), settings);
+        return _fadeRouteLight(const ReservaFormScreen(), settings);
       case clienteCreate:
         return _fadeRoute(const ClienteFormScreen(), settings);
-      case clienteEdit:
-        final cliente = settings.arguments as Cliente;
-        return _fadeRoute(ClienteFormScreen(cliente: cliente), settings);
       case hotelCreate:
         return _fadeRoute(const HotelFormScreen(), settings);
       case hotelEdit:
-        final hotel = settings.arguments as Hotel;
+        final hotel = argOf<Hotel>(settings);
+        if (hotel == null) return _fadeRoute(const HotelListScreen(), settings);
         return _fadeRoute(HotelFormScreen(hotel: hotel), settings);
       case proveedorCreate:
         return _fadeRoute(const ProveedorFormScreen(), settings);
       case proveedorEdit:
-        final proveedor = settings.arguments as Proveedor;
+        final proveedor = argOf<Proveedor>(settings);
+        if (proveedor == null) {
+          return _fadeRoute(const ProveedorListScreen(), settings);
+        }
         return _fadeRoute(ProveedorFormScreen(proveedor: proveedor), settings);
       case busLayoutCreate:
         return _fadeRoute(const BusLayoutFormScreen(), settings);
       case busLayoutEdit:
-        final busLayout = settings.arguments as BusLayout;
+        final busLayout = argOf<BusLayout>(settings);
+        if (busLayout == null) {
+          return _fadeRoute(const BusLayoutListScreen(), settings);
+        }
         return _fadeRoute(BusLayoutFormScreen(layout: busLayout), settings);
       case busManifiesto:
         final arg = settings.arguments;
-        int tourId;
+        int? tourId;
         int? salidaId;
         if (arg is Map<String, dynamic>) {
-          tourId = arg['tourId'] as int;
+          tourId = arg['tourId'] as int?;
           salidaId = arg['salidaId'] as int?;
-        } else {
-          tourId = arg is int ? arg : int.parse(arg.toString());
+        } else if (arg is int) {
+          tourId = arg;
+        } else if (arg != null) {
+          tourId = int.tryParse(arg.toString());
         }
-        return _fadeRoute(BusManifiestoScreen(tourId: tourId, salidaId: salidaId), settings);
-      case clienteHistorial:
-        final cliente = settings.arguments as Cliente;
+        if (tourId == null) {
+          return _fadeRoute(const BusLayoutListScreen(), settings);
+        }
         return _fadeRoute(
-          BlocProvider(
-            create: (context) => sl<ClienteHistorialBloc>(),
-            child: ClienteHistorialScreen(cliente: cliente),
-          ),
-          settings,
-        );
+            BusManifiestoScreen(tourId: tourId, salidaId: salidaId), settings);
       case enviarNotificacion:
         return _fadeRoute(const EnviarNotificacionScreen(), settings);
 
       default:
-        return _fadeRoute(const ProfileScreen(), settings);
+        return _fadeRoute(
+          NotFoundScreen(
+            message:
+                'La ruta "${settings.name ?? ''}" no existe en el panel.',
+          ),
+          settings,
+        );
     }
   }
 
@@ -392,6 +507,22 @@ class AppRouter {
       },
       transitionDuration: const Duration(milliseconds: 280),
       reverseTransitionDuration: const Duration(milliseconds: 220),
+    );
+  }
+
+  /// Transición ligera (fade simple y corto, sin scale) para pantallas pesadas
+  /// de formulario/detalle (reserva ~7.7k líneas, tour, cotización, pago). El
+  /// fade+scale de 280 ms de [_fadeRoute] suma jank al primer frame en esas
+  /// pantallas grandes; aquí lo reducimos a un fade de 120 ms.
+  static PageRouteBuilder _fadeRouteLight(Widget page, RouteSettings settings) {
+    return PageRouteBuilder(
+      settings: settings,
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      transitionDuration: const Duration(milliseconds: 120),
+      reverseTransitionDuration: const Duration(milliseconds: 100),
     );
   }
 }

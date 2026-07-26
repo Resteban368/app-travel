@@ -366,7 +366,7 @@ class _ClienteCardState extends State<_ClienteCard> {
           onTap: widget.canWrite
               ? () => Navigator.pushNamed(
                   context,
-                  AppRouter.clienteEdit,
+                  AppRouter.clienteEditPath(widget.cliente.id ?? 0),
                   arguments: widget.cliente,
                 )
               : null,
@@ -450,7 +450,7 @@ class _ClienteCardState extends State<_ClienteCard> {
           icon: Icon(Icons.history_rounded, color: context.saas.brand600, size: 20),
           onPressed: () => Navigator.pushNamed(
             context,
-            AppRouter.clienteHistorial,
+            AppRouter.clienteHistorialPath(widget.cliente.id ?? 0),
             arguments: widget.cliente,
           ),
         ),
@@ -458,7 +458,7 @@ class _ClienteCardState extends State<_ClienteCard> {
           icon: const Icon(Icons.edit_outlined, color: D.skyBlue, size: 20),
           onPressed: () => Navigator.pushNamed(
             context,
-            AppRouter.clienteEdit,
+            AppRouter.clienteEditPath(widget.cliente.id ?? 0),
             arguments: widget.cliente,
           ),
         ),

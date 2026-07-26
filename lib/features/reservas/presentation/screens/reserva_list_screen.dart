@@ -912,7 +912,11 @@ class _ReservaCardState extends State<_ReservaCard> {
           ),
           child: InkWell(
             onTap: () {
-              Navigator.pushNamed(context, AppRouter.reservaEdit, arguments: r);
+              Navigator.pushNamed(
+                context,
+                AppRouter.reservaEditPath(r.id ?? ''),
+                arguments: r,
+              );
             },
             borderRadius: BorderRadius.circular(16),
             child: Opacity(
@@ -967,7 +971,7 @@ class _ReservaCardState extends State<_ReservaCard> {
                                 reserva: r,
                                 onEdit: () => Navigator.pushNamed(
                                   context,
-                                  AppRouter.reservaEdit,
+                                  AppRouter.reservaEditPath(r.id ?? ''),
                                   arguments: r,
                                 ),
                                 onDelete: widget.onDelete,

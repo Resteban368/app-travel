@@ -220,11 +220,28 @@ Objetivo: estado predecible, sin fugas entre sesiones ni singletons cerrados.
 
 ---
 
-### Fase 3 — Navegación robusta y deep-linking (4-5 días)
+### Fase 3 — Navegación robusta y deep-linking ✅ COMPLETADA (2026-07-26)
 
 Objetivo: URLs reales, refresh de página que no rompe, cero casts inseguros.
 
-**Tareas**
+**Resultado:** router endurecido + deep-linking por ID para tours/reservas/clientes; `flutter analyze` en 0, suite de **45 tests pasando** (16 nuevos de navegación), build web verde. Alcance acordado con el usuario: **puntos 1 y 2** (endurecer el router manual + deep-linking por ID en las 3 entidades clave), **sin** migrar a `go_router`. Lo realizado:
+
+- **`argOf<T>(RouteSettings)` seguro** (en `core/navigation/entity_route_matcher.dart`): devuelve `null` en vez de lanzar. **Se eliminaron los ~23 casts `as T` a pelo del router**; toda ruta que exige argumento usa `argOf` y, si falta (p. ej. tras F5), **redirige a su LISTA**, nunca al perfil.
+- **Pantalla 404 real** (`NotFoundScreen`): reemplaza el fallback silencioso a `ProfileScreen` tanto en el `default` del switch como en el `catch` de `onGenerateNestedRoute` (que ahora además loguea).
+- **Deep-linking por ID (URLs reales)** para las rutas objeto-dependientes de las 3 entidades: `/tours/:id/edit`, `/tours/:id/detalle`, `/reservas/:id/edit`, `/clientes/:id/edit`, `/clientes/:id/historial`. El matcher (`_matchEntityRoute`) parsea el ID del path; si el objeto viene en `arguments` (navegación normal) se usa como **vía rápida sin fetch**; si no (F5/URL compartida) un `EntityLoader<T>` hace `getById`, muestra spinner y cae a 404 si no existe. Las 3 features ya tenían `getById` en su repo.
+- **Estado de ruta unificado**: eliminado el `AppRouter.currentRouteNotifier` global (estaba muerto: se asignaba y nunca se leía); el `NavigatorObserver` del shell es la única fuente.
+- **Transición ligera** (`_fadeRouteLight`, fade de 120 ms sin scale) para las pantallas pesadas de formulario/detalle (reserva, tour, cotización, pago); el resto mantiene la transición completa.
+
+**Pruebas (VM, sin el bloqueo web):**
+- `test/core/navigation/entity_route_matcher_test.dart` (12): parseo de rutas por ID (válidas, listas → null, id vacío → null, query string, >3 segmentos) y `argOf` (tipo correcto / null / tipo distinto sin lanzar).
+- `test/core/navigation/entity_loader_test.dart` (4): `EntityLoader` (spinner→pantalla, error→404, fetch una sola vez) y `NotFoundScreen`.
+
+> **Decisiones / desviaciones del plan:**
+> 1. **No se adoptó `go_router`** (era la recomendación del plan): el usuario pidió endurecer el router manual + deep-linking por ID en las 3 entidades. Se logran los objetivos clave (refresh no rompe, 0 casts inseguros, URLs con ID) sobre el router actual, con menos riesgo.
+> 2. **Lógica de navegación extraída a `entity_route_matcher.dart`** (parser + `argOf`), archivo puro sin dependencias de pantallas, para poder **testearla en la VM** — importar `app_router.dart` arrastra `dart:html` vía pantallas (bloqueo conocido, se resuelve en Fase 5). Por lo mismo, los widget tests de router completo (tabla ruta→widget, deep-link end-to-end, guard de auth) siguen bloqueados hasta Fase 5; se cubrió la lógica pura equivalente.
+> 3. Deep-linking por ID limitado a tours/reservas/clientes (lo acordado). El resto de rutas objeto-dependientes quedó con la guarda segura (redirige a su lista si falta el argumento), no con deep-linking por ID.
+
+**Tareas (originales)**
 
 1. **Rutas por ID, no por objeto**: `/tours/edit` → `/tours/:id/edit`. La pantalla recibe el ID, lo busca en el BLoC (o hace fetch si no está). El objeto por `arguments` queda solo como *optimización* opcional de precarga, nunca como requisito.
 2. **Helper de argumentos seguro**: `T? argOf<T>(RouteSettings s)` que devuelve null en vez de lanzar; toda ruta con argumento inválido/nulo redirige a su pantalla de lista (no a ProfileScreen).
@@ -241,7 +258,7 @@ Objetivo: URLs reales, refresh de página que no rompe, cero casts inseguros.
 - Test del guard: ruta protegida sin sesión → login.
 - Manual en web: F5 en formulario de edición, URL compartida en pestaña nueva, botones atrás/adelante del navegador.
 
-**Criterio de salida:** refrescar cualquier URL de la app la restaura correctamente; 0 casts `as` sin guard en el router.
+**Criterio de salida:** ✅ 0 casts `as` sin guard en el router; refrescar una URL de tours/reservas/clientes la restaura por ID; cualquier otra ruta con argumento faltante cae a su lista (no al perfil) y las desconocidas a un 404. Pendiente (manual, antes de mergear a `main`): F5 en `/tours/:id/edit`, URL compartida en pestaña nueva, botones atrás/adelante del navegador.
 
 ---
 

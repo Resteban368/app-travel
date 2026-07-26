@@ -56,6 +56,8 @@ Ver [ANALISIS_Y_PLAN_MEJORAS.md](ANALISIS_Y_PLAN_MEJORAS.md) para el plan por fa
 |------|---------|
 | [lib/main.dart](lib/main.dart) | Entry point; registers all BLoC providers at root |
 | [lib/config/app_router.dart](lib/config/app_router.dart) | All named routes and navigation transitions |
+| [lib/core/navigation/entity_route_matcher.dart](lib/core/navigation/entity_route_matcher.dart) | `argOf<T>` seguro + parser de rutas por ID (lógica pura, testeable) |
+| [lib/core/navigation/entity_loader.dart](lib/core/navigation/entity_loader.dart) | Carga una entidad por ID (deep-linking en F5) con spinner/404 |
 | [lib/core/di/injection_container.dart](lib/core/di/injection_container.dart) | GetIt registrations |
 | [lib/core/network/auth_client.dart](lib/core/network/auth_client.dart) | Custom `http.BaseClient` that injects JWT and auto-refreshes on 401 |
 | [lib/core/layout/admin_shell.dart](lib/core/layout/admin_shell.dart) | Persistent sidebar (desktop ≥800px) / drawer (mobile) |
@@ -76,6 +78,13 @@ All repositories use `AuthClient` (injected via GetIt) rather than raw `http.Cli
 - **Timeout global de 30 s** → `NetworkTimeoutException`.
 - El access token se cachea en memoria vía `TokenCache` (singleton en DI); `ApiAuthRepository` lo sincroniza en login/logout. Nunca leas el token de storage en un repo — usa `AuthClient`.
 - **Errores tipados** en `core/network/`: `ApiException` (con `code`), `NetworkException`, `NetworkTimeoutException`, `SessionExpiredException`. Repos nuevos deben usar `handleResponse<T>(response, parser)` / `ensureSuccess(response)` en vez de un `catch (e)` ad-hoc.
+
+## Navegación (Fase 3)
+
+- **Nunca `settings.arguments as T` a pelo.** Usa `argOf<T>(settings)` (en `entity_route_matcher.dart`): devuelve `null` en vez de lanzar cuando el argumento falta (p. ej. tras un F5). Si el argumento es obligatorio y falta, **redirige a la LISTA** de esa feature, nunca al perfil.
+- **Ruta desconocida → `NotFoundScreen`** (404), no fallback silencioso.
+- **Deep-linking por ID** para tours/reservas/clientes: navega con los helpers de path (`AppRouter.tourEditPath(id)`, `reservaEditPath`, `clienteEditPath`, `tourDetallePath`, `clienteHistorialPath`) y pasa el objeto en `arguments` como vía rápida. Al refrescar, `EntityLoader<T>` hace `getById`. Para añadir una entidad nueva al deep-linking: helper de path + caso en `_matchEntityRoute` + `getById` en su repo.
+- Formularios/detalles pesados usan `_fadeRouteLight` (transición corta); el resto `_fadeRoute`.
 
 ## UI & Theming
 

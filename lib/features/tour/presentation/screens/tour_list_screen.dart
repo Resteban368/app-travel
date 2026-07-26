@@ -592,7 +592,7 @@ class _TourRowState extends State<_TourRow> {
             final bloc = context.read<TourBloc>();
             await Navigator.pushNamed(
               context,
-              AppRouter.tourEdit,
+              AppRouter.tourEditPath(tour.id),
               arguments: tour,
             );
             bloc.add(LoadTours());

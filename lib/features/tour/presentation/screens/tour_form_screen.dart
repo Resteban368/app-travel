@@ -2863,11 +2863,15 @@ class _TourFormScreenState extends State<TourFormScreen>
 
   Widget _buildPasajerosBtn(BuildContext context) {
     return InkWell(
-      onTap: () => Navigator.pushNamed(
-        context,
-        AppRouter.tourDetalle,
-        arguments: widget.tour,
-      ),
+      onTap: () {
+        final tour = widget.tour;
+        if (tour == null) return;
+        Navigator.pushNamed(
+          context,
+          AppRouter.tourDetallePath(tour.id),
+          arguments: tour,
+        );
+      },
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
