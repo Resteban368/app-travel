@@ -262,11 +262,25 @@ Objetivo: URLs reales, refresh de página que no rompe, cero casts inseguros.
 
 ---
 
-### Fase 4 — Performance de UI y datos (5-8 días, incremental)
+### Fase 4 — Performance de UI y datos ✅ PARCIAL / alcance acordado (2026-07-26)
 
 Objetivo: formularios fluidos, listas que escalan, arranque más rápido. Se hace **por pantalla, en orden de impacto**: reservas → cotizaciones → tours → pagos.
 
-**Tareas**
+**Resultado:** frentes de bajo riesgo completados; `flutter analyze` en 0, suite de **57 tests pasando** (12 nuevos), build web verde. Alcance acordado con el usuario: **imágenes, fuentes/index.html y paginación**, dejando fuera la descomposición del god-widget (alto riesgo sin poder validar en runtime). Lo realizado:
+
+- **Optimización de imágenes:** `AuthNetworkImage` ahora decodifica al tamaño mostrado (`cacheWidth`/`cacheHeight` derivados de `width/height × devicePixelRatio`, o explícitos), en vez de a resolución completa. Beneficia directamente los grids/listas con muchas imágenes (galería, thumbnails de tours/hoteles/servicios). El wrapper ya tenía loading/error builders. 4 tests de `cacheWidth`.
+- **Fuentes / `index.html`:** eliminado el `@import` de Google Fonts (era una **segunda descarga render-blocking** de Inter; el app ya la carga vía `GoogleFonts` en runtime — el splash HTML usa la sans-serif del sistema ~1 s). Quitado `maximum-scale=1.0, user-scalable=no` del viewport (**accesibilidad**: se permite el zoom).
+- **Paginación:** verificado que **clientes, cotizaciones y pagos ya tienen paginación de servidor + scroll infinito completa** (`ScrollController`+`_onScroll`+`LoadMore`+`hasReachedMax`+`page`) — la suposición del análisis estaba desactualizada. Se añadieron **8 tests de regresión a nivel BLoC** (clientes: página 1, `hasReachedMax`, `LoadMore` que apende sin re-`Loading`, error) para blindar el comportamiento, ya que los widget tests de las pantallas siguen bloqueados (Fase 5).
+
+> **Diferido (requiere runtime o assets externos, no disponibles en este entorno):**
+> 1. **Descomponer los god-widgets** (`reserva_form` 7.7k líneas, etc.) y **auditar disposal** de los 196 controllers — es el ítem de mayor valor pero de altísimo riesgo sin poder correr la app para validar el formulario de pagos. Se recomienda hacerlo con validación en runtime y widget tests por sección.
+> 2. **Bundlear Inter como asset** + `GoogleFonts.config.allowRuntimeFetching=false` — requiere descargar los archivos de la fuente (sin red aquí). Nota: poner `allowRuntimeFetching=false` **sin** bundlear rompería la tipografía, por eso solo se quitó el `@import` duplicado.
+> 3. **PDF.js local** en `web/` — requiere descargar el asset de cdnjs. Anotado con `TODO` en `index.html`.
+> 4. Eliminar `shrinkWrap: true` anidados y `compute()` en `jsonDecode` — dentro de los god-widgets/pantallas grandes; se abordan junto a su descomposición.
+> 5. PDF generators async por chunks — pendiente.
+> 6. `Image.network` crudos restantes están dentro de los god-widgets (reserva/cotización/pago forms); su migración a `AuthNetworkImage` se hará al descomponerlos.
+
+**Tareas (originales)**
 
 1. **Descomponer los god-widgets**: `reserva_form_screen.dart` (7.7k líneas) se divide en secciones-widget (`DatosClienteSection`, `PasajerosSection`, `PagosSection`…) cada una `StatefulWidget` propio o manejada por el BLoC del formulario. Regla objetivo: ningún archivo de presentación > 800 líneas, ningún `build` > 150 líneas. Un `setState` de un campo solo reconstruye su sección.
 2. **Auditar disposal**: cuadrar los 196 `TextEditingController` con sus `dispose()`; los formularios divididos facilitan esto. Activar los lints `cancel_subscriptions`/`close_sinks` (ya en Fase 0) como verificación.
@@ -285,7 +299,7 @@ Objetivo: formularios fluidos, listas que escalan, arranque más rápido. Se hac
 - Widget test de lista paginada: scroll al final → dispara `LoadMore` → renderiza página 2.
 - Perfilado antes/después con DevTools (rebuild counts en formulario de reservas; frames > 16 ms en listas) y comparación contra la línea base de Fase 0. Lighthouse del build release.
 
-**Criterio de salida:** teclear en el formulario de reservas no reconstruye la pantalla completa (verificable con "Track widget rebuilds"); listas principales paginadas; bundle web sin fuentes/PDF.js remotos.
+**Criterio de salida:** ✅ listas principales paginadas (ya estaban, ahora con tests); ✅ imágenes decodificadas al tamaño mostrado; ✅ sin `@import` de fuente remota render-blocking. Pendiente (diferido): teclear en el formulario de reservas sin reconstruir la pantalla completa (requiere descomponer el god-widget con validación en runtime); PDF.js/fuente Inter como assets locales (requieren descargar los archivos).
 
 ---
 

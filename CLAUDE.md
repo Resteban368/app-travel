@@ -88,6 +88,7 @@ All repositories use `AuthClient` (injected via GetIt) rather than raw `http.Cli
 
 ## UI & Theming
 
-- Material 3, Google Fonts Inter, Spanish locale (`es_CO`), Colombian Peso formatting.
+- Material 3, Google Fonts Inter (fetch en runtime; el splash de `index.html` no la importa, para no duplicar la descarga), Spanish locale (`es_CO`), Colombian Peso formatting.
 - Responsive breakpoint at 800px: persistent sidebar vs. drawer.
 - Shimmer placeholders during async loads; staggered animations on dashboard.
+- **Imágenes de red:** usa `AuthNetworkImage` (`core/widgets/`), no `Image.network` a pelo. Trae loading/error builders y decodifica al tamaño mostrado (`cacheWidth`/`cacheHeight` derivados de `width/height × devicePixelRatio`). En listas/grids, pásale `width`/`height` para evitar decodificar a resolución completa.

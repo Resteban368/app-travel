@@ -31,16 +31,21 @@
   <title>Agente Viajes</title>
   <link rel="manifest" href="manifest.json">
 
-  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+  <!-- Accesibilidad: se permite el zoom del usuario (sin maximum-scale/user-scalable=no). -->
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
   <meta property="og:image" content="https://banestecodes.com/agenteTravel/icons/Icon-512.png">
 
   <!-- PDF.js for printing package on Flutter Web (compatible with printing ^5.13) -->
+  <!-- TODO(Fase 4/5): servir PDF.js como asset local en web/ en vez de cdnjs
+       (si el CDN falla o hay bloqueadores, la impresión muere en producción). -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
   <script type="text/javascript">
     pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js";
   </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+    /* La fuente Inter la carga Flutter en runtime (GoogleFonts). No se importa
+       aquí para evitar una segunda descarga render-blocking; el splash HTML usa
+       la sans-serif del sistema hasta que Flutter monta su tema. */
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
