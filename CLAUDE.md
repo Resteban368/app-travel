@@ -69,6 +69,14 @@ Auth flow: login → receive `access_token` + `refresh_token` → stored via `fl
 
 All repositories use `AuthClient` (injected via GetIt) rather than raw `http.Client`.
 
+**Garantías de `AuthClient` (Fase 1):**
+- **El retry automático en 500 solo aplica a métodos idempotentes (`GET`/`HEAD`).** Nunca se reintenta un `POST`/`PUT`/`PATCH`/`DELETE` — reintentarlos podía duplicar reservas/pagos. No cambies esto sin coordinar un `Idempotency-Key` en el backend.
+- **Refresh de token serializado**: peticiones concurrentes con 401 comparten una sola llamada a `/refresh` (`_ongoingRefresh`).
+- **Todo request se bufferiza y se reenvía clonado**, incluidos los `MultipartRequest` (uploads sobreviven al 401→refresh→retry).
+- **Timeout global de 30 s** → `NetworkTimeoutException`.
+- El access token se cachea en memoria vía `TokenCache` (singleton en DI); `ApiAuthRepository` lo sincroniza en login/logout. Nunca leas el token de storage en un repo — usa `AuthClient`.
+- **Errores tipados** en `core/network/`: `ApiException` (con `code`), `NetworkException`, `NetworkTimeoutException`, `SessionExpiredException`. Repos nuevos deben usar `handleResponse<T>(response, parser)` / `ensureSuccess(response)` en vez de un `catch (e)` ad-hoc.
+
 ## UI & Theming
 
 - Material 3, Google Fonts Inter, Spanish locale (`es_CO`), Colombian Peso formatting.

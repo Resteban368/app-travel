@@ -145,11 +145,25 @@ Objetivo: poder medir el impacto de todo lo demás y detener la regresión de ca
 
 ---
 
-### Fase 1 — Estabilidad de red: `AuthClient` y manejo de errores (3-4 días)
+### Fase 1 — Estabilidad de red: `AuthClient` y manejo de errores ✅ COMPLETADA (2026-07-26)
 
 Objetivo: eliminar el riesgo de duplicación de operaciones y los logouts aleatorios.
 
-**Tareas**
+**Resultado:** `AuthClient` reescrito; `flutter analyze` en 0, suite de **29 tests pasando** (17 nuevos: 9 de `AuthClient` con `MockClient` + 8 de `handleResponse`), build web verde. Lo realizado:
+
+- **Retry en 500 restringido a métodos idempotentes** (`{GET, HEAD}`). Antes el retry aplicaba a cualquier `http.Request` — incluidos POST — con riesgo de **duplicar reservas/pagos**. Test: `POST con 500 → NO reintenta`. (El header `Idempotency-Key` queda como mejora de backend futura, fuera del alcance del cliente.)
+- **Refresh de token serializado** con un `Future<String?>? _ongoingRefresh` compartido: el primer 401 dispara `/refresh`, las demás peticiones concurrentes esperan el mismo resultado. Cubre rotación del refresh token. Test: `3 peticiones concurrentes con 401 → 1 sola llamada a /refresh`.
+- **Todo request se bufferiza a bytes una vez y se reenvía clonado**, unificando `http.Request` y `MultipartRequest` (`finalize().toBytes()` fija y captura el `content-type` con boundary). Los uploads ahora sobreviven al ciclo 401→refresh→retry. Test: `Multipart con 401 → se reintenta con el body intacto`.
+- **Timeout global de 30 s** en `send` y en `/refresh`; al agotarse lanza `NetworkTimeoutException`. Un timeout durante el refresh **no** destruye la sesión (no confirma expiración). Test: `Timeout → NetworkTimeoutException`.
+- **Caché en memoria del access token** (`TokenCache`, singleton en DI) compartido entre `AuthClient` (lee/actualiza en refresh) y `ApiAuthRepository` (sincroniza en login/logout), para no leer `FlutterSecureStorage` en cada request sin arriesgar un token de la sesión anterior. Test: `no relee storage en la 2ª request`.
+- **Jerarquía de errores** en `core/network/`: `ApiException` (+ campo `code`), `NetworkException`, `NetworkTimeoutException`, `SessionExpiredException`, y helper `handleResponse<T>`/`ensureSuccess` con sus tests. La migración de los ~146 `catch (e)` de los repos a este helper es progresiva (Fases 2/4); el helper ya está disponible.
+
+> **Decisiones / desviaciones del plan:**
+> 1. En vez de "clonar `MultipartRequest`" con una clase aparte, se unificó el buffering de **todos** los requests (`finalize().toBytes()`), lo que resuelve el caso multipart y el estándar con un solo camino y menos código.
+> 2. El caché de token se implementó con un objeto `TokenCache` compartido en DI en lugar de un campo privado en `AuthClient`, para poder invalidarlo desde `ApiAuthRepository` (login/logout usan `http` crudo, no pasan por `AuthClient`) sin acoplar repositorio→cliente. Evita el bug de servir el token de la sesión anterior.
+> 3. `Idempotency-Key` se deja anotado como trabajo de backend (el cliente ya no reintenta operaciones de escritura, que era la causa raíz).
+
+**Tareas (originales)**
 
 1. **Retry en 500 solo para métodos idempotentes** (GET/HEAD). Para POST/PUT/PATCH/DELETE: no reintentar nunca automáticamente; si el backend lo soporta, introducir header `Idempotency-Key` en operaciones de creación de reservas/pagos.
 2. **Serializar el refresh de token**: un `Completer<String?>` compartido — el primer 401 dispara el refresh, los demás esperan el resultado. Cubrir rotación de refresh token.
@@ -168,7 +182,7 @@ Objetivo: eliminar el riesgo de duplicación de operaciones y los logouts aleato
   - Timeout → lanza `NetworkTimeoutException`.
 - Tests de `handleResponse` para cada categoría de status code.
 
-**Criterio de salida:** suite de red en verde en CI; verificación manual de login/expiración/upload en la app corriendo.
+**Criterio de salida:** suite de red en verde en CI ✅. Pendiente: verificación manual de login/expiración/upload en la app corriendo (recomendada antes de mergear a `main`).
 
 ---
 

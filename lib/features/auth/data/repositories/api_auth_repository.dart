@@ -4,15 +4,23 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:agente_viajes/core/constants/api_constants.dart';
 
+import '../../../../core/network/token_cache.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 
 class ApiAuthRepository implements AuthRepository {
   final FlutterSecureStorage _storage;
+
+  /// Caché en memoria del access token, compartido con `AuthClient`. Se
+  /// sincroniza en login/logout para que nunca sirva el token de la sesión
+  /// anterior.
+  final TokenCache? _tokenCache;
+
   static String get _baseUrl => '${ApiConstants.kBaseUrl}/v1/auth';
 
-  ApiAuthRepository({FlutterSecureStorage? storage})
-    : _storage = storage ?? const FlutterSecureStorage();
+  ApiAuthRepository({FlutterSecureStorage? storage, TokenCache? tokenCache})
+    : _storage = storage ?? const FlutterSecureStorage(),
+      _tokenCache = tokenCache;
 
   @override
   Future<User> login(String username, String password) async {
@@ -33,6 +41,7 @@ class ApiAuthRepository implements AuthRepository {
         if (refreshToken != null) {
           await _storage.write(key: 'refresh_token', value: refreshToken);
         }
+        _tokenCache?.set(accessToken);
 
         // Obtener datos de usuario
         final userResponse = await http.get(
@@ -165,5 +174,6 @@ class ApiAuthRepository implements AuthRepository {
     await _storage.delete(key: 'access_token');
     await _storage.delete(key: 'refresh_token');
     await _storage.delete(key: 'user_data');
+    _tokenCache?.clear();
   }
 }
