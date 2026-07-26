@@ -135,7 +135,6 @@ class AppRouter {
   static const String busLayoutEdit = '/bus-layouts/edit';
   static const String busManifiesto = '/bus-layouts/manifiesto';
   static const String profile = '/profile';
-  static const String admin = '/admin';
   static const String auditoria = '/auditoria';
   static const String saldosPendientes = '/saldos-pendientes';
   static const String saldosPendientesDetalle = '/saldos-pendientes/detalle';

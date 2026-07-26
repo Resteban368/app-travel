@@ -114,7 +114,10 @@ class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
     emit(ReservaSaving(reservas: currentReservas));
     try {
       final created = await repository.createReserva(event.reserva);
-      final result = await repository.getReservas(page: 1, limit: 20);
+      final result = await repository.getReservas(
+        page: 1,
+        limit: currentReservas.length + 1,
+      );
       emit(ReservaActionSuccess(result.data, createdReserva: created));
     } catch (e) {
       emit(ReservaError(e.toString()));
@@ -129,7 +132,10 @@ class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
     emit(ReservaSaving(reservas: currentReservas));
     try {
       await repository.updateReserva(event.reserva);
-      final result = await repository.getReservas(page: 1, limit: 20);
+      final result = await repository.getReservas(
+        page: 1,
+        limit: _refreshLimit(currentReservas),
+      );
       emit(ReservaActionSuccess(result.data));
     } catch (e) {
       emit(ReservaError(e.toString()));
@@ -145,8 +151,8 @@ class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
     try {
       await repository.deleteReserva(event.id);
       final result = await repository.getReservas(
-        page: (state is ReservaLoaded) ? (state as ReservaLoaded).page : 1,
-        limit: (state is ReservaLoaded) ? (state as ReservaLoaded).limit : 20,
+        page: 1,
+        limit: _refreshLimit(currentReservas),
       );
       emit(ReservaActionSuccess(result.data));
     } catch (e) {
@@ -162,12 +168,18 @@ class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
     emit(ReservaSaving(reservas: currentReservas));
     try {
       await repository.cancelReserva(event.id);
-      final result = await repository.getReservas(page: 1, limit: 20);
+      final result = await repository.getReservas(
+        page: 1,
+        limit: _refreshLimit(currentReservas),
+      );
       emit(ReservaActionSuccess(result.data));
     } catch (e) {
       emit(ReservaError(e.toString()));
     }
   }
+
+  int _refreshLimit(List<Reserva> current) =>
+      current.isEmpty ? 20 : current.length;
 
   List<Reserva> _getCurrentReservas() {
     if (state is ReservaLoaded) {
