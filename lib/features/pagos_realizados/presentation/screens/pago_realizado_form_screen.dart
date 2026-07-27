@@ -928,9 +928,15 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         final hasSelection = _selectedReservaId != null;
 
         Future<void> openPicker() async {
+          // showDialog usa el navigator raíz → re-proveer el ReservaBloc del
+          // shell por valor para que el picker lo encuentre.
+          final reservaBloc = context.read<ReservaBloc>();
           final result = await showDialog<Reserva>(
             context: context,
-            builder: (_) => const _ReservaPickerDialog(),
+            builder: (_) => BlocProvider.value(
+              value: reservaBloc,
+              child: const _ReservaPickerDialog(),
+            ),
           );
           if (result != null) {
             final parsed = int.tryParse(result.id ?? '');
@@ -1195,9 +1201,15 @@ class _PagoRealizadoFormScreenState extends State<PagoRealizadoFormScreen>
         }
 
         Future<void> openPicker() async {
+          // showDialog usa el navigator raíz → hay que re-proveer el ProveedorBloc
+          // del shell por valor para que el picker lo encuentre.
+          final proveedorBloc = context.read<ProveedorBloc>();
           final result = await showDialog<Proveedor>(
             context: context,
-            builder: (_) => const _ProveedorPickerDialog(),
+            builder: (_) => BlocProvider.value(
+              value: proveedorBloc,
+              child: const _ProveedorPickerDialog(),
+            ),
           );
           if (result != null) {
             setState(() => _selectedProveedorId = result.id);

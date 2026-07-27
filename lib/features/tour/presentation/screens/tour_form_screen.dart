@@ -409,10 +409,32 @@ class _TourFormScreenState extends State<TourFormScreen>
   }
 
   void _showFinalizarDialog(BuildContext context, String tourId) {
+    // `showDialog` usa el navigator raíz por defecto, cuyo overlay está por
+    // encima del MultiBlocProvider del shell → el BlocListener<TourBloc> del
+    // diálogo no encontraría el bloc. Se lo pasamos por valor (no lo cierra).
+    final tourBloc = context.read<TourBloc>();
+    // El form vive en el navigator ANIDADO (dentro del AdminShellWrapper);
+    // el diálogo, en el RAÍZ. Al finalizar hay que cerrar el diálogo en el
+    // raíz y hacer pop del form en el anidado para volver a la lista de tours.
+    final nestedNav = Navigator.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => _FinalizarTourDialog(tourId: tourId),
+      builder: (dialogCtx) => BlocProvider.value(
+        value: tourBloc,
+        child: _FinalizarTourDialog(
+          tourId: tourId,
+          onFinalized: () {
+            Navigator.of(dialogCtx).pop(); // cierra el diálogo (navigator raíz)
+            if (nestedNav.canPop()) {
+              nestedNav.pop(); // vuelve a la lista de tours (navigator anidado)
+            } else {
+              // Entrada por deep-link directo al form: no hay a dónde hacer pop.
+              nestedNav.pushReplacementNamed(AppRouter.tours);
+            }
+          },
+        ),
+      ),
     );
   }
 
@@ -3678,7 +3700,12 @@ class _PrecioGrupalCard extends StatelessWidget {
 
 class _FinalizarTourDialog extends StatefulWidget {
   final String tourId;
-  const _FinalizarTourDialog({required this.tourId});
+
+  /// Se invoca al finalizar el tour. Lo provee `_showFinalizarDialog`, que sí
+  /// tiene acceso a ambos navigators (el raíz donde vive el diálogo y el
+  /// anidado donde vive el form) para cerrar el diálogo y volver a la lista.
+  final VoidCallback? onFinalized;
+  const _FinalizarTourDialog({required this.tourId, this.onFinalized});
 
   @override
   State<_FinalizarTourDialog> createState() => _FinalizarTourDialogState();
@@ -3694,12 +3721,13 @@ class _FinalizarTourDialogState extends State<_FinalizarTourDialog> {
         if (state is TourFinalizando) {
           if (mounted) setState(() => _loading = true);
         } else if (state is TourFinalizado) {
-          // Reload tour list, close dialog and then form screen
+          // Recargar la lista y avisar (el snackbar se muestra con el context
+          // del diálogo aún montado; sobrevive al cierre porque lo posee el
+          // ScaffoldMessenger raíz). El cierre del diálogo + volver a la lista
+          // lo hace el callback, que conoce el navigator anidado correcto.
           context.read<TourBloc>().add(LoadTours());
-          final nav = Navigator.of(context);
-          nav.pop(); // close dialog
-          nav.pop(); // close form screen → back to tour list
           SaasSnackBar.showSuccess(context, 'Tour finalizado correctamente');
+          widget.onFinalized?.call();
         } else if (state is TourError) {
           if (mounted) setState(() => _loading = false);
         }

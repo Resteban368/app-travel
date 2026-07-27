@@ -3787,9 +3787,15 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         );
 
         Future<void> openPicker() async {
+          // showDialog usa el navigator raíz → re-proveer el ClienteBloc del
+          // shell por valor para que el BlocBuilder del picker lo encuentre.
+          final clienteBloc = context.read<ClienteBloc>();
           final result = await showDialog<Cliente>(
             context: context,
-            builder: (_) => _ClientePickerDialog(clientes: clientes),
+            builder: (_) => BlocProvider.value(
+              value: clienteBloc,
+              child: _ClientePickerDialog(clientes: clientes),
+            ),
           );
           if (result != null) {
             setState(() {
