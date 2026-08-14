@@ -2419,7 +2419,25 @@ class _RespuestaCotizacionFormScreenState
                         validator: (_) => null,
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
+                    _GaleriaButton(
+                      onPressed: () async {
+                        final url = await GalleryPickerDialog.show(
+                          context,
+                          isAdmin: true,
+                        );
+                        if (url != null && mounted) {
+                          setState(() {
+                            if (!data.fotos.contains(url)) {
+                              data.fotos.add(url);
+                              data.activeFotoIndex = data.fotos.length - 1;
+                            }
+                            data.fotoUrlCtrl.clear();
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 8),
                     _AddButton(
                       label: 'Agregar',
                       onTap: () {
@@ -2427,6 +2445,7 @@ class _RespuestaCotizacionFormScreenState
                         if (url.isEmpty) return;
                         setState(() {
                           data.fotos.add(url);
+                          data.activeFotoIndex = data.fotos.length - 1;
                           data.fotoUrlCtrl.clear();
                         });
                       },

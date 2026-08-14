@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
+import '../../domain/entities/nextcloud_upload_batch.dart';
 
 abstract class GalleryEvent extends Equatable {
   const GalleryEvent();
@@ -35,6 +36,15 @@ class SubirImagenGallery extends GalleryEvent {
   });
   @override
   List<Object?> get props => [folder, filename, mimeType];
+}
+
+/// Sube varias imágenes a la vez a [folder].
+class SubirImagenesGallery extends GalleryEvent {
+  final String folder;
+  final List<ArchivoSubida> archivos;
+  const SubirImagenesGallery({required this.folder, required this.archivos});
+  @override
+  List<Object?> get props => [folder, archivos.length];
 }
 
 class EliminarImagenGallery extends GalleryEvent {

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/nextcloud_folder.dart';
 import '../../domain/entities/nextcloud_image.dart';
+import '../../domain/entities/nextcloud_upload_batch.dart';
 
 abstract class GalleryState extends Equatable {
   const GalleryState();
@@ -22,6 +23,7 @@ class GalleryBrowseCargada extends GalleryState {
   final List<NextcloudImage> images;
   final bool subiendo;
   final String? errorSubida;
+  final NextcloudUploadBatch? resumenSubida;
   final bool eliminando;
   final String? errorEliminacion;
   final bool creandoCarpeta;
@@ -35,6 +37,7 @@ class GalleryBrowseCargada extends GalleryState {
     required this.images,
     this.subiendo = false,
     this.errorSubida,
+    this.resumenSubida,
     this.eliminando = false,
     this.errorEliminacion,
     this.creandoCarpeta = false,
@@ -46,7 +49,7 @@ class GalleryBrowseCargada extends GalleryState {
   @override
   List<Object?> get props => [
     folder, subfolders, images,
-    subiendo, errorSubida,
+    subiendo, errorSubida, resumenSubida,
     eliminando, errorEliminacion,
     creandoCarpeta, errorCreacion,
     eliminandoCarpeta, errorEliminacionCarpeta,

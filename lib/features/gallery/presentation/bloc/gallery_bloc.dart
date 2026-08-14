@@ -18,6 +18,7 @@ class GalleryBloc extends Bloc<GalleryEvent, GalleryState> {
     on<BrowseCarpeta>(_onBrowse);
     on<CrearCarpetaGallery>(_onCrearCarpeta);
     on<SubirImagenGallery>(_onSubir);
+    on<SubirImagenesGallery>(_onSubirVarias);
     on<EliminarImagenGallery>(_onEliminar);
     on<EliminarCarpetaGallery>(_onEliminarCarpeta);
   }
@@ -122,6 +123,55 @@ class GalleryBloc extends Bloc<GalleryEvent, GalleryState> {
         subfolders: browse?.subfolders ?? const [],
         images: prev,
         errorSubida: 'No se pudo subir la imagen. Intenta de nuevo.',
+      ));
+    }
+  }
+
+  // ─── Subir varias imágenes ────────────────────────────────────────────────
+
+  Future<void> _onSubirVarias(
+    SubirImagenesGallery event,
+    Emitter<GalleryState> emit,
+  ) async {
+    final current = state;
+    final browse = current is GalleryBrowseCargada ? current : null;
+    final prev = browse?.images ?? const <NextcloudImage>[];
+    final subfolders = browse?.subfolders ?? const [];
+
+    emit(GalleryBrowseCargada(
+      folder: browse?.folder,
+      subfolders: subfolders,
+      images: prev,
+      subiendo: true,
+    ));
+
+    try {
+      final batch = await _repository.subirImagenes(
+        folder: event.folder,
+        archivos: event.archivos,
+      );
+
+      // Las que sí subieron se agregan aunque otras hayan fallado.
+      final updated = [...batch.subidas, ...prev];
+      _browseCache[_key(browse?.folder)] = NextcloudBrowseResult(
+        folder: browse?.folder,
+        subfolders: subfolders,
+        images: updated,
+      );
+
+      emit(GalleryBrowseCargada(
+        folder: browse?.folder,
+        subfolders: subfolders,
+        images: updated,
+        resumenSubida: batch,
+      ));
+    } catch (e) {
+      debugPrint('[GalleryBloc] subida múltiple error: $e');
+      emit(GalleryBrowseCargada(
+        folder: browse?.folder,
+        subfolders: subfolders,
+        images: prev,
+        errorSubida: 'No se pudieron subir las imágenes. Intenta de nuevo.',
       ));
     }
   }

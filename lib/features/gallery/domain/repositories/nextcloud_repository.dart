@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import '../entities/nextcloud_browse_result.dart';
 import '../entities/nextcloud_folder.dart';
 import '../entities/nextcloud_image.dart';
+import '../entities/nextcloud_upload_batch.dart';
 
 abstract class NextcloudRepository {
   /// Devuelve subcarpetas + imágenes en un solo request.
@@ -15,6 +16,13 @@ abstract class NextcloudRepository {
     required Uint8List bytes,
     required String filename,
     required String mimeType,
+  });
+
+  /// Sube varias imágenes de una vez. Nunca lanza por fallos parciales:
+  /// el reporte dice cuáles subieron y cuáles no.
+  Future<NextcloudUploadBatch> subirImagenes({
+    required String folder,
+    required List<ArchivoSubida> archivos,
   });
 
   Future<void> eliminarImagen(String imageUrl);

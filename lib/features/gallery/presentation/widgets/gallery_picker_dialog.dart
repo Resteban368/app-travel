@@ -15,6 +15,7 @@ import '../bloc/gallery_bloc.dart';
 import '../bloc/gallery_event.dart';
 import '../bloc/gallery_state.dart';
 import '../../domain/entities/nextcloud_image.dart';
+import '../../domain/entities/nextcloud_upload_batch.dart';
 
 // ─── Entrada pública ──────────────────────────────────────────────────────────
 
@@ -114,31 +115,52 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
 
   // ─── Helpers de imagen ─────────────────────────────────────────────────────
 
+  /// Tope de archivos por tanda — debe coincidir con MAX_FILES de la API
+  /// (nextcloud.controller.ts). Si cambia uno, cambia el otro.
+  static const _maxArchivos = 10;
+
   Future<void> _pickAndUpload() async {
-    final completer = Completer<(Uint8List, String, String)?>();
     final input = html.FileUploadInputElement()
-      ..accept = 'image/jpeg,image/png,image/webp';
+      ..accept = 'image/jpeg,image/png,image/webp'
+      ..multiple = true; // ← permite selección múltiple
     input.click();
+
+    final completer = Completer<List<ArchivoSubida>>();
     input.onChange.listen((_) async {
-      final file = input.files?.first;
-      if (file == null) { completer.complete(null); return; }
-      final reader = html.FileReader();
-      reader.readAsArrayBuffer(file);
-      reader.onLoad.listen((_) {
-        final bytes = Uint8List.fromList(reader.result as List<int>);
-        completer.complete((bytes, file.name, file.type.isNotEmpty ? file.type : 'image/jpeg'));
-      });
-      reader.onError.listen((_) => completer.complete(null));
+      final files = input.files ?? [];
+      final resultado = <ArchivoSubida>[];
+
+      for (final file in files.take(_maxArchivos)) {
+        final reader = html.FileReader();
+        reader.readAsArrayBuffer(file);
+        // Si un archivo no se puede leer, se salta en vez de colgar el picker.
+        final ok = await Future.any([
+          reader.onLoad.first.then((_) => true),
+          reader.onError.first.then((_) => false),
+        ]);
+        if (!ok) continue;
+        resultado.add(ArchivoSubida(
+          bytes: Uint8List.fromList(reader.result as List<int>),
+          filename: file.name,
+          mimeType: file.type.isNotEmpty ? file.type : 'image/jpeg',
+        ));
+      }
+      completer.complete(resultado);
     });
-    final result = await completer.future;
-    if (result == null || !mounted) return;
-    final (bytes, name, mime) = result;
-    context.read<GalleryBloc>().add(SubirImagenGallery(
-      folder: _currentFolder,
-      bytes: bytes,
-      filename: name,
-      mimeType: mime,
-    ));
+
+    final archivos = await completer.future;
+    if (archivos.isEmpty || !mounted) return;
+
+    if ((input.files?.length ?? 0) > _maxArchivos) {
+      SaasSnackBar.showError(
+        context,
+        'Solo se suben las primeras $_maxArchivos imágenes por tanda',
+      );
+    }
+
+    context.read<GalleryBloc>().add(
+          SubirImagenesGallery(folder: _currentFolder, archivos: archivos),
+        );
   }
 
   void _showPreview(BuildContext context, NextcloudImage img) {
@@ -211,14 +233,40 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
       showDialog<void>(
         context: context,
         barrierDismissible: false,
-        builder: (_) => const DialogLoadingNetwork(titel: 'Subiendo imagen...'),
+        builder: (_) =>
+            const DialogLoadingNetwork(titel: 'Subiendo imágenes...'),
       ).whenComplete(() => _loadingOperation = null);
       return;
     }
     if (!state.subiendo && _loadingOperation == 'subida') {
       _loadingOperation = null;
       Navigator.of(context, rootNavigator: true).pop();
-      if (state.errorSubida != null) SaasSnackBar.showError(context, state.errorSubida!);
+
+      if (state.errorSubida != null) {
+        SaasSnackBar.showError(context, state.errorSubida!);
+        return;
+      }
+      final r = state.resumenSubida;
+      if (r == null) return;
+
+      if (r.todoOk) {
+        SaasSnackBar.showSuccess(
+          context,
+          '${r.exitosas} imagen${r.exitosas == 1 ? '' : 'es'} '
+          'subida${r.exitosas == 1 ? '' : 's'}',
+        );
+      } else if (r.parcial) {
+        SaasSnackBar.showError(
+          context,
+          'Subieron ${r.exitosas} de ${r.total}. Fallaron: '
+          '${r.errores.map((e) => e.archivo).join(', ')}',
+        );
+      } else {
+        SaasSnackBar.showError(
+          context,
+          'No se pudo subir ninguna imagen: ${r.errores.first.motivo}',
+        );
+      }
       return;
     }
 
@@ -289,6 +337,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
             next.eliminandoCarpeta != (p?.eliminandoCarpeta ?? false) ||
             next.errorCreacion != null ||
             next.errorSubida != null ||
+            next.resumenSubida != (p?.resumenSubida) ||
             next.errorEliminacion != null ||
             next.errorEliminacionCarpeta != null;
       },
@@ -501,7 +550,7 @@ class _GalleryPickerDialogState extends State<GalleryPickerDialog> {
                                       strokeWidth: 2, ))
                               : const Icon(Icons.upload_rounded, size: 15),
                           label: Text(
-                            subiendo ? 'Subiendo...' : 'Subir',
+                            subiendo ? 'Subiendo...' : 'Subir imágenes',
                             style: const TextStyle(
                                 fontSize: 12, fontWeight: FontWeight.w600),
                           ),

@@ -6,6 +6,7 @@ import 'package:agente_viajes/core/constants/api_constants.dart';
 import '../../domain/entities/nextcloud_browse_result.dart';
 import '../../domain/entities/nextcloud_folder.dart';
 import '../../domain/entities/nextcloud_image.dart';
+import '../../domain/entities/nextcloud_upload_batch.dart';
 import '../../domain/repositories/nextcloud_repository.dart';
 
 class ApiNextcloudRepository implements NextcloudRepository {
@@ -90,6 +91,44 @@ class ApiNextcloudRepository implements NextcloudRepository {
             url: url,
             href: img.href,
           );
+  }
+
+  @override
+  Future<NextcloudUploadBatch> subirImagenes({
+    required String folder,
+    required List<ArchivoSubida> archivos,
+  }) async {
+    final uri = Uri.parse('${ApiConstants.kBaseUrl}/v1/nextcloud/nc-upload-multi')
+        .replace(queryParameters: {'path': folder});
+
+    final request = http.MultipartRequest('POST', uri);
+    for (final a in archivos) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'files', // ← el MISMO nombre de campo para todos
+          a.bytes,
+          filename: a.filename,
+          contentType: MediaType.parse(a.mimeType),
+        ),
+      );
+    }
+
+    final streamed = await _client.send(request);
+    final response = await http.Response.fromStream(streamed);
+    debugPrint('[Gallery] upload-multi status=${response.statusCode}');
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+
+    // 201 todo ok · 207 parcial · 400/502 nada subió, pero el body sigue
+    // siendo el reporte. Si no trae "total", es un error real de la API.
+    if (!json.containsKey('total')) {
+      throw Exception(
+        json['message']?.toString() ??
+            'Error al subir imágenes: ${response.statusCode}',
+      );
+    }
+
+    return NextcloudUploadBatch.fromJson(json, normalizeUrl: _absolute);
   }
 
   @override
