@@ -196,6 +196,10 @@ class TourBloc extends Bloc<TourEvent, TourState> {
   }
 
   Future<void> _onLoadTours(LoadTours event, Emitter<TourState> emit) async {
+    // Dedupe en vuelo: si ya hay una carga de tours corriendo, ignoramos el
+    // evento duplicado (varias pantallas montadas sobre el MISMO TourBloc
+    // compartido dispararían LoadTours en paralelo → tormenta de fetches).
+    if (state is TourLoading) return;
     emit(TourLoading());
     try {
       final tours = await _tourRepository.getTours();

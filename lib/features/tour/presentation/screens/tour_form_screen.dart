@@ -222,9 +222,19 @@ class _TourFormScreenState extends State<TourFormScreen>
     });
   }
 
+  /// Guard de re-entrancy: evita cargar los agentes dos veces a la vez cuando
+  /// el `BlocListener` reacciona repetidas veces al mismo `TourDetailLoaded`.
+  bool _isLoadingAgentes = false;
+
   Future<void> _loadAgentesForAllBuses(String tourId, List<int> busIds) async {
+    if (_isLoadingAgentes) {
+      debugPrint('⏭️ [Agentes] Carga ya en curso — se ignora el duplicado');
+      return;
+    }
+    _isLoadingAgentes = true;
     final repo = sl<TourRepository>();
     debugPrint('🔍 [Agentes] Cargando agentes — tourId=$tourId busIds=$busIds');
+    try {
     for (final busId in busIds) {
       try {
         final seats = await repo.getAgentesForBus(tourId, busId);
@@ -235,6 +245,9 @@ class _TourFormScreenState extends State<TourFormScreen>
       } catch (e, st) {
         debugPrint('❌ [Agentes] bus=$busId error: $e\n$st');
       }
+    }
+    } finally {
+      _isLoadingAgentes = false;
     }
   }
 
@@ -453,6 +466,12 @@ class _TourFormScreenState extends State<TourFormScreen>
     return BlocListener<TourBloc, TourState>(
       listener: (context, state) async {
         if (state is TourDetailLoaded) {
+          // Solo el form ACTUALMENTE visible reacciona: con el TourBloc
+          // compartido, un TourFormScreen apilado (no-top) también recibiría
+          // este estado y volvería a cargar agentes / abrir diálogos → el
+          // cross-talk que multiplicaba las peticiones. Si no es la ruta actual,
+          // lo ignoramos.
+          if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
           Navigator.of(context, rootNavigator: true).pop();
           if (mounted) setState(() => _updateFieldsFromTour(state.tour));
           final busIds = state.tour.busLayoutIds;
@@ -821,6 +840,10 @@ class _TourFormScreenState extends State<TourFormScreen>
                                 if (_isEditing) ...[
                                   const SizedBox(height: 20),
                                   _buildPasajerosBtn(context),
+                                  if (canWrite) ...[
+                                    const SizedBox(height: 12),
+                                    _buildFinalizarButton(context),
+                                  ],
                                 ],
                                 const SizedBox(height: 40),
                                 if (widget.duplicateMode && canDuplicate)
@@ -2850,6 +2873,26 @@ class _TourFormScreenState extends State<TourFormScreen>
             activeColor: context.saas.brand600,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFinalizarButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => _showFinalizarDialog(context, widget.tour!.id),
+        icon: const Icon(Icons.flag_rounded, size: 20),
+        label: const Text('Finalizar tour'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.orange,
+          side: const BorderSide(color: Colors.orange),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        ),
       ),
     );
   }

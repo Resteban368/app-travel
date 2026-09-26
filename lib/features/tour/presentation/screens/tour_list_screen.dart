@@ -267,11 +267,7 @@ class _TourListScreenState extends State<TourListScreen> {
           child: Row(
             children: [
               const SizedBox(width: 12),
-              Icon(
-                Icons.search,
-                size: 18,
-                color: context.saas.textTertiary,
-              ),
+              Icon(Icons.search, size: 18, color: context.saas.textTertiary),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
@@ -461,7 +457,11 @@ class _TourListScreenState extends State<TourListScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline_rounded, size: 56, color: context.saas.danger),
+              Icon(
+                Icons.error_outline_rounded,
+                size: 56,
+                color: context.saas.danger,
+              ),
               const SizedBox(height: 16),
               Text(
                 'Error al cargar los tours',
@@ -475,7 +475,10 @@ class _TourListScreenState extends State<TourListScreen> {
               Text(
                 state.message,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: context.saas.textSecondary, fontSize: 13),
+                style: TextStyle(
+                  color: context.saas.textSecondary,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 24),
               SaasButton(
@@ -554,6 +557,9 @@ class _TourRowState extends State<_TourRow> {
   Widget build(BuildContext context) {
     final tour = widget.tour;
     final isPromo = tour.isPromotion;
+    // is_active == false → el tour NO se muestra al público. Sigue en la lista
+    // (no lo filtramos), pero atenuado y con un badge "OCULTO".
+    final isHidden = !tour.isActive;
 
     final Color typeColor = isPromo
         ? context.saas.warning.withValues(alpha: 0.12)
@@ -565,300 +571,345 @@ class _TourRowState extends State<_TourRow> {
     final isPermanente = tour.disponibilidadTipo == 'permanente';
     final ocupados = (tour.cupos ?? 0) - (tour.cuposDisponibles ?? 0);
     final total = tour.cupos ?? 1;
-    final double progress = isPermanente ? 0.0 : (ocupados / total).clamp(0.0, 1.0);
+    final double progress = isPermanente
+        ? 0.0
+        : (ocupados / total).clamp(0.0, 1.0);
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          color: context.saas.bgCanvas,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: _hovered ? context.saas.brand600 : context.saas.border,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: _hovered ? 0.07 : 0.03),
-              blurRadius: _hovered ? 16 : 6,
-              offset: const Offset(0, 3),
+    return Opacity(
+      opacity: isHidden ? 0.55 : 1.0,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          margin: const EdgeInsets.only(bottom: 10),
+          decoration: BoxDecoration(
+            color: context.saas.bgCanvas,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: _hovered ? context.saas.brand600 : context.saas.border,
             ),
-          ],
-        ),
-        child: InkWell(
-          onTap: () async {
-            final bloc = context.read<TourBloc>();
-            await Navigator.pushNamed(
-              context,
-              AppRouter.tourEditPath(tour.id),
-              arguments: tour,
-            );
-            bloc.add(LoadTours());
-          },
-          borderRadius: BorderRadius.circular(14),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 450;
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: _hovered ? 0.07 : 0.03),
+                blurRadius: _hovered ? 16 : 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: InkWell(
+            onTap: () async {
+              final bloc = context.read<TourBloc>();
+              await Navigator.pushNamed(
+                context,
+                AppRouter.tourEditPath(tour.id),
+                arguments: tour,
+              );
+              bloc.add(LoadTours());
+            },
+            borderRadius: BorderRadius.circular(14),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isNarrow = constraints.maxWidth < 450;
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                child: Row(
-                  crossAxisAlignment: isNarrow
-                      ? CrossAxisAlignment.start
-                      : CrossAxisAlignment.center,
-                  children: [
-                    // Left icon
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: typeColor,
-                        borderRadius: BorderRadius.circular(12),
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: isNarrow
+                        ? CrossAxisAlignment.start
+                        : CrossAxisAlignment.center,
+                    children: [
+                      // Left icon
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: typeColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          isPromo
+                              ? Icons.local_offer_rounded
+                              : Icons.map_outlined,
+                          color: typeText,
+                          size: 22,
+                        ),
                       ),
-                      child: Icon(
-                        isPromo
-                            ? Icons.local_offer_rounded
-                            : Icons.map_outlined,
-                        color: typeText,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
+                      const SizedBox(width: 14),
 
-                    // Main content area
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Main info (Name, Dates, Progress)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Name + badges
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      tour.name,
-                                      style: TextStyle(
-                                        color: context.saas.textPrimary,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 7,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: typeColor,
-                                      borderRadius: BorderRadius.circular(5),
-                                    ),
-                                    child: Text(
-                                      isPromo ? 'PROMO' : 'TOUR',
-                                      style: TextStyle(
-                                        color: typeText,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              // Dates + location
-                              Wrap(
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                spacing: 12,
-                                runSpacing: 4,
-                                children: [
-                                  Text.rich(
-                                    TextSpan(
-                                      children: [
-                                        WidgetSpan(
-                                          alignment:
-                                              PlaceholderAlignment.middle,
-                                          child: Icon(
-                                            Icons.calendar_today_outlined,
-                                            size: 12,
-                                            color: context.saas.textTertiary,
-                                          ),
-                                        ),
-                                        const WidgetSpan(
-                                          child: SizedBox(width: 4),
-                                        ),
-                                        TextSpan(
-                                          text: tour.disponibilidadTipo == 'permanente'
-                                              ? 'Disponible todo el año'
-                                              : tour.disponibilidadTipo == 'multiples_fechas'
-                                              ? 'Múltiples salidas'
-                                              : (tour.startDate != null && tour.endDate != null
-                                                  ? '${DateFormat('dd MMM').format(tour.startDate!)} — ${DateFormat('dd MMM yyyy').format(tour.endDate!)}'
-                                                  : 'Fecha por confirmar'),
-                                          style: TextStyle(
-                                            color: context.saas.textSecondary,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Text.rich(
-                                    TextSpan(
-                                      children: [
-                                        WidgetSpan(
-                                          alignment:
-                                              PlaceholderAlignment.middle,
-                                          child: Icon(
-                                            Icons.location_on_outlined,
-                                            size: 12,
-                                            color: context.saas.textTertiary,
-                                          ),
-                                        ),
-                                        const WidgetSpan(
-                                          child: SizedBox(width: 4),
-                                        ),
-                                        TextSpan(
-                                          text: tour.departurePoint,
-                                          style: TextStyle(
-                                            color: context.saas.textSecondary,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-
-                          if (isNarrow) ...[
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      // Main content area
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Main info (Name, Dates, Progress)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  widget.currencyFormat.format(tour.price),
-                                  style: TextStyle(
-                                    color: context.saas.brand600,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
+                                // Name + badges
                                 Row(
                                   children: [
-                                    if (widget.canWrite)
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.delete_outline_rounded,
-                                          size: 20,
+                                    Flexible(
+                                      child: Text(
+                                        tour.name,
+                                        style: TextStyle(
+                                          color: context.saas.textPrimary,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
                                         ),
-                                        color: context.saas.danger,
-                                        onPressed: () =>
-                                            _confirmDelete(context),
-                                        constraints: const BoxConstraints(),
-                                        padding: const EdgeInsets.all(4),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                    Icon(
-                                      Icons.chevron_right_rounded,
-                                      color: context.saas.textTertiary,
-                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: typeColor,
+                                        borderRadius: BorderRadius.circular(5),
+                                      ),
+                                      child: Text(
+                                        isPromo ? 'PROMO' : 'TOUR',
+                                        style: TextStyle(
+                                          color: typeText,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    if (isHidden) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: context.saas.danger,
+                                          borderRadius: BorderRadius.circular(
+                                            5,
+                                          ),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.visibility_off_rounded,
+                                              size: 11,
+                                              color: Colors.white,
+                                            ),
+                                            SizedBox(width: 3),
+                                            Text(
+                                              'OCULTO',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                // Dates + location
+                                Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 12,
+                                  runSpacing: 4,
+                                  children: [
+                                    Text.rich(
+                                      TextSpan(
+                                        children: [
+                                          WidgetSpan(
+                                            alignment:
+                                                PlaceholderAlignment.middle,
+                                            child: Icon(
+                                              Icons.calendar_today_outlined,
+                                              size: 12,
+                                              color: context.saas.textTertiary,
+                                            ),
+                                          ),
+                                          const WidgetSpan(
+                                            child: SizedBox(width: 4),
+                                          ),
+                                          TextSpan(
+                                            text:
+                                                tour.disponibilidadTipo ==
+                                                    'permanente'
+                                                ? 'Disponible todo el año'
+                                                : tour.disponibilidadTipo ==
+                                                      'multiples_fechas'
+                                                ? 'Múltiples salidas'
+                                                : (tour.startDate != null &&
+                                                          tour.endDate != null
+                                                      ? '${DateFormat('dd MMM').format(tour.startDate!)} — ${DateFormat('dd MMM yyyy').format(tour.endDate!)}'
+                                                      : 'Fecha por confirmar'),
+                                            style: TextStyle(
+                                              color: context.saas.textSecondary,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text.rich(
+                                      TextSpan(
+                                        children: [
+                                          WidgetSpan(
+                                            alignment:
+                                                PlaceholderAlignment.middle,
+                                            child: Icon(
+                                              Icons.location_on_outlined,
+                                              size: 12,
+                                              color: context.saas.textTertiary,
+                                            ),
+                                          ),
+                                          const WidgetSpan(
+                                            child: SizedBox(width: 4),
+                                          ),
+                                          TextSpan(
+                                            text: tour.departurePoint,
+                                            style: TextStyle(
+                                              color: context.saas.textSecondary,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
                               ],
                             ),
-                          ],
 
-                          const SizedBox(height: 8),
-                          if (isPermanente)
-                            Text(
-                              'Sin límite de cupos',
-                              style: TextStyle(
-                                color: context.saas.textTertiary,
-                                fontSize: 11,
+                            if (isNarrow) ...[
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    widget.currencyFormat.format(tour.price),
+                                    style: TextStyle(
+                                      color: context.saas.brand600,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      if (widget.canWrite)
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.delete_outline_rounded,
+                                            size: 20,
+                                          ),
+                                          color: context.saas.danger,
+                                          onPressed: () =>
+                                              _confirmDelete(context),
+                                          constraints: const BoxConstraints(),
+                                          padding: const EdgeInsets.all(4),
+                                        ),
+                                      Icon(
+                                        Icons.chevron_right_rounded,
+                                        color: context.saas.textTertiary,
+                                        size: 20,
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                            )
-                          else
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: LinearProgressIndicator(
-                                      value: progress,
-                                      minHeight: 5,
-                                      backgroundColor: context.saas.bgSubtle,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        progress > 0.8
-                                            ? context.saas.warning
-                                            : context.saas.brand600,
+                            ],
+
+                            const SizedBox(height: 8),
+                            if (isPermanente)
+                              Text(
+                                'Sin límite de cupos',
+                                style: TextStyle(
+                                  color: context.saas.textTertiary,
+                                  fontSize: 11,
+                                ),
+                              )
+                            else
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: LinearProgressIndicator(
+                                        value: progress,
+                                        minHeight: 5,
+                                        backgroundColor: context.saas.bgSubtle,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              progress > 0.8
+                                                  ? context.saas.warning
+                                                  : context.saas.brand600,
+                                            ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '$ocupados/$total cupos',
-                                  style: TextStyle(
-                                    color: context.saas.textTertiary,
-                                    fontSize: 11,
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '$ocupados/$total cupos',
+                                    style: TextStyle(
+                                      color: context.saas.textTertiary,
+                                      fontSize: 11,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
-
-                    if (!isNarrow) ...[
-                      const SizedBox(width: 16),
-                      // Price
-                      Text(
-                        widget.currencyFormat.format(tour.price),
-                        style: TextStyle(
-                          color: context.saas.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
+                                ],
+                              ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      // Actions
-                      if (widget.canWrite)
-                        InkWell(
-                          onTap: () => _confirmDelete(context),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Padding(
-                            padding: const EdgeInsets.all(6),
-                            child: Icon(
-                              Icons.delete_outline_rounded,
-                              color: context.saas.danger,
-                              size: 18,
-                            ),
+
+                      if (!isNarrow) ...[
+                        const SizedBox(width: 16),
+                        // Price
+                        Text(
+                          widget.currencyFormat.format(tour.price),
+                          style: TextStyle(
+                            color: context.saas.textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        color: context.saas.textTertiary,
-                        size: 20,
-                      ),
+                        const SizedBox(width: 12),
+                        // Actions
+                        if (widget.canWrite)
+                          InkWell(
+                            onTap: () => _confirmDelete(context),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Icon(
+                                Icons.delete_outline_rounded,
+                                color: context.saas.danger,
+                                size: 18,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: context.saas.textTertiary,
+                          size: 20,
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              );
-            },
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -908,10 +959,7 @@ class _EmptyState extends StatelessWidget {
           isSearch
               ? 'Intenta con otros términos o filtros.'
               : 'Pronto tendremos nuevas aventuras para ti.',
-          style: TextStyle(
-            color: context.saas.textSecondary,
-            fontSize: 14,
-          ),
+          style: TextStyle(color: context.saas.textSecondary, fontSize: 14),
         ),
       ],
     ),
@@ -966,10 +1014,7 @@ class _SaaSConfirmDialog extends StatelessWidget {
           Text(
             content,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: context.saas.textSecondary,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: context.saas.textSecondary, fontSize: 14),
           ),
           const SizedBox(height: 32),
           Row(

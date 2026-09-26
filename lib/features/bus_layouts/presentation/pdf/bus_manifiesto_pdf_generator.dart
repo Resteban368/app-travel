@@ -305,12 +305,13 @@ class BusManifestoPdfGenerator {
     );
   }
 
-  // ─── Bus block emitted as flat, page-breakable widgets ───────────
+  // ─── Bus block: seat map (left) + passenger table (right) ─────────
   //
-  // Returns a flat list instead of a single Column so MultiPage can page-break
-  // between the pieces. The passenger Table is a top-level spanning widget, so a
-  // long list flows across pages instead of throwing TooManyPagesException.
-  // (A Row/Column can't be split across pages — that was the original bug.)
+  // El diseño del bus va a la izquierda y la tabla de pasajeros a la derecha,
+  // en una misma fila, para que el manifiesto quepa en una sola página.
+  // Nota: al ir lado a lado, la fila es un bloque atómico que NO se parte entre
+  // páginas; si un bus tuviera una lista de pasajeros muy larga, ese bloque
+  // saltaría entero a la página siguiente (o podría no caber).
   static List<pw.Widget> _buildBusWidgets(
     BusManifiestoData bus,
     Map<String, int> reservaColorIdx,
@@ -323,11 +324,26 @@ class BusManifestoPdfGenerator {
       pw.SizedBox(height: 8),
       _buildStats(bus, bold),
       pw.SizedBox(height: 12),
-      // Seat map — atomic block, centered (fits within one page).
-      pw.Center(child: _buildSeatGrid(bus, reservaColorIdx, bold)),
-      pw.SizedBox(height: 14),
-      // Passenger table — spans pages when long.
-      ..._buildPassengerSection(bus, reservaColorIdx, bold, regular),
+      pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          // Seat map — a la izquierda, ancho fijo según su contenido.
+          _buildSeatGrid(bus, reservaColorIdx, bold),
+          pw.SizedBox(width: 16),
+          // Passenger table — a la derecha, ocupa el ancho restante.
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: _buildPassengerSection(
+                bus,
+                reservaColorIdx,
+                bold,
+                regular,
+              ),
+            ),
+          ),
+        ],
+      ),
     ];
   }
 
@@ -655,10 +671,6 @@ class BusManifestoPdfGenerator {
         rows.add(_passengerRow(
           reservaId: reserva.idReserva,
           nombre: person.nombre,
-          doc: person.documento != null
-              ? '${person.tipoDocumento ?? 'DOC'}: ${person.documento}'
-              : '-',
-          tel: person.telefono ?? '-',
           asientos: seatLabel,
           accentColor: accentColor,
           bgColor: accentColor,
@@ -678,9 +690,7 @@ class BusManifestoPdfGenerator {
         columnWidths: {
           0: const pw.FixedColumnWidth(50), // ID Reserva
           1: const pw.FlexColumnWidth(2.5), // Nombre
-          2: const pw.FlexColumnWidth(2.0), // Documento
-          3: const pw.FlexColumnWidth(1.5), // Teléfono
-          4: const pw.FixedColumnWidth(45), // Asientos
+          2: const pw.FixedColumnWidth(45), // Asientos
         },
         children: [
           pw.TableRow(
@@ -688,8 +698,6 @@ class BusManifestoPdfGenerator {
             children: [
               _th('ID Reserva', bold, color: PdfColors.white),
               _th('Nombre del Pasajero', bold, color: PdfColors.white),
-              _th('Documento', bold, color: PdfColors.white),
-              _th('Teléfono', bold, color: PdfColors.white),
               _th('Asientos', bold, color: PdfColors.white),
             ],
           ),
@@ -702,8 +710,6 @@ class BusManifestoPdfGenerator {
   static pw.TableRow _passengerRow({
     required String reservaId,
     required String nombre,
-    required String doc,
-    required String tel,
     required String asientos,
     required PdfColor accentColor,
     required PdfColor bgColor,
@@ -732,18 +738,6 @@ class BusManifestoPdfGenerator {
                 fontSize: 7,
                 color: textColor,
               )),
-        ),
-        // Documento
-        pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-          child: pw.Text(doc,
-              style: pw.TextStyle(font: regular, fontSize: 6.5, color: textColor)),
-        ),
-        // Teléfono
-        pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-          child: pw.Text(tel,
-              style: pw.TextStyle(font: regular, fontSize: 6.5, color: textColor)),
         ),
         // Asientos
         pw.Padding(

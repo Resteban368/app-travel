@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/di/injection_container.dart';
+import 'core/observability/app_bloc_observer.dart';
 import 'core/network/session_expired_notifier.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/premium_palette.dart';
@@ -14,6 +15,7 @@ import 'config/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  Bloc.observer = const AppBlocObserver();
   usePathUrlStrategy();
   initDependencies();
   await initializeDateFormatting('es_CO', null);

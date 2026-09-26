@@ -220,6 +220,69 @@ void main() {
     });
   });
 
+  group('Coordinación entre pestañas (web)', () {
+    test(
+        '401 pero otra pestaña ya renovó en storage → reintenta con ese token, '
+        'sin llamar a /refresh', () async {
+      var refreshCalls = 0;
+      final inner = MockClient((req) async {
+        if (req.url.path.endsWith('/refresh')) {
+          refreshCalls++;
+          return http.Response('should-not-happen', 200);
+        }
+        // Primer intento con el token viejo: simulamos que, justo antes,
+        // OTRA pestaña rotó el access token en el localStorage compartido.
+        if (req.headers['Authorization'] == 'Bearer old-access') {
+          await storage.write(key: 'access_token', value: 'tab-a-access');
+          return http.Response('unauthorized', 401);
+        }
+        if (req.headers['Authorization'] == 'Bearer tab-a-access') {
+          return http.Response('{"ok":true}', 200);
+        }
+        return http.Response('unauthorized', 401);
+      });
+
+      final resp =
+          await buildClient(inner).get(Uri.parse('https://api.test/x'));
+
+      expect(resp.statusCode, 200);
+      expect(refreshCalls, 0,
+          reason: 'debe adoptar el token de la otra pestaña, no gastar /refresh');
+      expect(cache.accessToken, 'tab-a-access');
+    });
+
+    test(
+        'refresh rechazado pero otra pestaña ya rotó el refresh token → adopta '
+        'su access token en vez de cerrar la sesión', () async {
+      var sessionExpired = false;
+      final sub = notifier.stream.listen((_) => sessionExpired = true);
+
+      final inner = MockClient((req) async {
+        if (req.url.path.endsWith('/refresh')) {
+          // El backend rechaza NUESTRO refresh (ya lo invalidó otra pestaña que
+          // rotó primero), pero esa pestaña dejó tokens nuevos en storage.
+          await storage.write(key: 'refresh_token', value: 'tab-a-refresh');
+          await storage.write(key: 'access_token', value: 'tab-a-access');
+          return http.Response('nope', 401);
+        }
+        if (req.headers['Authorization'] == 'Bearer tab-a-access') {
+          return http.Response('{"ok":true}', 200);
+        }
+        return http.Response('unauthorized', 401);
+      });
+
+      final resp =
+          await buildClient(inner).get(Uri.parse('https://api.test/x'));
+
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(resp.statusCode, 200);
+      expect(sessionExpired, isFalse, reason: 'no debe cerrar la sesión');
+      expect(cache.accessToken, 'tab-a-access');
+      expect(await storage.read(key: 'access_token'), 'tab-a-access');
+      await sub.cancel();
+    });
+  });
+
   group('Multipart', () {
     test('upload con 401 se reintenta tras el refresh con el body intacto',
         () async {

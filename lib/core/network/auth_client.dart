@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:agente_viajes/core/constants/api_constants.dart';
 import 'network_exceptions.dart';
 import 'session_expired_notifier.dart';
 import 'token_cache.dart';
+import 'token_storage_listener.dart';
 
 /// Cliente HTTP central: inyecta el JWT, renueva en 401 y aplica timeouts.
 ///
@@ -27,6 +29,9 @@ class AuthClient extends http.BaseClient {
   final SessionExpiredNotifier _sessionExpiredNotifier;
   final TokenCache _tokenCache;
 
+  /// Detecta cambios de token hechos por OTRAS pestañas (web). No-op en móvil/VM.
+  final TokenStorageListener _storageListener;
+
   /// Tiempo máximo para recibir la respuesta (cabeceras) del servidor.
   final Duration timeout;
 
@@ -41,7 +46,21 @@ class AuthClient extends http.BaseClient {
     this._sessionExpiredNotifier,
     this._tokenCache, {
     this.timeout = const Duration(seconds: 30),
-  });
+    TokenStorageListener? storageListener,
+  }) : _storageListener = storageListener ?? TokenStorageListener() {
+    // Si otra pestaña renueva/rota el token, nuestro caché en memoria queda
+    // obsoleto: lo invalidamos para rehidratar desde el storage compartido en
+    // la próxima petición, en vez de disparar un /refresh redundante (que con
+    // refresh tokens rotativos podría rechazarse y cerrar la sesión).
+    _storageListener.start(_tokenCache.invalidate);
+  }
+
+  @override
+  void close() {
+    _storageListener.stop();
+    _inner.close();
+    super.close();
+  }
 
   static const Set<String> _idempotentMethods = {'GET', 'HEAD'};
 
@@ -61,13 +80,27 @@ class AuthClient extends http.BaseClient {
       response = await _rawSend(replayable.build(_bearer(token)));
     }
 
-    // 401 → intentar renovar token (serializado) y reenviar una vez.
+    // 401 → intentar recuperar el token y reenviar una vez.
     if (response.statusCode == 401) {
-      final newToken = await _refreshAccessToken();
-      if (newToken != null) {
-        response = await _rawSend(replayable.build(_bearer(newToken)));
+      debugPrint('🔑 [AuthClient] 401 en ${request.method} ${request.url.path}');
+      // Primero: ¿otra pestaña ya renovó el token en el storage compartido?
+      // Releemos storage (saltándonos el caché, que puede ir por detrás del
+      // evento `storage`) y, si cambió, reintentamos con ese antes de gastar
+      // un /refresh —y de arriesgar una carrera de rotación entre pestañas—.
+      final storageToken = await _storage.read(key: 'access_token');
+      if (storageToken != null && storageToken != token) {
+        _tokenCache.set(storageToken);
+        response = await _rawSend(replayable.build(_bearer(storageToken)));
       }
-      // Si newToken es null, _performRefresh ya limpió la sesión y notificó.
+
+      // Si sigue 401, renovamos de verdad (serializado) y reenviamos una vez.
+      if (response.statusCode == 401) {
+        final newToken = await _refreshAccessToken();
+        if (newToken != null) {
+          response = await _rawSend(replayable.build(_bearer(newToken)));
+        }
+        // Si newToken es null, _performRefresh ya limpió la sesión y notificó.
+      }
     }
 
     return response;
@@ -121,6 +154,13 @@ class AuthClient extends http.BaseClient {
   Future<String?> _performRefresh() async {
     final refreshToken = await _storage.read(key: 'refresh_token');
     if (refreshToken == null) {
+      // Sin refresh token, pero otra pestaña pudo dejar un access token válido
+      // en el storage compartido: adóptalo antes de cerrar la sesión.
+      final freshAccess = await _storage.read(key: 'access_token');
+      if (freshAccess != null) {
+        _tokenCache.set(freshAccess);
+        return freshAccess;
+      }
       await _clearSession();
       return null;
     }
@@ -137,8 +177,10 @@ class AuthClient extends http.BaseClient {
     } on TimeoutException {
       // No pudimos confirmar la expiración: no destruimos la sesión por un
       // timeout de red. La petición original devolverá su 401 al llamador.
+      debugPrint('⏱️ [AuthClient] /refresh TIMEOUT — se mantiene la sesión');
       return null;
     } on http.ClientException {
+      debugPrint('🔌 [AuthClient] /refresh sin red (ClientException)');
       return null;
     }
 
@@ -161,12 +203,28 @@ class AuthClient extends http.BaseClient {
       return newAccessToken;
     }
 
-    // Refresh rechazado por el backend → sesión no recuperable.
+    // Refresh rechazado por el backend. Antes de destruir la sesión: ¿otra
+    // pestaña ya renovó con éxito? Con refresh tokens rotativos, el nuestro pudo
+    // quedar invalidado porque otra pestaña rotó primero. Si el refresh token
+    // del storage compartido cambió desde que lo leímos, adoptamos el access
+    // token nuevo en vez de cerrar sesión (evita el logout aleatorio al tener
+    // varias pestañas abiertas).
+    final currentRefresh = await _storage.read(key: 'refresh_token');
+    if (currentRefresh != null && currentRefresh != refreshToken) {
+      final freshAccess = await _storage.read(key: 'access_token');
+      if (freshAccess != null) {
+        _tokenCache.set(freshAccess);
+        return freshAccess;
+      }
+    }
+
+    // Sesión no recuperable.
     await _clearSession();
     return null;
   }
 
   Future<void> _clearSession() async {
+    debugPrint('🚪 [AuthClient] clearSession → notificando sesión expirada');
     await _storage.delete(key: 'access_token');
     await _storage.delete(key: 'refresh_token');
     await _storage.delete(key: 'user_data');

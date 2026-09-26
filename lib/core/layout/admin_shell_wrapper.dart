@@ -45,6 +45,12 @@ class _AdminShellWrapperState extends State<AdminShellWrapper> {
   late String _currentRoute;
   final GlobalKey<NavigatorState> _nestedNavKey = GlobalKey<NavigatorState>();
 
+  /// Nº de shells montados a la vez. DEBE ser 1: el navigator RAÍZ solo tiene un
+  /// AdminShellWrapper y toda la navegación interna va por el navigator ANIDADO.
+  /// Si se monta un segundo, se duplicarían el SSE y los ~20 BLoCs corriendo en
+  /// paralelo (la causa raíz del freeze). Lo detectamos para cazar la regresión.
+  static int _liveInstances = 0;
+
   void _onRouteChanged(Route<dynamic>? route) {
     final name = route?.settings.name;
     if (name != null && name != _currentRoute) {
@@ -57,6 +63,17 @@ class _AdminShellWrapperState extends State<AdminShellWrapper> {
   @override
   void initState() {
     super.initState();
+    _liveInstances++;
+    assert(() {
+      if (_liveInstances > 1) {
+        debugPrint(
+          '🚨 [AdminShellWrapper] ¡$_liveInstances shells montados a la vez! '
+          'Alguien navegó por el navigator RAÍZ y duplicó SSE + BLoCs. '
+          'Toda navegación interna debe usar el navigator ANIDADO.',
+        );
+      }
+      return true;
+    }());
     _currentRoute = widget.initialRoute ?? AppRouter.dashboard;
 
     // Cuando el usuario recarga la página (o el tab se suspende y recupera),
@@ -70,6 +87,12 @@ class _AdminShellWrapperState extends State<AdminShellWrapper> {
         authBloc.add(const AppStarted());
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _liveInstances--;
+    super.dispose();
   }
 
   void _onItemTapped(String route) {

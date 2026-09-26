@@ -454,9 +454,6 @@ class ApiReservaRepository implements ReservaRepository {
       );
     }
 
-    debugPrint(
-      '📦 [ApiReservaRepository] _fromJson id=${json['id']} id_responsable=$idResponsable responsable=${parsedResponsable?.nombre}',
-    );
     return Reserva(
       id: json['id']?.toString(),
       idReserva: json['id_reserva']?.toString(),

@@ -7,6 +7,12 @@ import 'reserva_state.dart';
 class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
   final ReservaRepository repository;
 
+  /// Firma de la carga de reservas actualmente en vuelo (página + filtros).
+  /// Evita que dos `LoadReservas` idénticos disparados casi a la vez (p. ej.
+  /// el menú + el initState de la lista) vuelvan a pedir y RE-PARSEAR las mismas
+  /// ~200 reservas en el hilo de UI. Distintas páginas/filtros sí pasan.
+  String? _inFlightLoadKey;
+
   ReservaBloc({required this.repository}) : super(ReservaInitial()) {
     on<LoadReservas>(_onLoadReservas);
     on<LoadReservaById>(_onLoadReservaById);
@@ -50,6 +56,13 @@ class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
     LoadReservas event,
     Emitter<ReservaState> emit,
   ) async {
+    final loadKey = '${event.page}|${event.limit}|${event.startDate}'
+        '|${event.endDate}|${event.status}|${event.search}';
+    // Si ya hay una carga IDÉNTICA en vuelo, la ignoramos (dedupe): reintentarla
+    // solo re-parsearía las mismas reservas y bloquearía la UI.
+    if (_inFlightLoadKey == loadKey) return;
+    _inFlightLoadKey = loadKey;
+
     final isFirstPage = event.page == 1;
     if (isFirstPage) {
       emit(ReservaLoading());
@@ -103,6 +116,8 @@ class ReservaBloc extends Bloc<ReservaEvent, ReservaState> {
       }
     } catch (e) {
       emit(ReservaError(e.toString()));
+    } finally {
+      if (_inFlightLoadKey == loadKey) _inFlightLoadKey = null;
     }
   }
 

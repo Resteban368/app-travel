@@ -36,4 +36,12 @@ class TokenCache {
     _accessToken = null;
     _loaded = true;
   }
+
+  /// Otra pestaña (web) cambió el token en el `localStorage` compartido: el
+  /// valor en memoria puede estar obsoleto. Fuerza rehidratar desde storage en
+  /// la próxima lectura ([isLoaded] vuelve a `false`) en vez de seguir usando el
+  /// token viejo. No borra el valor actual: si nadie lo relee, sigue sirviendo.
+  void invalidate() {
+    _loaded = false;
+  }
 }

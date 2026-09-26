@@ -148,7 +148,6 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
 
     // Attempt to load tours if not loaded or empty
     final tourState = context.read<TourBloc>().state;
-    debugPrint('🔍 [ReservaFormScreen] initState - TourBloc state: $tourState');
     if (tourState is TourInitial ||
         tourState is TourError ||
         (tourState is ToursLoaded && tourState.tours.isEmpty)) {
@@ -1466,10 +1465,6 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
             } else if (state is TourSaving && state.tours != null) {
               tours = state.tours!;
             }
-
-            debugPrint(
-              '🎨 [ReservaFormScreen] _buildTourDropdown - State: $state, Tours: ${tours.length}, isLoading: $isLoading',
-            );
 
             final selectedTour = _selectedTourId != null
                 ? tours.firstWhere(
@@ -3776,15 +3771,6 @@ class _ReservaFormScreenState extends State<ReservaFormScreen>
         }
 
         final Cliente? displayCliente = _selectedCliente;
-
-        debugPrint(
-          '🧩 [ClienteSelector] state=${state.runtimeType}, '
-          'clientes=${clientes.length}, '
-          '_selectedClienteId=$_selectedClienteId, '
-          '_selectedCliente=${_selectedCliente?.nombre}, '
-          '_loadingResponsable=$_loadingResponsable, '
-          'displayCliente=${displayCliente?.nombre}',
-        );
 
         Future<void> openPicker() async {
           // showDialog usa el navigator raíz → re-proveer el ClienteBloc del
