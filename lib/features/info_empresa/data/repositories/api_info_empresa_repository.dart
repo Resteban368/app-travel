@@ -114,6 +114,10 @@ class ApiInfoEmpresaRepository implements InfoEmpresaRepository {
       correo: json['correo'] ?? '',
       sitioWeb: json['pagina_web'] ?? json['sitio_web'] ?? '',
       rnt: json['rnt'] ?? '',
+      politicas: (json['politicas'] as List? ?? [])
+          .whereType<Map<String, dynamic>>()
+          .map(Politica.fromJson)
+          .toList(),
     );
   }
 
@@ -131,6 +135,7 @@ class ApiInfoEmpresaRepository implements InfoEmpresaRepository {
       'telefono': info.telefono,
       'correo': info.correo,
       'rnt': info.rnt,
+      'politicas': info.politicas.map((p) => p.toJson()).toList(),
     };
     if (info.sitioWeb.isNotEmpty) map['pagina_web'] = info.sitioWeb;
     return map;

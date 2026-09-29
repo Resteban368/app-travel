@@ -19,6 +19,24 @@ class RedSocial extends Equatable {
   }
 }
 
+/// Política de la empresa (cancelaciones, pagos, equipaje…).
+class Politica extends Equatable {
+  final String titulo;
+  final String contenido;
+
+  const Politica({required this.titulo, required this.contenido});
+
+  @override
+  List<Object?> get props => [titulo, contenido];
+
+  Map<String, dynamic> toJson() => {'titulo': titulo, 'contenido': contenido};
+
+  factory Politica.fromJson(Map<String, dynamic> json) => Politica(
+    titulo: json['titulo'] ?? '',
+    contenido: json['contenido'] ?? '',
+  );
+}
+
 class InfoEmpresa extends Equatable {
   final int id;
   final String nombre;
@@ -37,6 +55,8 @@ class InfoEmpresa extends Equatable {
   /// Registro Nacional de Turismo (solo el número, p. ej. "302421")
   final String rnt;
 
+  final List<Politica> politicas;
+
   const InfoEmpresa({
     required this.id,
     required this.nombre,
@@ -52,6 +72,7 @@ class InfoEmpresa extends Equatable {
     required this.correo,
     required this.sitioWeb,
     this.rnt = '',
+    this.politicas = const [],
   });
 
   InfoEmpresa copyWith({
@@ -69,6 +90,7 @@ class InfoEmpresa extends Equatable {
     String? correo,
     String? sitioWeb,
     String? rnt,
+    List<Politica>? politicas,
   }) {
     return InfoEmpresa(
       id: id ?? this.id,
@@ -85,6 +107,7 @@ class InfoEmpresa extends Equatable {
       correo: correo ?? this.correo,
       sitioWeb: sitioWeb ?? this.sitioWeb,
       rnt: rnt ?? this.rnt,
+      politicas: politicas ?? this.politicas,
     );
   }
 
@@ -104,5 +127,6 @@ class InfoEmpresa extends Equatable {
     correo,
     sitioWeb,
     rnt,
+    politicas,
   ];
 }

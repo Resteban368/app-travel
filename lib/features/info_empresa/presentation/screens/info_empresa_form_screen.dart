@@ -34,6 +34,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
   late TextEditingController _rntCtrl;
 
   List<RedSocial> _redesSociales = [];
+  final List<_PoliticaData> _politicas = [];
 
   late final AnimationController _entryCtrl;
   late final Animation<double> _fade;
@@ -56,6 +57,9 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
     _correoCtrl = TextEditingController(text: widget.info?.correo);
     _webCtrl = TextEditingController(text: widget.info?.sitioWeb);
     _rntCtrl = TextEditingController(text: widget.info?.rnt);
+    for (final p in widget.info?.politicas ?? const <Politica>[]) {
+      _politicas.add(_PoliticaData(titulo: p.titulo, contenido: p.contenido));
+    }
 
     _redesSociales = widget.info?.redesSociales != null
         ? List.from(widget.info!.redesSociales)
@@ -91,6 +95,9 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
     _correoCtrl.dispose();
     _webCtrl.dispose();
     _rntCtrl.dispose();
+    for (final p in _politicas) {
+      p.dispose();
+    }
     super.dispose();
   }
 
@@ -122,6 +129,15 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
       correo: _correoCtrl.text.trim(),
       sitioWeb: _webCtrl.text.trim(),
       rnt: _rntCtrl.text.trim(),
+      politicas: _politicas
+          .map(
+            (p) => Politica(
+              titulo: p.tituloCtrl.text.trim(),
+              contenido: p.contenidoCtrl.text.trim(),
+            ),
+          )
+          .where((p) => p.titulo.isNotEmpty || p.contenido.isNotEmpty)
+          .toList(),
     );
 
     if (widget.info == null) {
@@ -664,6 +680,9 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                                 const SizedBox(height: 24),
 
                                 _buildRedesSocialesSection(canWrite: canWrite),
+                                const SizedBox(height: 24),
+
+                                _buildPoliticasSection(canWrite: canWrite),
                                 const SizedBox(height: 48),
 
                                 if (canWrite)
@@ -896,6 +915,172 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
         ],
       ),
     );
+  }
+
+  Widget _buildPoliticasSection({required bool canWrite}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: context.saas.bgCanvas,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.saas.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: context.saas.brand50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.policy_rounded,
+                  color: context.saas.brand600,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'POLÍTICAS DE LA EMPRESA',
+                  style: TextStyle(
+                    color: context.saas.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+              if (canWrite)
+                TextButton.icon(
+                  onPressed: () =>
+                      setState(() => _politicas.add(_PoliticaData())),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.saas.brand600,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(color: context.saas.border),
+                    ),
+                  ),
+                  icon: const Icon(Icons.add_rounded, size: 16),
+                  label: const Text(
+                    'Añadir',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Divider(color: context.saas.border),
+          const SizedBox(height: 12),
+          if (_politicas.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 16,
+                    color: context.saas.textTertiary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'No hay políticas configuradas (cancelaciones, pagos, equipaje…)',
+                      style: TextStyle(
+                        color: context.saas.textTertiary,
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ..._politicas.asMap().entries.map((e) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: context.saas.bgSubtle,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: context.saas.border),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: PremiumTextField(
+                            controller: e.value.tituloCtrl,
+                            label: 'Título (ej. Cancelaciones)',
+                            icon: Icons.title_rounded,
+                            readOnly: !canWrite,
+                            validator: (_) => null,
+                          ),
+                        ),
+                        if (canWrite)
+                          IconButton(
+                            onPressed: () => setState(() {
+                              _politicas.removeAt(e.key).dispose();
+                            }),
+                            icon: Icon(
+                              Icons.delete_outline_rounded,
+                              color: context.saas.danger,
+                              size: 18,
+                            ),
+                            tooltip: 'Eliminar',
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    PremiumTextField(
+                      controller: e.value.contenidoCtrl,
+                      label: 'Contenido de la política',
+                      icon: Icons.notes_rounded,
+                      maxLines: 5,
+                      readOnly: !canWrite,
+                      validator: (_) => null,
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Estado editable de una política ──────────────────────────────────────────
+class _PoliticaData {
+  final TextEditingController tituloCtrl;
+  final TextEditingController contenidoCtrl;
+
+  _PoliticaData({String titulo = '', String contenido = ''})
+    : tituloCtrl = TextEditingController(text: titulo),
+      contenidoCtrl = TextEditingController(text: contenido);
+
+  void dispose() {
+    tituloCtrl.dispose();
+    contenidoCtrl.dispose();
   }
 }
 
