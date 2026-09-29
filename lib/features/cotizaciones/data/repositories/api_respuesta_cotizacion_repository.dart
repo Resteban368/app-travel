@@ -141,6 +141,16 @@ class ApiRespuestaCotizacionRepository
     'vuelos': r.vuelos.map(_vueloToJson).toList(),
     'opciones_hotel': r.opcionesHotel.map(_hotelToJson).toList(),
     'adicionales': r.adicionales.map(_adicionalToJson).toList(),
+    'itinerario': r.itinerario
+        .where((d) => d.tieneContenido)
+        .map((d) => {
+              'titulo': d.titulo.trim(),
+              'descripciones': d.descripciones
+                  .map((x) => x.trim())
+                  .where((x) => x.isNotEmpty)
+                  .toList(),
+            })
+        .toList(),
     'condiciones_generales': r.condicionesGenerales,
     'es_publica': r.esPublica,
   };
@@ -212,6 +222,13 @@ class ApiRespuestaCotizacionRepository
       adicionales: asList(
         j['adicionales'],
       ).map((e) => _adicionalFromJson(e as Map<String, dynamic>)).toList(),
+      itinerario: asList(j['itinerario'])
+          .whereType<Map<String, dynamic>>()
+          .map((e) => DiaItinerario(
+                titulo: e['titulo'] as String? ?? '',
+                descripciones: List<String>.from(asList(e['descripciones'])),
+              ))
+          .toList(),
       condicionesGenerales: j['condiciones_generales'] as String? ?? '',
       createdAt: j['created_at'] != null
           ? DateTime.parse(j['created_at'] as String)

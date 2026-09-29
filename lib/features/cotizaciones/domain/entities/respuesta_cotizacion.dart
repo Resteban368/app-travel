@@ -94,6 +94,17 @@ class AdicionalViaje {
   });
 }
 
+/// Un día del itinerario. El número del día es su posición en la lista.
+class DiaItinerario {
+  final String titulo;
+  final List<String> descripciones;
+
+  const DiaItinerario({this.titulo = '', this.descripciones = const []});
+
+  bool get tieneContenido =>
+      titulo.trim().isNotEmpty || descripciones.any((d) => d.trim().isNotEmpty);
+}
+
 class VistaRespuesta {
   final int id;
   final int respuestaId;
@@ -121,6 +132,7 @@ class RespuestaCotizacion {
   final List<VueloItinerario> vuelos;
   final List<OpcionHotel> opcionesHotel;
   final List<AdicionalViaje> adicionales;
+  final List<DiaItinerario> itinerario;
   final String condicionesGenerales;
   final DateTime createdAt;
 
@@ -150,6 +162,7 @@ class RespuestaCotizacion {
     required this.vuelos,
     required this.opcionesHotel,
     required this.adicionales,
+    this.itinerario = const [],
     required this.condicionesGenerales,
     required this.createdAt,
     this.nombreCliente,
@@ -188,6 +201,7 @@ class RespuestaCotizacion {
       vuelos: vuelos,
       opcionesHotel: opcionesHotel,
       adicionales: adicionales,
+      itinerario: itinerario,
       condicionesGenerales: condicionesGenerales,
       createdAt: createdAt,
       nombreCliente: nombreCliente,

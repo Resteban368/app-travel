@@ -119,6 +119,18 @@ class _AdicionalData {
   }
 }
 
+class _DiaItinerarioData {
+  final tituloCtrl = TextEditingController();
+  final List<TextEditingController> descripciones = [TextEditingController()];
+
+  void dispose() {
+    tituloCtrl.dispose();
+    for (final d in descripciones) {
+      d.dispose();
+    }
+  }
+}
+
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 class RespuestaCotizacionFormScreen extends StatefulWidget {
@@ -196,6 +208,7 @@ class _RespuestaCotizacionFormScreenState
 
   // Adicionales
   final List<_AdicionalData> _adicionales = [];
+  final List<_DiaItinerarioData> _dias = [];
 
   // Condiciones generales
   final _condicionesCtrl = TextEditingController();
@@ -282,6 +295,10 @@ class _RespuestaCotizacionFormScreenState
         for (final a in _adicionales) {
           a.dispose();
         }
+        for (final d in _dias) {
+          d.dispose();
+        }
+        _dias.clear();
         _vuelos.clear();
         _selectedVuelos.clear();
         _hoteles.clear();
@@ -521,6 +538,18 @@ class _RespuestaCotizacionFormScreenState
       data.nombreCtrl.addListener(_refreshResumen);
       _adicionales.add(data);
     }
+
+    for (final d in r.itinerario) {
+      final data = _DiaItinerarioData();
+      data.tituloCtrl.text = d.titulo;
+      if (d.descripciones.isNotEmpty) {
+        data.descripciones.first.text = d.descripciones.first;
+        for (final x in d.descripciones.skip(1)) {
+          data.descripciones.add(TextEditingController(text: x));
+        }
+      }
+      _dias.add(data);
+    }
   }
 
   Future<void> _loadAerolineas() async {
@@ -570,6 +599,9 @@ class _RespuestaCotizacionFormScreenState
     }
     for (final a in _adicionales) {
       a.dispose();
+    }
+    for (final d in _dias) {
+      d.dispose();
     }
     _condicionesCtrl.dispose();
     super.dispose();
@@ -690,6 +722,36 @@ class _RespuestaCotizacionFormScreenState
     _adicionales.add(data);
   }
 
+  void _addDia() => setState(() => _dias.add(_DiaItinerarioData()));
+
+  void _removeDia(int i) {
+    setState(() {
+      _dias[i].dispose();
+      _dias.removeAt(i);
+    });
+  }
+
+  void _addDescripcion(_DiaItinerarioData dia) =>
+      setState(() => dia.descripciones.add(TextEditingController()));
+
+  void _removeDescripcion(_DiaItinerarioData dia, int i) {
+    setState(() {
+      dia.descripciones[i].dispose();
+      dia.descripciones.removeAt(i);
+    });
+  }
+
+  /// Día 1 del itinerario: fecha del vuelo de ida o, si no hay, del primer check-in.
+  DateTime? get _inicioItinerario {
+    for (final v in _vuelos) {
+      if (v.tipoVuelo == 'ida' && v.fecha != null) return v.fecha;
+    }
+    for (final h in _hoteles) {
+      if (h.fechaEntrada != null) return h.fechaEntrada;
+    }
+    return null;
+  }
+
   void _removeAdicional(int i) {
     setState(() {
       _adicionales[i].dispose();
@@ -786,6 +848,18 @@ class _RespuestaCotizacionFormScreenState
               esSeleccionable: a.esSeleccionable,
             ),
           )
+          .toList(),
+      itinerario: _dias
+          .map(
+            (d) => DiaItinerario(
+              titulo: d.tituloCtrl.text.trim(),
+              descripciones: d.descripciones
+                  .map((c) => c.text.trim())
+                  .where((x) => x.isNotEmpty)
+                  .toList(),
+            ),
+          )
+          .where((d) => d.tieneContenido)
           .toList(),
       condicionesGenerales: _condicionesCtrl.text.trim(),
       anclada: widget.respuesta?.anclada ?? false,
@@ -1000,6 +1074,8 @@ class _RespuestaCotizacionFormScreenState
                   _buildDatosGenerales(),
                   const SizedBox(height: 20),
                   _buildImagenesSection(),
+                  const SizedBox(height: 20),
+                  _buildItinerarioSection(),
                   const SizedBox(height: 20),
                   _buildItemsIncluidosSection(),
                   const SizedBox(height: 20),
@@ -2616,6 +2692,114 @@ class _RespuestaCotizacionFormScreenState
             icon: Icons.notes_rounded,
             maxLines: 2,
             validator: (_) => null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Itinerario ────────────────────────────────────────────────────────────
+  Widget _buildItinerarioSection() {
+    return PremiumSectionCard(
+      title: 'ITINERARIO',
+      icon: Icons.route_rounded,
+      children: [
+        if (_dias.isEmpty)
+          const PremiumEmptyIndicator(
+            msg:
+                'Opcional. Agrega los días del viaje con un título y lo que se hace cada día.',
+            icon: Icons.calendar_view_day_rounded,
+          ),
+        ..._dias.asMap().entries.map((e) => _buildDiaCard(e.key, e.value)),
+        const SizedBox(height: 8),
+        _OutlineAddButton(
+          label: 'Agregar día',
+          icon: Icons.add_rounded,
+          onTap: _addDia,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDiaCard(int index, _DiaItinerarioData dia) {
+    final inicio = _inicioItinerario;
+    final fecha = inicio == null
+        ? null
+        : DateFormat(
+            'EEE d MMM yyyy',
+            'es_CO',
+          ).format(inicio.add(Duration(days: index)));
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.saas.bgSubtle,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.saas.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _SectionBadge(
+                label: 'Día ${index + 1}',
+                color: const Color(0xFF0B2A6B),
+                icon: Icons.today_rounded,
+              ),
+              if (fecha != null) ...[
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    fecha,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: context.saas.textTertiary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+              const Spacer(),
+              _RemoveButton(onTap: () => _removeDia(index)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          PremiumTextField(
+            controller: dia.tituloCtrl,
+            label: 'Título del día (ej. Llegada a El Cairo)',
+            icon: Icons.title_rounded,
+            validator: (_) => null,
+          ),
+          const SizedBox(height: 12),
+          const _FieldLabel(label: 'Descripciones'),
+          const SizedBox(height: 8),
+          ...dia.descripciones.asMap().entries.map(
+            (e) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: PremiumTextField(
+                      controller: e.value,
+                      label: 'Descripción ${e.key + 1}',
+                      icon: Icons.notes_rounded,
+                      maxLines: 2,
+                      validator: (_) => null,
+                    ),
+                  ),
+                  if (dia.descripciones.length > 1)
+                    _RemoveButton(onTap: () => _removeDescripcion(dia, e.key)),
+                ],
+              ),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () => _addDescripcion(dia),
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('Agregar descripción'),
           ),
         ],
       ),
@@ -4513,6 +4697,134 @@ class _TipoVueloToggle extends StatelessWidget {
 
 // ── Live preview dialog ───────────────────────────────────────────────────────
 
+class _PreviewItinerario extends StatelessWidget {
+  final RespuestaCotizacion respuesta;
+  const _PreviewItinerario({required this.respuesta});
+
+  /// Día 1 = fecha del vuelo de ida o, si no hay, del primer check-in.
+  DateTime? get _inicio {
+    final ida = respuesta.vuelos.where(
+      (v) => v.tipo == 'ida' && v.fecha.isNotEmpty,
+    );
+    if (ida.isNotEmpty) return DateTime.tryParse(ida.first.fecha);
+    final hotel = respuesta.opcionesHotel.where(
+      (h) => h.fechaEntrada.isNotEmpty,
+    );
+    return hotel.isNotEmpty
+        ? DateTime.tryParse(hotel.first.fechaEntrada)
+        : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final inicio = _inicio;
+    final fmt = DateFormat('EEE d MMM', 'es_CO');
+    final dias = respuesta.itinerario;
+    return Column(
+      children: [
+        for (var i = 0; i < dias.length; i++)
+          Padding(
+            padding: EdgeInsets.only(bottom: i == dias.length - 1 ? 0 : 14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 52,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0B2A6B),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'DÍA',
+                        style: TextStyle(
+                          color: Color(0xFFF7B928),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      Text(
+                        '${i + 1}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          height: 1.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (inicio != null)
+                        Text(
+                          fmt
+                              .format(inicio.add(Duration(days: i)))
+                              .toUpperCase(),
+                          style: const TextStyle(
+                            color: Color(0xFF3AAEE5),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      if (dias[i].titulo.trim().isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2, bottom: 4),
+                          child: Text(
+                            dias[i].titulo.trim(),
+                            style: const TextStyle(
+                              color: Color(0xFF1E3A5F),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      for (final d in dias[i].descripciones)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Padding(
+                                padding: EdgeInsets.only(top: 6, right: 8),
+                                child: CircleAvatar(
+                                  radius: 3,
+                                  backgroundColor: Color(0xFF3AAEE5),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  d,
+                                  style: const TextStyle(
+                                    color: Color(0xFF64748B),
+                                    fontSize: 13,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _PropuestaPreviewDialog extends StatefulWidget {
   final RespuestaCotizacion respuesta;
   final Cotizacion? cotizacion;
@@ -4634,6 +4946,16 @@ class _PropuestaPreviewDialogState extends State<_PropuestaPreviewDialog> {
                                 ),
                               ),
                               const SizedBox(height: 16),
+                            ],
+                            if (r.itinerario.isNotEmpty) ...[
+                              _PreviewSectionTitle(
+                                title:
+                                    'ITINERARIO · ${r.itinerario.length} DÍA${r.itinerario.length > 1 ? 'S' : ''}',
+                                icon: Icons.route_rounded,
+                              ),
+                              const SizedBox(height: 12),
+                              _PreviewItinerario(respuesta: r),
+                              const SizedBox(height: 24),
                             ],
                             if (r.itemsIncluidos.isNotEmpty) ...[
                               const _PreviewSectionTitle(
