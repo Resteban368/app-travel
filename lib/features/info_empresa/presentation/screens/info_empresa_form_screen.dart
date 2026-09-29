@@ -31,6 +31,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
   late TextEditingController _telefonoCtrl;
   late TextEditingController _correoCtrl;
   late TextEditingController _webCtrl;
+  late TextEditingController _rntCtrl;
 
   List<RedSocial> _redesSociales = [];
 
@@ -54,6 +55,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
     _telefonoCtrl = TextEditingController(text: widget.info?.telefono);
     _correoCtrl = TextEditingController(text: widget.info?.correo);
     _webCtrl = TextEditingController(text: widget.info?.sitioWeb);
+    _rntCtrl = TextEditingController(text: widget.info?.rnt);
 
     _redesSociales = widget.info?.redesSociales != null
         ? List.from(widget.info!.redesSociales)
@@ -88,6 +90,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
     _telefonoCtrl.dispose();
     _correoCtrl.dispose();
     _webCtrl.dispose();
+    _rntCtrl.dispose();
     super.dispose();
   }
 
@@ -118,6 +121,7 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
       telefono: _telefonoCtrl.text.trim(),
       correo: _correoCtrl.text.trim(),
       sitioWeb: _webCtrl.text.trim(),
+      rnt: _rntCtrl.text.trim(),
     );
 
     if (widget.info == null) {
@@ -624,6 +628,15 @@ class _InfoEmpresaFormScreenState extends State<InfoEmpresaFormScreen>
                                       label: 'Sitio Web',
                                       icon: Icons.language_rounded,
                                       readOnly: !canWrite,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    PremiumTextField(
+                                      controller: _rntCtrl,
+                                      label:
+                                          'Registro Nacional de Turismo (RNT)',
+                                      icon: Icons.verified_rounded,
+                                      readOnly: !canWrite,
+                                      validator: (_) => null,
                                     ),
                                   ],
                                 ),

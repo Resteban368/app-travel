@@ -113,6 +113,7 @@ class ApiInfoEmpresaRepository implements InfoEmpresaRepository {
       telefono: json['telefono'] ?? '',
       correo: json['correo'] ?? '',
       sitioWeb: json['pagina_web'] ?? json['sitio_web'] ?? '',
+      rnt: json['rnt'] ?? '',
     );
   }
 
@@ -129,6 +130,7 @@ class ApiInfoEmpresaRepository implements InfoEmpresaRepository {
       'nombre_gerente': info.nombreGerente,
       'telefono': info.telefono,
       'correo': info.correo,
+      'rnt': info.rnt,
     };
     if (info.sitioWeb.isNotEmpty) map['pagina_web'] = info.sitioWeb;
     return map;
