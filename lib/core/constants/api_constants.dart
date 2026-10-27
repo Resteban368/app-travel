@@ -10,7 +10,7 @@ class ApiConstants {
   //
   // static const String kBaseUrl = 'http://localhost:3001';
   //todo api de test
-  static const String kBaseUrl = 'https://api-travel-tours.vercel.app';
+  static const String kBaseUrl = 'https://api.travelclubagencia.com';
   // todo vamos a usar el emulador de android
   // static const String kBaseUrl = 'http://10.0.2.2:3001';
 
