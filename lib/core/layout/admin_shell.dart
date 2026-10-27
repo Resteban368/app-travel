@@ -13,6 +13,8 @@ import 'package:agente_viajes/features/catalogue/presentation/bloc/catalogue_blo
 import 'package:agente_viajes/features/catalogue/presentation/bloc/catalogue_event.dart';
 import 'package:agente_viajes/features/faq/presentation/bloc/faq_bloc.dart';
 import 'package:agente_viajes/features/faq/presentation/bloc/faq_event.dart';
+import 'package:agente_viajes/features/opiniones/presentation/bloc/opinion_bloc.dart';
+import 'package:agente_viajes/features/opiniones/presentation/bloc/opinion_event.dart';
 import 'package:agente_viajes/features/service/presentation/bloc/service_bloc.dart';
 import 'package:agente_viajes/features/service/presentation/bloc/service_event.dart';
 import 'package:agente_viajes/features/politica_reserva/presentation/bloc/politica_reserva_bloc.dart';
@@ -129,6 +131,12 @@ class _AdminShellState extends State<AdminShell> {
       permission: 'faqs',
     ),
     _NavItem(
+      icon: Icons.rate_review_rounded,
+      label: 'Opiniones',
+      route: AppRouter.opiniones,
+      permission: 'opiniones',
+    ),
+    _NavItem(
       icon: Icons.settings_suggest_rounded,
       label: 'Servicios',
       route: AppRouter.services,
@@ -231,6 +239,8 @@ class _AdminShellState extends State<AdminShell> {
         context.read<CatalogueBloc>().add(LoadCatalogues());
       case AppRouter.faqs:
         context.read<FaqBloc>().add(LoadFaqs());
+      case AppRouter.opiniones:
+        context.read<OpinionBloc>().add(LoadOpiniones());
       case AppRouter.services:
         context.read<ServiceBloc>().add(LoadServices());
       case AppRouter.politicasReserva:

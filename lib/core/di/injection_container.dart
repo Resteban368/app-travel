@@ -27,6 +27,9 @@ import '../../features/catalogue/presentation/bloc/catalogue_bloc.dart';
 import '../../features/faq/data/repositories/api_faq_repository.dart';
 import '../../features/faq/domain/repositories/faq_repository.dart';
 import '../../features/faq/presentation/bloc/faq_bloc.dart';
+import '../../features/opiniones/data/repositories/api_opinion_repository.dart';
+import '../../features/opiniones/domain/repositories/opinion_repository.dart';
+import '../../features/opiniones/presentation/bloc/opinion_bloc.dart';
 import '../../features/service/data/repositories/api_service_repository.dart';
 import '../../features/service/domain/repositories/service_repository.dart';
 import '../../features/service/presentation/bloc/service_bloc.dart';
@@ -128,6 +131,9 @@ void initDependencies() {
     () => ApiCatalogueRepository(client: sl()),
   );
   sl.registerLazySingleton<FaqRepository>(() => ApiFaqRepository(client: sl()));
+  sl.registerLazySingleton<OpinionRepository>(
+    () => ApiOpinionRepository(client: sl()),
+  );
   sl.registerLazySingleton<ServiceRepository>(
     () => ApiServiceRepository(client: sl()),
   );
@@ -209,6 +215,7 @@ void initDependencies() {
   sl.registerFactory(() => PaymentMethodBloc(paymentMethodRepository: sl()));
   sl.registerFactory(() => CatalogueBloc(catalogueRepository: sl()));
   sl.registerFactory(() => FaqBloc(faqRepository: sl()));
+  sl.registerFactory(() => OpinionBloc(repository: sl()));
   sl.registerFactory(() => ServiceBloc(serviceRepository: sl()));
   sl.registerFactory(() => PoliticaReservaBloc(repository: sl()));
   sl.registerFactory(() => InfoEmpresaBloc(repository: sl()));

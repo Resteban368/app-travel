@@ -29,6 +29,7 @@ import '../features/catalogue/domain/entities/catalogue.dart';
 import '../features/faq/presentation/screens/faq_list_screen.dart';
 import '../features/faq/presentation/screens/faq_form_screen.dart';
 import '../features/faq/domain/entities/faq.dart';
+import '../features/opiniones/presentation/screens/opinion_list_screen.dart';
 import '../features/info_empresa/presentation/screens/info_empresa_list_screen.dart';
 import '../features/info_empresa/presentation/screens/info_empresa_form_screen.dart';
 import '../features/info_empresa/domain/entities/info_empresa.dart';
@@ -100,6 +101,7 @@ class AppRouter {
   static const String faqs = '/faqs';
   static const String faqCreate = '/faqs/create';
   static const String faqEdit = '/faqs/edit';
+  static const String opiniones = '/opiniones';
   static const String services = '/services';
   static const String serviceCreate = '/services/create';
   static const String serviceEdit = '/services/edit';
@@ -276,6 +278,8 @@ class AppRouter {
         return _fadeRoute(const CatalogueListScreen(), settings);
       case faqs:
         return _fadeRoute(const FaqListScreen(), settings);
+      case opiniones:
+        return _fadeRoute(const OpinionListScreen(), settings);
       case services:
         return _fadeRoute(const ServiceListScreen(), settings);
       case politicasReserva:

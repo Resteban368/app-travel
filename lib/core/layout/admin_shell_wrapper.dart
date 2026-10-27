@@ -10,6 +10,7 @@ import '../../features/settings/presentation/bloc/sede_bloc.dart';
 import '../../features/settings/presentation/bloc/payment_method_bloc.dart';
 import '../../features/catalogue/presentation/bloc/catalogue_bloc.dart';
 import '../../features/faq/presentation/bloc/faq_bloc.dart';
+import '../../features/opiniones/presentation/bloc/opinion_bloc.dart';
 import '../../features/service/presentation/bloc/service_bloc.dart';
 import '../../features/politica_reserva/presentation/bloc/politica_reserva_bloc.dart';
 import '../../features/info_empresa/presentation/bloc/info_empresa_bloc.dart';
@@ -117,6 +118,7 @@ class _AdminShellWrapperState extends State<AdminShellWrapper> {
         BlocProvider<PaymentMethodBloc>(create: (_) => sl<PaymentMethodBloc>()),
         BlocProvider<CatalogueBloc>(create: (_) => sl<CatalogueBloc>()),
         BlocProvider<FaqBloc>(create: (_) => sl<FaqBloc>()),
+        BlocProvider<OpinionBloc>(create: (_) => sl<OpinionBloc>()),
         BlocProvider<ServiceBloc>(create: (_) => sl<ServiceBloc>()),
         BlocProvider<PoliticaReservaBloc>(
           create: (_) => sl<PoliticaReservaBloc>(),
