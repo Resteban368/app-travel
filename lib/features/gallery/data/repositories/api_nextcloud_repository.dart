@@ -39,11 +39,12 @@ class ApiNextcloudRepository implements NextcloudRepository {
 
   @override
   Future<NextcloudFolder> crearCarpeta(String nombre) async {
-    final uri = Uri.parse('${ApiConstants.kBaseUrl}/v1/nextcloud/folder');
+    // Ruta directa del almacenamiento, la misma que usa nc-browse (ej: Photos/PLANES/2026)
+    final uri = Uri.parse('${ApiConstants.kBaseUrl}/v1/nextcloud/nc-folder');
     final response = await _client.post(
       uri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'nombre': nombre}),
+      body: jsonEncode({'path': nombre}),
     );
     if (response.statusCode != 201) {
       throw Exception('Error al crear carpeta: ${response.statusCode}');
@@ -142,7 +143,8 @@ class ApiNextcloudRepository implements NextcloudRepository {
 
   @override
   Future<int> eliminarCarpeta(String folder) async {
-    final uri = Uri.parse('${ApiConstants.kBaseUrl}/v1/nextcloud/folder/$folder');
+    final encoded = folder.split('/').map(Uri.encodeComponent).join('/');
+    final uri = Uri.parse('${ApiConstants.kBaseUrl}/v1/nextcloud/nc-folder/$encoded');
     final response = await _client.delete(uri);
     if (response.statusCode != 200) {
       throw Exception('Error al eliminar carpeta: ${response.statusCode}');
